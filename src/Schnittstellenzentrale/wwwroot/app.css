@@ -1,3 +1,23 @@
+[data-bs-theme="light"] {
+    --sz-sidebar-bg-start: rgb(5, 39, 103);
+    --sz-sidebar-bg-end: #3a0647;
+    --sz-toprow-bg: #f7f7f7;
+    --sz-toprow-border: #d6d5d5;
+    --sz-nav-link-color: #d7d7d7;
+    --sz-nav-icon-fill: white;
+    --sz-nav-toprow-bg: rgba(0,0,0,0.4);
+}
+
+[data-bs-theme="dark"] {
+    --sz-sidebar-bg-start: #0d1b2a;
+    --sz-sidebar-bg-end: #1a0a1e;
+    --sz-toprow-bg: #1e1e2e;
+    --sz-toprow-border: #3a3a4a;
+    --sz-nav-link-color: #c0c0d0;
+    --sz-nav-icon-fill: #c0c0d0;
+    --sz-nav-toprow-bg: rgba(0,0,0,0.6);
+}
+
 html, body {
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
 }
