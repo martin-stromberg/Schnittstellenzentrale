@@ -1,0 +1,22 @@
+@inject IThemeService ThemeService
+
+<button class="btn btn-link px-0" title="Theme wechseln" @onclick="ToggleTheme">
+    @if (ThemeService.CurrentScheme == ColorScheme.Dark)
+    {
+        <span>&#9728;</span>
+    }
+    else
+    {
+        <span>&#9790;</span>
+    }
+</button>
+
+@code {
+    private async Task ToggleTheme()
+    {
+        var next = ThemeService.CurrentScheme == ColorScheme.Light
+            ? ColorScheme.Dark
+            : ColorScheme.Light;
+        await ThemeService.SetTheme(next);
+    }
+}

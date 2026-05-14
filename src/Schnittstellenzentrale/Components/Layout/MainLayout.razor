@@ -1,5 +1,6 @@
 @inherits LayoutComponentBase
 @inject IStorageModeService StorageModeService
+@inject IThemeService ThemeService
 @implements IDisposable
 
 <div class="page">
@@ -14,6 +15,7 @@
                 <option value="@StorageMode.Team">Team</option>
                 <option value="@StorageMode.User">Benutzer</option>
             </select>
+            <ThemeToggle />
         </div>
 
         <article class="content px-4">
@@ -31,7 +33,17 @@
 @code {
     protected override void OnInitialized()
     {
-        StorageModeService.OnModeChanged += OnModeChanged;
+        StorageModeService.OnModeChanged += OnStateChanged;
+        ThemeService.OnThemeChanged += OnStateChanged;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await ThemeService.InitializeAsync();
+            await InvokeAsync(StateHasChanged);
+        }
     }
 
     private void OnStorageModeChanged(ChangeEventArgs e)
@@ -40,13 +52,14 @@
             StorageModeService.SetMode(mode);
     }
 
-    private void OnModeChanged()
+    private void OnStateChanged()
     {
         InvokeAsync(StateHasChanged);
     }
 
     public void Dispose()
     {
-        StorageModeService.OnModeChanged -= OnModeChanged;
+        StorageModeService.OnModeChanged -= OnStateChanged;
+        ThemeService.OnThemeChanged -= OnStateChanged;
     }
 }
