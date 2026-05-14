@@ -1,0 +1,104 @@
+@inject IEndpointExecutionService ExecutionService
+@inject IHealthCheckService HealthCheckService
+@inject IEndpointRepository EndpointRepository
+
+<div class="endpoint-execution-panel border rounded p-2 mb-2">
+    <div class="d-flex justify-content-between align-items-center">
+        <span class="badge bg-primary me-2">@Endpoint.Method</span>
+        <span class="flex-grow-1">@Endpoint.Name</span>
+        <span class="text-muted small me-2">@Endpoint.RelativePath</span>
+        <button class="btn btn-sm btn-success" @onclick="ExecuteAsync">Ausführen</button>
+        <button class="btn btn-sm btn-outline-secondary ms-1" @onclick="ToggleEdit">Bearbeiten</button>
+    </div>
+
+    @if (_showEditor)
+    {
+        <div class="mt-2">
+            <EndpointEditor Endpoint="Endpoint" ApplicationId="Endpoint.ApplicationId" OnSaved="OnEditorSaved" OnCancel="OnEditorCancel" />
+        </div>
+    }
+
+    @if (_result != null)
+    {
+        <div class="mt-2">
+            <div class="border-top pt-2">
+                <strong>Request:</strong>
+                <pre class="small bg-light p-1">@_result.RequestDetails</pre>
+                <strong>Status:</strong> @_result.StatusCode
+                @if (!string.IsNullOrEmpty(_result.ResponseBody))
+                {
+                    <div>
+                        <strong>Antwort:</strong>
+                        <pre class="small bg-light p-1 mt-1" style="max-height:200px;overflow-y:auto;">@_result.ResponseBody</pre>
+                    </div>
+                }
+                @if (!string.IsNullOrEmpty(_result.ErrorMessage))
+                {
+                    <div class="text-danger">
+                        <strong>Fehler:</strong> @_result.ErrorMessage
+                    </div>
+                    @if (_showHealthCheck)
+                    {
+                        <HealthCheckDialog Application="Endpoint.Application" IsReachable="_healthCheckResult" OnClose="CloseHealthCheck" OnRemove="() => Task.CompletedTask" />
+                    }
+                }
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public Core.Models.Endpoint Endpoint { get; set; } = null!;
+    [Parameter] public EventCallback<Core.Models.Endpoint> OnEndpointUpdated { get; set; }
+
+    private EndpointExecutionResult? _result;
+    private bool _showEditor;
+    private bool _showHealthCheck;
+    private bool? _healthCheckResult;
+
+    private async Task ExecuteAsync()
+    {
+        _result = await ExecutionService.ExecuteAsync(Endpoint);
+        if (IsConnectionError(_result) && Endpoint.Application != null)
+        {
+            _healthCheckResult = await HealthCheckService.CheckAsync(Endpoint.Application);
+            _showHealthCheck = true;
+        }
+    }
+
+    private static bool IsConnectionError(EndpointExecutionResult result)
+    {
+        // Kein StatusCode bedeutet, dass die Anfrage nie den Server erreicht hat (Verbindungsfehler).
+        return !result.Success && result.StatusCode == null;
+    }
+
+    private void ToggleEdit() => _showEditor = !_showEditor;
+
+    private async Task OnEditorSaved()
+    {
+        var refreshedEndpoint = await EndpointRepository.GetEndpointByIdAsync(Endpoint.Id);
+        if (refreshedEndpoint != null)
+            CopyEndpointState(Endpoint, refreshedEndpoint);
+
+        _showEditor = false;
+        await OnEndpointUpdated.InvokeAsync(Endpoint);
+        StateHasChanged();
+    }
+
+    private void OnEditorCancel() => _showEditor = false;
+
+    private void CloseHealthCheck() => _showHealthCheck = false;
+
+    private static void CopyEndpointState(Core.Models.Endpoint target, Core.Models.Endpoint source)
+    {
+        target.Name = source.Name;
+        target.Method = source.Method;
+        target.RelativePath = source.RelativePath;
+        target.Body = source.Body;
+        target.AuthenticationType = source.AuthenticationType;
+        target.EndpointGroupId = source.EndpointGroupId;
+        target.RowVersion = source.RowVersion;
+        target.Headers = source.Headers;
+        target.QueryParameters = source.QueryParameters;
+    }
+}

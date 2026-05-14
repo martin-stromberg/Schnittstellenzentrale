@@ -1,0 +1,77 @@
+@inject IApplicationRepository ApplicationRepository
+@inject IStorageModeService StorageModeService
+@inject ICurrentUserService CurrentUserService
+@inject NavigationManager NavigationManager
+@implements IDisposable
+
+<div class="application-group-tree">
+    @if (_groups != null)
+    {
+        @foreach (var group in _groups)
+        {
+            <CollapsibleSection Title="@group.Name">
+                @foreach (var app in group.Applications)
+                {
+                    <div class="tree-leaf">
+                        <button class="btn btn-link" @onclick="() => SelectApplication(app.Id)">
+                            @app.Name
+                        </button>
+                    </div>
+                }
+            </CollapsibleSection>
+        }
+    }
+    @if (_ungroupedApplications != null && _ungroupedApplications.Any())
+    {
+        <CollapsibleSection Title="Ohne Gruppe">
+            @foreach (var app in _ungroupedApplications)
+            {
+                <div class="tree-leaf">
+                    <button class="btn btn-link" @onclick="() => SelectApplication(app.Id)">
+                        @app.Name
+                    </button>
+                </div>
+            }
+        </CollapsibleSection>
+    }
+</div>
+
+@code {
+    [Parameter] public EventCallback<int> OnApplicationSelected { get; set; }
+
+    private IList<ApplicationGroup>? _groups;
+    private IList<Application>? _ungroupedApplications;
+    private string _owner = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        StorageModeService.OnModeChanged += OnModeChanged;
+        _owner = CurrentUserService.GetCurrentUserName();
+        await LoadDataAsync();
+    }
+
+    private async Task LoadDataAsync()
+    {
+        _groups = await ApplicationRepository.GetGroupsAsync(StorageModeService.CurrentMode, _owner);
+        _ungroupedApplications = await ApplicationRepository.GetUngroupedApplicationsAsync(StorageModeService.CurrentMode, _owner);
+    }
+
+    private async Task SelectApplication(int applicationId)
+    {
+        await OnApplicationSelected.InvokeAsync(applicationId);
+    }
+
+    private void OnModeChanged()
+    {
+        InvokeAsync(async () =>
+        {
+            await LoadDataAsync();
+            StateHasChanged();
+        });
+    }
+
+    public void Dispose()
+    {
+        StorageModeService.OnModeChanged -= OnModeChanged;
+    }
+}

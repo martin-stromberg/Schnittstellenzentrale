@@ -1,0 +1,37 @@
+@page "/"
+
+<PageTitle>Schnittstellenzentrale</PageTitle>
+
+<div class="container-fluid h-100">
+    <div class="row h-100">
+        <div class="col-3 border-end pe-2">
+            <ApplicationGroupTree OnApplicationSelected="OnApplicationSelected" />
+        </div>
+        <div class="col-9 ps-2">
+            @if (_selectedApplicationId.HasValue)
+            {
+                <ApplicationCard ApplicationId="_selectedApplicationId.Value" OnApplicationRemoved="OnApplicationRemoved" />
+            }
+            else
+            {
+                <p class="text-muted mt-3">Bitte wählen Sie links eine Anwendung aus.</p>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private int? _selectedApplicationId;
+
+    private void OnApplicationSelected(int applicationId)
+    {
+        _selectedApplicationId = applicationId;
+        StateHasChanged();
+    }
+
+    private void OnApplicationRemoved()
+    {
+        _selectedApplicationId = null;
+        StateHasChanged();
+    }
+}

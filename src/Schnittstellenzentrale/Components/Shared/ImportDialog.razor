@@ -1,0 +1,117 @@
+@using Microsoft.EntityFrameworkCore
+
+<div class="modal-backdrop">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">@Title</h5>
+                <button type="button" class="btn-close" @onclick="OnClose"></button>
+            </div>
+            <div class="modal-body">
+                @if (Diff.NewEndpoints.Any())
+                {
+                    <h6 class="text-success">Neue Endpunkte (@Diff.NewEndpoints.Count)</h6>
+                    @foreach (var ep in Diff.NewEndpoints)
+                    {
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" checked="@IsSelected(ep, _selectedNew)"
+                                   @onchange="e => ToggleSelection(ep, _selectedNew, (bool)e.Value!)" />
+                            <label class="form-check-label">@ep.Method @ep.RelativePath — @ep.Name</label>
+                        </div>
+                    }
+                }
+                @if (Diff.ChangedEndpoints.Any())
+                {
+                    <h6 class="text-warning mt-2">Geänderte Endpunkte (@Diff.ChangedEndpoints.Count)</h6>
+                    @foreach (var ep in Diff.ChangedEndpoints)
+                    {
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" checked="@IsSelected(ep, _selectedChanged)"
+                                   @onchange="e => ToggleSelection(ep, _selectedChanged, (bool)e.Value!)" />
+                            <label class="form-check-label">@ep.Method @ep.RelativePath — @ep.Name</label>
+                        </div>
+                    }
+                }
+                @if (Diff.RemovedEndpoints.Any())
+                {
+                    <h6 class="text-danger mt-2">Entfernte Endpunkte (@Diff.RemovedEndpoints.Count)</h6>
+                    @foreach (var ep in Diff.RemovedEndpoints)
+                    {
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" checked="@IsSelected(ep, _selectedRemoved)"
+                                   @onchange="e => ToggleSelection(ep, _selectedRemoved, (bool)e.Value!)" />
+                            <label class="form-check-label">@ep.Method @ep.RelativePath — @ep.Name</label>
+                        </div>
+                    }
+                }
+            </div>
+            @if (!string.IsNullOrEmpty(_errorMessage))
+            {
+                <div class="alert alert-danger mx-3">@_errorMessage</div>
+            }
+            <div class="modal-footer">
+                <button class="btn btn-primary" @onclick="ApplyAsync">Übernehmen</button>
+                <button class="btn btn-secondary" @onclick="OnClose">Abbrechen</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public string Title { get; set; } = string.Empty;
+    [Parameter] public ImportDiff Diff { get; set; } = null!;
+    [Parameter] public Application Application { get; set; } = null!;
+    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public EventCallback<ImportDiff> OnApply { get; set; }
+
+    private readonly HashSet<Core.Models.Endpoint> _selectedNew = [];
+    private readonly HashSet<Core.Models.Endpoint> _selectedChanged = [];
+    private readonly HashSet<Core.Models.Endpoint> _selectedRemoved = [];
+    private string? _errorMessage;
+
+    protected override void OnParametersSet()
+    {
+        InitSelection(_selectedNew, Diff.NewEndpoints);
+        InitSelection(_selectedChanged, Diff.ChangedEndpoints);
+        InitSelection(_selectedRemoved, Diff.RemovedEndpoints);
+    }
+
+    private static void InitSelection(HashSet<Core.Models.Endpoint> set, IList<Core.Models.Endpoint> source)
+    {
+        set.Clear();
+        set.UnionWith(source);
+    }
+
+    private bool IsSelected(Core.Models.Endpoint ep, HashSet<Core.Models.Endpoint> set) => set.Contains(ep);
+
+    private void ToggleSelection(Core.Models.Endpoint ep, HashSet<Core.Models.Endpoint> set, bool selected)
+    {
+        if (selected) set.Add(ep);
+        else set.Remove(ep);
+    }
+
+    private async Task ApplyAsync()
+    {
+        _errorMessage = null;
+        try
+        {
+            var selectedDiff = new ImportDiff
+            {
+                NewEndpoints = _selectedNew.ToList(),
+                ChangedEndpoints = _selectedChanged.ToList(),
+                RemovedEndpoints = _selectedRemoved.ToList()
+            };
+
+            await OnApply.InvokeAsync(selectedDiff);
+            await OnClose.InvokeAsync();
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            _errorMessage = "Übernahme fehlgeschlagen: Ein anderer Benutzer hat die Daten gleichzeitig geändert. Bitte laden Sie die Seite neu.";
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Übernahme fehlgeschlagen: {ex.Message}";
+        }
+    }
+}

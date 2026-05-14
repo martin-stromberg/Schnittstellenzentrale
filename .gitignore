@@ -427,3 +427,11 @@ FodyWeavers.xsd
 *.msix
 *.msm
 *.msp
+
+# SQLite files
+*.db
+
+# Claude AI files
+.claude/*
+*.db-shm
+*.db-wal

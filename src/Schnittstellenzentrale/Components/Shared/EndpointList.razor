@@ -1,0 +1,44 @@
+@inject IEndpointRepository EndpointRepository
+
+@if (_endpointGroups != null)
+{
+    @foreach (var group in _endpointGroups)
+    {
+        <CollapsibleSection Title="@group.Name">
+            @foreach (var endpoint in _endpoints.Where(e => e.EndpointGroupId == group.Id))
+            {
+                <EndpointExecutionPanel Endpoint="endpoint" OnEndpointUpdated="OnEndpointUpdated" />
+            }
+        </CollapsibleSection>
+    }
+    @if (_ungroupedEndpoints.Any())
+    {
+        <CollapsibleSection Title="Ohne Gruppe">
+            @foreach (var endpoint in _ungroupedEndpoints)
+            {
+                <EndpointExecutionPanel Endpoint="endpoint" OnEndpointUpdated="OnEndpointUpdated" />
+            }
+        </CollapsibleSection>
+    }
+}
+
+@code {
+    [Parameter] public int ApplicationId { get; set; }
+
+    private IList<Core.Models.Endpoint> _endpoints = [];
+    private IList<EndpointGroup> _endpointGroups = [];
+    private IList<Core.Models.Endpoint> _ungroupedEndpoints = [];
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _endpoints = await EndpointRepository.GetEndpointsAsync(ApplicationId);
+        _endpointGroups = await EndpointRepository.GetEndpointGroupsAsync(ApplicationId);
+        _ungroupedEndpoints = await EndpointRepository.GetUngroupedEndpointsAsync(ApplicationId);
+    }
+
+    private async Task OnEndpointUpdated(Core.Models.Endpoint _)
+    {
+        await OnParametersSetAsync();
+        StateHasChanged();
+    }
+}

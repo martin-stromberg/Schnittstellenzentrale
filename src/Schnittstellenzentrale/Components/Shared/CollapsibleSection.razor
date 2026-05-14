@@ -1,0 +1,26 @@
+<div class="collapsible-section">
+    <button class="btn btn-link tree-node" @onclick="Toggle">
+        @(_expanded ? "&#x25BC;" : "&#x25B6;") @Title
+    </button>
+    @if (_expanded)
+    {
+        <div class="collapsible-section-content">
+            @ChildContent
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public string Title { get; set; } = string.Empty;
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public bool InitiallyExpanded { get; set; } = false;
+
+    private bool _expanded;
+
+    protected override void OnInitialized()
+    {
+        _expanded = InitiallyExpanded;
+    }
+
+    private void Toggle() => _expanded = !_expanded;
+}

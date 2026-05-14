@@ -1,0 +1,21 @@
+<div class="modal-backdrop">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Schreibkonflikt erkannt</h5>
+            </div>
+            <div class="modal-body">
+                <p>Die Daten wurden zwischenzeitlich von einem anderen Benutzer geändert. Möchten Sie Ihre Änderungen trotzdem speichern und die anderen Änderungen überschreiben?</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-danger" @onclick="OnForceSave">Überschreiben (Force-Save)</button>
+                <button class="btn btn-secondary" @onclick="OnCancel">Abbrechen</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public EventCallback OnForceSave { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+}

@@ -1,0 +1,38 @@
+<div class="modal-backdrop">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Health-Check: @Application.Name</h5>
+                <button type="button" class="btn-close" @onclick="OnClose"></button>
+            </div>
+            <div class="modal-body">
+                @if (IsReachable == null)
+                {
+                    <div class="alert alert-warning">Health-Check wurde übersprungen (Cooldown aktiv).</div>
+                }
+                else if (IsReachable == true)
+                {
+                    <div class="alert alert-success">Die Anwendung ist erreichbar.</div>
+                }
+                else
+                {
+                    <div class="alert alert-danger">Die Anwendung ist nicht erreichbar.</div>
+                }
+            </div>
+            <div class="modal-footer">
+                @if (IsReachable == false)
+                {
+                    <button class="btn btn-danger" @onclick="OnRemove">Anwendung entfernen</button>
+                }
+                <button class="btn btn-secondary" @onclick="OnClose">Schließen</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public Application Application { get; set; } = null!;
+    [Parameter] public bool? IsReachable { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public EventCallback OnRemove { get; set; }
+}

@@ -1,0 +1,14 @@
+@inject ISwaggerImportService SwaggerImportService
+
+<ImportDialog Title="Swagger-Import-Vorschau" Diff="Diff" Application="Application" OnApply="ApplyAsync" OnClose="OnClose" />
+
+@code {
+    [Parameter] public ImportDiff Diff { get; set; } = null!;
+    [Parameter] public Application Application { get; set; } = null!;
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    private async Task ApplyAsync(ImportDiff diff)
+    {
+        await SwaggerImportService.ApplyDiffAsync(diff);
+    }
+}

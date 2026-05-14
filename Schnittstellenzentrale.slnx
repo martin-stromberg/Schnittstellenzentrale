@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Schnittstellenzentrale/Schnittstellenzentrale.csproj" />
+    <Project Path="src/Schnittstellenzentrale.Core/Schnittstellenzentrale.Core.csproj" />
+    <Project Path="src/Schnittstellenzentrale.Infrastructure/Schnittstellenzentrale.Infrastructure.csproj" />
+    <Project Path="src/Schnittstellenzentrale.Tests/Schnittstellenzentrale.Tests.csproj" />    
+  </Folder>
+</Solution>
