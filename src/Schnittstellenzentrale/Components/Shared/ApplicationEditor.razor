@@ -1,0 +1,96 @@
+@inject IApplicationRepository ApplicationRepository
+@inject ISignalRNotificationService SignalRNotificationService
+@inject IStorageModeService StorageModeService
+@inject ICurrentUserService CurrentUserService
+
+<div class="application-editor">
+    <EditForm Model="_model" OnValidSubmit="SaveAsync">
+        <DataAnnotationsValidator />
+
+        <div class="mb-3">
+            <label class="form-label">Name</label>
+            <InputText class="form-control" @bind-Value="_model.Name" />
+            <ValidationMessage For="() => _model.Name" />
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Basis-URL</label>
+            <InputText class="form-control" @bind-Value="_model.BaseUrl" />
+            <ValidationMessage For="() => _model.BaseUrl" />
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Beschreibung</label>
+            <InputText class="form-control" @bind-Value="_model.Description" />
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Swagger-URL</label>
+            <InputText class="form-control" @bind-Value="_model.SwaggerUrl" />
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Metadaten-URL</label>
+            <InputText class="form-control" @bind-Value="_model.MetadataUrl" />
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Gruppe</label>
+            <InputSelect class="form-select" @bind-Value="_model.ApplicationGroupId">
+                <option value="">Ohne Gruppe</option>
+                @foreach (var group in _groups)
+                {
+                    <option value="@group.Id">@group.Name</option>
+                }
+            </InputSelect>
+        </div>
+
+        @if (!string.IsNullOrEmpty(_errorMessage))
+        {
+            <div class="alert alert-danger mt-2">@_errorMessage</div>
+        }
+
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary">Speichern</button>
+            <button type="button" class="btn btn-secondary" @onclick="Cancel">Abbrechen</button>
+        </div>
+    </EditForm>
+</div>
+
+@code {
+    [Parameter] public EventCallback OnSaved { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    private Application _model = new();
+    private IList<ApplicationGroup> _groups = [];
+    private string? _errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _groups = await ApplicationRepository.GetGroupsAsync(StorageModeService.CurrentMode, CurrentUserService.GetCurrentUserName());
+    }
+
+    private async Task SaveAsync()
+    {
+        _errorMessage = null;
+        try
+        {
+            if (StorageModeService.CurrentMode == StorageMode.User)
+                _model.Owner = CurrentUserService.GetCurrentUserName();
+
+            var saved = await ApplicationRepository.AddApplicationAsync(_model);
+
+            if (StorageModeService.CurrentMode == StorageMode.Team)
+                await SignalRNotificationService.NotifyApplicationChangedAsync(saved.Id);
+
+            _model = new Application();
+            await OnSaved.InvokeAsync();
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Speichern fehlgeschlagen: {ex.Message}";
+        }
+    }
+
+    private async Task Cancel() => await OnCancel.InvokeAsync();
+}
