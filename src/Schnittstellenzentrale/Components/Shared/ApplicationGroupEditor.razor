@@ -1,0 +1,52 @@
+@inject IApplicationRepository ApplicationRepository
+@inject ISignalRNotificationService SignalRNotificationService
+@inject IStorageModeService StorageModeService
+
+<div class="application-group-editor">
+    <EditForm Model="_model" OnValidSubmit="SaveAsync">
+        <DataAnnotationsValidator />
+
+        <div class="mb-3">
+            <label class="form-label">Name</label>
+            <InputText class="form-control" @bind-Value="_model.Name" />
+            <ValidationMessage For="() => _model.Name" />
+        </div>
+
+        @if (!string.IsNullOrEmpty(_errorMessage))
+        {
+            <div class="alert alert-danger mt-2">@_errorMessage</div>
+        }
+
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary">Speichern</button>
+            <button type="button" class="btn btn-secondary" @onclick="Cancel">Abbrechen</button>
+        </div>
+    </EditForm>
+</div>
+
+@code {
+    [Parameter] public EventCallback OnSaved { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    private ApplicationGroup _model = new();
+    private string? _errorMessage;
+
+    private async Task SaveAsync()
+    {
+        _errorMessage = null;
+        try
+        {
+            var saved = await ApplicationRepository.AddGroupAsync(_model);
+            if (StorageModeService.CurrentMode == StorageMode.Team)
+                await SignalRNotificationService.NotifyGroupChangedAsync(saved.Id);
+            _model = new ApplicationGroup();
+            await OnSaved.InvokeAsync();
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Speichern fehlgeschlagen: {ex.Message}";
+        }
+    }
+
+    private async Task Cancel() => await OnCancel.InvokeAsync();
+}

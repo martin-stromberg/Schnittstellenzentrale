@@ -5,6 +5,21 @@
 @implements IDisposable
 
 <div class="application-group-tree">
+    <div class="d-flex gap-2 mb-2">
+        <button type="button" class="btn btn-outline-primary btn-sm" @onclick="ShowGroupEditor">Neue Gruppe</button>
+        <button type="button" class="btn btn-outline-primary btn-sm" @onclick="ShowApplicationEditor">Neue Anwendung</button>
+    </div>
+
+    @if (_showGroupEditor)
+    {
+        <ApplicationGroupEditor OnSaved="OnGroupSaved" OnCancel="OnEditorCancelled" />
+    }
+
+    @if (_showApplicationEditor)
+    {
+        <ApplicationEditor OnSaved="OnApplicationSaved" OnCancel="OnEditorCancelled" />
+    }
+
     @if (_groups != null)
     {
         @foreach (var group in _groups)
@@ -42,6 +57,8 @@
     private IList<ApplicationGroup>? _groups;
     private IList<Application>? _ungroupedApplications;
     private string _owner = string.Empty;
+    private bool _showGroupEditor;
+    private bool _showApplicationEditor;
 
     protected override async Task OnInitializedAsync()
     {
@@ -63,15 +80,54 @@
 
     private void OnModeChanged()
     {
-        InvokeAsync(async () =>
+        _ = InvokeAsync(async () =>
         {
-            await LoadDataAsync();
-            StateHasChanged();
+            try
+            {
+                await LoadDataAsync();
+                StateHasChanged();
+            }
+            catch
+            {
+                StateHasChanged();
+            }
         });
     }
 
     public void Dispose()
     {
         StorageModeService.OnModeChanged -= OnModeChanged;
+    }
+
+    private void ShowGroupEditor()
+    {
+        _showGroupEditor = true;
+        _showApplicationEditor = false;
+    }
+
+    private void ShowApplicationEditor()
+    {
+        _showApplicationEditor = true;
+        _showGroupEditor = false;
+    }
+
+    private async Task OnGroupSaved()
+    {
+        _showGroupEditor = false;
+        await LoadDataAsync();
+        StateHasChanged();
+    }
+
+    private async Task OnApplicationSaved()
+    {
+        _showApplicationEditor = false;
+        await LoadDataAsync();
+        StateHasChanged();
+    }
+
+    private void OnEditorCancelled()
+    {
+        _showGroupEditor = false;
+        _showApplicationEditor = false;
     }
 }
