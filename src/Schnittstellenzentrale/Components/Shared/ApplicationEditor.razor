@@ -60,14 +60,29 @@
 @code {
     [Parameter] public EventCallback OnSaved { get; set; }
     [Parameter] public EventCallback OnCancel { get; set; }
+    [Parameter] public Application? ExistingApplication { get; set; }
 
     private Application _model = new();
     private IList<ApplicationGroup> _groups = [];
     private string? _errorMessage;
+    private bool _isEditMode;
 
     protected override async Task OnInitializedAsync()
     {
-        _groups = await ApplicationRepository.GetGroupsAsync(StorageModeService.CurrentMode, CurrentUserService.GetCurrentUserName());
+        try
+        {
+            _groups = await ApplicationRepository.GetGroupsAsync(StorageModeService.CurrentMode, CurrentUserService.GetCurrentUserName());
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Fehler beim Laden der Gruppen: {ex.Message}";
+        }
+
+        if (ExistingApplication != null)
+        {
+            _isEditMode = true;
+            _model = ExistingApplication.Clone();
+        }
     }
 
     private async Task SaveAsync()
@@ -78,13 +93,28 @@
             if (StorageModeService.CurrentMode == StorageMode.User)
                 _model.Owner = CurrentUserService.GetCurrentUserName();
 
-            var saved = await ApplicationRepository.AddApplicationAsync(_model);
+            if (_isEditMode)
+            {
+                var saved = await ApplicationRepository.UpdateApplicationAsync(_model);
 
-            if (StorageModeService.CurrentMode == StorageMode.Team)
-                await SignalRNotificationService.NotifyApplicationChangedAsync(saved.Id);
+                if (StorageModeService.CurrentMode == StorageMode.Team)
+                    await SignalRNotificationService.NotifyApplicationChangedAsync(saved.Id);
+            }
+            else
+            {
+                var saved = await ApplicationRepository.AddApplicationAsync(_model);
 
-            _model = new Application();
+                if (StorageModeService.CurrentMode == StorageMode.Team)
+                    await SignalRNotificationService.NotifyApplicationChangedAsync(saved.Id);
+
+                _model = new Application();
+            }
+
             await OnSaved.InvokeAsync();
+        }
+        catch (Microsoft.EntityFrameworkCore.DbUpdateConcurrencyException)
+        {
+            _errorMessage = "Die Daten wurden zwischenzeitlich geändert. Bitte laden Sie die Seite neu und versuchen Sie es erneut.";
         }
         catch (Exception ex)
         {

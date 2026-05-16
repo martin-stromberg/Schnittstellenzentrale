@@ -1,0 +1,25 @@
+<div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Anwendung löschen</h5>
+            </div>
+            <div class="modal-body">
+                <p>Anwendung '@Application.Name' wirklich löschen?</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-danger" @onclick="Confirmed">Löschen</button>
+                <button type="button" class="btn btn-secondary" @onclick="Cancelled">Abbrechen</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public Application Application { get; set; } = default!;
+    [Parameter] public EventCallback<Application> OnConfirmed { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    private async Task Confirmed() => await OnConfirmed.InvokeAsync(Application);
+    private async Task Cancelled() => await OnCancel.InvokeAsync();
+}

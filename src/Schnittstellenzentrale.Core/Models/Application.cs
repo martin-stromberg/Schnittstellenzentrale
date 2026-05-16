@@ -14,4 +14,17 @@ public class Application
     public byte[] RowVersion { get; set; } = [];
     public ICollection<Endpoint> Endpoints { get; set; } = [];
     public ICollection<EndpointGroup> EndpointGroups { get; set; } = [];
+
+    public Application Clone() => new()
+    {
+        Id = Id,
+        Name = Name,
+        Description = Description,
+        BaseUrl = BaseUrl,
+        SwaggerUrl = SwaggerUrl,
+        MetadataUrl = MetadataUrl,
+        Owner = Owner,
+        ApplicationGroupId = ApplicationGroupId,
+        RowVersion = RowVersion
+    };
 }

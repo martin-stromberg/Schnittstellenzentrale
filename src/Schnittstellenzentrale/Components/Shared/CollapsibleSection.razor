@@ -1,7 +1,17 @@
-<div class="collapsible-section">
-    <button class="btn btn-link tree-node" @onclick="Toggle">
-        @(_expanded ? "▼" : "▶") @Title
-    </button>
+<div class="collapsible-section"
+     @ondragover="HandleDragOver"
+     @ondragover:preventDefault="IsDropTarget"
+     @ondrop="HandleDrop"
+     @ondrop:stopPropagation="IsDropTarget">
+    <div class="d-flex align-items-center justify-content-between">
+        <button class="btn btn-link tree-node" @onclick="Toggle">
+            @(_expanded ? "▼" : "▶") @Title
+        </button>
+        @if (TitleActions != null)
+        {
+            @TitleActions
+        }
+    </div>
     @if (_expanded)
     {
         <div class="collapsible-section-content">
@@ -13,7 +23,10 @@
 @code {
     [Parameter] public string Title { get; set; } = string.Empty;
     [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public RenderFragment? TitleActions { get; set; }
     [Parameter] public bool InitiallyExpanded { get; set; } = false;
+    [Parameter] public bool IsDropTarget { get; set; } = false;
+    [Parameter] public EventCallback OnDrop { get; set; }
 
     private bool _expanded;
 
@@ -23,4 +36,12 @@
     }
 
     private void Toggle() => _expanded = !_expanded;
+
+    private void HandleDragOver() { }
+
+    private async Task HandleDrop()
+    {
+        if (OnDrop.HasDelegate)
+            await OnDrop.InvokeAsync();
+    }
 }
