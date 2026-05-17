@@ -32,7 +32,7 @@ public class HealthCheckService : IHealthCheckService
             _lastCheckTimes[application.Id] = DateTime.UtcNow;
         }
 
-        var url = application.SwaggerUrl ?? application.MetadataUrl ?? application.BaseUrl;
+        var url = application.InterfaceUrl ?? application.BaseUrl;
         try
         {
             var client = _httpClientFactory.CreateClient();

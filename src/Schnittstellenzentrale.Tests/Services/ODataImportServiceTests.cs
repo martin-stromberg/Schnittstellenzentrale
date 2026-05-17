@@ -55,7 +55,7 @@ public class ODataImportServiceTests
         var repoMock = new Mock<IEndpointRepository>();
         repoMock.Setup(r => r.GetEndpointsAsync(It.IsAny<int>())).ReturnsAsync([]);
         var service = CreateService(ODataMetadata, repoMock);
-        var app = new Core.Models.Application { Id = 1, MetadataUrl = "http://localhost/$metadata", BaseUrl = "http://localhost" };
+        var app = new Core.Models.Application { Id = 1, InterfaceUrl = "http://localhost/$metadata", InterfaceType = Core.Enums.InterfaceType.OData, BaseUrl = "http://localhost" };
 
         var diff = await service.ImportAsync(app);
 
@@ -74,7 +74,7 @@ public class ODataImportServiceTests
         var repoMock = new Mock<IEndpointRepository>();
         repoMock.Setup(r => r.GetEndpointsAsync(It.IsAny<int>())).ReturnsAsync(existing);
         var service = CreateService(ODataMetadata, repoMock);
-        var app = new Core.Models.Application { Id = 1, MetadataUrl = "http://localhost/$metadata", BaseUrl = "http://localhost" };
+        var app = new Core.Models.Application { Id = 1, InterfaceUrl = "http://localhost/$metadata", InterfaceType = Core.Enums.InterfaceType.OData, BaseUrl = "http://localhost" };
 
         var diff = await service.ImportAsync(app);
 
@@ -91,7 +91,7 @@ public class ODataImportServiceTests
         var repoMock = new Mock<IEndpointRepository>();
         repoMock.Setup(r => r.GetEndpointsAsync(It.IsAny<int>())).ReturnsAsync(existing);
         var service = CreateService(ODataMetadata, repoMock);
-        var app = new Core.Models.Application { Id = 1, MetadataUrl = "http://localhost/$metadata", BaseUrl = "http://localhost" };
+        var app = new Core.Models.Application { Id = 1, InterfaceUrl = "http://localhost/$metadata", InterfaceType = Core.Enums.InterfaceType.OData, BaseUrl = "http://localhost" };
 
         var diff = await service.ImportAsync(app);
 

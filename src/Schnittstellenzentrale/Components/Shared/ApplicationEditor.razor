@@ -1,3 +1,4 @@
+@using Schnittstellenzentrale.Core.Enums
 @inject IApplicationRepository ApplicationRepository
 @inject ISignalRNotificationService SignalRNotificationService
 @inject IStorageModeService StorageModeService
@@ -25,13 +26,25 @@
         </div>
 
         <div class="mb-3">
-            <label class="form-label">Swagger-URL</label>
-            <InputText class="form-control" @bind-Value="_model.SwaggerUrl" />
-        </div>
-
-        <div class="mb-3">
-            <label class="form-label">Metadaten-URL</label>
-            <InputText class="form-control" @bind-Value="_model.MetadataUrl" />
+            <label class="form-label">Schnittstellen-URL</label>
+            <input type="text" class="form-control" value="@_model.InterfaceUrl" @oninput="OnInterfaceUrlChanged" />
+            @if (!string.IsNullOrEmpty(_model.InterfaceUrl))
+            {
+                <div class="mt-1">
+                    @switch (_model.InterfaceType)
+                    {
+                        case InterfaceType.Rest:
+                            <span class="badge bg-primary">REST (Swagger/OpenAPI)</span>
+                            break;
+                        case InterfaceType.OData:
+                            <span class="badge bg-secondary">OData</span>
+                            break;
+                        default:
+                            <span class="badge bg-warning text-dark">Typ nicht erkannt</span>
+                            break;
+                    }
+                </div>
+            }
         </div>
 
         <div class="mb-3">
@@ -60,14 +73,35 @@
 @code {
     [Parameter] public EventCallback OnSaved { get; set; }
     [Parameter] public EventCallback OnCancel { get; set; }
+    [Parameter] public Application? ExistingApplication { get; set; }
 
     private Application _model = new();
     private IList<ApplicationGroup> _groups = [];
     private string? _errorMessage;
+    private bool _isEditMode;
 
     protected override async Task OnInitializedAsync()
     {
-        _groups = await ApplicationRepository.GetGroupsAsync(StorageModeService.CurrentMode, CurrentUserService.GetCurrentUserName());
+        try
+        {
+            _groups = await ApplicationRepository.GetGroupsAsync(StorageModeService.CurrentMode, CurrentUserService.GetCurrentUserName());
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Fehler beim Laden der Gruppen: {ex.Message}";
+        }
+
+        if (ExistingApplication != null)
+        {
+            _isEditMode = true;
+            _model = ExistingApplication.Clone();
+        }
+    }
+
+    private void OnInterfaceUrlChanged(ChangeEventArgs e)
+    {
+        _model.InterfaceUrl = e.Value?.ToString();
+        _model.InterfaceType = Application.DetectInterfaceType(_model.InterfaceUrl);
     }
 
     private async Task SaveAsync()
@@ -78,13 +112,28 @@
             if (StorageModeService.CurrentMode == StorageMode.User)
                 _model.Owner = CurrentUserService.GetCurrentUserName();
 
-            var saved = await ApplicationRepository.AddApplicationAsync(_model);
+            if (_isEditMode)
+            {
+                var saved = await ApplicationRepository.UpdateApplicationAsync(_model);
 
-            if (StorageModeService.CurrentMode == StorageMode.Team)
-                await SignalRNotificationService.NotifyApplicationChangedAsync(saved.Id);
+                if (StorageModeService.CurrentMode == StorageMode.Team)
+                    await SignalRNotificationService.NotifyApplicationChangedAsync(saved.Id);
+            }
+            else
+            {
+                var saved = await ApplicationRepository.AddApplicationAsync(_model);
 
-            _model = new Application();
+                if (StorageModeService.CurrentMode == StorageMode.Team)
+                    await SignalRNotificationService.NotifyApplicationChangedAsync(saved.Id);
+
+                _model = new Application();
+            }
+
             await OnSaved.InvokeAsync();
+        }
+        catch (Microsoft.EntityFrameworkCore.DbUpdateConcurrencyException)
+        {
+            _errorMessage = "Die Daten wurden zwischenzeitlich geändert. Bitte laden Sie die Seite neu und versuchen Sie es erneut.";
         }
         catch (Exception ex)
         {

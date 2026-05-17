@@ -1,14 +1,53 @@
 @page "/"
+@inject IApplicationRepository ApplicationRepository
+@inject IStorageModeService StorageModeService
+@inject ISignalRNotificationService SignalRNotificationService
 
 <PageTitle>Schnittstellenzentrale</PageTitle>
 
 <div class="container-fluid h-100">
     <div class="row h-100">
         <div class="col-3 border-end pe-2">
-            <ApplicationGroupTree OnApplicationSelected="OnApplicationSelected" />
+            <ApplicationGroupTree @ref="_tree"
+                OnApplicationSelected="OnApplicationSelected"
+                OnSelectionCleared="OnSelectionCleared"
+                OnCreateGroupRequested="OnCreateGroupRequested"
+                OnCreateApplicationRequested="OnCreateApplicationRequested"
+                OnEditApplicationRequested="OnEditApplicationRequested"
+                OnRenameGroupRequested="OnRenameGroupRequested"
+                OnDeleteGroupRequested="OnDeleteGroupRequested"
+                OnDeleteApplicationRequested="OnDeleteApplicationRequested" />
         </div>
         <div class="col-9 ps-2">
-            @if (_selectedApplicationId.HasValue)
+            @if (!string.IsNullOrEmpty(_errorMessage))
+            {
+                <div class="alert alert-danger mt-2">@_errorMessage</div>
+            }
+            @if (_showGroupEditor)
+            {
+                <ApplicationGroupEditor OnSaved="OnGroupSaved" OnCancel="CloseAllPanels" />
+            }
+            else if (_showApplicationEditor)
+            {
+                <ApplicationEditor OnSaved="OnApplicationSaved" OnCancel="CloseAllPanels" />
+            }
+            else if (_editTargetApplication != null)
+            {
+                <ApplicationEditor ExistingApplication="_editTargetApplication" OnSaved="OnApplicationEdited" OnCancel="CloseAllPanels" />
+            }
+            else if (_renameTargetGroup != null)
+            {
+                <RenameGroupDialog Group="_renameTargetGroup" OnSaved="OnGroupRenamed" OnCancel="CloseAllPanels" />
+            }
+            else if (_deleteTargetGroup != null)
+            {
+                <ConfirmDeleteGroupDialog Group="_deleteTargetGroup" OnDeleteAll="OnDeleteGroupConfirmedAll" OnDeleteGroupOnly="OnDeleteGroupConfirmedGroupOnly" OnCancel="CloseAllPanels" />
+            }
+            else if (_deleteTargetApplication != null)
+            {
+                <ConfirmDeleteApplicationDialog Application="_deleteTargetApplication" OnConfirmed="OnDeleteApplicationConfirmed" OnCancel="CloseAllPanels" />
+            }
+            else if (_selectedApplicationId.HasValue)
             {
                 <ApplicationCard ApplicationId="_selectedApplicationId.Value" OnApplicationRemoved="OnApplicationRemoved" />
             }
@@ -21,17 +60,176 @@
 </div>
 
 @code {
+    private ApplicationGroupTree? _tree;
     private int? _selectedApplicationId;
+    private string? _errorMessage;
+
+    private bool _showGroupEditor;
+    private bool _showApplicationEditor;
+    private Application? _editTargetApplication;
+    private ApplicationGroup? _renameTargetGroup;
+    private ApplicationGroup? _deleteTargetGroup;
+    private Application? _deleteTargetApplication;
+
+    private void CloseAllPanels()
+    {
+        _showGroupEditor = false;
+        _showApplicationEditor = false;
+        _editTargetApplication = null;
+        _renameTargetGroup = null;
+        _deleteTargetGroup = null;
+        _deleteTargetApplication = null;
+        _errorMessage = null;
+    }
 
     private void OnApplicationSelected(int applicationId)
     {
+        CloseAllPanels();
         _selectedApplicationId = applicationId;
-        StateHasChanged();
     }
 
-    private void OnApplicationRemoved()
+    private void OnApplicationRemoved() => ClearSelection();
+
+    private void OnSelectionCleared() => ClearSelection();
+
+    private void ClearSelection()
     {
         _selectedApplicationId = null;
-        StateHasChanged();
+        CloseAllPanels();
+    }
+
+    private void OnCreateGroupRequested()
+    {
+        _selectedApplicationId = null;
+        CloseAllPanels();
+        _showGroupEditor = true;
+    }
+
+    private void OnCreateApplicationRequested()
+    {
+        _selectedApplicationId = null;
+        CloseAllPanels();
+        _showApplicationEditor = true;
+    }
+
+    private void OnEditApplicationRequested(Application application)
+    {
+        CloseAllPanels();
+        _editTargetApplication = application;
+    }
+
+    private void OnRenameGroupRequested(ApplicationGroup group)
+    {
+        CloseAllPanels();
+        _renameTargetGroup = group;
+    }
+
+    private void OnDeleteGroupRequested(ApplicationGroup group)
+    {
+        CloseAllPanels();
+        _deleteTargetGroup = group;
+    }
+
+    private void OnDeleteApplicationRequested(Application application)
+    {
+        CloseAllPanels();
+        _deleteTargetApplication = application;
+    }
+
+    private async Task OnGroupSaved()
+    {
+        _showGroupEditor = false;
+        if (_tree != null)
+            await _tree.RefreshAsync();
+    }
+
+    private async Task OnApplicationSaved()
+    {
+        _showApplicationEditor = false;
+        if (_tree != null)
+            await _tree.RefreshAsync();
+    }
+
+    private async Task OnApplicationEdited()
+    {
+        _editTargetApplication = null;
+        if (_tree != null)
+            await _tree.RefreshAsync();
+    }
+
+    private async Task OnGroupRenamed(ApplicationGroup group)
+    {
+        // Exception propagates to RenameGroupDialog.SaveAsync which shows the error inline
+        await ApplicationRepository.UpdateGroupAsync(group);
+        if (StorageModeService.CurrentMode == StorageMode.Team)
+            await SignalRNotificationService.NotifyGroupChangedAsync(group.Id);
+        _renameTargetGroup = null;
+        if (_tree != null)
+            await _tree.RefreshAsync();
+    }
+
+    private async Task OnDeleteGroupConfirmedAll(ApplicationGroup group)
+    {
+        _deleteTargetGroup = null;
+        try
+        {
+            foreach (var app in group.Applications.ToList())
+            {
+                await ApplicationRepository.DeleteApplicationAsync(app.Id);
+                if (StorageModeService.CurrentMode == StorageMode.Team)
+                    await SignalRNotificationService.NotifyApplicationChangedAsync(app.Id);
+            }
+            await ApplicationRepository.DeleteGroupAsync(group.Id);
+            if (StorageModeService.CurrentMode == StorageMode.Team)
+                await SignalRNotificationService.NotifyGroupChangedAsync(group.Id);
+            if (_tree != null)
+                await _tree.RefreshAsync();
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Fehler beim Löschen der Gruppe: {ex.Message}";
+        }
+    }
+
+    private async Task OnDeleteGroupConfirmedGroupOnly(ApplicationGroup group)
+    {
+        _deleteTargetGroup = null;
+        try
+        {
+            foreach (var app in group.Applications.ToList())
+            {
+                app.ApplicationGroupId = null;
+                await ApplicationRepository.UpdateApplicationAsync(app);
+                if (StorageModeService.CurrentMode == StorageMode.Team)
+                    await SignalRNotificationService.NotifyApplicationChangedAsync(app.Id);
+            }
+            await ApplicationRepository.DeleteGroupAsync(group.Id);
+            if (StorageModeService.CurrentMode == StorageMode.Team)
+                await SignalRNotificationService.NotifyGroupChangedAsync(group.Id);
+            if (_tree != null)
+                await _tree.RefreshAsync();
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Fehler beim Löschen der Gruppe: {ex.Message}";
+        }
+    }
+
+    private async Task OnDeleteApplicationConfirmed(Application application)
+    {
+        _deleteTargetApplication = null;
+        try
+        {
+            await ApplicationRepository.DeleteApplicationAsync(application.Id);
+            if (StorageModeService.CurrentMode == StorageMode.Team)
+                await SignalRNotificationService.NotifyApplicationChangedAsync(application.Id);
+            _selectedApplicationId = null;
+            if (_tree != null)
+                await _tree.RefreshAsync();
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Fehler beim Löschen der Anwendung: {ex.Message}";
+        }
     }
 }

@@ -58,8 +58,7 @@ public class AppDbContext : DbContext
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
             entity.Property(e => e.BaseUrl).IsRequired().HasMaxLength(500);
-            entity.Property(e => e.SwaggerUrl).HasMaxLength(500);
-            entity.Property(e => e.MetadataUrl).HasMaxLength(500);
+            entity.Property(e => e.InterfaceUrl).HasMaxLength(500);
             entity.Property(e => e.Owner).HasMaxLength(256);
             entity.Property(e => e.RowVersion).IsConcurrencyToken();
             entity.HasMany(e => e.Endpoints)

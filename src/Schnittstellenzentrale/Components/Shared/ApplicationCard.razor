@@ -9,11 +9,11 @@
         <div class="card-header d-flex justify-content-between align-items-center">
             <h5 class="mb-0">@_application.Name</h5>
             <div class="btn-group">
-                @if (!string.IsNullOrEmpty(_application.SwaggerUrl))
+                @if (_application.InterfaceType == Core.Enums.InterfaceType.Rest)
                 {
                     <button class="btn btn-sm btn-outline-primary" @onclick="OpenSwaggerImport">Swagger-Import</button>
                 }
-                @if (!string.IsNullOrEmpty(_application.MetadataUrl))
+                @if (_application.InterfaceType == Core.Enums.InterfaceType.OData)
                 {
                     <button class="btn btn-sm btn-outline-secondary" @onclick="OpenODataImport">OData-Import</button>
                 }
@@ -23,13 +23,14 @@
         <div class="card-body">
             <p>@_application.Description</p>
             <p><strong>Basis-URL:</strong> @_application.BaseUrl</p>
-            @if (!string.IsNullOrEmpty(_application.SwaggerUrl))
+            @if (!string.IsNullOrEmpty(_application.InterfaceUrl))
             {
-                <p><strong>Swagger-URL:</strong> @_application.SwaggerUrl</p>
-            }
-            @if (!string.IsNullOrEmpty(_application.MetadataUrl))
-            {
-                <p><strong>Metadata-URL:</strong> @_application.MetadataUrl</p>
+                <p>
+                    <strong>
+                        @(_application.InterfaceType == Core.Enums.InterfaceType.OData ? "Metadaten-URL:" : "Swagger-URL:")
+                    </strong>
+                    @_application.InterfaceUrl
+                </p>
             }
             <EndpointList ApplicationId="_application.Id" />
         </div>

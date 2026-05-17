@@ -1,70 +1,101 @@
 @inject IApplicationRepository ApplicationRepository
 @inject IStorageModeService StorageModeService
 @inject ICurrentUserService CurrentUserService
-@inject NavigationManager NavigationManager
+@inject ISignalRNotificationService SignalRNotificationService
 @implements IDisposable
 
 <div class="application-group-tree">
+    @if (!string.IsNullOrEmpty(_errorMessage))
+    {
+        <div class="alert alert-danger mt-2">@_errorMessage</div>
+    }
+
     <div class="d-flex gap-2 mb-2">
-        <button type="button" class="btn btn-outline-primary btn-sm" @onclick="ShowGroupEditor">Neue Gruppe</button>
-        <button type="button" class="btn btn-outline-primary btn-sm" @onclick="ShowApplicationEditor">Neue Anwendung</button>
+        <button type="button" class="btn btn-outline-primary btn-sm" @onclick="RequestCreateGroup">Neue Gruppe</button>
+        <button type="button" class="btn btn-outline-primary btn-sm" @onclick="RequestCreateApplication">Neue Anwendung</button>
     </div>
-
-    @if (_showGroupEditor)
-    {
-        <ApplicationGroupEditor OnSaved="OnGroupSaved" OnCancel="OnEditorCancelled" />
-    }
-
-    @if (_showApplicationEditor)
-    {
-        <ApplicationEditor OnSaved="OnApplicationSaved" OnCancel="OnEditorCancelled" />
-    }
 
     @if (_groups != null)
     {
         @foreach (var group in _groups)
         {
-            <CollapsibleSection Title="@group.Name">
-                @foreach (var app in group.Applications)
-                {
-                    <div class="tree-leaf">
-                        <button class="btn btn-link" @onclick="() => SelectApplication(app.Id)">
-                            @app.Name
-                        </button>
-                    </div>
-                }
-            </CollapsibleSection>
+            <div @key="group.Id"
+                 class="@(_dropTargetGroupId == group.Id ? "drag-over" : "")"
+                 @ondragenter="() => OnDragEnter(group.Id)"
+                 @ondragleave="OnDragLeave">
+                <CollapsibleSection Title="@group.Name" IsDropTarget="true" OnDrop="() => OnDrop(group.Id)">
+                    <TitleActions>
+                        <ApplicationGroupContextMenu Group="group" OnRenameRequested="RequestRenameGroup" OnDeleteRequested="RequestDeleteGroup" />
+                    </TitleActions>
+                    <ChildContent>
+                        @foreach (var app in group.Applications)
+                        {
+                            <div class="tree-leaf" draggable="true" @ondragstart="() => OnDragStart(app)" @ondragover:preventDefault="true">
+                                <button class="btn btn-link" @onclick="() => SelectApplication(app.Id)">
+                                    @app.Name
+                                </button>
+                                <ApplicationContextMenu Application="app" OnEditRequested="RequestEditApplication" OnRemoveFromGroupRequested="OnRemoveFromGroupRequested" OnDeleteRequested="RequestDeleteApplication" />
+                            </div>
+                        }
+                    </ChildContent>
+                </CollapsibleSection>
+            </div>
         }
     }
     @if (_ungroupedApplications != null && _ungroupedApplications.Any())
     {
-        <CollapsibleSection Title="Ohne Gruppe">
-            @foreach (var app in _ungroupedApplications)
-            {
-                <div class="tree-leaf">
-                    <button class="btn btn-link" @onclick="() => SelectApplication(app.Id)">
-                        @app.Name
-                    </button>
-                </div>
-            }
-        </CollapsibleSection>
+        <div class="@(_dropTargetIsUngrouped ? "drag-over" : "")"
+             @ondragenter="OnDragEnterUngrouped"
+             @ondragleave="OnDragLeaveUngrouped">
+            <CollapsibleSection Title="Ohne Gruppe" IsDropTarget="true" OnDrop="() => OnDrop(null)">
+                <ChildContent>
+                    @foreach (var app in _ungroupedApplications)
+                    {
+                        <div class="tree-leaf" draggable="true" @ondragstart="() => OnDragStart(app)" @ondragover:preventDefault="true">
+                            <button class="btn btn-link" @onclick="() => SelectApplication(app.Id)">
+                                @app.Name
+                            </button>
+                            <ApplicationContextMenu Application="app" OnEditRequested="RequestEditApplication" OnRemoveFromGroupRequested="OnRemoveFromGroupRequested" OnDeleteRequested="RequestDeleteApplication" />
+                        </div>
+                    }
+                </ChildContent>
+            </CollapsibleSection>
+        </div>
     }
 </div>
 
 @code {
     [Parameter] public EventCallback<int> OnApplicationSelected { get; set; }
+    [Parameter] public EventCallback OnSelectionCleared { get; set; }
+    [Parameter] public EventCallback OnCreateGroupRequested { get; set; }
+    [Parameter] public EventCallback OnCreateApplicationRequested { get; set; }
+    [Parameter] public EventCallback<Application> OnEditApplicationRequested { get; set; }
+    [Parameter] public EventCallback<ApplicationGroup> OnRenameGroupRequested { get; set; }
+    [Parameter] public EventCallback<ApplicationGroup> OnDeleteGroupRequested { get; set; }
+    [Parameter] public EventCallback<Application> OnDeleteApplicationRequested { get; set; }
 
     private IList<ApplicationGroup>? _groups;
     private IList<Application>? _ungroupedApplications;
     private string _owner = string.Empty;
-    private bool _showGroupEditor;
-    private bool _showApplicationEditor;
+
+    private Application? _draggedApplication;
+    private int? _dropTargetGroupId;
+    private int _dragEnterCount;
+    private bool _dropTargetIsUngrouped;
+    private int _dragEnterCountUngrouped;
+    private string? _errorMessage;
 
     protected override async Task OnInitializedAsync()
     {
         StorageModeService.OnModeChanged += OnModeChanged;
         _owner = CurrentUserService.GetCurrentUserName();
         await LoadDataAsync();
+    }
+
+    public async Task RefreshAsync()
+    {
+        await LoadDataAsync();
+        StateHasChanged();
     }
 
     private async Task LoadDataAsync()
@@ -84,11 +115,20 @@
         {
             try
             {
+                _draggedApplication = null;
+                _dropTargetGroupId = null;
+                _dropTargetIsUngrouped = false;
+                _dragEnterCount = 0;
+                _dragEnterCountUngrouped = 0;
+                _errorMessage = null;
+
                 await LoadDataAsync();
+                await OnSelectionCleared.InvokeAsync();
                 StateHasChanged();
             }
-            catch
+            catch (Exception ex)
             {
+                _errorMessage = $"Fehler beim Laden der Daten: {ex.Message}";
                 StateHasChanged();
             }
         });
@@ -99,35 +139,110 @@
         StorageModeService.OnModeChanged -= OnModeChanged;
     }
 
-    private void ShowGroupEditor()
+    private async Task RequestCreateGroup() => await OnCreateGroupRequested.InvokeAsync();
+    private async Task RequestCreateApplication() => await OnCreateApplicationRequested.InvokeAsync();
+    private async Task RequestEditApplication(Application app) => await OnEditApplicationRequested.InvokeAsync(app);
+    private async Task RequestRenameGroup(ApplicationGroup group) => await OnRenameGroupRequested.InvokeAsync(group);
+    private async Task RequestDeleteGroup(ApplicationGroup group) => await OnDeleteGroupRequested.InvokeAsync(group);
+    private async Task RequestDeleteApplication(Application app) => await OnDeleteApplicationRequested.InvokeAsync(app);
+
+    private async Task OnRemoveFromGroupRequested(Application application)
     {
-        _showGroupEditor = true;
-        _showApplicationEditor = false;
+        try
+        {
+            var previousGroupId = application.ApplicationGroupId;
+            application.ApplicationGroupId = null;
+            try
+            {
+                await ApplicationRepository.UpdateApplicationAsync(application);
+            }
+            catch
+            {
+                application.ApplicationGroupId = previousGroupId;
+                throw;
+            }
+            if (StorageModeService.CurrentMode == StorageMode.Team)
+                await SignalRNotificationService.NotifyApplicationChangedAsync(application.Id);
+            await LoadDataAsync();
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Fehler beim Entfernen aus der Gruppe: {ex.Message}";
+            StateHasChanged();
+        }
     }
 
-    private void ShowApplicationEditor()
+    private void OnDragStart(Application application)
     {
-        _showApplicationEditor = true;
-        _showGroupEditor = false;
+        _draggedApplication = application;
     }
 
-    private async Task OnGroupSaved()
+    private void OnDragEnter(int groupId)
     {
-        _showGroupEditor = false;
-        await LoadDataAsync();
-        StateHasChanged();
+        if (_dropTargetGroupId != groupId)
+        {
+            _dropTargetGroupId = groupId;
+            _dragEnterCount = 1;
+        }
+        else
+        {
+            _dragEnterCount++;
+        }
     }
 
-    private async Task OnApplicationSaved()
+    private void OnDragLeave()
     {
-        _showApplicationEditor = false;
-        await LoadDataAsync();
-        StateHasChanged();
+        _dragEnterCount--;
+        if (_dragEnterCount <= 0)
+        {
+            _dropTargetGroupId = null;
+            _dragEnterCount = 0;
+        }
     }
 
-    private void OnEditorCancelled()
+    private void OnDragEnterUngrouped()
     {
-        _showGroupEditor = false;
-        _showApplicationEditor = false;
+        _dragEnterCountUngrouped++;
+        _dropTargetIsUngrouped = true;
+    }
+
+    private void OnDragLeaveUngrouped()
+    {
+        _dragEnterCountUngrouped--;
+        if (_dragEnterCountUngrouped <= 0)
+        {
+            _dropTargetIsUngrouped = false;
+            _dragEnterCountUngrouped = 0;
+        }
+    }
+
+    private async Task OnDrop(int? targetGroupId)
+    {
+        if (_draggedApplication == null)
+            return;
+
+        var previousGroupId = _draggedApplication.ApplicationGroupId;
+        _draggedApplication.ApplicationGroupId = targetGroupId;
+        try
+        {
+            await ApplicationRepository.UpdateApplicationAsync(_draggedApplication);
+            if (StorageModeService.CurrentMode == StorageMode.Team)
+                await SignalRNotificationService.NotifyApplicationChangedAsync(_draggedApplication.Id);
+            _draggedApplication = null;
+            _dropTargetGroupId = null;
+            _dropTargetIsUngrouped = false;
+            _dragEnterCountUngrouped = 0;
+            await LoadDataAsync();
+        }
+        catch (Exception ex)
+        {
+            if (_draggedApplication != null)
+                _draggedApplication.ApplicationGroupId = previousGroupId;
+            _draggedApplication = null;
+            _dropTargetGroupId = null;
+            _dropTargetIsUngrouped = false;
+            _dragEnterCountUngrouped = 0;
+            _errorMessage = $"Fehler beim Verschieben der Anwendung: {ex.Message}";
+        }
     }
 }

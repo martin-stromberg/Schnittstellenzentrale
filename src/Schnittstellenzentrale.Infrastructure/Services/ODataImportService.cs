@@ -22,14 +22,14 @@ public class ODataImportService : IODataImportService
 
     public async Task<ImportDiff> ImportAsync(Core.Models.Application application)
     {
-        if (string.IsNullOrEmpty(application.MetadataUrl))
+        if (string.IsNullOrEmpty(application.InterfaceUrl))
             return new ImportDiff();
 
         string xmlContent;
         try
         {
             var client = _httpClientFactory.CreateClient();
-            xmlContent = await client.GetStringAsync(application.MetadataUrl);
+            xmlContent = await client.GetStringAsync(application.InterfaceUrl);
         }
         catch (HttpRequestException ex)
         {
