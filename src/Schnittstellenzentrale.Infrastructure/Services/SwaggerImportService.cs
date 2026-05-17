@@ -20,14 +20,14 @@ public class SwaggerImportService : ISwaggerImportService
 
     public async Task<ImportDiff> ImportAsync(Core.Models.Application application)
     {
-        if (string.IsNullOrEmpty(application.SwaggerUrl))
+        if (string.IsNullOrEmpty(application.InterfaceUrl))
             return new ImportDiff();
 
         Stream? fetchedStream;
         try
         {
             var client = _httpClientFactory.CreateClient();
-            fetchedStream = await client.GetStreamAsync(application.SwaggerUrl);
+            fetchedStream = await client.GetStreamAsync(application.InterfaceUrl);
         }
         catch (HttpRequestException ex)
         {

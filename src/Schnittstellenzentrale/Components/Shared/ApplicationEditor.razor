@@ -1,3 +1,4 @@
+@using Schnittstellenzentrale.Core.Enums
 @inject IApplicationRepository ApplicationRepository
 @inject ISignalRNotificationService SignalRNotificationService
 @inject IStorageModeService StorageModeService
@@ -25,13 +26,25 @@
         </div>
 
         <div class="mb-3">
-            <label class="form-label">Swagger-URL</label>
-            <InputText class="form-control" @bind-Value="_model.SwaggerUrl" />
-        </div>
-
-        <div class="mb-3">
-            <label class="form-label">Metadaten-URL</label>
-            <InputText class="form-control" @bind-Value="_model.MetadataUrl" />
+            <label class="form-label">Schnittstellen-URL</label>
+            <input type="text" class="form-control" value="@_model.InterfaceUrl" @oninput="OnInterfaceUrlChanged" />
+            @if (!string.IsNullOrEmpty(_model.InterfaceUrl))
+            {
+                <div class="mt-1">
+                    @switch (_model.InterfaceType)
+                    {
+                        case InterfaceType.Rest:
+                            <span class="badge bg-primary">REST (Swagger/OpenAPI)</span>
+                            break;
+                        case InterfaceType.OData:
+                            <span class="badge bg-secondary">OData</span>
+                            break;
+                        default:
+                            <span class="badge bg-warning text-dark">Typ nicht erkannt</span>
+                            break;
+                    }
+                </div>
+            }
         </div>
 
         <div class="mb-3">
@@ -83,6 +96,12 @@
             _isEditMode = true;
             _model = ExistingApplication.Clone();
         }
+    }
+
+    private void OnInterfaceUrlChanged(ChangeEventArgs e)
+    {
+        _model.InterfaceUrl = e.Value?.ToString();
+        _model.InterfaceType = Application.DetectInterfaceType(_model.InterfaceUrl);
     }
 
     private async Task SaveAsync()
