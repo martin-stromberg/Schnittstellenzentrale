@@ -1,26 +1,35 @@
-#pragma warning disable CS1591
 using Microsoft.EntityFrameworkCore;
 using Schnittstellenzentrale.Core.Models;
 
 namespace Schnittstellenzentrale.Infrastructure.Data;
 
+/// <summary>Entity Framework Core-Datenbankkontext der Anwendung.</summary>
 public class AppDbContext : DbContext
 {
+    /// <summary>Initialisiert eine neue Instanz von <see cref="AppDbContext"/>.</summary>
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
+    /// <summary>Anwendungsgruppen.</summary>
     public DbSet<ApplicationGroup> ApplicationGroups => Set<ApplicationGroup>();
+    /// <summary>Anwendungen.</summary>
     public DbSet<Core.Models.Application> Applications => Set<Core.Models.Application>();
+    /// <summary>Endpunktgruppen.</summary>
     public DbSet<EndpointGroup> EndpointGroups => Set<EndpointGroup>();
+    /// <summary>Endpunkte.</summary>
     public DbSet<Core.Models.Endpoint> Endpoints => Set<Core.Models.Endpoint>();
+    /// <summary>Endpunkt-Header.</summary>
     public DbSet<EndpointHeader> EndpointHeaders => Set<EndpointHeader>();
+    /// <summary>Endpunkt-Abfrageparameter.</summary>
     public DbSet<EndpointQueryParameter> EndpointQueryParameters => Set<EndpointQueryParameter>();
 
+    /// <inheritdoc/>
     public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
         UpdateRowVersions();
         return base.SaveChangesAsync(cancellationToken);
     }
 
+    /// <inheritdoc/>
     public override int SaveChanges(bool acceptAllChangesOnSuccess)
     {
         UpdateRowVersions();
@@ -39,6 +48,7 @@ public class AppDbContext : DbContext
         }
     }
 
+    /// <inheritdoc/>
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -47,6 +57,7 @@ public class AppDbContext : DbContext
         {
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.IsSystem).HasDefaultValue(false);
             entity.Property(e => e.RowVersion).IsConcurrencyToken();
             entity.HasMany(e => e.Applications)
                   .WithOne(a => a.ApplicationGroup)
@@ -58,6 +69,7 @@ public class AppDbContext : DbContext
         {
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.IsSystem).HasDefaultValue(false);
             entity.Property(e => e.BaseUrl).IsRequired().HasMaxLength(500);
             entity.Property(e => e.InterfaceUrl).HasMaxLength(500);
             entity.Property(e => e.Owner).HasMaxLength(256);

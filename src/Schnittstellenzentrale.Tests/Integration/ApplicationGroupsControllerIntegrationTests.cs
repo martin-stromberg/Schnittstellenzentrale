@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using Microsoft.Extensions.DependencyInjection;
 using Schnittstellenzentrale.Core.Contracts;
 using Schnittstellenzentrale.Core.Interfaces;
+using Schnittstellenzentrale.Core.Models;
 using Schnittstellenzentrale.Tests.Helpers;
 
 namespace Schnittstellenzentrale.Tests.Integration;
@@ -16,19 +17,11 @@ public class ApplicationGroupsControllerIntegrationTests : IClassFixture<Control
         _factory = factory;
     }
 
-    private async Task<string> ObtainTokenAsync(HttpClient client)
-    {
-        var response = await client.PostAsync("/authenticate", null);
-        response.EnsureSuccessStatusCode();
-        var body = await response.Content.ReadFromJsonAsync<AuthenticateResponse>();
-        return body!.Token;
-    }
-
     [Fact]
     public async Task PostApplicationGroup_WithValidTokenAndRequest_Returns201AndLocation()
     {
         var client = _factory.CreateClient();
-        var token = await ObtainTokenAsync(client);
+        var token = await _factory.ObtainTokenAsync(client);
 
         var request = new HttpRequestMessage(HttpMethod.Post, "/api/application-groups");
         request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
@@ -85,7 +78,7 @@ public class ApplicationGroupsControllerIntegrationTests : IClassFixture<Control
     public async Task PostApplicationGroup_WithMissingName_Returns400()
     {
         var client = _factory.CreateClient();
-        var token = await ObtainTokenAsync(client);
+        var token = await _factory.ObtainTokenAsync(client);
 
         var request = new HttpRequestMessage(HttpMethod.Post, "/api/application-groups");
         request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
@@ -101,7 +94,7 @@ public class ApplicationGroupsControllerIntegrationTests : IClassFixture<Control
     public async Task PostApplicationGroup_Returns_NewTokenHeader()
     {
         var client = _factory.CreateClient();
-        var originalToken = await ObtainTokenAsync(client);
+        var originalToken = await _factory.ObtainTokenAsync(client);
 
         var request = new HttpRequestMessage(HttpMethod.Post, "/api/application-groups");
         request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", originalToken);
@@ -120,7 +113,7 @@ public class ApplicationGroupsControllerIntegrationTests : IClassFixture<Control
     public async Task PostApplicationGroup_AfterRotation_OldTokenIsUnauthorized()
     {
         var client = _factory.CreateClient();
-        var originalToken = await ObtainTokenAsync(client);
+        var originalToken = await _factory.ObtainTokenAsync(client);
 
         var request = new HttpRequestMessage(HttpMethod.Post, "/api/application-groups");
         request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", originalToken);
@@ -143,7 +136,7 @@ public class ApplicationGroupsControllerIntegrationTests : IClassFixture<Control
     public async Task PostApplicationGroup_AfterRotation_NewTokenIsValid()
     {
         var client = _factory.CreateClient();
-        var originalToken = await ObtainTokenAsync(client);
+        var originalToken = await _factory.ObtainTokenAsync(client);
 
         var request = new HttpRequestMessage(HttpMethod.Post, "/api/application-groups");
         request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", originalToken);
@@ -168,7 +161,7 @@ public class ApplicationGroupsControllerIntegrationTests : IClassFixture<Control
     public async Task GetApplicationGroups_WithValidToken_Returns200WithList()
     {
         var client = _factory.CreateClient();
-        var token = await ObtainTokenAsync(client);
+        var token = await _factory.ObtainTokenAsync(client);
 
         var postRequest = new HttpRequestMessage(HttpMethod.Post, "/api/application-groups");
         postRequest.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
@@ -212,7 +205,7 @@ public class ApplicationGroupsControllerIntegrationTests : IClassFixture<Control
     public async Task GetApplicationGroupById_WithValidId_Returns200()
     {
         var client = _factory.CreateClient();
-        var token = await ObtainTokenAsync(client);
+        var token = await _factory.ObtainTokenAsync(client);
 
         var postRequest = new HttpRequestMessage(HttpMethod.Post, "/api/application-groups");
         postRequest.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
@@ -242,7 +235,7 @@ public class ApplicationGroupsControllerIntegrationTests : IClassFixture<Control
     public async Task GetApplicationGroupById_WithInvalidId_Returns404()
     {
         var client = _factory.CreateClient();
-        var token = await ObtainTokenAsync(client);
+        var token = await _factory.ObtainTokenAsync(client);
 
         var getRequest = new HttpRequestMessage(HttpMethod.Get, "/api/application-groups/999999");
         getRequest.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
@@ -256,7 +249,7 @@ public class ApplicationGroupsControllerIntegrationTests : IClassFixture<Control
     public async Task PutApplicationGroup_WithValidRequest_Returns200AndRotatesToken()
     {
         var client = _factory.CreateClient();
-        var token = await ObtainTokenAsync(client);
+        var token = await _factory.ObtainTokenAsync(client);
 
         var postRequest = new HttpRequestMessage(HttpMethod.Post, "/api/application-groups");
         postRequest.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
@@ -287,7 +280,7 @@ public class ApplicationGroupsControllerIntegrationTests : IClassFixture<Control
     public async Task PutApplicationGroup_WithInvalidId_Returns404()
     {
         var client = _factory.CreateClient();
-        var token = await ObtainTokenAsync(client);
+        var token = await _factory.ObtainTokenAsync(client);
 
         var putRequest = new HttpRequestMessage(HttpMethod.Put, "/api/application-groups/999999");
         putRequest.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
@@ -303,7 +296,7 @@ public class ApplicationGroupsControllerIntegrationTests : IClassFixture<Control
     public async Task PutApplicationGroup_WithMissingName_Returns400()
     {
         var client = _factory.CreateClient();
-        var token = await ObtainTokenAsync(client);
+        var token = await _factory.ObtainTokenAsync(client);
 
         var postRequest = new HttpRequestMessage(HttpMethod.Post, "/api/application-groups");
         postRequest.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
@@ -329,7 +322,7 @@ public class ApplicationGroupsControllerIntegrationTests : IClassFixture<Control
     public async Task DeleteApplicationGroup_WithValidId_Returns204AndRotatesToken()
     {
         var client = _factory.CreateClient();
-        var token = await ObtainTokenAsync(client);
+        var token = await _factory.ObtainTokenAsync(client);
 
         var postRequest = new HttpRequestMessage(HttpMethod.Post, "/api/application-groups");
         postRequest.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
@@ -355,7 +348,7 @@ public class ApplicationGroupsControllerIntegrationTests : IClassFixture<Control
     public async Task DeleteApplicationGroup_WithInvalidId_Returns404()
     {
         var client = _factory.CreateClient();
-        var token = await ObtainTokenAsync(client);
+        var token = await _factory.ObtainTokenAsync(client);
 
         var deleteRequest = new HttpRequestMessage(HttpMethod.Delete, "/api/application-groups/999999");
         deleteRequest.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
@@ -364,5 +357,50 @@ public class ApplicationGroupsControllerIntegrationTests : IClassFixture<Control
         var deleteResponse = await client.SendAsync(deleteRequest);
 
         Assert.Equal(HttpStatusCode.NotFound, deleteResponse.StatusCode);
+    }
+
+    [Fact]
+    public async Task DeleteApplicationGroup_WithSystemGroup_Returns403()
+    {
+        var client = _factory.CreateClient();
+        var token = await _factory.ObtainTokenAsync(client);
+
+        var repo = _factory.Services.GetRequiredService<IApplicationRepository>();
+        var systemGroup = await repo.AddGroupAsync(new ApplicationGroup
+        {
+            Name = "Schnittstellenzentrale",
+            IsSystem = true
+        });
+
+        var deleteRequest = new HttpRequestMessage(HttpMethod.Delete, $"/api/application-groups/{systemGroup.Id}");
+        deleteRequest.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+        deleteRequest.Headers.Add("X-Storage-Mode", "Team");
+
+        var deleteResponse = await client.SendAsync(deleteRequest);
+
+        Assert.Equal(HttpStatusCode.Forbidden, deleteResponse.StatusCode);
+    }
+
+    [Fact]
+    public async Task PutApplicationGroup_WithSystemGroup_Returns403()
+    {
+        var client = _factory.CreateClient();
+        var token = await _factory.ObtainTokenAsync(client);
+
+        var repo = _factory.Services.GetRequiredService<IApplicationRepository>();
+        var systemGroup = await repo.AddGroupAsync(new ApplicationGroup
+        {
+            Name = "Schnittstellenzentrale",
+            IsSystem = true
+        });
+
+        var putRequest = new HttpRequestMessage(HttpMethod.Put, $"/api/application-groups/{systemGroup.Id}");
+        putRequest.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+        putRequest.Headers.Add("X-Storage-Mode", "Team");
+        putRequest.Content = JsonContent.Create(new UpdateApplicationGroupRequest { Name = "NeuerName" });
+
+        var putResponse = await client.SendAsync(putRequest);
+
+        Assert.Equal(HttpStatusCode.Forbidden, putResponse.StatusCode);
     }
 }

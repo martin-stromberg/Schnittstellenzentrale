@@ -1,7 +1,10 @@
 using System.Net;
 using System.Net.Http.Json;
+using Microsoft.Extensions.DependencyInjection;
 using Schnittstellenzentrale.Core.Contracts;
 using Schnittstellenzentrale.Core.Enums;
+using Schnittstellenzentrale.Core.Interfaces;
+using Schnittstellenzentrale.Core.Models;
 using Schnittstellenzentrale.Tests.Helpers;
 using HttpMethod = System.Net.Http.HttpMethod;
 
@@ -16,19 +19,11 @@ public class ApplicationsControllerIntegrationTests : IClassFixture<ControllerTe
         _factory = factory;
     }
 
-    private async Task<string> ObtainTokenAsync(HttpClient client)
-    {
-        var response = await client.PostAsync("/authenticate", null);
-        response.EnsureSuccessStatusCode();
-        var body = await response.Content.ReadFromJsonAsync<AuthenticateResponse>();
-        return body!.Token;
-    }
-
     [Fact]
     public async Task PostApplication_WithValidTokenAndRequest_Returns201AndLocation()
     {
         var client = _factory.CreateClient();
-        var token = await ObtainTokenAsync(client);
+        var token = await _factory.ObtainTokenAsync(client);
 
         var request = new HttpRequestMessage(HttpMethod.Post, "/api/applications");
         request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
@@ -73,7 +68,7 @@ public class ApplicationsControllerIntegrationTests : IClassFixture<ControllerTe
     public async Task PostApplication_WithMissingName_Returns400()
     {
         var client = _factory.CreateClient();
-        var token = await ObtainTokenAsync(client);
+        var token = await _factory.ObtainTokenAsync(client);
 
         var request = new HttpRequestMessage(HttpMethod.Post, "/api/applications");
         request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
@@ -93,7 +88,7 @@ public class ApplicationsControllerIntegrationTests : IClassFixture<ControllerTe
     public async Task PostApplication_WithMissingBaseUrl_Returns400()
     {
         var client = _factory.CreateClient();
-        var token = await ObtainTokenAsync(client);
+        var token = await _factory.ObtainTokenAsync(client);
 
         var request = new HttpRequestMessage(HttpMethod.Post, "/api/applications");
         request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
@@ -113,7 +108,7 @@ public class ApplicationsControllerIntegrationTests : IClassFixture<ControllerTe
     public async Task GetApplications_WithValidToken_Returns200WithList()
     {
         var client = _factory.CreateClient();
-        var token = await ObtainTokenAsync(client);
+        var token = await _factory.ObtainTokenAsync(client);
 
         var postRequest = new HttpRequestMessage(HttpMethod.Post, "/api/applications");
         postRequest.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
@@ -160,7 +155,7 @@ public class ApplicationsControllerIntegrationTests : IClassFixture<ControllerTe
     public async Task GetUngroupedApplications_WithValidToken_Returns200WithList()
     {
         var client = _factory.CreateClient();
-        var token = await ObtainTokenAsync(client);
+        var token = await _factory.ObtainTokenAsync(client);
 
         var postRequest = new HttpRequestMessage(HttpMethod.Post, "/api/applications");
         postRequest.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
@@ -194,7 +189,7 @@ public class ApplicationsControllerIntegrationTests : IClassFixture<ControllerTe
     public async Task GetApplicationById_WithValidId_Returns200WithAllFields()
     {
         var client = _factory.CreateClient();
-        var token = await ObtainTokenAsync(client);
+        var token = await _factory.ObtainTokenAsync(client);
 
         var postRequest = new HttpRequestMessage(HttpMethod.Post, "/api/applications");
         postRequest.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
@@ -236,7 +231,7 @@ public class ApplicationsControllerIntegrationTests : IClassFixture<ControllerTe
     public async Task GetApplicationById_WithInvalidId_Returns404()
     {
         var client = _factory.CreateClient();
-        var token = await ObtainTokenAsync(client);
+        var token = await _factory.ObtainTokenAsync(client);
 
         var getRequest = new HttpRequestMessage(HttpMethod.Get, "/api/applications/999999");
         getRequest.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
@@ -250,7 +245,7 @@ public class ApplicationsControllerIntegrationTests : IClassFixture<ControllerTe
     public async Task PutApplication_WithValidRequest_Returns200AndRotatesToken()
     {
         var client = _factory.CreateClient();
-        var token = await ObtainTokenAsync(client);
+        var token = await _factory.ObtainTokenAsync(client);
 
         var postRequest = new HttpRequestMessage(HttpMethod.Post, "/api/applications");
         postRequest.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
@@ -292,7 +287,7 @@ public class ApplicationsControllerIntegrationTests : IClassFixture<ControllerTe
     public async Task PutApplication_WithInvalidId_Returns404()
     {
         var client = _factory.CreateClient();
-        var token = await ObtainTokenAsync(client);
+        var token = await _factory.ObtainTokenAsync(client);
 
         var putRequest = new HttpRequestMessage(HttpMethod.Put, "/api/applications/999999");
         putRequest.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
@@ -312,7 +307,7 @@ public class ApplicationsControllerIntegrationTests : IClassFixture<ControllerTe
     public async Task PutApplication_WithMissingBaseUrl_Returns400()
     {
         var client = _factory.CreateClient();
-        var token = await ObtainTokenAsync(client);
+        var token = await _factory.ObtainTokenAsync(client);
 
         var postRequest = new HttpRequestMessage(HttpMethod.Post, "/api/applications");
         postRequest.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
@@ -346,7 +341,7 @@ public class ApplicationsControllerIntegrationTests : IClassFixture<ControllerTe
     public async Task DeleteApplication_WithValidId_Returns204AndRotatesToken()
     {
         var client = _factory.CreateClient();
-        var token = await ObtainTokenAsync(client);
+        var token = await _factory.ObtainTokenAsync(client);
 
         var postRequest = new HttpRequestMessage(HttpMethod.Post, "/api/applications");
         postRequest.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
@@ -376,7 +371,7 @@ public class ApplicationsControllerIntegrationTests : IClassFixture<ControllerTe
     public async Task DeleteApplication_WithInvalidId_Returns404()
     {
         var client = _factory.CreateClient();
-        var token = await ObtainTokenAsync(client);
+        var token = await _factory.ObtainTokenAsync(client);
 
         var deleteRequest = new HttpRequestMessage(HttpMethod.Delete, "/api/applications/999999");
         deleteRequest.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
@@ -385,5 +380,56 @@ public class ApplicationsControllerIntegrationTests : IClassFixture<ControllerTe
         var deleteResponse = await client.SendAsync(deleteRequest);
 
         Assert.Equal(HttpStatusCode.NotFound, deleteResponse.StatusCode);
+    }
+
+    [Fact]
+    public async Task DeleteApplication_WithSystemApplication_Returns403()
+    {
+        var client = _factory.CreateClient();
+        var token = await _factory.ObtainTokenAsync(client);
+
+        var repo = _factory.Services.GetRequiredService<IApplicationRepository>();
+        var systemApp = await repo.AddApplicationAsync(new Application
+        {
+            Name = "Schnittstellenzentrale",
+            IsSystem = true,
+            BaseUrl = "https://localhost:5001"
+        });
+
+        var deleteRequest = new HttpRequestMessage(HttpMethod.Delete, $"/api/applications/{systemApp.Id}");
+        deleteRequest.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+        deleteRequest.Headers.Add("X-Storage-Mode", "Team");
+
+        var deleteResponse = await client.SendAsync(deleteRequest);
+
+        Assert.Equal(HttpStatusCode.Forbidden, deleteResponse.StatusCode);
+    }
+
+    [Fact]
+    public async Task PutApplication_WithSystemApplication_Returns403()
+    {
+        var client = _factory.CreateClient();
+        var token = await _factory.ObtainTokenAsync(client);
+
+        var repo = _factory.Services.GetRequiredService<IApplicationRepository>();
+        var systemApp = await repo.AddApplicationAsync(new Application
+        {
+            Name = "Schnittstellenzentrale",
+            IsSystem = true,
+            BaseUrl = "https://localhost:5001"
+        });
+
+        var putRequest = new HttpRequestMessage(HttpMethod.Put, $"/api/applications/{systemApp.Id}");
+        putRequest.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+        putRequest.Headers.Add("X-Storage-Mode", "Team");
+        putRequest.Content = JsonContent.Create(new UpdateApplicationRequest
+        {
+            Name = "NeuerName",
+            BaseUrl = "https://localhost:5001"
+        });
+
+        var putResponse = await client.SendAsync(putRequest);
+
+        Assert.Equal(HttpStatusCode.Forbidden, putResponse.StatusCode);
     }
 }

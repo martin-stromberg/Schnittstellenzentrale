@@ -7,6 +7,7 @@ public interface IApplicationRepository
 {
     Task<IList<ApplicationGroup>> GetGroupsAsync(StorageMode storageMode, string owner);
     Task<ApplicationGroup?> GetGroupByIdAsync(int id);
+    Task<ApplicationGroup?> GetSystemGroupAsync();
     Task<ApplicationGroup> AddGroupAsync(ApplicationGroup group);
     Task<ApplicationGroup> UpdateGroupAsync(ApplicationGroup group);
     Task DeleteGroupAsync(int id);

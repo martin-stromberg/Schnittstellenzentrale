@@ -1,4 +1,3 @@
-#pragma warning disable CS1591
 using Microsoft.EntityFrameworkCore;
 using Schnittstellenzentrale.Core.Enums;
 using Schnittstellenzentrale.Core.Interfaces;
@@ -7,15 +6,18 @@ using Schnittstellenzentrale.Infrastructure.Data;
 
 namespace Schnittstellenzentrale.Infrastructure.Repositories;
 
+/// <summary>EF-Core-Implementierung von <see cref="IApplicationRepository"/>.</summary>
 public class ApplicationRepository : IApplicationRepository
 {
     private readonly AppDbContext _context;
 
+    /// <summary>Initialisiert eine neue Instanz von <see cref="ApplicationRepository"/>.</summary>
     public ApplicationRepository(AppDbContext context)
     {
         _context = context;
     }
 
+    /// <inheritdoc/>
     public async Task<IList<ApplicationGroup>> GetGroupsAsync(StorageMode storageMode, string owner)
     {
         var query = _context.ApplicationGroups.AsNoTracking().Include(g => g.Applications).AsQueryable();
@@ -32,6 +34,7 @@ public class ApplicationRepository : IApplicationRepository
         return await query.ToListAsync();
     }
 
+    /// <inheritdoc/>
     public async Task<ApplicationGroup?> GetGroupByIdAsync(int id)
     {
         return await _context.ApplicationGroups
@@ -40,6 +43,16 @@ public class ApplicationRepository : IApplicationRepository
             .FirstOrDefaultAsync(g => g.Id == id);
     }
 
+    /// <inheritdoc/>
+    public async Task<ApplicationGroup?> GetSystemGroupAsync()
+    {
+        return await _context.ApplicationGroups
+            .AsNoTracking()
+            .Include(g => g.Applications)
+            .FirstOrDefaultAsync(g => g.IsSystem);
+    }
+
+    /// <inheritdoc/>
     public async Task<ApplicationGroup> AddGroupAsync(ApplicationGroup group)
     {
         _context.ApplicationGroups.Add(group);
@@ -47,6 +60,7 @@ public class ApplicationRepository : IApplicationRepository
         return group;
     }
 
+    /// <inheritdoc/>
     public async Task<ApplicationGroup> UpdateGroupAsync(ApplicationGroup group)
     {
         var tracked = _context.ChangeTracker.Entries<ApplicationGroup>()
@@ -59,6 +73,7 @@ public class ApplicationRepository : IApplicationRepository
         return group;
     }
 
+    /// <inheritdoc/>
     public async Task DeleteGroupAsync(int id)
     {
         var group = await _context.ApplicationGroups.FindAsync(id);
@@ -69,6 +84,7 @@ public class ApplicationRepository : IApplicationRepository
         }
     }
 
+    /// <inheritdoc/>
     public async Task<IList<Core.Models.Application>> GetApplicationsAsync(StorageMode storageMode, string owner)
     {
         var query = ApplyOwnerFilter(
@@ -82,6 +98,7 @@ public class ApplicationRepository : IApplicationRepository
         return await query.ToListAsync();
     }
 
+    /// <inheritdoc/>
     public async Task<IList<Core.Models.Application>> GetUngroupedApplicationsAsync(StorageMode storageMode, string owner)
     {
         var query = ApplyOwnerFilter(
@@ -95,6 +112,7 @@ public class ApplicationRepository : IApplicationRepository
         return await query.ToListAsync();
     }
 
+    /// <inheritdoc/>
     public async Task<Core.Models.Application?> GetApplicationByIdAsync(int id)
     {
         return await _context.Applications
@@ -106,6 +124,7 @@ public class ApplicationRepository : IApplicationRepository
             .FirstOrDefaultAsync(a => a.Id == id);
     }
 
+    /// <inheritdoc/>
     public async Task<Core.Models.Application> AddApplicationAsync(Core.Models.Application application)
     {
         _context.Applications.Add(application);
@@ -113,6 +132,7 @@ public class ApplicationRepository : IApplicationRepository
         return application;
     }
 
+    /// <inheritdoc/>
     public async Task<Core.Models.Application> UpdateApplicationAsync(Core.Models.Application application)
     {
         var trackedApp = _context.ChangeTracker.Entries<Core.Models.Application>()
@@ -136,6 +156,7 @@ public class ApplicationRepository : IApplicationRepository
         return application;
     }
 
+    /// <inheritdoc/>
     public async Task DeleteApplicationAsync(int id)
     {
         var application = await _context.Applications.FindAsync(id);

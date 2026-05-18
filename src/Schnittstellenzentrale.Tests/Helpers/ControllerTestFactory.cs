@@ -1,3 +1,4 @@
+using System.Net.Http.Json;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -8,6 +9,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Moq;
+using Schnittstellenzentrale.Core.Contracts;
 using Schnittstellenzentrale.Core.Interfaces;
 using Schnittstellenzentrale.Infrastructure.Data;
 using Schnittstellenzentrale.Infrastructure.Repositories;
@@ -69,6 +71,14 @@ public class ControllerTestFactory : WebApplicationFactory<Program>
         db.Database.EnsureCreated();
 
         return host;
+    }
+
+    public async Task<string> ObtainTokenAsync(HttpClient client)
+    {
+        var response = await client.PostAsync("/authenticate", null);
+        response.EnsureSuccessStatusCode();
+        var body = await response.Content.ReadFromJsonAsync<AuthenticateResponse>();
+        return body!.Token;
     }
 
     protected override void Dispose(bool disposing)

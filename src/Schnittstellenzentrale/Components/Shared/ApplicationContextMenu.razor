@@ -4,7 +4,7 @@
     {
         <div class="context-menu-overlay" @onclick="() => _isOpen = false"></div>
         <div class="context-menu-dropdown">
-            <button type="button" class="context-menu-item" @onclick="EditRequested">
+            <button type="button" class="context-menu-item" @onclick="EditRequested" disabled="@(Application.IsSystem)">
                 <i class="bi bi-pencil"></i> Bearbeiten
             </button>
             @if (Application.ApplicationGroupId.HasValue)
@@ -13,7 +13,7 @@
                     <i class="bi bi-folder-minus"></i> Aus Gruppe entfernen
                 </button>
             }
-            <button type="button" class="context-menu-item context-menu-item--danger" @onclick="DeleteRequested">
+            <button type="button" class="context-menu-item context-menu-item--danger" @onclick="DeleteRequested" disabled="@(Application.IsSystem)">
                 <i class="bi bi-trash3"></i> Löschen
             </button>
         </div>

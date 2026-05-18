@@ -158,3 +158,13 @@ Lassen Sie die Maustaste über dem Zielbereich los.
 ## Moduswechsel (Team / Benutzer)
 
 Wenn Sie den Modus wechseln, werden alle geöffneten Dialoge und Formulare automatisch geschlossen und der Navigationsbaum mit den Daten des neuen Modus neu geladen. Der Detailbereich auf der rechten Seite wird ebenfalls ausgeblendet.
+
+---
+
+## Systemeinträge
+
+Die Gruppe und die Anwendung **„Schnittstellenzentrale"** werden beim Start automatisch angelegt und repräsentieren die eigene REST-API der Schnittstellenzentrale. Diese Einträge sind systemseitig verwaltet und können nicht verändert oder gelöscht werden.
+
+Im Zahnrad-Menü dieser Einträge sind die Schaltflächen **Umbenennen** / **Bearbeiten** und **Löschen** sichtbar, aber deaktiviert. Systemanwendungen lassen sich nicht per Drag & Drop verschieben.
+
+> **Hinweis:** Normale Anwendungen können weiterhin per Drag & Drop in die Systemgruppe hinein- oder herausbewegt werden.

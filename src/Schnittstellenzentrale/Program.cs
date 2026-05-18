@@ -1,5 +1,6 @@
 using Microsoft.OpenApi;
 using Serilog;
+using Schnittstellenzentrale;
 using Schnittstellenzentrale.Components;
 using Schnittstellenzentrale.Core.Interfaces;
 using Schnittstellenzentrale.Hubs;
@@ -75,6 +76,7 @@ builder.Services.AddHttpClient<IApplicationApiClient, ApplicationApiClient>();
 var app = builder.Build();
 
 await EnsureDatabaseInitializedAsync(app.Services);
+await SystemEntryInitializer.InitializeAsync(app.Services, builder.Configuration);
 
 if (!app.Environment.IsDevelopment())
 {
@@ -110,6 +112,5 @@ static async Task MigrateDatabaseAsync(AppDbContext dbContext)
     await dbContext.Database.MigrateAsync();
 }
 
-#pragma warning disable CS1591
+/// <summary>Einstiegspunkt der Anwendung (für Integrationstests als partielle Klasse zugänglich).</summary>
 public partial class Program { }
-#pragma warning restore CS1591
