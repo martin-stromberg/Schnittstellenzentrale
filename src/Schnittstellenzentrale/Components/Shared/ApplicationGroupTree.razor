@@ -1,7 +1,6 @@
-@inject IApplicationRepository ApplicationRepository
+@inject IApplicationApiClient ApplicationApiClient
 @inject IStorageModeService StorageModeService
 @inject ICurrentUserService CurrentUserService
-@inject ISignalRNotificationService SignalRNotificationService
 @implements IDisposable
 
 <div class="application-group-tree">
@@ -100,8 +99,16 @@
 
     private async Task LoadDataAsync()
     {
-        _groups = await ApplicationRepository.GetGroupsAsync(StorageModeService.CurrentMode, _owner);
-        _ungroupedApplications = await ApplicationRepository.GetUngroupedApplicationsAsync(StorageModeService.CurrentMode, _owner);
+        try
+        {
+            _errorMessage = null;
+            _groups = await ApplicationApiClient.GetGroupsAsync(StorageModeService.CurrentMode, _owner);
+            _ungroupedApplications = await ApplicationApiClient.GetUngroupedApplicationsAsync(StorageModeService.CurrentMode, _owner);
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Fehler beim Laden der Daten: {ex.Message}";
+        }
     }
 
     private async Task SelectApplication(int applicationId)
@@ -154,15 +161,13 @@
             application.ApplicationGroupId = null;
             try
             {
-                await ApplicationRepository.UpdateApplicationAsync(application);
+                await ApplicationApiClient.UpdateApplicationAsync(application);
             }
             catch
             {
                 application.ApplicationGroupId = previousGroupId;
                 throw;
             }
-            if (StorageModeService.CurrentMode == StorageMode.Team)
-                await SignalRNotificationService.NotifyApplicationChangedAsync(application.Id);
             await LoadDataAsync();
         }
         catch (Exception ex)
@@ -225,9 +230,7 @@
         _draggedApplication.ApplicationGroupId = targetGroupId;
         try
         {
-            await ApplicationRepository.UpdateApplicationAsync(_draggedApplication);
-            if (StorageModeService.CurrentMode == StorageMode.Team)
-                await SignalRNotificationService.NotifyApplicationChangedAsync(_draggedApplication.Id);
+            await ApplicationApiClient.UpdateApplicationAsync(_draggedApplication);
             _draggedApplication = null;
             _dropTargetGroupId = null;
             _dropTargetIsUngrouped = false;

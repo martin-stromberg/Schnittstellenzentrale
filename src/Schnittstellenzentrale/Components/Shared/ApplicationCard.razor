@@ -1,7 +1,12 @@
-@inject IApplicationRepository ApplicationRepository
+@inject IApplicationApiClient ApplicationApiClient
 @inject ISwaggerImportService SwaggerImportService
 @inject IODataImportService ODataImportService
 @inject IHealthCheckService HealthCheckService
+
+@if (!string.IsNullOrEmpty(_errorMessage))
+{
+    <div class="alert alert-danger mt-2">@_errorMessage</div>
+}
 
 @if (_application != null)
 {
@@ -57,6 +62,7 @@
     [Parameter] public EventCallback OnApplicationRemoved { get; set; }
 
     private Application? _application;
+    private string? _errorMessage;
     private bool _showSwaggerImport;
     private bool _showODataImport;
     private bool _showHealthCheck;
@@ -66,7 +72,15 @@
 
     protected override async Task OnParametersSetAsync()
     {
-        _application = await ApplicationRepository.GetApplicationByIdAsync(ApplicationId);
+        try
+        {
+            _errorMessage = null;
+            _application = await ApplicationApiClient.GetApplicationByIdAsync(ApplicationId);
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Fehler beim Laden der Anwendung: {ex.Message}";
+        }
     }
 
     private async Task OpenSwaggerImport()
@@ -97,7 +111,7 @@
     private async Task RemoveApplication()
     {
         if (_application == null) return;
-        await ApplicationRepository.DeleteApplicationAsync(_application.Id);
+        await ApplicationApiClient.DeleteApplicationAsync(_application.Id);
         _showHealthCheck = false;
         await OnApplicationRemoved.InvokeAsync();
     }

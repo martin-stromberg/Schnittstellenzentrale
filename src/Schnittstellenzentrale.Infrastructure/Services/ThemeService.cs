@@ -1,3 +1,4 @@
+#pragma warning disable CS1591
 using Microsoft.JSInterop;
 using Schnittstellenzentrale.Core.Enums;
 using Schnittstellenzentrale.Core.Interfaces;

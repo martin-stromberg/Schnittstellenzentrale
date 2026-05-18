@@ -1,3 +1,4 @@
+#pragma warning disable CS1591
 using System.Net;
 using System.Net.Http.Headers;
 using System.Security.Principal;

@@ -42,8 +42,7 @@ Klicken Sie auf **Neue Anwendung**. Das Formular wird direkt unterhalb der Schal
 ### 3. Optionale Felder ausfüllen (nach Bedarf)
 
 - **Beschreibung** — Kurze Erläuterung zum Zweck der Anwendung.
-- **Swagger-URL** — URL zur Swagger/OpenAPI-Beschreibung.
-- **Metadaten-URL** — URL zu weiteren Metadaten.
+- **Schnittstellen-URL** — URL zur API-Beschreibung (z. B. Swagger/OpenAPI oder OData-Metadaten). Sobald eine URL eingetragen ist, erkennt die Anwendung den Typ automatisch und zeigt ein Badge an: `REST (Swagger/OpenAPI)` oder `OData`. Bei nicht erkanntem Format erscheint `Typ nicht erkannt`.
 - **Gruppe** — Wählen Sie eine vorhandene Gruppe. Die Option **Ohne Gruppe** belässt die Anwendung außerhalb jeder Gruppe.
 
 ### 4. Speichern
@@ -103,7 +102,7 @@ Fahren Sie mit der Maus auf die Anwendungszeile — das ⚙️-Symbol erscheint 
 Ein Bearbeitungsformular erscheint mit folgenden vorausgefüllten Feldern:
 - **Name** (Pflichtfeld)
 - **Basis-URL** (Pflichtfeld)
-- **Beschreibung**, **Swagger-URL**, **Metadaten-URL**
+- **Beschreibung**, **Schnittstellen-URL**
 - **Gruppe** (Dropdown; „Ohne Gruppe" wählen, um die Anwendung keiner Gruppe zuzuweisen)
 
 ### 3. Speichern oder Abbrechen

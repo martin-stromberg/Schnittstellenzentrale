@@ -1,3 +1,4 @@
+#pragma warning disable CS1591
 using Microsoft.Extensions.Logging;
 using Microsoft.OData.Edm;
 using Microsoft.OData.Edm.Csdl;

@@ -1,6 +1,5 @@
 @using Schnittstellenzentrale.Core.Enums
-@inject IApplicationRepository ApplicationRepository
-@inject ISignalRNotificationService SignalRNotificationService
+@inject IApplicationApiClient ApplicationApiClient
 @inject IStorageModeService StorageModeService
 @inject ICurrentUserService CurrentUserService
 
@@ -84,7 +83,7 @@
     {
         try
         {
-            _groups = await ApplicationRepository.GetGroupsAsync(StorageModeService.CurrentMode, CurrentUserService.GetCurrentUserName());
+            _groups = await ApplicationApiClient.GetGroupsAsync(StorageModeService.CurrentMode, CurrentUserService.GetCurrentUserName());
         }
         catch (Exception ex)
         {
@@ -114,26 +113,15 @@
 
             if (_isEditMode)
             {
-                var saved = await ApplicationRepository.UpdateApplicationAsync(_model);
-
-                if (StorageModeService.CurrentMode == StorageMode.Team)
-                    await SignalRNotificationService.NotifyApplicationChangedAsync(saved.Id);
+                await ApplicationApiClient.UpdateApplicationAsync(_model);
             }
             else
             {
-                var saved = await ApplicationRepository.AddApplicationAsync(_model);
-
-                if (StorageModeService.CurrentMode == StorageMode.Team)
-                    await SignalRNotificationService.NotifyApplicationChangedAsync(saved.Id);
-
+                await ApplicationApiClient.AddApplicationAsync(_model);
                 _model = new Application();
             }
 
             await OnSaved.InvokeAsync();
-        }
-        catch (Microsoft.EntityFrameworkCore.DbUpdateConcurrencyException)
-        {
-            _errorMessage = "Die Daten wurden zwischenzeitlich geändert. Bitte laden Sie die Seite neu und versuchen Sie es erneut.";
         }
         catch (Exception ex)
         {

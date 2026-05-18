@@ -1,5 +1,6 @@
+#pragma warning disable CS1591
 using Microsoft.Extensions.Logging;
-using Microsoft.OpenApi.Readers;
+using Microsoft.OpenApi.Reader;
 using Schnittstellenzentrale.Core.Interfaces;
 using Schnittstellenzentrale.Core.Models;
 
@@ -36,8 +37,10 @@ public class SwaggerImportService : ISwaggerImportService
         }
 
         await using var stream = fetchedStream;
-        var reader = new OpenApiStreamReader();
-        var document = reader.Read(stream, out var diagnostics);
+        var reader = new OpenApiJsonReader();
+        var result = await reader.ReadAsync(stream, null, new OpenApiReaderSettings(), default);
+        var document = result.Document;
+        var diagnostics = result.Diagnostic;
 
         if (diagnostics.Errors.Any())
         {

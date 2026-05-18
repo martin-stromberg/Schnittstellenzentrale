@@ -34,7 +34,7 @@
 
 **Verhalten:** Nach jeder persistierenden Operation wird `ISignalRNotificationService.NotifyGroupChangedAsync` bzw. `NotifyApplicationChangedAsync` aufgerufen. Im Benutzermodus entfällt die Benachrichtigung.
 
-**Umsetzung:** `ApplicationGroupEditor.SaveAsync`, `ApplicationEditor.SaveAsync` und alle Handler in `ApplicationGroupTree`.
+**Umsetzung:** Beim Anlegen (Anlage-Modus) wird der `StorageMode` per `X-Storage-Mode`-Header an den REST-Controller übergeben; `ApplicationGroupsController.CreateAsync` und `ApplicationsController.CreateAsync` rufen `ISignalRNotificationService` auf. Bei Bearbeitungs-, Lösch- und Drag-&-Drop-Operationen bleiben `ApplicationEditor.SaveAsync` und alle Handler in `ApplicationGroupTree` zuständig.
 
 ---
 
