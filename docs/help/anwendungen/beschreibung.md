@@ -10,7 +10,7 @@ In der `ApplicationGroupTree`-Seitenleiste befinden sich zwei Schaltflächen: **
 
 **Neue Gruppe** öffnet den `ApplicationGroupEditor`. Einziges Pflichtfeld ist der Name der Gruppe.
 
-**Neue Anwendung** öffnet den `ApplicationEditor`. Pflichtfelder sind Name und Basis-URL. Optional können Beschreibung, Swagger-URL und Metadaten-URL eingetragen werden. Über ein Auswahlfeld kann die Anwendung einer vorhandenen Gruppe zugeordnet werden; die Option „Ohne Gruppe" ist ebenfalls wählbar.
+**Neue Anwendung** öffnet den `ApplicationEditor`. Pflichtfelder sind Name und Basis-URL. Optional können Beschreibung und Schnittstellen-URL eingetragen werden; aus der Schnittstellen-URL wird der Typ (REST/OData) automatisch erkannt und als Badge angezeigt. Über ein Auswahlfeld kann die Anwendung einer vorhandenen Gruppe zugeordnet werden; die Option „Ohne Gruppe" ist ebenfalls wählbar.
 
 Nach dem Speichern wird das Formular geschlossen und die Seitenleiste aktualisiert. Über **Abbrechen** lässt sich das Formular jederzeit ohne Datenverlust schließen.
 

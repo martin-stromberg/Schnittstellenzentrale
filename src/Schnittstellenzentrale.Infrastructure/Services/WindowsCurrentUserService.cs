@@ -1,3 +1,4 @@
+#pragma warning disable CS1591
 using System.Security.Principal;
 using Schnittstellenzentrale.Core.Interfaces;
 

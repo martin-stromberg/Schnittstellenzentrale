@@ -1,7 +1,6 @@
 @page "/"
-@inject IApplicationRepository ApplicationRepository
+@inject IApplicationApiClient ApplicationApiClient
 @inject IStorageModeService StorageModeService
-@inject ISignalRNotificationService SignalRNotificationService
 
 <PageTitle>Schnittstellenzentrale</PageTitle>
 
@@ -159,10 +158,7 @@
 
     private async Task OnGroupRenamed(ApplicationGroup group)
     {
-        // Exception propagates to RenameGroupDialog.SaveAsync which shows the error inline
-        await ApplicationRepository.UpdateGroupAsync(group);
-        if (StorageModeService.CurrentMode == StorageMode.Team)
-            await SignalRNotificationService.NotifyGroupChangedAsync(group.Id);
+        await ApplicationApiClient.UpdateGroupAsync(group);
         _renameTargetGroup = null;
         if (_tree != null)
             await _tree.RefreshAsync();
@@ -174,14 +170,8 @@
         try
         {
             foreach (var app in group.Applications.ToList())
-            {
-                await ApplicationRepository.DeleteApplicationAsync(app.Id);
-                if (StorageModeService.CurrentMode == StorageMode.Team)
-                    await SignalRNotificationService.NotifyApplicationChangedAsync(app.Id);
-            }
-            await ApplicationRepository.DeleteGroupAsync(group.Id);
-            if (StorageModeService.CurrentMode == StorageMode.Team)
-                await SignalRNotificationService.NotifyGroupChangedAsync(group.Id);
+                await ApplicationApiClient.DeleteApplicationAsync(app.Id);
+            await ApplicationApiClient.DeleteGroupAsync(group.Id);
             if (_tree != null)
                 await _tree.RefreshAsync();
         }
@@ -199,13 +189,9 @@
             foreach (var app in group.Applications.ToList())
             {
                 app.ApplicationGroupId = null;
-                await ApplicationRepository.UpdateApplicationAsync(app);
-                if (StorageModeService.CurrentMode == StorageMode.Team)
-                    await SignalRNotificationService.NotifyApplicationChangedAsync(app.Id);
+                await ApplicationApiClient.UpdateApplicationAsync(app);
             }
-            await ApplicationRepository.DeleteGroupAsync(group.Id);
-            if (StorageModeService.CurrentMode == StorageMode.Team)
-                await SignalRNotificationService.NotifyGroupChangedAsync(group.Id);
+            await ApplicationApiClient.DeleteGroupAsync(group.Id);
             if (_tree != null)
                 await _tree.RefreshAsync();
         }
@@ -220,9 +206,7 @@
         _deleteTargetApplication = null;
         try
         {
-            await ApplicationRepository.DeleteApplicationAsync(application.Id);
-            if (StorageModeService.CurrentMode == StorageMode.Team)
-                await SignalRNotificationService.NotifyApplicationChangedAsync(application.Id);
+            await ApplicationApiClient.DeleteApplicationAsync(application.Id);
             _selectedApplicationId = null;
             if (_tree != null)
                 await _tree.RefreshAsync();

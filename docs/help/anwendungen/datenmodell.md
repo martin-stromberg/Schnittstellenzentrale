@@ -21,8 +21,8 @@ Die Entitäten `ApplicationGroup` und `Application` sind in `Schnittstellenzentr
 | `Name` | `string` | Anzeigename der Anwendung (Pflichtfeld) |
 | `BaseUrl` | `string` | Basis-URL des Dienstes (Pflichtfeld) |
 | `Description` | `string?` | Optionale Beschreibung |
-| `SwaggerUrl` | `string?` | Optionale URL zur Swagger/OpenAPI-Beschreibung |
-| `MetadataUrl` | `string?` | Optionale URL zu weiteren Metadaten |
+| `InterfaceUrl` | `string?` | Optionale URL zur API-Beschreibung (Swagger/OpenAPI oder OData) |
+| `InterfaceType` | `InterfaceType` | Automatisch erkannter Schnittstellentyp (`Rest`, `OData`, `Unknown`) |
 | `ApplicationGroupId` | `int?` | Fremdschlüssel zur zugeordneten Gruppe (optional) |
 | `Owner` | `string?` | Windows-Benutzername des Eigentümers; nur im Benutzermodus gesetzt |
 | `RowVersion` | `byte[]` | Optimistische Nebenläufigkeitskontrolle |
@@ -47,8 +47,8 @@ erDiagram
         string Name
         string BaseUrl
         string Description
-        string SwaggerUrl
-        string MetadataUrl
+        string InterfaceUrl
+        string InterfaceType
         int ApplicationGroupId
         string Owner
         byte[] RowVersion

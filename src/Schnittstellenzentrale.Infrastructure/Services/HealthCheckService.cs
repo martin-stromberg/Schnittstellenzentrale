@@ -1,3 +1,4 @@
+#pragma warning disable CS1591
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Schnittstellenzentrale.Core.Interfaces;

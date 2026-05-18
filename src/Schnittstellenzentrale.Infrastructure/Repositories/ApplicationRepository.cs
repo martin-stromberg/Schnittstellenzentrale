@@ -1,3 +1,4 @@
+#pragma warning disable CS1591
 using Microsoft.EntityFrameworkCore;
 using Schnittstellenzentrale.Core.Enums;
 using Schnittstellenzentrale.Core.Interfaces;

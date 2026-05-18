@@ -25,16 +25,17 @@ Das `EditForm` führt eine `DataAnnotationsValidator`-Prüfung durch. Bei Fehler
 
 ### 4. Persistierung — Gruppe anlegen
 
-- `ApplicationGroupEditor.SaveAsync` — ruft `IApplicationRepository.AddGroupAsync(_model)` auf.
-- Bei `StorageMode.Team`: `ISignalRNotificationService.NotifyGroupChangedAsync(saved.Id)`.
+- `ApplicationGroupEditor.SaveAsync` — ruft `IApplicationApiClient.AddGroupAsync(new CreateApplicationGroupRequest { Name = ... }, storageMode)` auf.
+- `ApplicationApiClient` authentifiziert sich bei Bedarf über `POST /authenticate` und sendet den Request an `POST /api/application-groups` mit Bearer-Token und `X-Storage-Mode`-Header.
+- Im Controller: `IApplicationRepository.AddGroupAsync`, bei `StorageMode.Team` anschließend `ISignalRNotificationService.NotifyGroupChangedAsync(saved.Id)`.
 - Nach Erfolg: `OnSaved.InvokeAsync()` → `ApplicationGroupTree.OnGroupSaved` setzt Flag auf `false` und ruft `LoadDataAsync()` auf.
 - Bei Exception: `_errorMessage` wird gesetzt.
 
 ### 5. Persistierung — Anwendung anlegen
 
 - `ApplicationEditor.SaveAsync` — bei `StorageMode.User` wird `_model.Owner` auf `ICurrentUserService.GetCurrentUserName()` gesetzt.
-- Ruft `IApplicationRepository.AddApplicationAsync(_model)` auf.
-- Bei `StorageMode.Team`: `ISignalRNotificationService.NotifyApplicationChangedAsync(saved.Id)`.
+- Ruft `IApplicationApiClient.AddApplicationAsync(new CreateApplicationRequest { ... }, storageMode)` auf.
+- `ApplicationApiClient` sendet den Request an `POST /api/applications`; im Controller: `IApplicationRepository.AddApplicationAsync`, `InterfaceType` wird via `Application.DetectInterfaceType(request.InterfaceUrl)` abgeleitet; bei `StorageMode.Team` anschließend `ISignalRNotificationService.NotifyApplicationChangedAsync(saved.Id)`.
 - Nach Erfolg: `OnSaved.InvokeAsync()` → `ApplicationGroupTree.OnApplicationSaved` setzt Flag auf `false` und ruft `LoadDataAsync()` auf.
 
 ### 6. Abbrechen
@@ -53,8 +54,8 @@ flowchart TD
     F -- Speichern --> H[DataAnnotationsValidator]
     H -- Fehler --> I[Fehlermeldung anzeigen]
     H -- OK --> J{StorageMode?}
-    J -- Team --> K[AddGroupAsync / AddApplicationAsync\nNotifyGroupChangedAsync / NotifyApplicationChangedAsync]
-    J -- User --> L[Owner setzen\nAddApplicationAsync]
+    J -- Team --> K[AddGroupAsync / AddApplicationAsync via REST-Client\nController ruft NotifyGroupChangedAsync / NotifyApplicationChangedAsync]
+    J -- User --> L[Owner setzen\nAddApplicationAsync via REST-Client]
     K --> M[OnSaved.InvokeAsync]
     L --> M
     M --> N[Flag=false\nLoadDataAsync]

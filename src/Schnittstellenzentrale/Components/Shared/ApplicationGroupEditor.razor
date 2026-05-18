@@ -1,6 +1,4 @@
-@inject IApplicationRepository ApplicationRepository
-@inject ISignalRNotificationService SignalRNotificationService
-@inject IStorageModeService StorageModeService
+@inject IApplicationApiClient ApplicationApiClient
 
 <div class="application-group-editor">
     <EditForm Model="_model" OnValidSubmit="SaveAsync">
@@ -36,15 +34,9 @@
         _errorMessage = null;
         try
         {
-            var saved = await ApplicationRepository.AddGroupAsync(_model);
-            if (StorageModeService.CurrentMode == StorageMode.Team)
-                await SignalRNotificationService.NotifyGroupChangedAsync(saved.Id);
+            await ApplicationApiClient.AddGroupAsync(new ApplicationGroup { Name = _model.Name });
             _model = new ApplicationGroup();
             await OnSaved.InvokeAsync();
-        }
-        catch (Microsoft.EntityFrameworkCore.DbUpdateConcurrencyException)
-        {
-            _errorMessage = "Die Daten wurden zwischenzeitlich geändert. Bitte laden Sie die Seite neu und versuchen Sie es erneut.";
         }
         catch (Exception ex)
         {

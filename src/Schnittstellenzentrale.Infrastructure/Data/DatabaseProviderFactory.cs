@@ -1,3 +1,4 @@
+#pragma warning disable CS1591
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
