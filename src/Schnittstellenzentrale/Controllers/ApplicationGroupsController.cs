@@ -1,4 +1,3 @@
-#pragma warning disable CS1591
 using Microsoft.AspNetCore.Mvc;
 using Schnittstellenzentrale.Core.Contracts;
 using Schnittstellenzentrale.Core.Enums;
@@ -16,6 +15,7 @@ public class ApplicationGroupsController : ApiControllerBase
     private readonly IApplicationRepository _applicationRepository;
     private readonly ISignalRNotificationService _signalRNotificationService;
 
+    /// <summary>Initialisiert eine neue Instanz von <see cref="ApplicationGroupsController"/>.</summary>
     public ApplicationGroupsController(
         ITokenStore tokenStore,
         IApplicationRepository applicationRepository,
@@ -37,14 +37,11 @@ public class ApplicationGroupsController : ApiControllerBase
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> GetAllAsync()
     {
-        var newToken = await ValidateTokenAndSetResponseHeaderAsync();
-        if (newToken == null)
+        var context = await ParseRequestContextAsync();
+        if (context == null)
             return Unauthorized();
 
-        var storageMode = ParseStorageMode();
-        var owner = Request.Headers["X-Owner"].ToString();
-
-        var groups = await _applicationRepository.GetGroupsAsync(storageMode, owner);
+        var groups = await _applicationRepository.GetGroupsAsync(context.StorageMode, context.Owner);
 
         var response = groups.Select(MapToResponse).ToList();
         return Ok(response);
@@ -129,6 +126,9 @@ public class ApplicationGroupsController : ApiControllerBase
         if (group == null)
             return NotFound();
 
+        if (group.IsSystem)
+            return StatusCode(StatusCodes.Status403Forbidden);
+
         group.Name = request.Name;
         var saved = await _applicationRepository.UpdateGroupAsync(group);
 
@@ -161,6 +161,9 @@ public class ApplicationGroupsController : ApiControllerBase
         if (group == null)
             return NotFound();
 
+        if (group.IsSystem)
+            return StatusCode(StatusCodes.Status403Forbidden);
+
         await _applicationRepository.DeleteGroupAsync(id);
 
         if (storageMode == StorageMode.Team)
@@ -169,10 +172,4 @@ public class ApplicationGroupsController : ApiControllerBase
         return NoContent();
     }
 
-    private static ApplicationGroupResponse MapToResponse(ApplicationGroup group) => new()
-    {
-        Id = group.Id,
-        Name = group.Name,
-        Applications = group.Applications.Select(MapToResponse).ToList()
-    };
 }

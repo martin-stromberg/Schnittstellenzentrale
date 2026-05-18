@@ -43,6 +43,18 @@ Im **Team-Modus** lösen alle persistierenden Operationen SignalR-Benachrichtigu
 - Eine Anwendung, die versehentlich der falschen Gruppe zugeordnet wurde, per Drag & Drop in die richtige Gruppe ziehen.
 - Beim Löschen einer Gruppe mit fünf Anwendungen wählen, ob alle mitgelöscht oder in den gruppenlosen Bereich verschoben werden.
 
+## Systemeinträge
+
+Beim Start der Anwendung legt die Schnittstellenzentrale automatisch eine Gruppe und eine Anwendung mit dem Namen „Schnittstellenzentrale" an, die die eigene REST-API repräsentieren. Diese Einträge sind als Systemeinträge markiert (`IsSystem = true`) und werden vom `SystemEntryInitializer` verwaltet.
+
+Systemeinträge können nicht über die Benutzeroberfläche oder die REST-API verändert oder gelöscht werden:
+
+- Das Zahnrad-Menü zeigt die Schaltflächen **Umbenennen** und **Löschen** (Gruppe) bzw. **Bearbeiten** und **Löschen** (Anwendung) weiterhin an, jedoch deaktiviert.
+- Systemanwendungen können nicht per Drag & Drop verschoben werden — das `draggable`-Attribut ist auf `false` gesetzt, und der `OnDragStart`-Handler bricht bei `IsSystem == true` ab.
+- DELETE- und PUT-Anfragen an die REST-API für Systemeinträge werden mit `403 Forbidden` abgewiesen.
+
+Normale Anwendungen dürfen per Drag & Drop in die Systemgruppe hinein- und wieder herausbewegt werden.
+
 ## Einschränkungen
 
 - Die Gruppenauswahl im `ApplicationEditor` zeigt nur Gruppen, die beim Öffnen des Formulars bereits vorhanden sind.

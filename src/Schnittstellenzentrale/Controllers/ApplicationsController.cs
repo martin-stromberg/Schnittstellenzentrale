@@ -1,4 +1,3 @@
-#pragma warning disable CS1591
 using Microsoft.AspNetCore.Mvc;
 using Schnittstellenzentrale.Core.Contracts;
 using Schnittstellenzentrale.Core.Enums;
@@ -16,6 +15,7 @@ public class ApplicationsController : ApiControllerBase
     private readonly IApplicationRepository _applicationRepository;
     private readonly ISignalRNotificationService _signalRNotificationService;
 
+    /// <summary>Initialisiert eine neue Instanz von <see cref="ApplicationsController"/>.</summary>
     public ApplicationsController(
         ITokenStore tokenStore,
         IApplicationRepository applicationRepository,
@@ -37,14 +37,11 @@ public class ApplicationsController : ApiControllerBase
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> GetAllAsync()
     {
-        var newToken = await ValidateTokenAndSetResponseHeaderAsync();
-        if (newToken == null)
+        var context = await ParseRequestContextAsync();
+        if (context == null)
             return Unauthorized();
 
-        var storageMode = ParseStorageMode();
-        var owner = Request.Headers["X-Owner"].ToString();
-
-        var applications = await _applicationRepository.GetApplicationsAsync(storageMode, owner);
+        var applications = await _applicationRepository.GetApplicationsAsync(context.StorageMode, context.Owner);
 
         var response = applications.Select(MapToResponse).ToList();
         return Ok(response);
@@ -61,14 +58,11 @@ public class ApplicationsController : ApiControllerBase
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> GetUngroupedAsync()
     {
-        var newToken = await ValidateTokenAndSetResponseHeaderAsync();
-        if (newToken == null)
+        var context = await ParseRequestContextAsync();
+        if (context == null)
             return Unauthorized();
 
-        var storageMode = ParseStorageMode();
-        var owner = Request.Headers["X-Owner"].ToString();
-
-        var applications = await _applicationRepository.GetUngroupedApplicationsAsync(storageMode, owner);
+        var applications = await _applicationRepository.GetUngroupedApplicationsAsync(context.StorageMode, context.Owner);
 
         var response = applications.Select(MapToResponse).ToList();
         return Ok(response);
@@ -117,16 +111,8 @@ public class ApplicationsController : ApiControllerBase
 
         var storageMode = ParseStorageMode();
 
-        var application = new Application
-        {
-            Name = request.Name,
-            BaseUrl = request.BaseUrl,
-            Description = request.Description ?? string.Empty,
-            InterfaceUrl = request.InterfaceUrl,
-            InterfaceType = Application.DetectInterfaceType(request.InterfaceUrl),
-            ApplicationGroupId = request.ApplicationGroupId,
-            Owner = request.Owner
-        };
+        var application = new Application();
+        ApplyRequestToApplication(application, request);
 
         var saved = await _applicationRepository.AddApplicationAsync(application);
 
@@ -163,13 +149,10 @@ public class ApplicationsController : ApiControllerBase
         if (application == null)
             return NotFound();
 
-        application.Name = request.Name;
-        application.BaseUrl = request.BaseUrl;
-        application.Description = request.Description ?? string.Empty;
-        application.InterfaceUrl = request.InterfaceUrl;
-        application.InterfaceType = Application.DetectInterfaceType(request.InterfaceUrl);
-        application.ApplicationGroupId = request.ApplicationGroupId;
-        application.Owner = request.Owner;
+        if (application.IsSystem)
+            return StatusCode(StatusCodes.Status403Forbidden);
+
+        ApplyRequestToApplication(application, request);
 
         var saved = await _applicationRepository.UpdateApplicationAsync(application);
 
@@ -202,11 +185,25 @@ public class ApplicationsController : ApiControllerBase
         if (application == null)
             return NotFound();
 
+        if (application.IsSystem)
+            return StatusCode(StatusCodes.Status403Forbidden);
+
         await _applicationRepository.DeleteApplicationAsync(id);
 
         if (storageMode == StorageMode.Team)
             await _signalRNotificationService.NotifyApplicationChangedAsync(id);
 
         return NoContent();
+    }
+
+    private static void ApplyRequestToApplication(Application application, UpdateApplicationRequest request)
+    {
+        application.Name = request.Name;
+        application.BaseUrl = request.BaseUrl;
+        application.Description = request.Description ?? string.Empty;
+        application.InterfaceUrl = request.InterfaceUrl;
+        application.InterfaceType = Application.DetectInterfaceType(request.InterfaceUrl);
+        application.ApplicationGroupId = request.ApplicationGroupId;
+        application.Owner = request.Owner;
     }
 }

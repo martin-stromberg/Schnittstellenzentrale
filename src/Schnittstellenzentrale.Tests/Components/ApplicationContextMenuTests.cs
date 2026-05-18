@@ -12,6 +12,9 @@ public class ApplicationContextMenuTests : BunitContext
     private static Application WithoutGroup() =>
         new() { Id = 2, Name = "TestApp", BaseUrl = "http://app", ApplicationGroupId = null };
 
+    private static Application SystemApplication() =>
+        new() { Id = 3, Name = "Schnittstellenzentrale", BaseUrl = "http://app", IsSystem = true };
+
     [Fact]
     public void AusGruppeEntfernen_NurSichtbar_WennAnwendungInGruppe()
     {
@@ -55,5 +58,33 @@ public class ApplicationContextMenuTests : BunitContext
 
         Assert.Equal(application, received);
         Assert.Empty(cut.FindAll(".context-menu-dropdown"));
+    }
+
+    [Fact]
+    public void Bearbeiten_Deaktiviert_WennIsSystem()
+    {
+        var cut = Render<ApplicationContextMenu>(p => p
+            .Add(x => x.Application, SystemApplication()));
+
+        cut.Find(".context-menu-toggle").Click();
+
+        var bearbeitenButton = cut.FindAll("button.context-menu-item")
+            .First(b => b.TextContent.Contains("Bearbeiten"));
+
+        Assert.True(bearbeitenButton.HasAttribute("disabled"));
+    }
+
+    [Fact]
+    public void Löschen_Deaktiviert_WennIsSystem()
+    {
+        var cut = Render<ApplicationContextMenu>(p => p
+            .Add(x => x.Application, SystemApplication()));
+
+        cut.Find(".context-menu-toggle").Click();
+
+        var löschenButton = cut.FindAll("button.context-menu-item")
+            .First(b => b.TextContent.Contains("Löschen"));
+
+        Assert.True(löschenButton.HasAttribute("disabled"));
     }
 }

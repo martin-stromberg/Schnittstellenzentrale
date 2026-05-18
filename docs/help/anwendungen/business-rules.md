@@ -136,6 +136,41 @@
 
 ---
 
+## Systemeinträge: Schutz vor Änderung und Löschung
+
+**Beschreibung:** Gruppe und Anwendung mit `IsSystem == true` werden ausschließlich vom `SystemEntryInitializer` verwaltet. Benutzer dürfen sie weder umbenennen/bearbeiten noch löschen.
+
+**Bedingungen:** `ApplicationGroup.IsSystem == true` bzw. `Application.IsSystem == true`
+
+**Verhalten:**
+- REST-API: `ApplicationGroupsController.DeleteAsync` und `UpdateAsync` sowie `ApplicationsController.DeleteAsync` und `UpdateAsync` geben `403 Forbidden` zurück, wenn `IsSystem == true`.
+- UI (Kontextmenü): Schaltflächen „Umbenennen" und „Löschen" in `ApplicationGroupContextMenu` sind deaktiviert (`disabled="@(Group.IsSystem)"`); Schaltflächen „Bearbeiten" und „Löschen" in `ApplicationContextMenu` sind deaktiviert (`disabled="@(Application.IsSystem)"`).
+- UI (Drag & Drop): `ApplicationGroupTree.OnDragStart` bricht ab, ohne `_draggedApplication` zu setzen; `draggable` ist im Razor-Template auf `"false"` gesetzt.
+
+**Umsetzung:** `ApplicationGroupsController.DeleteAsync`, `ApplicationGroupsController.UpdateAsync`, `ApplicationsController.DeleteAsync`, `ApplicationsController.UpdateAsync`, `ApplicationGroupContextMenu`, `ApplicationContextMenu`, `ApplicationGroupTree.OnDragStart`.
+
+---
+
+## Systemeintrag: automatisches Anlegen und URL-Aktualisierung
+
+**Beschreibung:** Beim Programmstart stellt `SystemEntryInitializer` sicher, dass genau eine Systemgruppe und eine Systemanwendung vorhanden sind. Ist die URL der Systemanwendung veraltet, wird sie auf den aktuellen Wert aus `Api:BaseUrl` aktualisiert.
+
+**Bedingungen:**
+- `Api:BaseUrl` ist in `appsettings.json` konfiguriert und nicht leer.
+- Es existiert keine `ApplicationGroup` mit `IsSystem == true` (Neuanlage) oder die URL der zugehörigen `Application` weicht vom konfigurierten Wert ab (Aktualisierung).
+
+**Verhalten:**
+- Gruppe fehlt: Anlegen mit `Name = "Schnittstellenzentrale"`, `IsSystem = true`.
+- Anwendung fehlt: Anlegen mit `Name = "Schnittstellenzentrale"`, `IsSystem = true`, `BaseUrl = {Api:BaseUrl}`, `InterfaceUrl = {Api:BaseUrl}/swagger/v1/swagger.json`.
+- URL weicht ab: `BaseUrl` und `InterfaceUrl` werden aktualisiert.
+- Fehlt `Api:BaseUrl`: Warnung wird geloggt; kein Eintrag wird angelegt; Programmstart läuft weiter.
+- Datenbankfehler: Exception wird abgefangen und geloggt; Programmstart wird nicht unterbrochen.
+- Wiederholter Aufruf ist idempotent: Es entsteht kein Duplikat.
+
+**Umsetzung:** `SystemEntryInitializer.InitializeAsync` — liest `Api:BaseUrl` aus `IConfiguration`; arbeitet direkt auf `IApplicationRepository` ohne HTTP-Loopback.
+
+---
+
 ## Moduswechsel: vollständiger State-Reset
 
 **Beschreibung:** Beim Wechsel des `StorageMode` muss der gesamte Seitenstate zurückgesetzt werden, damit keine Daten eines alten Modus sichtbar bleiben.

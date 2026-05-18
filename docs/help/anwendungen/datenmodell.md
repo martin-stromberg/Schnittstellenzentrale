@@ -10,6 +10,7 @@ Die Entitäten `ApplicationGroup` und `Application` sind in `Schnittstellenzentr
 |-------------|-----|--------------|
 | `Id` | `int` | Primärschlüssel (automatisch vergeben) |
 | `Name` | `string` | Anzeigename der Gruppe (Pflichtfeld) |
+| `IsSystem` | `bool` | Kennzeichnet den Eintrag als systemseitig verwaltet; Default `false` |
 | `RowVersion` | `byte[]` | Optimistische Nebenläufigkeitskontrolle |
 | `Applications` | `IList<Application>` | Zugeordnete Anwendungen (Navigationseigenschaft) |
 
@@ -19,6 +20,7 @@ Die Entitäten `ApplicationGroup` und `Application` sind in `Schnittstellenzentr
 |-------------|-----|--------------|
 | `Id` | `int` | Primärschlüssel (automatisch vergeben) |
 | `Name` | `string` | Anzeigename der Anwendung (Pflichtfeld) |
+| `IsSystem` | `bool` | Kennzeichnet den Eintrag als systemseitig verwaltet; Default `false` |
 | `BaseUrl` | `string` | Basis-URL des Dienstes (Pflichtfeld) |
 | `Description` | `string?` | Optionale Beschreibung |
 | `InterfaceUrl` | `string?` | Optionale URL zur API-Beschreibung (Swagger/OpenAPI oder OData) |
@@ -40,11 +42,13 @@ erDiagram
     ApplicationGroup {
         int Id
         string Name
+        bool IsSystem
         byte[] RowVersion
     }
     Application {
         int Id
         string Name
+        bool IsSystem
         string BaseUrl
         string Description
         string InterfaceUrl

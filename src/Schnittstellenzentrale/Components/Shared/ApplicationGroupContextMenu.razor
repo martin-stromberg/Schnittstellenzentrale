@@ -4,10 +4,10 @@
     {
         <div class="context-menu-overlay" @onclick="() => _isOpen = false"></div>
         <div class="context-menu-dropdown">
-            <button type="button" class="context-menu-item" @onclick="RenameRequested">
+            <button type="button" class="context-menu-item" @onclick="RenameRequested" disabled="@(Group.IsSystem)">
                 <i class="bi bi-pencil"></i> Umbenennen
             </button>
-            <button type="button" class="context-menu-item context-menu-item--danger" @onclick="DeleteRequested">
+            <button type="button" class="context-menu-item context-menu-item--danger" @onclick="DeleteRequested" disabled="@(Group.IsSystem)">
                 <i class="bi bi-trash3"></i> Löschen
             </button>
         </div>

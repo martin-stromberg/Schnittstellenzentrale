@@ -29,7 +29,7 @@
                     <ChildContent>
                         @foreach (var app in group.Applications)
                         {
-                            <div class="tree-leaf" draggable="true" @ondragstart="() => OnDragStart(app)" @ondragover:preventDefault="true">
+                            <div class="tree-leaf" draggable="@(app.IsSystem ? "false" : "true")" @ondragstart="() => OnDragStart(app)" @ondragover:preventDefault="true">
                                 <button class="btn btn-link" @onclick="() => SelectApplication(app.Id)">
                                     @app.Name
                                 </button>
@@ -50,7 +50,7 @@
                 <ChildContent>
                     @foreach (var app in _ungroupedApplications)
                     {
-                        <div class="tree-leaf" draggable="true" @ondragstart="() => OnDragStart(app)" @ondragover:preventDefault="true">
+                        <div class="tree-leaf" draggable="@(app.IsSystem ? "false" : "true")" @ondragstart="() => OnDragStart(app)" @ondragover:preventDefault="true">
                             <button class="btn btn-link" @onclick="() => SelectApplication(app.Id)">
                                 @app.Name
                             </button>
@@ -179,6 +179,9 @@
 
     private void OnDragStart(Application application)
     {
+        if (application.IsSystem)
+            return;
+
         _draggedApplication = application;
     }
 
@@ -231,21 +234,24 @@
         try
         {
             await ApplicationApiClient.UpdateApplicationAsync(_draggedApplication);
-            _draggedApplication = null;
-            _dropTargetGroupId = null;
-            _dropTargetIsUngrouped = false;
-            _dragEnterCountUngrouped = 0;
+            ResetDragState();
             await LoadDataAsync();
         }
         catch (Exception ex)
         {
             if (_draggedApplication != null)
                 _draggedApplication.ApplicationGroupId = previousGroupId;
-            _draggedApplication = null;
-            _dropTargetGroupId = null;
-            _dropTargetIsUngrouped = false;
-            _dragEnterCountUngrouped = 0;
+            ResetDragState();
             _errorMessage = $"Fehler beim Verschieben der Anwendung: {ex.Message}";
         }
+    }
+
+    private void ResetDragState()
+    {
+        _draggedApplication = null;
+        _dropTargetGroupId = null;
+        _dropTargetIsUngrouped = false;
+        _dragEnterCount = 0;
+        _dragEnterCountUngrouped = 0;
     }
 }

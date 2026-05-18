@@ -209,6 +209,89 @@ flowchart TD
 
 ---
 
+## Ablauf: Systemeinträge beim Programmstart anlegen oder aktualisieren
+
+Dieser Ablauf wird in `Program.cs` nach `EnsureDatabaseInitializedAsync` ausgeführt.
+
+### 1. `SystemEntryInitializer.InitializeAsync` aufrufen
+
+`Program.cs` ruft `SystemEntryInitializer.InitializeAsync(app.Services, builder.Configuration)` auf. Die Methode erstellt einen `IServiceScope` und löst `IApplicationRepository` auf.
+
+### 2. `Api:BaseUrl` prüfen
+
+Der Wert `Api:BaseUrl` wird aus `IConfiguration` gelesen. Ist er leer oder nicht vorhanden, loggt `Serilog` eine Warnung und die Methode kehrt ohne Aktion zurück.
+
+### 3. Systemgruppe laden oder anlegen
+
+`IApplicationRepository.GetSystemGroupAsync` fragt die Datenbank nach einer `ApplicationGroup` mit `IsSystem == true`.
+
+- **Nicht vorhanden:** `IApplicationRepository.AddGroupAsync` legt eine neue Gruppe mit `Name = "Schnittstellenzentrale"` und `IsSystem = true` an.
+- **Vorhanden:** keine Änderung an der Gruppe.
+
+### 4. Systemanwendung laden oder anlegen oder aktualisieren
+
+Innerhalb der Gruppe wird nach einer `Application` mit `IsSystem == true` gesucht.
+
+- **Nicht vorhanden:** `IApplicationRepository.AddApplicationAsync` legt eine neue Anwendung an (`Name = "Schnittstellenzentrale"`, `IsSystem = true`, `BaseUrl = {Api:BaseUrl}`, `InterfaceUrl = {Api:BaseUrl}/swagger/v1/swagger.json`).
+- **Vorhanden, URL weicht ab:** `IApplicationRepository.UpdateApplicationAsync` aktualisiert `BaseUrl` und `InterfaceUrl`.
+- **Vorhanden, URL identisch:** keine Aktion.
+
+Jede Ausnahme in den Schritten 2–4 wird abgefangen, per Serilog als Fehler geloggt und verschluckt — der Programmstart wird nicht unterbrochen.
+
+Beteiligte Klassen/Komponenten: `SystemEntryInitializer`, `Program`, `IApplicationRepository`, `ApplicationRepository`, `ApplicationGroup`, `Application`
+
+```mermaid
+flowchart TD
+    A[Program.cs: InitializeAsync] --> B{Api:BaseUrl vorhanden?}
+    B -- Nein --> C[Warnung loggen\nRückkehr ohne Aktion]
+    B -- Ja --> D[GetSystemGroupAsync]
+    D -- Null --> E[AddGroupAsync\nName=Schnittstellenzentrale\nIsSystem=true]
+    D -- Gefunden --> F[Gruppe unverändert]
+    E --> G[Systemanwendung suchen\nIsSystem==true in Gruppe]
+    F --> G
+    G -- Nicht vorhanden --> H[AddApplicationAsync]
+    G -- URL abweichend --> I[UpdateApplicationAsync]
+    G -- URL identisch --> J[Keine Aktion]
+    H --> K[Ende]
+    I --> K
+    J --> K
+```
+
+---
+
+## Ablauf: DELETE / PUT auf Systemeintrag abweisen (REST-API)
+
+Wenn ein API-Client versucht, eine Systemgruppe oder -anwendung zu löschen oder zu ändern, greifen Guards in den Controllern.
+
+### Gruppe löschen oder umbenennen (`ApplicationGroupsController`)
+
+1. `GetGroupByIdAsync` lädt die Gruppe; ist sie nicht gefunden, wird `404 Not Found` zurückgegeben.
+2. Ist `group.IsSystem == true`, gibt `DeleteAsync` bzw. `UpdateAsync` sofort `403 Forbidden` zurück.
+3. Andernfalls wird die Operation durchgeführt.
+
+### Anwendung löschen oder bearbeiten (`ApplicationsController`)
+
+1. `GetApplicationByIdAsync` lädt die Anwendung; ist sie nicht gefunden, wird `404 Not Found` zurückgegeben.
+2. Ist `application.IsSystem == true`, gibt `DeleteAsync` bzw. `UpdateAsync` sofort `403 Forbidden` zurück.
+3. Andernfalls wird die Operation durchgeführt.
+
+Beteiligte Klassen/Komponenten: `ApplicationGroupsController`, `ApplicationsController`, `IApplicationRepository`
+
+---
+
+## Ablauf: Drag & Drop für Systemanwendungen sperren
+
+1. `ApplicationGroupTree.OnDragStart(application)` wird aufgerufen.
+2. Ist `application.IsSystem == true`, kehrt die Methode sofort zurück ohne `_draggedApplication` zu setzen.
+3. Ergänzend ist im Razor-Template `draggable="@(app.IsSystem ? "false" : "true")"` gesetzt, sodass der Browser das Ziehen gar nicht erst ermöglicht.
+4. `OnDrop` prüft `_draggedApplication == null` und bricht ohne Aktion ab, falls kein gültiges Drag-Objekt existiert.
+
+Beteiligte Klassen/Komponenten: `ApplicationGroupTree`
+
+---
+
 ## Fehlerbehandlung
 
 Beide Editoren und alle Handler in `ApplicationGroupTree` fangen Ausnahmen ab und setzen `_errorMessage`. Die Fehlermeldung wird als `alert alert-danger` angezeigt. Formulare bleiben bei Fehlern geöffnet.
+
+`SystemEntryInitializer` fängt alle Ausnahmen im `try/catch`-Block ab und loggt sie per Serilog — der Programmstart wird dadurch nicht unterbrochen.
