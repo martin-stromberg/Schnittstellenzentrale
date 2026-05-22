@@ -155,6 +155,120 @@ Lassen Sie die Maustaste über dem Zielbereich los.
 
 ---
 
+## Endpunkte und Ordner in einer Anwendung verwalten
+
+### Anwendung aufklappen
+
+Klicken Sie auf den Pfeil (▶) links neben dem Anwendungsnamen. Die zugehörigen Ordner und Endpunkte erscheinen eingerückt darunter.
+
+### Ordner anlegen
+
+Fahren Sie mit der Maus auf eine Anwendungszeile und öffnen Sie das ⚙️-Menü. Wählen Sie **Ordner anlegen**. Der neue Ordner erscheint sofort mit dem Namen „Neuer Ordner" im Baum.
+
+### Ordner umbenennen
+
+Fahren Sie mit der Maus auf einen Ordner und öffnen Sie das ⚙️-Menü. Wählen Sie **Ordner umbenennen**. Ein Formular öffnet sich mit dem aktuellen Namen vorausgefüllt. Geben Sie den neuen Namen ein und klicken Sie auf **Speichern**.
+
+> **Hinweis:** Der Name darf nicht leer sein.
+
+### Ordner löschen
+
+Fahren Sie mit der Maus auf einen Ordner und öffnen Sie das ⚙️-Menü. Wählen Sie **Ordner löschen**. Ein Dialog erscheint.
+
+- Enthält der Ordner Endpunkte, weist der Dialog auf die kaskadierende Löschung hin: alle enthaltenen Endpunkte werden ebenfalls gelöscht.
+- Klicken Sie auf **Löschen** oder **Abbrechen**.
+
+> **Hinweis:** Das Löschen kann nicht rückgängig gemacht werden.
+
+---
+
+## Endpunkt anlegen
+
+Es gibt zwei Wege:
+
+- **Über eine Anwendung:** Fahren Sie auf die Anwendungszeile, öffnen Sie das ⚙️-Menü und wählen Sie **Endpunkt anlegen**. Der Endpunkt wird direkt auf Anwendungsebene (ohne Ordner) angelegt.
+- **Über einen Ordner:** Fahren Sie auf den Ordner, öffnen Sie das ⚙️-Menü und wählen Sie **Endpunkt anlegen**. Der Endpunkt wird innerhalb des Ordners angelegt.
+
+In beiden Fällen wird der neue Endpunkt mit dem Namen „Neuer Endpunkt" angelegt und sofort zur Bearbeitung geöffnet.
+
+---
+
+## Endpunkt bearbeiten
+
+Klicken Sie auf einen Endpunkt-Knoten im Navigationsbaum. Die Bearbeitungsansicht öffnet sich im rechten Bereich.
+
+### Name ändern
+
+Klicken Sie in das Namensfeld im Kopfbereich und ändern Sie den Text. Ein Badge **geändert** erscheint, solange ungespeicherte Änderungen vorliegen.
+
+### HTTP-Methode und Pfad festlegen
+
+Wählen Sie die HTTP-Methode (GET, POST, PUT, DELETE, PATCH, HEAD, OPTIONS) aus dem Dropdown. Geben Sie im Textfeld rechts daneben den relativen Pfad ein (z. B. `/api/orders`).
+
+### Authentifizierung konfigurieren (Register „Autorisierung")
+
+Wählen Sie den Authentifizierungstyp:
+- **None** — keine Authentifizierung.
+- **Basic** — Benutzername und Passwort eingeben (Format: `benutzer:passwort`); wird sicher im Windows Credential Manager gespeichert.
+- **Negotiate** — Windows-Authentifizierung; keine weiteren Felder erforderlich.
+- **BearerToken** — Token eingeben; wird im Windows Credential Manager gespeichert.
+- **NegotiateWithImpersonation** — Windows-Authentifizierung mit Impersonation; keine weiteren Felder erforderlich.
+
+### Header konfigurieren (Register „Headers")
+
+Klicken Sie auf **+ Header**, um einen neuen Eintrag hinzuzufügen. Geben Sie Name und Wert ein. Klicken Sie auf **✕**, um einen Header zu entfernen.
+
+> **Hinweis:** Der `Content-Type`-Header wird automatisch gesetzt, wenn Sie im Register „Body" ein Body-Format auswählen. Er erscheint ausgegraut und kann manuell überschrieben werden.
+
+### Query-Parameter konfigurieren (Register „Query-Parameter")
+
+Klicken Sie auf **+ Parameter**, um einen neuen Eintrag hinzuzufügen.
+
+### Body konfigurieren (Register „Body")
+
+Wählen Sie das Body-Format aus:
+- **None** — kein Body wird gesendet; das Textfeld ist deaktiviert.
+- **Json** — JSON-Body; `Content-Type: application/json` wird automatisch gesetzt.
+- **Xml** — XML-Body; `Content-Type: application/xml` wird automatisch gesetzt.
+- **PlainText** — Nur-Text-Body; `Content-Type: text/plain` wird automatisch gesetzt.
+
+Klicken Sie auf **Formatieren** (bei JSON oder XML), um den Body-Text automatisch einzurücken. Bei syntaktisch ungültigem JSON oder XML erscheint eine Fehlermeldung.
+
+### Speichern
+
+Klicken Sie auf **Speichern** oder drücken Sie **Strg+S**.
+
+> **Hinweis:** Versuchen Sie, zu einem anderen Endpunkt zu wechseln oder die Seite zu verlassen, während ungespeicherte Änderungen vorliegen, erscheint eine Bestätigungsabfrage.
+
+---
+
+## Anfrage senden
+
+Klicken Sie in der Adressleiste auf **Anfrage senden**.
+
+- Falls noch ungespeicherte Änderungen vorliegen, werden diese zuerst automatisch gespeichert.
+- Die Antwort erscheint unterhalb der Adressleiste mit Statuscode, Dauer und Größe.
+- Register **Body** — formatierter oder roher Antwort-Body (Pretty/Raw umschalten; Formatauswahl JSON/XML).
+- Register **Headers** — alle Antwort-Header als Tabelle.
+
+> **Hinweis:** Bei einem Verbindungsfehler erscheint die Fehlermeldung im Antwortbereich.
+
+---
+
+## Endpunkt löschen
+
+Fahren Sie mit der Maus auf einen Endpunkt-Knoten und öffnen Sie das ⚙️-Menü. Wählen Sie **Endpunkt löschen**. Ein Browser-Dialog erscheint zur Bestätigung.
+
+> **Hinweis:** Das Löschen kann nicht rückgängig gemacht werden.
+
+---
+
+## Sidebar-Breite anpassen
+
+Ziehen Sie den schmalen Trennstrich am rechten Rand der Seitenleiste nach links oder rechts, um die Breite anzupassen. Die eingestellte Breite wird im Browser gespeichert und beim nächsten Öffnen automatisch wiederhergestellt.
+
+---
+
 ## Moduswechsel (Team / Benutzer)
 
 Wenn Sie den Modus wechseln, werden alle geöffneten Dialoge und Formulare automatisch geschlossen und der Navigationsbaum mit den Daten des neuen Modus neu geladen. Der Detailbereich auf der rechten Seite wird ebenfalls ausgeblendet.

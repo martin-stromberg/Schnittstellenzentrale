@@ -7,6 +7,12 @@
             <button type="button" class="context-menu-item" @onclick="EditRequested" disabled="@(Application.IsSystem)">
                 <i class="bi bi-pencil"></i> Bearbeiten
             </button>
+            <button type="button" class="context-menu-item" @onclick="CreateEndpointGroupRequested">
+                <i class="bi bi-folder-plus"></i> Ordner anlegen
+            </button>
+            <button type="button" class="context-menu-item" @onclick="CreateEndpointRequested">
+                <i class="bi bi-lightning"></i> Endpunkt anlegen
+            </button>
             @if (Application.ApplicationGroupId.HasValue)
             {
                 <button type="button" class="context-menu-item" @onclick="RemoveFromGroupRequested">
@@ -25,6 +31,8 @@
     [Parameter] public EventCallback<Application> OnEditRequested { get; set; }
     [Parameter] public EventCallback<Application> OnRemoveFromGroupRequested { get; set; }
     [Parameter] public EventCallback<Application> OnDeleteRequested { get; set; }
+    [Parameter] public EventCallback<Application> OnCreateEndpointGroupRequested { get; set; }
+    [Parameter] public EventCallback<Application> OnCreateEndpointRequested { get; set; }
 
     private bool _isOpen;
 
@@ -46,5 +54,17 @@
     {
         _isOpen = false;
         await OnDeleteRequested.InvokeAsync(Application);
+    }
+
+    private async Task CreateEndpointGroupRequested()
+    {
+        _isOpen = false;
+        await OnCreateEndpointGroupRequested.InvokeAsync(Application);
+    }
+
+    private async Task CreateEndpointRequested()
+    {
+        _isOpen = false;
+        await OnCreateEndpointRequested.InvokeAsync(Application);
     }
 }

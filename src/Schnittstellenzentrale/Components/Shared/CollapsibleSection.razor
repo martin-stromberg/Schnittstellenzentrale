@@ -3,10 +3,15 @@
      @ondragover:preventDefault="IsDropTarget"
      @ondrop="HandleDrop"
      @ondrop:stopPropagation="IsDropTarget">
-    <div class="d-flex align-items-center justify-content-between">
-        <button class="btn btn-link tree-node" @onclick="Toggle">
-            @(_expanded ? "▼" : "▶") @Title
+    <div class="sz-tree-row">
+        <button class="sz-tree-chevron-btn" @onclick="Toggle">
+            <i class="bi @(_expanded ? "bi-chevron-down" : "bi-chevron-right")"></i>
         </button>
+        @if (!string.IsNullOrEmpty(IconClass))
+        {
+            <i class="@IconClass sz-tree-icon"></i>
+        }
+        <span class="sz-tree-node-text">@Title</span>
         @if (TitleActions != null)
         {
             @TitleActions
@@ -14,7 +19,7 @@
     </div>
     @if (_expanded)
     {
-        <div class="collapsible-section-content">
+        <div class="sz-tree-children">
             @ChildContent
         </div>
     }
@@ -22,6 +27,7 @@
 
 @code {
     [Parameter] public string Title { get; set; } = string.Empty;
+    [Parameter] public string? IconClass { get; set; }
     [Parameter] public RenderFragment? ChildContent { get; set; }
     [Parameter] public RenderFragment? TitleActions { get; set; }
     [Parameter] public bool InitiallyExpanded { get; set; } = false;

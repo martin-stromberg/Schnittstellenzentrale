@@ -1,0 +1,26 @@
+<div class="response-headers-panel">
+    <table class="table table-sm">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Wert</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (Headers != null)
+            {
+                @foreach (var header in Headers)
+                {
+                    <tr @key="header.Key">
+                        <td>@header.Key</td>
+                        <td>@header.Value</td>
+                    </tr>
+                }
+            }
+        </tbody>
+    </table>
+</div>
+
+@code {
+    [Parameter] public IDictionary<string, string>? Headers { get; set; }
+}

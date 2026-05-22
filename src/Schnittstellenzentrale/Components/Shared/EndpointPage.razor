@@ -1,0 +1,420 @@
+@inject IEndpointRepository EndpointRepository
+@inject IEndpointExecutionService ExecutionService
+@inject IJSRuntime JSRuntime
+@inject NavigationManager NavigationManager
+@inject IStorageModeService StorageModeService
+@inject ISignalRNotificationService SignalRNotificationService
+@using Microsoft.EntityFrameworkCore
+@implements IAsyncDisposable
+
+<div class="endpoint-page">
+    <div class="endpoint-header d-flex align-items-center gap-2 mb-3">
+        <input class="form-control form-control-lg flex-grow-1" value="@_model.Name" @oninput="OnNameChanged" />
+        @if (_isDirty)
+        {
+            <span class="badge bg-warning text-dark">geändert</span>
+        }
+        <button class="btn btn-primary" @onclick="SaveAsync" disabled="@(string.IsNullOrWhiteSpace(_model.Name))">Speichern</button>
+    </div>
+
+    @if (!string.IsNullOrEmpty(_errorMessage))
+    {
+        <div class="alert alert-danger">@_errorMessage</div>
+    }
+
+    @if (string.IsNullOrWhiteSpace(_model.Name))
+    {
+        <div class="alert alert-warning">Der Name darf nicht leer sein.</div>
+    }
+
+    <div class="endpoint-address d-flex gap-2 mb-3">
+        <select class="form-select" style="width:auto;" value="@_model.Method" @onchange="OnMethodChanged">
+            @foreach (var method in Enum.GetValues<Core.Enums.HttpMethod>())
+            {
+                <option value="@method">@method</option>
+            }
+        </select>
+        <input class="form-control flex-grow-1" placeholder="Relativer Pfad" value="@_model.RelativePath" @oninput="OnPathChanged" />
+        <button class="btn btn-success" @onclick="SendRequestAsync">Anfrage senden</button>
+    </div>
+
+    <ul class="nav nav-tabs">
+        <li class="nav-item">
+            <button class="nav-link @(_activeRequestTab == "auth" ? "active" : "")" @onclick='() => _activeRequestTab = "auth"'>Autorisierung</button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link @(_activeRequestTab == "headers" ? "active" : "")" @onclick='() => _activeRequestTab = "headers"'>Headers</button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link @(_activeRequestTab == "query" ? "active" : "")" @onclick='() => _activeRequestTab = "query"'>Query-Parameter</button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link @(_activeRequestTab == "body" ? "active" : "")" @onclick='() => _activeRequestTab = "body"'>Body</button>
+        </li>
+    </ul>
+
+    <div class="request-panel-body border border-top-0 p-3 mb-3">
+        @if (_activeRequestTab == "auth")
+        {
+            <RequestAuthPanel AuthenticationType="_model.AuthenticationType"
+                              AuthenticationTypeChanged="OnAuthTypeChanged"
+                              ApplicationId="_model.ApplicationId" />
+        }
+        else if (_activeRequestTab == "headers")
+        {
+            <RequestHeadersPanel Headers="_headers" OnChanged="MarkDirty" />
+        }
+        else if (_activeRequestTab == "query")
+        {
+            <RequestQueryParamsPanel QueryParameters="_queryParameters" OnChanged="MarkDirty" />
+        }
+        else if (_activeRequestTab == "body")
+        {
+            <RequestBodyPanel Body="_model.Body" BodyChanged="OnBodyChanged"
+                              BodyMode="_model.BodyMode" BodyModeChanged="OnBodyModeChanged" />
+        }
+    </div>
+
+    @if (_result != null)
+    {
+        <div class="response-section">
+            <h5>Antwort</h5>
+            <div class="d-flex gap-3 mb-2 small text-muted">
+                <span>Status: <strong>@_result.StatusCode</strong></span>
+                @if (_result.DurationMs.HasValue)
+                {
+                    <span>Dauer: <strong>@_result.DurationMs ms</strong></span>
+                }
+                @if (_result.ResponseSizeBytes.HasValue)
+                {
+                    <span>Größe: <strong>@_result.ResponseSizeBytes Bytes</strong></span>
+                }
+            </div>
+            @if (!string.IsNullOrEmpty(_result.ErrorMessage))
+            {
+                <div class="alert alert-danger">@_result.ErrorMessage</div>
+            }
+            <ul class="nav nav-tabs">
+                <li class="nav-item">
+                    <button class="nav-link @(_activeResponseTab == "body" ? "active" : "")" @onclick='() => _activeResponseTab = "body"'>Body</button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link @(_activeResponseTab == "headers" ? "active" : "")" @onclick='() => _activeResponseTab = "headers"'>Headers</button>
+                </li>
+            </ul>
+            <div class="response-panel-body border border-top-0 p-3">
+                @if (_activeResponseTab == "body")
+                {
+                    <ResponseBodyPanel Body="_result.ResponseBody" />
+                }
+                else
+                {
+                    <ResponseHeadersPanel Headers="_result.ResponseHeaders" />
+                }
+            </div>
+        </div>
+    }
+</div>
+
+@if (_showConcurrencyWarning)
+{
+    <ConcurrencyWarningDialog OnForceSave="ForceSaveAsync" OnCancel="CancelConcurrencyWarning" />
+}
+
+@code {
+    [Parameter] public Core.Models.Endpoint Endpoint { get; set; } = default!;
+    [Parameter] public EventCallback<Core.Models.Endpoint> OnEndpointSaved { get; set; }
+
+    private Core.Models.Endpoint _model = new();
+    private List<RequestHeadersPanel.HeaderEntry> _headers = [];
+    private List<RequestQueryParamsPanel.QueryParamEntry> _queryParameters = [];
+    private bool _isDirty;
+    private bool _showConcurrencyWarning;
+    private string? _errorMessage;
+    private EndpointExecutionResult? _result;
+    private string _activeRequestTab = "auth";
+    private string _activeResponseTab = "body";
+
+    private IJSObjectReference? _jsModule;
+    private DotNetObjectReference<EndpointPage>? _dotNetRef;
+    private IDisposable? _locationChangingRegistration;
+    private bool _beforeUnloadActive;
+    private int _lastLoadedEndpointId;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Endpoint.Id != _lastLoadedEndpointId)
+        {
+            _lastLoadedEndpointId = Endpoint.Id;
+            LoadModelFromParameter();
+            _isDirty = false;
+            _errorMessage = null;
+            _result = null;
+            await DisableBeforeUnloadGuardAsync();
+            UnregisterLocationChanging();
+        }
+    }
+
+    /// <summary>Spiegelt alle Felder von <see cref="Endpoint"/> in das lokale Modell. Bei neuen Feldern in <see cref="Core.Models.Endpoint"/> muss diese Methode ergänzt werden.</summary>
+    private void LoadModelFromParameter()
+    {
+        _model = new Core.Models.Endpoint
+        {
+            Id = Endpoint.Id,
+            Name = Endpoint.Name,
+            Method = Endpoint.Method,
+            RelativePath = Endpoint.RelativePath,
+            Body = Endpoint.Body,
+            BodyMode = Endpoint.BodyMode,
+            AuthenticationType = Endpoint.AuthenticationType,
+            ApplicationId = Endpoint.ApplicationId,
+            Application = Endpoint.Application,
+            EndpointGroupId = Endpoint.EndpointGroupId,
+            EndpointGroup = Endpoint.EndpointGroup,
+            RowVersion = Endpoint.RowVersion
+        };
+        _headers = Endpoint.Headers
+            .Select(h => new RequestHeadersPanel.HeaderEntry { Key = h.Key, Value = h.Value })
+            .ToList();
+        _queryParameters = Endpoint.QueryParameters
+            .Select(p => new RequestQueryParamsPanel.QueryParamEntry { Key = p.Key, Value = p.Value })
+            .ToList();
+        SyncAutoContentType();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _jsModule = await JSRuntime.InvokeAsync<IJSObjectReference>("import", "./endpoint-page.js");
+            _dotNetRef = DotNetObjectReference.Create(this);
+            await _jsModule.InvokeVoidAsync("registerSaveShortcut", _dotNetRef);
+        }
+    }
+
+    [JSInvokable]
+    public async Task OnSaveShortcut()
+    {
+        await SaveAsync();
+    }
+
+    private void OnNameChanged(ChangeEventArgs e)
+    {
+        _model.Name = e.Value?.ToString() ?? string.Empty;
+        MarkDirty();
+    }
+
+    private void OnPathChanged(ChangeEventArgs e)
+    {
+        _model.RelativePath = e.Value?.ToString() ?? string.Empty;
+        MarkDirty();
+    }
+
+    private void OnMethodChanged(ChangeEventArgs e)
+    {
+        if (Enum.TryParse<Core.Enums.HttpMethod>(e.Value?.ToString(), out var method))
+        {
+            _model.Method = method;
+            MarkDirty();
+        }
+    }
+
+    private void OnAuthTypeChanged(AuthenticationType authType)
+    {
+        _model.AuthenticationType = authType;
+        MarkDirty();
+    }
+
+    private void OnBodyChanged(string? body)
+    {
+        _model.Body = body;
+        MarkDirty();
+    }
+
+    private void OnBodyModeChanged(BodyMode mode)
+    {
+        _model.BodyMode = mode;
+        SyncAutoContentType();
+        MarkDirty();
+    }
+
+    private void SyncAutoContentType()
+    {
+        var contentType = _model.BodyMode switch
+        {
+            BodyMode.Json => "application/json",
+            BodyMode.Xml => "application/xml",
+            BodyMode.PlainText => "text/plain",
+            _ => null
+        };
+
+        var existing = _headers.FirstOrDefault(h => h.Key.Equals("Content-Type", StringComparison.OrdinalIgnoreCase));
+        if (contentType == null)
+        {
+            if (existing != null && existing.IsAutoContentType)
+                _headers.Remove(existing);
+            return;
+        }
+
+        if (existing == null)
+        {
+            _headers.Add(new RequestHeadersPanel.HeaderEntry
+            {
+                Key = "Content-Type",
+                Value = contentType,
+                IsAutoContentType = true
+            });
+        }
+        else if (existing.IsAutoContentType)
+        {
+            existing.Value = contentType;
+        }
+    }
+
+    private void MarkDirty()
+    {
+        if (!_isDirty)
+        {
+            _isDirty = true;
+            _ = EnableNavigationGuardsAsync();
+        }
+    }
+
+    private async Task EnableNavigationGuardsAsync()
+    {
+        if (_locationChangingRegistration == null)
+            _locationChangingRegistration = NavigationManager.RegisterLocationChangingHandler(HandleLocationChanging);
+        if (!_beforeUnloadActive && _jsModule != null)
+        {
+            await _jsModule.InvokeVoidAsync("enableBeforeUnloadGuard");
+            _beforeUnloadActive = true;
+        }
+    }
+
+    private async Task DisableBeforeUnloadGuardAsync()
+    {
+        if (_beforeUnloadActive && _jsModule != null)
+        {
+            await _jsModule.InvokeVoidAsync("disableBeforeUnloadGuard");
+            _beforeUnloadActive = false;
+        }
+    }
+
+    private void UnregisterLocationChanging()
+    {
+        _locationChangingRegistration?.Dispose();
+        _locationChangingRegistration = null;
+    }
+
+    private async ValueTask HandleLocationChanging(LocationChangingContext context)
+    {
+        if (!_isDirty)
+            return;
+        var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", "Es gibt ungespeicherte Änderungen. Trotzdem verlassen?");
+        if (!confirmed)
+            context.PreventNavigation();
+    }
+
+    private async Task SaveAsync()
+    {
+        _errorMessage = null;
+        if (string.IsNullOrWhiteSpace(_model.Name))
+            return;
+
+        _model.Headers = _headers.Select(h => new EndpointHeader { Key = h.Key, Value = h.Value }).ToList();
+        _model.QueryParameters = _queryParameters.Select(p => new EndpointQueryParameter { Key = p.Key, Value = p.Value }).ToList();
+
+        try
+        {
+            await PersistAsync(_model);
+            await OnSaveSuccessAsync();
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            _showConcurrencyWarning = true;
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Speichern fehlgeschlagen: {ex.Message}";
+        }
+    }
+
+    private async Task ForceSaveAsync()
+    {
+        _showConcurrencyWarning = false;
+
+        if (_model.Id != 0)
+        {
+            var current = await EndpointRepository.GetEndpointByIdAsync(_model.Id);
+            if (current != null)
+                _model.RowVersion = current.RowVersion;
+        }
+
+        try
+        {
+            await PersistAsync(_model);
+            await OnSaveSuccessAsync();
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Speichern fehlgeschlagen: {ex.Message}";
+        }
+    }
+
+    private void CancelConcurrencyWarning() => _showConcurrencyWarning = false;
+
+    private async Task PersistAsync(Core.Models.Endpoint endpoint)
+    {
+        if (endpoint.Id == 0)
+            await EndpointRepository.AddEndpointAsync(endpoint);
+        else
+            await EndpointRepository.UpdateEndpointAsync(endpoint);
+    }
+
+    private async Task OnSaveSuccessAsync()
+    {
+        _isDirty = false;
+        UnregisterLocationChanging();
+        await DisableBeforeUnloadGuardAsync();
+        if (StorageModeService.CurrentMode == StorageMode.Team)
+            await SignalRNotificationService.NotifyEndpointChangedAsync(_model.Id, _model.ApplicationId);
+        await OnEndpointSaved.InvokeAsync(_model);
+    }
+
+    private async Task SendRequestAsync()
+    {
+        if (_isDirty)
+        {
+            await SaveAsync();
+            if (_isDirty)
+                return;
+        }
+
+        var refreshed = await EndpointRepository.GetEndpointByIdAsync(_model.Id);
+        if (refreshed == null)
+        {
+            _errorMessage = "Endpunkt konnte nicht geladen werden.";
+            return;
+        }
+
+        _result = await ExecutionService.ExecuteAsync(refreshed);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        UnregisterLocationChanging();
+        if (_jsModule != null)
+        {
+            try
+            {
+                await _jsModule.InvokeVoidAsync("unregisterSaveShortcut");
+                await _jsModule.InvokeVoidAsync("disableBeforeUnloadGuard");
+                await _jsModule.DisposeAsync();
+            }
+            catch (JSDisconnectedException)
+            {
+            }
+        }
+        _dotNetRef?.Dispose();
+    }
+}

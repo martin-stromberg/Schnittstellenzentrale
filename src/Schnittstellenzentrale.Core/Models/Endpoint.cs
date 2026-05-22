@@ -9,6 +9,7 @@ public class Endpoint
     public Enums.HttpMethod Method { get; set; }
     public string RelativePath { get; set; } = string.Empty;
     public string? Body { get; set; }
+    public BodyMode BodyMode { get; set; }
     public AuthenticationType AuthenticationType { get; set; }
     public int ApplicationId { get; set; }
     public Application Application { get; set; } = null!;

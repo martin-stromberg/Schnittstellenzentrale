@@ -1,0 +1,72 @@
+<div class="request-headers-panel">
+    <table class="table table-sm">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Wert</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var header in Headers)
+            {
+                <tr @key="header">
+                    <td>
+                        <input class="form-control form-control-sm @(header.IsAutoContentType ? "text-muted" : "")"
+                               value="@header.Key"
+                               @oninput="(e) => OnKeyChanged(header, e)" />
+                    </td>
+                    <td>
+                        <input class="form-control form-control-sm @(header.IsAutoContentType ? "text-muted" : "")"
+                               value="@header.Value"
+                               @oninput="(e) => OnValueChanged(header, e)" />
+                    </td>
+                    <td>
+                        <button type="button" class="btn btn-outline-danger btn-sm" @onclick="() => RemoveHeader(header)">&#x2715;</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+    <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="AddHeader">+ Header</button>
+</div>
+
+@code {
+    [Parameter] public List<HeaderEntry> Headers { get; set; } = [];
+    [Parameter] public EventCallback OnChanged { get; set; }
+
+    public class HeaderEntry
+    {
+        public string Key { get; set; } = string.Empty;
+        public string Value { get; set; } = string.Empty;
+        public bool IsAutoContentType { get; set; }
+    }
+
+    private async Task OnKeyChanged(HeaderEntry entry, ChangeEventArgs e)
+    {
+        entry.Key = e.Value?.ToString() ?? string.Empty;
+        if (entry.IsAutoContentType)
+            entry.IsAutoContentType = false;
+        await OnChanged.InvokeAsync();
+    }
+
+    private async Task OnValueChanged(HeaderEntry entry, ChangeEventArgs e)
+    {
+        entry.Value = e.Value?.ToString() ?? string.Empty;
+        if (entry.IsAutoContentType)
+            entry.IsAutoContentType = false;
+        await OnChanged.InvokeAsync();
+    }
+
+    private async Task AddHeader()
+    {
+        Headers.Add(new HeaderEntry());
+        await OnChanged.InvokeAsync();
+    }
+
+    private async Task RemoveHeader(HeaderEntry entry)
+    {
+        Headers.Remove(entry);
+        await OnChanged.InvokeAsync();
+    }
+}

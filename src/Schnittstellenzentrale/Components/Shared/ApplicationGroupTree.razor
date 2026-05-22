@@ -1,66 +1,66 @@
 @inject IApplicationApiClient ApplicationApiClient
+@inject IEndpointRepository EndpointRepository
 @inject IStorageModeService StorageModeService
 @inject ICurrentUserService CurrentUserService
-@implements IDisposable
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JSRuntime
+@inject ILogger<ApplicationGroupTree> Logger
+@using Microsoft.AspNetCore.SignalR.Client
+@implements IAsyncDisposable
 
-<div class="application-group-tree">
+<div @ref="_sidebarElement" class="application-group-tree">
     @if (!string.IsNullOrEmpty(_errorMessage))
     {
-        <div class="alert alert-danger mt-2">@_errorMessage</div>
+        <div class="alert alert-danger m-2 p-2 small">@_errorMessage</div>
     }
 
-    <div class="d-flex gap-2 mb-2">
+    <div class="sz-tree-topbar">
         <button type="button" class="btn btn-outline-primary btn-sm" @onclick="RequestCreateGroup">Neue Gruppe</button>
         <button type="button" class="btn btn-outline-primary btn-sm" @onclick="RequestCreateApplication">Neue Anwendung</button>
     </div>
 
-    @if (_groups != null)
-    {
-        @foreach (var group in _groups)
+    <div class="sz-tree-body">
+        @if (_groups != null)
         {
-            <div @key="group.Id"
-                 class="@(_dropTargetGroupId == group.Id ? "drag-over" : "")"
-                 @ondragenter="() => OnDragEnter(group.Id)"
-                 @ondragleave="OnDragLeave">
-                <CollapsibleSection Title="@group.Name" IsDropTarget="true" OnDrop="() => OnDrop(group.Id)">
-                    <TitleActions>
-                        <ApplicationGroupContextMenu Group="group" OnRenameRequested="RequestRenameGroup" OnDeleteRequested="RequestDeleteGroup" />
-                    </TitleActions>
+            @foreach (var group in _groups)
+            {
+                <div @key="group.Id"
+                     class="@(_dropTargetGroupId == group.Id ? "drag-over" : "")"
+                     @ondragenter="() => OnDragEnter(group.Id)"
+                     @ondragleave="OnDragLeave">
+                    <CollapsibleSection Title="@group.Name" IconClass="bi bi-collection" IsDropTarget="true" OnDrop="() => OnDrop(group.Id)">
+                        <TitleActions>
+                            <ApplicationGroupContextMenu Group="group" OnRenameRequested="RequestRenameGroup" OnDeleteRequested="RequestDeleteGroup" />
+                        </TitleActions>
+                        <ChildContent>
+                            @foreach (var app in group.Applications)
+                            {
+                                @RenderApplication(app)
+                            }
+                        </ChildContent>
+                    </CollapsibleSection>
+                </div>
+            }
+        }
+        @if (_ungroupedApplications != null && _ungroupedApplications.Any())
+        {
+            <div class="@(_dropTargetIsUngrouped ? "drag-over" : "")"
+                 @ondragenter="OnDragEnterUngrouped"
+                 @ondragleave="OnDragLeaveUngrouped">
+                <CollapsibleSection Title="Ohne Gruppe" IconClass="bi bi-layers" IsDropTarget="true" OnDrop="() => OnDrop(null)">
                     <ChildContent>
-                        @foreach (var app in group.Applications)
+                        @foreach (var app in _ungroupedApplications)
                         {
-                            <div class="tree-leaf" draggable="@(app.IsSystem ? "false" : "true")" @ondragstart="() => OnDragStart(app)" @ondragover:preventDefault="true">
-                                <button class="btn btn-link" @onclick="() => SelectApplication(app.Id)">
-                                    @app.Name
-                                </button>
-                                <ApplicationContextMenu Application="app" OnEditRequested="RequestEditApplication" OnRemoveFromGroupRequested="OnRemoveFromGroupRequested" OnDeleteRequested="RequestDeleteApplication" />
-                            </div>
+                            @RenderApplication(app)
                         }
                     </ChildContent>
                 </CollapsibleSection>
             </div>
         }
-    }
-    @if (_ungroupedApplications != null && _ungroupedApplications.Any())
-    {
-        <div class="@(_dropTargetIsUngrouped ? "drag-over" : "")"
-             @ondragenter="OnDragEnterUngrouped"
-             @ondragleave="OnDragLeaveUngrouped">
-            <CollapsibleSection Title="Ohne Gruppe" IsDropTarget="true" OnDrop="() => OnDrop(null)">
-                <ChildContent>
-                    @foreach (var app in _ungroupedApplications)
-                    {
-                        <div class="tree-leaf" draggable="@(app.IsSystem ? "false" : "true")" @ondragstart="() => OnDragStart(app)" @ondragover:preventDefault="true">
-                            <button class="btn btn-link" @onclick="() => SelectApplication(app.Id)">
-                                @app.Name
-                            </button>
-                            <ApplicationContextMenu Application="app" OnEditRequested="RequestEditApplication" OnRemoveFromGroupRequested="OnRemoveFromGroupRequested" OnDeleteRequested="RequestDeleteApplication" />
-                        </div>
-                    }
-                </ChildContent>
-            </CollapsibleSection>
-        </div>
-    }
+    </div>
+
+    <div @ref="_resizeHandleElement" class="sidebar-resize-handle"
+         style="position: absolute; top: 0; right: -4px; width: 8px; height: 100%; cursor: ew-resize;"></div>
 </div>
 
 @code {
@@ -72,9 +72,18 @@
     [Parameter] public EventCallback<ApplicationGroup> OnRenameGroupRequested { get; set; }
     [Parameter] public EventCallback<ApplicationGroup> OnDeleteGroupRequested { get; set; }
     [Parameter] public EventCallback<Application> OnDeleteApplicationRequested { get; set; }
+    [Parameter] public EventCallback<Application> OnCreateEndpointGroupRequested { get; set; }
+    [Parameter] public EventCallback<(Application Application, EndpointGroup? Group)> OnCreateEndpointRequested { get; set; }
+    [Parameter] public EventCallback<EndpointGroup> OnRenameEndpointGroupRequested { get; set; }
+    [Parameter] public EventCallback<EndpointGroup> OnDeleteEndpointGroupRequested { get; set; }
+    [Parameter] public EventCallback<Core.Models.Endpoint> OnDeleteEndpointRequested { get; set; }
+    [Parameter] public EventCallback<Core.Models.Endpoint> OnEndpointSelected { get; set; }
 
     private IList<ApplicationGroup>? _groups;
     private IList<Application>? _ungroupedApplications;
+    private Dictionary<int, IList<EndpointGroup>> _endpointGroups = new();
+    private Dictionary<int, IList<Core.Models.Endpoint>> _endpoints = new();
+    private HashSet<int> _expandedApplicationIds = new();
     private string _owner = string.Empty;
 
     private Application? _draggedApplication;
@@ -84,16 +93,73 @@
     private int _dragEnterCountUngrouped;
     private string? _errorMessage;
 
+    private ElementReference _sidebarElement;
+    private ElementReference _resizeHandleElement;
+    private IJSObjectReference? _jsModule;
+    private HubConnection? _hubConnection;
+
     protected override async Task OnInitializedAsync()
     {
         StorageModeService.OnModeChanged += OnModeChanged;
         _owner = CurrentUserService.GetCurrentUserName();
         await LoadDataAsync();
+        await ConnectHubAsync();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _jsModule = await JSRuntime.InvokeAsync<IJSObjectReference>("import", "./endpoint-page.js");
+            await _jsModule.InvokeVoidAsync("applyStoredSidebarWidth", _sidebarElement);
+            await _jsModule.InvokeVoidAsync("initializeSidebarResize", _resizeHandleElement, _sidebarElement);
+        }
+    }
+
+    private async Task ConnectHubAsync()
+    {
+        try
+        {
+            _hubConnection = new HubConnectionBuilder()
+                .WithUrl(NavigationManager.ToAbsoluteUri("/hubs/endpoint"))
+                .WithAutomaticReconnect()
+                .Build();
+
+            _hubConnection.On<int, int>("EndpointChanged", async (endpointId, applicationId) =>
+            {
+                await ReloadApplicationDataAsync(applicationId);
+                await InvokeAsync(StateHasChanged);
+            });
+
+            _hubConnection.On<int, int>("EndpointGroupChanged", async (groupId, applicationId) =>
+            {
+                await ReloadApplicationDataAsync(applicationId);
+                await InvokeAsync(StateHasChanged);
+            });
+
+            await _hubConnection.StartAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogDebug(ex, "SignalR-Verbindung konnte nicht aufgebaut werden – Live-Updates nicht verfügbar");
+            _hubConnection = null;
+        }
     }
 
     public async Task RefreshAsync()
     {
         await LoadDataAsync();
+        StateHasChanged();
+    }
+
+    public async Task ExpandApplicationAsync(int applicationId)
+    {
+        if (!_expandedApplicationIds.Contains(applicationId))
+        {
+            _expandedApplicationIds.Add(applicationId);
+            if (_hubConnection?.State == HubConnectionState.Connected)
+                await _hubConnection.InvokeAsync("SubscribeToApplication", applicationId);
+        }
         StateHasChanged();
     }
 
@@ -104,11 +170,39 @@
             _errorMessage = null;
             _groups = await ApplicationApiClient.GetGroupsAsync(StorageModeService.CurrentMode, _owner);
             _ungroupedApplications = await ApplicationApiClient.GetUngroupedApplicationsAsync(StorageModeService.CurrentMode, _owner);
+            _endpointGroups = new Dictionary<int, IList<EndpointGroup>>();
+            _endpoints = new Dictionary<int, IList<Core.Models.Endpoint>>();
+            foreach (var application in EnumerateApplications())
+                await ReloadApplicationDataAsync(application.Id);
         }
         catch (Exception ex)
         {
             _errorMessage = $"Fehler beim Laden der Daten: {ex.Message}";
         }
+    }
+
+    private async Task ReloadApplicationDataAsync(int applicationId)
+    {
+        try
+        {
+            _endpointGroups[applicationId] = await EndpointRepository.GetEndpointGroupsAsync(applicationId);
+            _endpoints[applicationId] = await EndpointRepository.GetEndpointsAsync(applicationId);
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Fehler beim Laden der Endpunkte: {ex.Message}";
+        }
+    }
+
+    private IEnumerable<Application> EnumerateApplications()
+    {
+        if (_groups != null)
+            foreach (var group in _groups)
+                foreach (var application in group.Applications)
+                    yield return application;
+        if (_ungroupedApplications != null)
+            foreach (var application in _ungroupedApplications)
+                yield return application;
     }
 
     private async Task SelectApplication(int applicationId)
@@ -128,6 +222,7 @@
                 _dragEnterCount = 0;
                 _dragEnterCountUngrouped = 0;
                 _errorMessage = null;
+                _expandedApplicationIds.Clear();
 
                 await LoadDataAsync();
                 await OnSelectionCleared.InvokeAsync();
@@ -141,9 +236,48 @@
         });
     }
 
-    public void Dispose()
+    private async Task ToggleApplicationExpanded(int applicationId)
+    {
+        if (_expandedApplicationIds.Contains(applicationId))
+        {
+            _expandedApplicationIds.Remove(applicationId);
+            if (_hubConnection?.State == HubConnectionState.Connected)
+                await _hubConnection.InvokeAsync("UnsubscribeFromApplication", applicationId);
+        }
+        else
+        {
+            _expandedApplicationIds.Add(applicationId);
+            if (_hubConnection?.State == HubConnectionState.Connected)
+                await _hubConnection.InvokeAsync("SubscribeToApplication", applicationId);
+        }
+    }
+
+    public async ValueTask DisposeAsync()
     {
         StorageModeService.OnModeChanged -= OnModeChanged;
+        if (_hubConnection != null)
+        {
+            try
+            {
+                foreach (var id in _expandedApplicationIds.ToList())
+                    if (_hubConnection.State == HubConnectionState.Connected)
+                        await _hubConnection.InvokeAsync("UnsubscribeFromApplication", id);
+                await _hubConnection.DisposeAsync();
+            }
+            catch
+            {
+            }
+        }
+        if (_jsModule != null)
+        {
+            try
+            {
+                await _jsModule.DisposeAsync();
+            }
+            catch (JSDisconnectedException)
+            {
+            }
+        }
     }
 
     private async Task RequestCreateGroup() => await OnCreateGroupRequested.InvokeAsync();
@@ -152,6 +286,14 @@
     private async Task RequestRenameGroup(ApplicationGroup group) => await OnRenameGroupRequested.InvokeAsync(group);
     private async Task RequestDeleteGroup(ApplicationGroup group) => await OnDeleteGroupRequested.InvokeAsync(group);
     private async Task RequestDeleteApplication(Application app) => await OnDeleteApplicationRequested.InvokeAsync(app);
+
+    private async Task RequestCreateEndpointGroup(Application app) => await OnCreateEndpointGroupRequested.InvokeAsync(app);
+    private async Task RequestCreateEndpointForApplication(Application app) => await OnCreateEndpointRequested.InvokeAsync((app, null));
+    private async Task RequestCreateEndpointForGroup(Application app, EndpointGroup group) => await OnCreateEndpointRequested.InvokeAsync((app, group));
+    private async Task RequestRenameEndpointGroup(EndpointGroup group) => await OnRenameEndpointGroupRequested.InvokeAsync(group);
+    private async Task RequestDeleteEndpointGroup(EndpointGroup group) => await OnDeleteEndpointGroupRequested.InvokeAsync(group);
+    private async Task RequestDeleteEndpoint(Core.Models.Endpoint endpoint) => await OnDeleteEndpointRequested.InvokeAsync(endpoint);
+    private async Task RequestSelectEndpoint(Core.Models.Endpoint endpoint) => await OnEndpointSelected.InvokeAsync(endpoint);
 
     private async Task OnRemoveFromGroupRequested(Application application)
     {
@@ -181,7 +323,6 @@
     {
         if (application.IsSystem)
             return;
-
         _draggedApplication = application;
     }
 
@@ -228,7 +369,6 @@
     {
         if (_draggedApplication == null)
             return;
-
         var previousGroupId = _draggedApplication.ApplicationGroupId;
         _draggedApplication.ApplicationGroupId = targetGroupId;
         try
@@ -254,4 +394,71 @@
         _dragEnterCount = 0;
         _dragEnterCountUngrouped = 0;
     }
+
+    private RenderFragment RenderApplication(Application app) => __builder =>
+    {
+        <div @key="app.Id">
+            <div class="sz-tree-row" draggable="@(app.IsSystem ? "false" : "true")" @ondragstart="() => OnDragStart(app)" @ondragover:preventDefault="true">
+                <button class="sz-tree-chevron-btn" @onclick="() => ToggleApplicationExpanded(app.Id)">
+                    <i class="bi @(_expandedApplicationIds.Contains(app.Id) ? "bi-chevron-down" : "bi-chevron-right")"></i>
+                </button>
+                <i class="bi bi-window sz-tree-icon"></i>
+                <button class="sz-tree-item-btn" @onclick="() => SelectApplication(app.Id)">@app.Name</button>
+                <ApplicationContextMenu Application="app"
+                                        OnEditRequested="RequestEditApplication"
+                                        OnRemoveFromGroupRequested="OnRemoveFromGroupRequested"
+                                        OnDeleteRequested="RequestDeleteApplication"
+                                        OnCreateEndpointGroupRequested="RequestCreateEndpointGroup"
+                                        OnCreateEndpointRequested="RequestCreateEndpointForApplication" />
+            </div>
+            @if (_expandedApplicationIds.Contains(app.Id))
+            {
+                <div class="sz-tree-children">
+                    @if (_endpointGroups.TryGetValue(app.Id, out var appGroups))
+                    {
+                        @foreach (var endpointGroup in appGroups)
+                        {
+                            <div @key="endpointGroup.Id">
+                                <div class="sz-tree-row">
+                                    <span class="sz-tree-indent"></span>
+                                    <i class="bi bi-folder sz-tree-icon"></i>
+                                    <span class="sz-tree-item-label">@endpointGroup.Name</span>
+                                    <EndpointGroupContextMenu Group="endpointGroup"
+                                                              OnCreateEndpointRequested="@(g => RequestCreateEndpointForGroup(app, g))"
+                                                              OnRenameEndpointGroupRequested="RequestRenameEndpointGroup"
+                                                              OnDeleteEndpointGroupRequested="RequestDeleteEndpointGroup" />
+                                </div>
+                                <div class="sz-tree-children">
+                                    @if (_endpoints.TryGetValue(app.Id, out var groupEndpoints))
+                                    {
+                                        @foreach (var endpoint in groupEndpoints.Where(e => e.EndpointGroupId == endpointGroup.Id))
+                                        {
+                                            <div class="sz-tree-row" @key="endpoint.Id">
+                                                <span class="sz-tree-indent"></span>
+                                                <i class="bi bi-lightning sz-tree-icon"></i>
+                                                <button class="sz-tree-item-btn" @onclick="() => RequestSelectEndpoint(endpoint)">@endpoint.Name</button>
+                                                <EndpointContextMenu Endpoint="endpoint" OnDeleteRequested="RequestDeleteEndpoint" />
+                                            </div>
+                                        }
+                                    }
+                                </div>
+                            </div>
+                        }
+                    }
+                    @if (_endpoints.TryGetValue(app.Id, out var ungroupedEndpoints))
+                    {
+                        @foreach (var endpoint in ungroupedEndpoints.Where(e => e.EndpointGroupId == null))
+                        {
+                            <div class="sz-tree-row" @key="endpoint.Id">
+                                <span class="sz-tree-indent"></span>
+                                <i class="bi bi-lightning sz-tree-icon"></i>
+                                <button class="sz-tree-item-btn" @onclick="() => RequestSelectEndpoint(endpoint)">@endpoint.Name</button>
+                                <EndpointContextMenu Endpoint="endpoint" OnDeleteRequested="RequestDeleteEndpoint" />
+                            </div>
+                        }
+                    }
+                </div>
+            }
+        </div>
+    };
 }

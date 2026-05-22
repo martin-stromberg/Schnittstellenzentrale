@@ -295,3 +295,157 @@ Beteiligte Klassen/Komponenten: `ApplicationGroupTree`
 Beide Editoren und alle Handler in `ApplicationGroupTree` fangen Ausnahmen ab und setzen `_errorMessage`. Die Fehlermeldung wird als `alert alert-danger` angezeigt. Formulare bleiben bei Fehlern geöffnet.
 
 `SystemEntryInitializer` fängt alle Ausnahmen im `try/catch`-Block ab und loggt sie per Serilog — der Programmstart wird dadurch nicht unterbrochen.
+
+---
+
+## Ablauf: Navigationsbaum mit Endpunkten und Ordnern laden (Eager Loading)
+
+`ApplicationGroupTree.LoadDataAsync` lädt beim Initialisieren (und bei jedem `RefreshAsync`-Aufruf) alle Endpunktgruppen und Endpunkte für jede Anwendung:
+
+1. `IApplicationApiClient.GetGroupsAsync` und `GetUngroupedApplicationsAsync` liefern die Anwendungsstruktur.
+2. Für jede `Application` wird `ReloadApplicationDataAsync(applicationId)` aufgerufen:
+   - `IEndpointRepository.GetEndpointGroupsAsync(applicationId)` → wird in `_endpointGroups[applicationId]` gespeichert.
+   - `IEndpointRepository.GetEndpointsAsync(applicationId)` → wird in `_endpoints[applicationId]` gespeichert.
+3. SignalR-Events `EndpointChanged(endpointId, applicationId)` und `EndpointGroupChanged(groupId, applicationId)` lösen ebenfalls `ReloadApplicationDataAsync(applicationId)` aus.
+
+Beim Aufklappen eines Anwendungsknotens (`ToggleApplicationExpanded`) wird die `applicationId` zu `_expandedApplicationIds` hinzugefügt und `EndpointHub.SubscribeToApplication(applicationId)` aufgerufen; beim Zuklappen wird abonniert und aus `_expandedApplicationIds` entfernt.
+
+`DisposeAsync` kündigt alle verbleibenden SignalR-Abonnements und gibt JS-Ressourcen frei.
+
+Beteiligte Klassen/Komponenten: `ApplicationGroupTree`, `IEndpointRepository`, `IApplicationApiClient`, `HubConnection`
+
+---
+
+## Ablauf: Ordner (`EndpointGroup`) anlegen
+
+1. Anwender klickt im `ApplicationContextMenu` auf „Ordner anlegen".
+2. `ApplicationContextMenu.CreateEndpointGroupRequested` ruft `OnCreateEndpointGroupRequested.InvokeAsync(Application)` auf.
+3. `Home.HandleCreateEndpointGroupRequested(application)`:
+   - Legt `EndpointGroup { Name = "Neuer Ordner", ApplicationId = application.Id }` an.
+   - `IEndpointRepository.AddEndpointGroupAsync(group)` speichert die Gruppe.
+   - Bei `StorageMode.Team`: `ISignalRNotificationService.NotifyEndpointGroupChangedAsync(saved.Id, application.Id)`.
+   - `_tree.RefreshAsync()` lädt den Baum neu.
+
+Beteiligte Klassen/Komponenten: `ApplicationContextMenu`, `Home`, `IEndpointRepository`, `ISignalRNotificationService`, `ApplicationGroupTree`
+
+---
+
+## Ablauf: Ordner (`EndpointGroup`) umbenennen
+
+1. Anwender klickt im `EndpointGroupContextMenu` auf „Ordner umbenennen".
+2. `EndpointGroupContextMenu.RenameRequested` ruft `OnRenameEndpointGroupRequested.InvokeAsync(Group)` auf.
+3. `Home.HandleRenameEndpointGroupRequested(group)` setzt `_renameTargetEndpointGroup = group` → `RenameEndpointGroupDialog` wird gerendert.
+4. `RenameEndpointGroupDialog.SaveAsync` löst `OnSaved.InvokeAsync(_model)` aus → `Home.OnEndpointGroupRenamed(group)`:
+   - `IEndpointRepository.UpdateEndpointGroupAsync(group)`.
+   - Bei `StorageMode.Team`: `ISignalRNotificationService.NotifyEndpointGroupChangedAsync(group.Id, group.ApplicationId)`.
+   - `_tree.RefreshAsync()`.
+
+Beteiligte Klassen/Komponenten: `EndpointGroupContextMenu`, `RenameEndpointGroupDialog`, `Home`, `IEndpointRepository`, `ISignalRNotificationService`, `ApplicationGroupTree`
+
+---
+
+## Ablauf: Ordner (`EndpointGroup`) löschen
+
+1. Anwender klickt im `EndpointGroupContextMenu` auf „Ordner löschen".
+2. `Home.HandleDeleteEndpointGroupRequested(group)`:
+   - Lädt alle Endpunkte der Anwendung via `IEndpointRepository.GetEndpointsAsync(group.ApplicationId)`.
+   - Zählt die Endpunkte mit `EndpointGroupId == group.Id` → `_deleteTargetEndpointCount`.
+   - Setzt `_deleteTargetEndpointGroup = group` → `ConfirmDeleteEndpointGroupDialog` wird mit `EndpointCount` gerendert.
+3. Nach Bestätigung: `Home.OnEndpointGroupDeleteConfirmed(group)`:
+   - Prüft, ob `_selectedEndpoint` zu dieser Gruppe gehört → setzt ggf. `_selectedEndpoint = null`.
+   - `IEndpointRepository.DeleteEndpointGroupAsync(group.Id)` — EF Core löscht alle enthaltenen Endpunkte kaskadierend (`DeleteBehavior.Cascade`).
+   - Bei `StorageMode.Team`: `ISignalRNotificationService.NotifyEndpointGroupChangedAsync(group.Id, applicationId)`.
+   - `_tree.RefreshAsync()`.
+
+Beteiligte Klassen/Komponenten: `EndpointGroupContextMenu`, `ConfirmDeleteEndpointGroupDialog`, `Home`, `IEndpointRepository`, `AppDbContext` (Cascade), `ISignalRNotificationService`
+
+---
+
+## Ablauf: Endpunkt anlegen
+
+1. Anwender klickt im `ApplicationContextMenu` auf „Endpunkt anlegen" oder im `EndpointGroupContextMenu` auf „Endpunkt anlegen".
+2. `Home.HandleCreateEndpointRequested((application, group?))`:
+   - Legt `Endpoint { Name = "Neuer Endpunkt", Method = GET, RelativePath = "", BodyMode = None, ApplicationId = ..., EndpointGroupId = group?.Id }` an.
+   - `IEndpointRepository.AddEndpointAsync(endpoint)`.
+   - Bei `StorageMode.Team`: `ISignalRNotificationService.NotifyEndpointChangedAsync(saved.Id, application.Id)`.
+   - `_tree.RefreshAsync()`.
+   - `IEndpointRepository.GetEndpointByIdAsync(saved.Id)` lädt den vollständigen Datensatz → `_selectedEndpoint = loaded` → `EndpointPage` wird geöffnet.
+
+Beteiligte Klassen/Komponenten: `ApplicationContextMenu`, `EndpointGroupContextMenu`, `Home`, `IEndpointRepository`, `ISignalRNotificationService`, `ApplicationGroupTree`, `EndpointPage`
+
+---
+
+## Ablauf: Endpunkt bearbeiten und speichern
+
+1. Anwender klickt auf einen Endpunkt-Knoten → `ApplicationGroupTree.RequestSelectEndpoint(endpoint)` → `OnEndpointSelected.InvokeAsync(endpoint)`.
+2. `Home.HandleEndpointSelected(endpoint)` setzt `_selectedEndpoint = endpoint` → `EndpointPage` wird im rechten Bereich gerendert.
+3. `EndpointPage.OnParametersSetAsync` erkennt eine neue `Endpoint.Id` und ruft `LoadModelFromParameter()` auf: kopiert alle Felder in `_model`, baut `_headers`- und `_queryParameters`-Listen auf, ruft `SyncAutoContentType()` auf.
+4. Anwender ändert Felder → `MarkDirty()` setzt `_isDirty = true` und registriert:
+   - `NavigationManager.RegisterLocationChangingHandler(HandleLocationChanging)` — verhindert Blazor-interne Navigation.
+   - `_jsModule.InvokeVoidAsync("enableBeforeUnloadGuard")` — setzt `window.onbeforeunload` für Browser-Refresh/Tab-Close.
+5. Speichern via Schaltfläche, `Strg+S` (`JSInvokable OnSaveShortcut`) oder implizit vor „Anfrage senden":
+   - Baut `_model.Headers` und `_model.QueryParameters` aus den lokalen Listen.
+   - `IEndpointRepository.UpdateEndpointAsync(_model)`.
+   - Bei `DbUpdateConcurrencyException`: `_showConcurrencyWarning = true` → `ConcurrencyWarningDialog`.
+   - Nach Erfolg: `_isDirty = false`; Navigation Guards deregistrieren; bei Team-Modus `NotifyEndpointChangedAsync`; `OnEndpointSaved.InvokeAsync`.
+
+Beteiligte Klassen/Komponenten: `EndpointPage`, `Home`, `IEndpointRepository`, `ISignalRNotificationService`, `ConcurrencyWarningDialog`, `IJSRuntime`, `NavigationManager`
+
+---
+
+## Ablauf: Anfrage senden
+
+1. Anwender klickt in `EndpointPage` auf **Anfrage senden**.
+2. Wenn `_isDirty == true`: `SaveAsync()` wird aufgerufen; schlägt das Speichern fehl, bricht die Ausführung ab.
+3. `IEndpointRepository.GetEndpointByIdAsync(_model.Id)` lädt den aktuellen Datensatz aus der Datenbank (um sicherzustellen, dass gespeicherte Header und Parameter verwendet werden).
+4. `IEndpointExecutionService.ExecuteAsync(refreshed)`:
+   - Wählt je nach `AuthenticationType` den HTTP-Client (`negotiate` oder Standard).
+   - `SendAndBuildResultAsync` startet eine `Stopwatch`, sendet die HTTP-Anfrage, stoppt nach Eingang der Antwort.
+   - `BuildResult` befüllt `EndpointExecutionResult` mit `StatusCode`, `ResponseBody`, `ResponseHeaders` (aus `HttpResponseMessage.Headers` und `Content.Headers`), `DurationMs` und `ResponseSizeBytes` (UTF-8-Byte-Länge des Body).
+5. `EndpointPage` zeigt das Ergebnis in `ResponseBodyPanel` und `ResponseHeadersPanel` an.
+
+Beteiligte Klassen/Komponenten: `EndpointPage`, `IEndpointExecutionService`, `EndpointExecutionService`, `EndpointExecutionResult`, `ResponseBodyPanel`, `ResponseHeadersPanel`
+
+---
+
+## Ablauf: `BodyMode`-Automatik für `Content-Type`
+
+1. Anwender wählt in `RequestBodyPanel` einen `BodyMode`.
+2. `RequestBodyPanel.OnBodyModeChanged` löst `BodyModeChanged.InvokeAsync(newMode)` aus.
+3. `EndpointPage.OnBodyModeChanged` ruft `SyncAutoContentType()` auf:
+   - `BodyMode.Json` → `Content-Type: application/json`; `BodyMode.Xml` → `application/xml`; `BodyMode.PlainText` → `text/plain`; `BodyMode.None` → kein automatischer Header.
+   - Existiert bereits ein `Content-Type`-Eintrag mit `IsAutoContentType == true`, wird dessen Wert aktualisiert.
+   - Existiert kein `Content-Type`-Eintrag, wird er mit `IsAutoContentType = true` hinzugefügt.
+   - Bei `BodyMode.None`: automatischer `Content-Type`-Eintrag wird entfernt.
+4. `RequestHeadersPanel` stellt Einträge mit `IsAutoContentType == true` ausgegraut dar.
+5. Ändert der Anwender den `Content-Type`-Wert manuell, setzt `RequestHeadersPanel.OnValueChanged` das `IsAutoContentType`-Flag auf `false`.
+
+Beteiligte Klassen/Komponenten: `EndpointPage`, `RequestBodyPanel`, `RequestHeadersPanel`
+
+---
+
+## Ablauf: Endpunkt löschen
+
+1. Anwender klickt im `EndpointContextMenu` auf „Endpunkt löschen".
+2. `EndpointContextMenu.DeleteRequested` löst `OnDeleteRequested.InvokeAsync(Endpoint)` aus.
+3. `Home.HandleDeleteEndpointRequested(endpoint)`:
+   - `IJSRuntime.InvokeAsync<bool>("confirm", ...)` — Browser-Bestätigungsdialog.
+   - Bei Ablehnung: keine Aktion.
+   - `IEndpointRepository.DeleteEndpointAsync(endpoint.Id)`.
+   - Wenn `_selectedEndpoint?.Id == endpoint.Id`: `_selectedEndpoint = null` → `EndpointPage` wird geschlossen.
+   - Bei `StorageMode.Team`: `ISignalRNotificationService.NotifyEndpointChangedAsync(endpoint.Id, endpoint.ApplicationId)`.
+   - `_tree.RefreshAsync()`.
+
+Beteiligte Klassen/Komponenten: `EndpointContextMenu`, `Home`, `IEndpointRepository`, `ISignalRNotificationService`, `ApplicationGroupTree`, `EndpointPage`
+
+---
+
+## Ablauf: Sidebar-Resize
+
+1. Nach dem ersten Rendern ruft `ApplicationGroupTree.OnAfterRenderAsync` das JS-Modul `endpoint-page.js` auf:
+   - `applyStoredSidebarWidth(_sidebarElement)` — liest gespeicherte Breite aus `localStorage` und setzt die CSS-Variable `--sidebar-width`.
+   - `initializeSidebarResize(_resizeHandleElement, _sidebarElement)` — registriert `mousedown`/`pointermove`/`pointerup`-Listener auf dem Resize-Handle.
+2. Beim Ziehen aktualisiert das JS-Modul die Sidebar-Breite als Inline-Style.
+3. Nach `pointerup` wird der aktuelle Wert in `localStorage` gespeichert.
+
+Beteiligte Klassen/Komponenten: `ApplicationGroupTree`, `IJSRuntime`, `endpoint-page.js`, Browser `localStorage`
