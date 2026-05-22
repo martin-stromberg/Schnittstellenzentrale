@@ -1,0 +1,59 @@
+@using System.Text.Json
+@using System.Xml.Linq
+
+<div class="response-body-panel">
+    <div class="d-flex gap-2 align-items-center mb-2">
+        <div class="btn-group btn-group-sm">
+            <button type="button" class="btn @(_viewMode == "pretty" ? "btn-primary" : "btn-outline-secondary")" @onclick='() => SetViewMode("pretty")'>Pretty</button>
+            <button type="button" class="btn @(_viewMode == "raw" ? "btn-primary" : "btn-outline-secondary")" @onclick='() => SetViewMode("raw")'>Raw</button>
+        </div>
+        @if (_viewMode == "pretty")
+        {
+            <select class="form-select form-select-sm" style="width:auto;" value="@_prettyFormat" @onchange="OnPrettyFormatChanged">
+                <option value="Json">JSON</option>
+                <option value="Xml">XML</option>
+            </select>
+        }
+    </div>
+    <pre class="bg-light p-2 border rounded small" style="max-height: 400px; overflow:auto;">@GetDisplayBody()</pre>
+</div>
+
+@code {
+    [Parameter] public string? Body { get; set; }
+
+    private string _viewMode = "pretty";
+    private string _prettyFormat = "Json";
+
+    private void SetViewMode(string mode) => _viewMode = mode;
+
+    private void OnPrettyFormatChanged(ChangeEventArgs e)
+    {
+        _prettyFormat = e.Value?.ToString() ?? "Json";
+    }
+
+    private string GetDisplayBody()
+    {
+        if (string.IsNullOrWhiteSpace(Body))
+            return string.Empty;
+
+        if (_viewMode == "raw")
+            return Body;
+
+        try
+        {
+            if (_prettyFormat == "Json")
+            {
+                using var doc = JsonDocument.Parse(Body);
+                return JsonSerializer.Serialize(doc.RootElement, new JsonSerializerOptions { WriteIndented = true });
+            }
+            else
+            {
+                return XDocument.Parse(Body).ToString();
+            }
+        }
+        catch
+        {
+            return Body;
+        }
+    }
+}

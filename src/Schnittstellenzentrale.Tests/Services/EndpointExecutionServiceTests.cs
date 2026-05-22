@@ -34,14 +34,15 @@ public class EndpointExecutionServiceTests
     private static (EndpointExecutionService, Mock<HttpMessageHandler>) CreateService(
         Mock<IHealthCheckService> healthCheckMock,
         Mock<ICredentialService> credentialMock,
-        HttpStatusCode responseCode = HttpStatusCode.OK)
+        HttpStatusCode responseCode = HttpStatusCode.OK,
+        string body = "{}")
     {
         var handlerMock = new Mock<HttpMessageHandler>();
         handlerMock.Protected()
             .Setup<Task<HttpResponseMessage>>("SendAsync",
                 ItExpr.IsAny<HttpRequestMessage>(),
                 ItExpr.IsAny<CancellationToken>())
-            .ReturnsAsync(new HttpResponseMessage(responseCode) { Content = new StringContent("{}") });
+            .ReturnsAsync(new HttpResponseMessage(responseCode) { Content = new StringContent(body) });
 
         var httpClient = new HttpClient(handlerMock.Object);
         var factoryMock = new Mock<IHttpClientFactory>();
@@ -87,8 +88,10 @@ public class EndpointExecutionServiceTests
             ItExpr.IsAny<CancellationToken>());
     }
 
-    [Fact]
-    public async Task Execute_WithAuthTypeNegotiate_UsesNegotiateHandler()
+    [Theory]
+    [InlineData(AuthenticationType.Negotiate)]
+    [InlineData(AuthenticationType.NegotiateWithImpersonation)]
+    public async Task Execute_WithNegotiateAuthType_UsesNegotiateHandler(AuthenticationType authType)
     {
         var healthMock = new Mock<IHealthCheckService>();
         var credMock = new Mock<ICredentialService>();
@@ -102,7 +105,7 @@ public class EndpointExecutionServiceTests
         var factoryMock = new Mock<IHttpClientFactory>();
         factoryMock.Setup(f => f.CreateClient(It.IsAny<string>())).Returns(new HttpClient(handlerMock.Object));
         var service = new EndpointExecutionService(factoryMock.Object, healthMock.Object, credMock.Object);
-        var endpoint = CreateEndpoint(AuthenticationType.Negotiate);
+        var endpoint = CreateEndpoint(authType);
 
         await service.ExecuteAsync(endpoint);
 
@@ -130,7 +133,38 @@ public class EndpointExecutionServiceTests
     }
 
     [Fact]
-    public async Task Execute_WithAuthTypeNegotiateWithImpersonation_RunsImpersonated()
+    public async Task Execute_SetsResponseHeaders()
+    {
+        var healthMock = new Mock<IHealthCheckService>();
+        var credMock = new Mock<ICredentialService>();
+        var handlerMock = new Mock<HttpMessageHandler>();
+        var response = new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent("{}")
+        };
+        response.Headers.Add("X-Custom-Header", "headerValue");
+        handlerMock.Protected()
+            .Setup<Task<HttpResponseMessage>>("SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>())
+            .ReturnsAsync(response);
+
+        var httpClient = new HttpClient(handlerMock.Object);
+        var factoryMock = new Mock<IHttpClientFactory>();
+        factoryMock.Setup(f => f.CreateClient(It.IsAny<string>())).Returns(httpClient);
+
+        var service = new EndpointExecutionService(factoryMock.Object, healthMock.Object, credMock.Object);
+        var endpoint = CreateEndpoint(AuthenticationType.None);
+
+        var result = await service.ExecuteAsync(endpoint);
+
+        Assert.NotNull(result.ResponseHeaders);
+        Assert.True(result.ResponseHeaders!.ContainsKey("X-Custom-Header"));
+        Assert.Equal("headerValue", result.ResponseHeaders["X-Custom-Header"]);
+    }
+
+    [Fact]
+    public async Task Execute_SetsDurationMs()
     {
         var healthMock = new Mock<IHealthCheckService>();
         var credMock = new Mock<ICredentialService>();
@@ -139,16 +173,38 @@ public class EndpointExecutionServiceTests
             .Setup<Task<HttpResponseMessage>>("SendAsync",
                 ItExpr.IsAny<HttpRequestMessage>(),
                 ItExpr.IsAny<CancellationToken>())
-            .ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("{}") });
+            .Returns(async () =>
+            {
+                await Task.Delay(20);
+                return new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("{}") };
+            });
 
+        var httpClient = new HttpClient(handlerMock.Object);
         var factoryMock = new Mock<IHttpClientFactory>();
-        factoryMock.Setup(f => f.CreateClient(It.IsAny<string>())).Returns(new HttpClient(handlerMock.Object));
+        factoryMock.Setup(f => f.CreateClient(It.IsAny<string>())).Returns(httpClient);
+
         var service = new EndpointExecutionService(factoryMock.Object, healthMock.Object, credMock.Object);
-        var endpoint = CreateEndpoint(AuthenticationType.NegotiateWithImpersonation);
+        var endpoint = CreateEndpoint(AuthenticationType.None);
 
-        await service.ExecuteAsync(endpoint);
+        var result = await service.ExecuteAsync(endpoint);
 
-        factoryMock.Verify(f => f.CreateClient("negotiate"), Times.Once());
+        Assert.NotNull(result.DurationMs);
+        Assert.True(result.DurationMs > 0);
+    }
+
+    [Fact]
+    public async Task Execute_SetsResponseSizeBytes()
+    {
+        var healthMock = new Mock<IHealthCheckService>();
+        var credMock = new Mock<ICredentialService>();
+        const string body = "{\"value\":42}";
+        var (service, _) = CreateService(healthMock, credMock, body: body);
+        var endpoint = CreateEndpoint(AuthenticationType.None);
+
+        var result = await service.ExecuteAsync(endpoint);
+
+        Assert.NotNull(result.ResponseSizeBytes);
+        Assert.Equal(System.Text.Encoding.UTF8.GetByteCount(body), result.ResponseSizeBytes);
     }
 
     [Fact]

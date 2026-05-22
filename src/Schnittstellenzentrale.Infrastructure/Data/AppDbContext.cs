@@ -92,7 +92,7 @@ public class AppDbContext : DbContext
             entity.HasMany(e => e.Endpoints)
                   .WithOne(e => e.EndpointGroup)
                   .HasForeignKey(e => e.EndpointGroupId)
-                  .OnDelete(DeleteBehavior.SetNull);
+                  .OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<Core.Models.Endpoint>(entity =>

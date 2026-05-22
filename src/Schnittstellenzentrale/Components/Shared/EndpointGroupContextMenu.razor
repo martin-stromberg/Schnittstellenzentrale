@@ -1,0 +1,47 @@
+<div class="context-menu-container @(_isOpen ? "menu-open" : "")">
+    <button type="button" class="btn btn-link btn-sm context-menu-toggle" @onclick="ToggleMenu">⚙️</button>
+    @if (_isOpen)
+    {
+        <div class="context-menu-overlay" @onclick="() => _isOpen = false"></div>
+        <div class="context-menu-dropdown">
+            <button type="button" class="context-menu-item" @onclick="CreateEndpointRequested">
+                <i class="bi bi-lightning"></i> Endpunkt anlegen
+            </button>
+            <button type="button" class="context-menu-item" @onclick="RenameRequested">
+                <i class="bi bi-pencil"></i> Ordner umbenennen
+            </button>
+            <button type="button" class="context-menu-item context-menu-item--danger" @onclick="DeleteRequested">
+                <i class="bi bi-trash3"></i> Ordner löschen
+            </button>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public EndpointGroup Group { get; set; } = default!;
+    [Parameter] public EventCallback<EndpointGroup> OnCreateEndpointRequested { get; set; }
+    [Parameter] public EventCallback<EndpointGroup> OnRenameEndpointGroupRequested { get; set; }
+    [Parameter] public EventCallback<EndpointGroup> OnDeleteEndpointGroupRequested { get; set; }
+
+    private bool _isOpen;
+
+    private void ToggleMenu() => _isOpen = !_isOpen;
+
+    private async Task CreateEndpointRequested()
+    {
+        _isOpen = false;
+        await OnCreateEndpointRequested.InvokeAsync(Group);
+    }
+
+    private async Task RenameRequested()
+    {
+        _isOpen = false;
+        await OnRenameEndpointGroupRequested.InvokeAsync(Group);
+    }
+
+    private async Task DeleteRequested()
+    {
+        _isOpen = false;
+        await OnDeleteEndpointGroupRequested.InvokeAsync(Group);
+    }
+}

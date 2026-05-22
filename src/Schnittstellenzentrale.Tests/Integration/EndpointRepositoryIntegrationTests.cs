@@ -1,8 +1,6 @@
-using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Schnittstellenzentrale.Core.Enums;
 using Schnittstellenzentrale.Core.Models;
-using Schnittstellenzentrale.Infrastructure.Data;
 using Schnittstellenzentrale.Infrastructure.Repositories;
 using Schnittstellenzentrale.Tests.Helpers;
 
@@ -11,44 +9,175 @@ namespace Schnittstellenzentrale.Tests.Integration;
 public class EndpointRepositoryIntegrationTests
 {
     [Fact]
+    public async Task AddThenUpdate_WithDifferentInstance_DoesNotThrowTrackingConflict()
+    {
+        var (context, connection) = TestHelpers.CreateInMemoryDbContext();
+        try
+        {
+            var app = new Core.Models.Application { Name = "App", BaseUrl = "http://app" };
+            context.Applications.Add(app);
+            await context.SaveChangesAsync();
+            context.Entry(app).State = EntityState.Detached;
+
+            var repository = new EndpointRepository(context);
+
+            await repository.AddEndpointAsync(new Core.Models.Endpoint
+            {
+                Name = "Original",
+                Method = Core.Enums.HttpMethod.GET,
+                RelativePath = "/test",
+                ApplicationId = app.Id
+            });
+
+            var loaded = await repository.GetEndpointByIdAsync(
+                await context.Endpoints.Select(e => e.Id).FirstAsync());
+
+            loaded!.Name = "Updated";
+
+            var result = await repository.UpdateEndpointAsync(loaded);
+
+            Assert.Equal("Updated", result.Name);
+        }
+        finally
+        {
+            await context.DisposeAsync();
+            await connection.DisposeAsync();
+        }
+    }
+
+    [Fact]
+    public async Task AddThenUpdate_EndpointGroup_WithDifferentInstance_DoesNotThrowTrackingConflict()
+    {
+        var (context, connection) = TestHelpers.CreateInMemoryDbContext();
+        try
+        {
+            var app = new Core.Models.Application { Name = "App", BaseUrl = "http://app" };
+            context.Applications.Add(app);
+            await context.SaveChangesAsync();
+
+            var repository = new EndpointRepository(context);
+
+            await repository.AddEndpointGroupAsync(new EndpointGroup
+            {
+                Name = "Original",
+                ApplicationId = app.Id
+            });
+
+            var loaded = await repository.GetEndpointGroupByIdAsync(
+                await context.EndpointGroups.Select(g => g.Id).FirstAsync());
+
+            loaded!.Name = "Updated";
+
+            var result = await repository.UpdateEndpointGroupAsync(loaded);
+
+            Assert.Equal("Updated", result.Name);
+        }
+        finally
+        {
+            await context.DisposeAsync();
+            await connection.DisposeAsync();
+        }
+    }
+
+    [Fact]
     public async Task SaveEndpoint_ConcurrentWrite_DetectsConflict()
     {
-        await using var connection = new SqliteConnection("Data Source=:memory:");
-        connection.Open();
-
-        var options = new DbContextOptionsBuilder<AppDbContext>()
-            .UseSqlite(connection)
-            .Options;
-
-        await using var context1 = new AppDbContext(options);
-        context1.Database.EnsureCreated();
-
-        var app = new Core.Models.Application { Name = "App", BaseUrl = "http://app" };
-        context1.Applications.Add(app);
-        await context1.SaveChangesAsync();
-
-        var endpoint = new Core.Models.Endpoint
+        await TestHelpers.ExecuteWithTwoEndpointContextsAsync(async (ctx1, ctx2) =>
         {
-            Name = "Endpoint1",
-            Method = Core.Enums.HttpMethod.GET,
-            RelativePath = "/test",
-            ApplicationId = app.Id
-        };
-        context1.Endpoints.Add(endpoint);
-        await context1.SaveChangesAsync();
+            var app = new Core.Models.Application { Name = "App", BaseUrl = "http://app" };
+            ctx1.Context.Applications.Add(app);
+            await ctx1.Context.SaveChangesAsync();
 
-        await using var context2 = new AppDbContext(options);
-        var endpointFromContext2 = await context2.Endpoints.FirstAsync(e => e.Id == endpoint.Id);
+            var endpoint = await ctx1.Repo.AddEndpointAsync(new Core.Models.Endpoint
+            {
+                Name = "Endpoint1",
+                Method = Core.Enums.HttpMethod.GET,
+                RelativePath = "/test",
+                ApplicationId = app.Id
+            });
 
-        endpoint.Name = "UpdatedByContext1";
-        await context1.SaveChangesAsync();
+            var endpointFromRepo2 = await ctx2.Repo.GetEndpointByIdAsync(endpoint.Id);
 
-        endpointFromContext2.Name = "UpdatedByContext2";
+            endpoint.Name = "UpdatedByContext1";
+            await ctx1.Repo.UpdateEndpointAsync(endpoint);
 
-        await Assert.ThrowsAnyAsync<DbUpdateConcurrencyException>(async () =>
-        {
-            context2.Endpoints.Update(endpointFromContext2);
-            await context2.SaveChangesAsync();
+            endpointFromRepo2!.Name = "UpdatedByContext2";
+
+            await Assert.ThrowsAnyAsync<DbUpdateConcurrencyException>(async () =>
+                await ctx2.Repo.UpdateEndpointAsync(endpointFromRepo2));
         });
+    }
+
+    [Fact]
+    public async Task DeleteEndpointGroup_WithEndpoints_CascadesDelete()
+    {
+        var (context, connection) = TestHelpers.CreateInMemoryDbContext();
+        try
+        {
+            var app = new Core.Models.Application { Name = "App", BaseUrl = "http://app" };
+            context.Applications.Add(app);
+            await context.SaveChangesAsync();
+
+            var group = new EndpointGroup { Name = "Group", ApplicationId = app.Id };
+            context.EndpointGroups.Add(group);
+            await context.SaveChangesAsync();
+
+            var endpoint1 = new Core.Models.Endpoint
+            {
+                Name = "Endpoint1",
+                Method = Core.Enums.HttpMethod.GET,
+                RelativePath = "/e1",
+                ApplicationId = app.Id,
+                EndpointGroupId = group.Id
+            };
+            var endpoint2 = new Core.Models.Endpoint
+            {
+                Name = "Endpoint2",
+                Method = Core.Enums.HttpMethod.GET,
+                RelativePath = "/e2",
+                ApplicationId = app.Id,
+                EndpointGroupId = group.Id
+            };
+            context.Endpoints.AddRange(endpoint1, endpoint2);
+            await context.SaveChangesAsync();
+
+            var repository = new EndpointRepository(context);
+            await repository.DeleteEndpointGroupAsync(group.Id);
+
+            Assert.False(await context.EndpointGroups.AnyAsync(g => g.Id == group.Id));
+            Assert.False(await context.Endpoints.AnyAsync(e => e.Id == endpoint1.Id));
+            Assert.False(await context.Endpoints.AnyAsync(e => e.Id == endpoint2.Id));
+        }
+        finally
+        {
+            await context.DisposeAsync();
+            await connection.DisposeAsync();
+        }
+    }
+
+    [Fact]
+    public async Task DeleteEndpointGroup_WithoutEndpoints_DeletesGroup()
+    {
+        var (context, connection) = TestHelpers.CreateInMemoryDbContext();
+        try
+        {
+            var app = new Core.Models.Application { Name = "App", BaseUrl = "http://app" };
+            context.Applications.Add(app);
+            await context.SaveChangesAsync();
+
+            var group = new EndpointGroup { Name = "EmptyGroup", ApplicationId = app.Id };
+            context.EndpointGroups.Add(group);
+            await context.SaveChangesAsync();
+
+            var repository = new EndpointRepository(context);
+            await repository.DeleteEndpointGroupAsync(group.Id);
+
+            Assert.False(await context.EndpointGroups.AnyAsync(g => g.Id == group.Id));
+        }
+        finally
+        {
+            await context.DisposeAsync();
+            await connection.DisposeAsync();
+        }
     }
 }

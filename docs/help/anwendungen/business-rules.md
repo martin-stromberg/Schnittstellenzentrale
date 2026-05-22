@@ -171,6 +171,101 @@
 
 ---
 
+## `BodyMode`-Automatik für `Content-Type`
+
+**Beschreibung:** Wählt der Anwender ein Body-Format, wird der `Content-Type`-Header automatisch gesetzt, damit keine manuelle Pflege nötig ist. Der Anwender kann den Wert jederzeit manuell überschreiben.
+
+**Bedingungen:** `BodyMode` ist in `RequestBodyPanel` auf einen Wert ungleich `None` gesetzt.
+
+**Verhalten:**
+- `BodyMode.Json` → `Content-Type: application/json` wird in `_headers` hinzugefügt oder aktualisiert (`IsAutoContentType = true`).
+- `BodyMode.Xml` → `Content-Type: application/xml`.
+- `BodyMode.PlainText` → `Content-Type: text/plain`.
+- `BodyMode.None` → vorhandener automatischer `Content-Type`-Eintrag wird entfernt.
+- Ändert der Anwender Schlüssel oder Wert eines automatischen `Content-Type`-Eintrags manuell, wird `IsAutoContentType` auf `false` gesetzt — der Eintrag gilt fortan als manuell gepflegt und wird bei `BodyMode`-Wechsel nicht mehr automatisch aktualisiert.
+- `IsAutoContentType` ist nur ein UI-State-Flag und wird nicht in der Datenbank persistiert. Nach dem erneuten Laden eines Endpunkts wird `SyncAutoContentType()` erneut aufgerufen und setzt den Eintrag bei Übereinstimmung wieder auf `IsAutoContentType = true`.
+
+**Umsetzung:** `EndpointPage.SyncAutoContentType`, `EndpointPage.OnBodyModeChanged`, `RequestHeadersPanel.OnKeyChanged`, `RequestHeadersPanel.OnValueChanged`.
+
+---
+
+## Nebenläufigkeitskonflikte bei Endpunkten (RowVersion)
+
+**Beschreibung:** Auch `Endpoint` besitzt ein `RowVersion`-Feld. Wurde der Endpunkt zwischen Laden und Speichern von einer anderen Instanz geändert, wirft EF Core eine `DbUpdateConcurrencyException`.
+
+**Betroffene Operationen:** `IEndpointRepository.UpdateEndpointAsync` in `EndpointPage.SaveAsync`.
+
+**Verhalten:**
+- `ConcurrencyWarningDialog` erscheint.
+- **Änderungen trotzdem speichern:** `EndpointPage.ForceSaveAsync` lädt die aktuelle `RowVersion` via `GetEndpointByIdAsync` nach und wiederholt `UpdateEndpointAsync`.
+- **Abbrechen:** Dialog wird geschlossen; der Anwender kann den Endpunkt manuell neu laden.
+
+**Umsetzung:** `EndpointPage.SaveAsync`, `EndpointPage.ForceSaveAsync`, `ConcurrencyWarningDialog`.
+
+---
+
+## Ordner löschen: kaskadierende Löschung von Endpunkten
+
+**Beschreibung:** Das Löschen eines Ordners löscht kaskadierend alle enthaltenen Endpunkte, da `DeleteBehavior.Cascade` auf der `EndpointGroup → Endpoint`-Beziehung konfiguriert ist. Der Anwender muss vorab explizit informiert werden.
+
+**Bedingungen:** `EndpointCount > 0` (Anzahl der Endpunkte in der Gruppe)
+
+**Verhalten:**
+- `ConfirmDeleteEndpointGroupDialog` zeigt eine Warnung mit der genauen Anzahl betroffener Endpunkte.
+- Nach Bestätigung löscht `IEndpointRepository.DeleteEndpointGroupAsync` die Gruppe; EF Core löscht alle Endpunkte automatisch in der Datenbank.
+- Ist der gerade in `EndpointPage` angezeigte Endpunkt in der Gruppe enthalten, wird `_selectedEndpoint = null` gesetzt und `EndpointPage` geschlossen.
+
+**Umsetzung:** `Home.HandleDeleteEndpointGroupRequested`, `Home.OnEndpointGroupDeleteConfirmed`, `ConfirmDeleteEndpointGroupDialog`, `AppDbContext` (`DeleteBehavior.Cascade`).
+
+---
+
+## Implizites Speichern vor dem Senden einer Anfrage
+
+**Beschreibung:** Die Ausführung einer HTTP-Anfrage setzt voraus, dass der Endpunkt gespeichert ist, damit der `EndpointExecutionService` den aktuellen Datenbankstand verwendet.
+
+**Bedingungen:** `_isDirty == true` beim Klick auf „Anfrage senden".
+
+**Verhalten:**
+- `EndpointPage.SendRequestAsync` ruft zuerst `SaveAsync()` auf.
+- Schlägt das Speichern fehl (z. B. Validierungsfehler oder Concurrency-Konflikt), wird die Ausführung abgebrochen — `_isDirty` bleibt `true`.
+- Nach erfolgreichem Speichern wird der Endpunkt via `GetEndpointByIdAsync` neu geladen, bevor `ExecuteAsync` aufgerufen wird.
+
+**Umsetzung:** `EndpointPage.SendRequestAsync`.
+
+---
+
+## Navigation Guard bei ungespeicherten Änderungen
+
+**Beschreibung:** Verlässt der Anwender einen Endpunkt mit ungespeicherten Änderungen, soll er nicht versehentlich Daten verlieren.
+
+**Bedingungen:** `_isDirty == true`
+
+**Verhalten:**
+- Blazor-interne Navigation (Klick auf anderen Endpunkt): `NavigationManager.RegisterLocationChangingHandler` fängt die Navigation ab und zeigt einen Browser-Dialog. Bei Ablehnung wird die Navigation verhindert.
+- Browser-Refresh oder Tab-Close: `window.onbeforeunload` (via `IJSRuntime`, JS-Modul `endpoint-page.js`) zeigt den Browser-eigenen Verlassen-Dialog.
+- Nach erfolgreichem Speichern werden beide Guards deregistriert.
+- `DisposeAsync` deregistriert alle Guards explizit, um verwaiste Listener zu vermeiden.
+
+**Umsetzung:** `EndpointPage.MarkDirty`, `EndpointPage.EnableNavigationGuardsAsync`, `EndpointPage.DisableBeforeUnloadGuardAsync`, `EndpointPage.UnregisterLocationChanging`, `EndpointPage.DisposeAsync`, `endpoint-page.js`.
+
+---
+
+## SignalR-Benachrichtigung für Endpunkte und Ordner
+
+**Beschreibung:** Im Team-Modus erhalten alle verbundenen Clients Echtzeit-Updates über Änderungen an Endpunkten und Ordnern.
+
+**Bedingungen:** `IStorageModeService.CurrentMode == StorageMode.Team`
+
+**Verhalten:**
+- Alle Schreiboperationen auf `Endpoint` und `EndpointGroup` rufen `ISignalRNotificationService.NotifyEndpointChangedAsync(endpointId, applicationId)` bzw. `NotifyEndpointGroupChangedAsync(groupId, applicationId)` auf.
+- Events werden an die SignalR-Gruppe `application:{applicationId}` gesendet (Methoden: `EndpointChanged`, `EndpointGroupChanged`).
+- `ApplicationGroupTree` empfängt diese Events und lädt nur die Daten der betroffenen Anwendung neu (`ReloadApplicationDataAsync(applicationId)`), ohne den gesamten Baum neu aufzubauen.
+- Abonnements werden nur für aufgeklappte Anwendungsknoten gehalten; zuklappen kündigt das Abonnement.
+
+**Umsetzung:** `Home` (alle Schreibhandler), `EndpointPage.OnSaveSuccessAsync`, `SignalRNotificationService.NotifyEndpointChangedAsync`, `SignalRNotificationService.NotifyEndpointGroupChangedAsync`, `ApplicationGroupTree` (SignalR-Event-Handler, `ToggleApplicationExpanded`, `DisposeAsync`).
+
+---
+
 ## Moduswechsel: vollständiger State-Reset
 
 **Beschreibung:** Beim Wechsel des `StorageMode` muss der gesamte Seitenstate zurückgesetzt werden, damit keine Daten eines alten Modus sichtbar bleiben.

@@ -55,9 +55,60 @@ Systemeinträge können nicht über die Benutzeroberfläche oder die REST-API ve
 
 Normale Anwendungen dürfen per Drag & Drop in die Systemgruppe hinein- und wieder herausbewegt werden.
 
+## Endpunktgruppen und Endpunkte
+
+Jede Anwendung kann Endpunktgruppen (`EndpointGroup`) und einzelne Endpunkte (`Endpoint`) enthalten. Diese erscheinen nach dem Aufklappen des Anwendungsknotens im Navigationsbaum. Endpunkte ohne Gruppe werden direkt unterhalb der Anwendung aufgelistet; Endpunkte in einer Gruppe erscheinen unterhalb des Ordner-Knotens.
+
+**Navigationsbaum-Icons:**
+| Knotentyp | Icon |
+|---|---|
+| `ApplicationGroup` | `bi-collection` |
+| `Application` | `bi-window` |
+| `EndpointGroup` | `bi-folder` |
+| `Endpoint` | `bi-lightning` |
+
+**Endpunktgruppen verwalten** — Das Zahnrad-Menü eines Ordner-Knotens (`EndpointGroupContextMenu`) bietet:
+- **Endpunkt anlegen** — legt einen neuen Endpunkt innerhalb des Ordners an.
+- **Ordner umbenennen** — öffnet `RenameEndpointGroupDialog` mit dem aktuellen Namen.
+- **Ordner löschen** — öffnet `ConfirmDeleteEndpointGroupDialog`; enthält der Ordner Endpunkte, wird auf die kaskadierende Löschung hingewiesen.
+
+**Endpunkte verwalten** — Das Zahnrad-Menü eines Endpunkt-Knotens (`EndpointContextMenu`) bietet:
+- **Endpunkt löschen** — löscht den Endpunkt nach Bestätigung über einen Browser-Dialog.
+
+Das `ApplicationContextMenu` einer Anwendung wurde um zwei neue Einträge ergänzt:
+- **Ordner anlegen** — legt eine neue `EndpointGroup` mit dem Namen „Neuer Ordner" an.
+- **Endpunkt anlegen** — legt einen neuen Endpunkt direkt auf Anwendungsebene (ohne Gruppe) an.
+
+## Endpunkt bearbeiten (`EndpointPage`)
+
+Ein Klick auf einen Endpunkt-Knoten öffnet `EndpointPage` im rechten Bereich der Startseite. Die Seite bietet:
+
+- **Kopfbereich** — inline editierbarer Name; Badge „geändert", solange ungespeicherte Änderungen vorliegen; Schaltfläche **Speichern**.
+- **Adressleiste** — Dropdown für die HTTP-Methode (GET, POST, PUT, DELETE, PATCH, HEAD, OPTIONS), Eingabefeld für den relativen Pfad, Schaltfläche **Anfrage senden**.
+- **Anfrage-Register:**
+  - **Autorisierung** (`RequestAuthPanel`) — `AuthenticationType`-Auswahl; kontextsensitive Felder für Basic (Benutzername:Passwort) und BearerToken (Token-Feld); gespeichert im Windows Credential Manager.
+  - **Headers** (`RequestHeadersPanel`) — editierbare Tabelle mit beliebig vielen Name/Wert-Paaren; der automatisch gesetzte `Content-Type`-Eintrag wird ausgegraut dargestellt.
+  - **Query-Parameter** (`RequestQueryParamsPanel`) — editierbare Tabelle mit beliebig vielen Name/Wert-Paaren.
+  - **Body** (`RequestBodyPanel`) — Freitextfeld; `BodyMode`-Auswahl (None, Json, Xml, PlainText); Schaltfläche **Formatieren** (für JSON und XML).
+- **Antwort-Bereich** (erscheint nach einer Anfrage):
+  - Statuszeile mit Statuscode, Anfragedauer (ms) und Antwortgröße (Bytes).
+  - Register **Body** (`ResponseBodyPanel`) — Pretty/Raw-Umschalter; Formatauswahl (JSON/XML) im Pretty-Modus.
+  - Register **Headers** (`ResponseHeadersPanel`) — schreibgeschützte Tabelle der Antwort-Header.
+
+**Tastaturkürzel:** `Strg+S` löst das Speichern aus.
+
+**Ungespeicherte Änderungen:** Versucht der Anwender, zu einem anderen Endpunkt zu navigieren oder die Seite zu verlassen, erscheint eine Bestätigungsabfrage.
+
+## Sidebar-Resize
+
+Die Breite der linken Seitenleiste ist per Drag am rechten Rand frei anpassbar. Die eingestellte Breite wird im `localStorage` des Browsers gespeichert und bei der nächsten Sitzung automatisch wiederhergestellt.
+
 ## Einschränkungen
 
 - Die Gruppenauswahl im `ApplicationEditor` zeigt nur Gruppen, die beim Öffnen des Formulars bereits vorhanden sind.
 - Die Reihenfolge von Anwendungen innerhalb einer Gruppe wird durch Drag & Drop nicht verändert — nur die Gruppenzugehörigkeit.
 - Berechtigungen im Benutzermodus (darf ein Benutzer nur eigene oder alle sichtbaren Anwendungen bearbeiten?) sind noch nicht implementiert; alle sichtbaren Einträge zeigen das Zahnrad-Menü.
-- Bei einem Nebenläufigkeitskonflikt (`RowVersion`) wird eine Fehlermeldung angezeigt; ein automatisches Zusammenführen findet nicht statt.
+- Bei einem Nebenläufigkeitskonflikt (`RowVersion`) auf einem Endpunkt erscheint der `ConcurrencyWarningDialog`; „Änderungen trotzdem speichern" lädt die aktuelle `RowVersion` nach und speichert erneut.
+- Endpunkte können nicht zwischen Anwendungen oder Ordnern per Drag & Drop verschoben werden.
+- Das Formatieren im `RequestBodyPanel` prüft nur die syntaktische Korrektheit (JSON/XML) — semantische Validierung findet nicht statt.
+- Die Sidebar-Breite wird nur client-seitig im `localStorage` gespeichert; auf einem anderen Gerät oder Browser wird die Standardbreite verwendet.

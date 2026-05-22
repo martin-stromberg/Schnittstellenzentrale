@@ -1,0 +1,27 @@
+<div class="context-menu-container @(_isOpen ? "menu-open" : "")">
+    <button type="button" class="btn btn-link btn-sm context-menu-toggle" @onclick="ToggleMenu">⚙️</button>
+    @if (_isOpen)
+    {
+        <div class="context-menu-overlay" @onclick="() => _isOpen = false"></div>
+        <div class="context-menu-dropdown">
+            <button type="button" class="context-menu-item context-menu-item--danger" @onclick="DeleteRequested">
+                <i class="bi bi-trash3"></i> Endpunkt löschen
+            </button>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public Core.Models.Endpoint Endpoint { get; set; } = default!;
+    [Parameter] public EventCallback<Core.Models.Endpoint> OnDeleteRequested { get; set; }
+
+    private bool _isOpen;
+
+    private void ToggleMenu() => _isOpen = !_isOpen;
+
+    private async Task DeleteRequested()
+    {
+        _isOpen = false;
+        await OnDeleteRequested.InvokeAsync(Endpoint);
+    }
+}

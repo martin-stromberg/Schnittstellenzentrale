@@ -5,7 +5,6 @@ namespace Schnittstellenzentrale.Core.Interfaces;
 public interface IEndpointRepository
 {
     Task<IList<Endpoint>> GetEndpointsAsync(int applicationId);
-    Task<IList<Endpoint>> GetUngroupedEndpointsAsync(int applicationId);
     Task<Endpoint?> GetEndpointByIdAsync(int id);
     Task<Endpoint> AddEndpointAsync(Endpoint endpoint);
     Task<Endpoint> UpdateEndpointAsync(Endpoint endpoint);

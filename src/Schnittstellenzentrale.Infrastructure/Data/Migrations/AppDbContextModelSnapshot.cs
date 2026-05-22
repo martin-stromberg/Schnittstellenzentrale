@@ -108,6 +108,9 @@ namespace Schnittstellenzentrale.Infrastructure.Data.Migrations
                     b.Property<string>("Body")
                         .HasColumnType("TEXT");
 
+                    b.Property<int>("BodyMode")
+                        .HasColumnType("INTEGER");
+
                     b.Property<int?>("EndpointGroupId")
                         .HasColumnType("INTEGER");
 
@@ -237,7 +240,7 @@ namespace Schnittstellenzentrale.Infrastructure.Data.Migrations
                     b.HasOne("Schnittstellenzentrale.Core.Models.EndpointGroup", "EndpointGroup")
                         .WithMany("Endpoints")
                         .HasForeignKey("EndpointGroupId")
-                        .OnDelete(DeleteBehavior.SetNull);
+                        .OnDelete(DeleteBehavior.Cascade);
 
                     b.Navigation("Application");
 

@@ -1,6 +1,6 @@
 # Anwendungen
 
-Anwendungen und Anwendungsgruppen bilden die zentrale Struktur der Schnittstellenzentrale. Sie können über die Benutzeroberfläche angelegt, bearbeitet, verschoben und gelöscht werden — alles direkt im Navigationsbaum auf der linken Seite, ohne Datenbankzugriff.
+Anwendungen und Anwendungsgruppen bilden die zentrale Struktur der Schnittstellenzentrale. Sie können über die Benutzeroberfläche angelegt, bearbeitet, verschoben und gelöscht werden — alles direkt im Navigationsbaum auf der linken Seite, ohne Datenbankzugriff. Jede Anwendung kann Endpunktgruppen und Endpunkte enthalten, die ebenfalls im Navigationsbaum verwaltet und direkt ausgeführt werden können.
 
 ## Inhalt
 

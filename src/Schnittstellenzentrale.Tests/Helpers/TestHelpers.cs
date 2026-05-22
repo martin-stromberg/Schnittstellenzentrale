@@ -48,4 +48,28 @@ public static class TestHelpers
             await test(new ApplicationRepository(context1), new ApplicationRepository(context2));
         }
     }
+
+    /// <summary>
+    /// Wie <see cref="ExecuteWithTwoContextsAsync"/>, jedoch für <see cref="EndpointRepository"/>.
+    /// Übergibt jeweils ein Tupel aus <see cref="AppDbContext"/> und <see cref="EndpointRepository"/>,
+    /// damit Tests sowohl Repository-Methoden als auch direkte Kontextoperationen (z. B. für Setup) nutzen können.
+    /// </summary>
+    public static async Task ExecuteWithTwoEndpointContextsAsync(
+        Func<(AppDbContext Context, EndpointRepository Repo), (AppDbContext Context, EndpointRepository Repo), Task> test)
+    {
+        var connection = new SqliteConnection("Data Source=:memory:");
+        connection.Open();
+
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseSqlite(connection)
+            .Options;
+
+        await using (connection)
+        {
+            await using var context1 = new AppDbContext(options);
+            context1.Database.EnsureCreated();
+            await using var context2 = new AppDbContext(options);
+            await test((context1, new EndpointRepository(context1)), (context2, new EndpointRepository(context2)));
+        }
+    }
 }

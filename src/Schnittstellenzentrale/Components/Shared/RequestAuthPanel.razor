@@ -1,0 +1,79 @@
+@inject ICredentialService CredentialService
+@using Schnittstellenzentrale.Core.Helpers
+
+<div class="request-auth-panel">
+    <div class="mb-3">
+        <label class="form-label">Authentifizierungstyp</label>
+        <select class="form-select" value="@AuthenticationType" @onchange="OnAuthTypeChanged">
+            @foreach (var authType in Enum.GetValues<AuthenticationType>())
+            {
+                <option value="@authType">@authType</option>
+            }
+        </select>
+    </div>
+
+    @if (AuthenticationType == AuthenticationType.Basic)
+    {
+        <div class="mb-3">
+            <label class="form-label">Benutzername:Passwort</label>
+            <input type="text" class="form-control" value="@_credentialValue" @oninput="OnCredentialChanged" placeholder="benutzer:passwort" />
+            <small class="text-muted">Wird im Windows Credential Manager gespeichert.</small>
+        </div>
+    }
+    else if (AuthenticationType == AuthenticationType.BearerToken)
+    {
+        <div class="mb-3">
+            <label class="form-label">Bearer-Token</label>
+            <input type="text" class="form-control" value="@_credentialValue" @oninput="OnCredentialChanged" placeholder="Token" />
+            <small class="text-muted">Wird im Windows Credential Manager gespeichert.</small>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public AuthenticationType AuthenticationType { get; set; }
+    [Parameter] public EventCallback<AuthenticationType> AuthenticationTypeChanged { get; set; }
+    [Parameter] public int ApplicationId { get; set; }
+
+    private string _credentialValue = string.Empty;
+    private AuthenticationType _lastLoadedType;
+    private int _lastLoadedApplicationId;
+
+    protected override void OnParametersSet()
+    {
+        if (AuthenticationType != _lastLoadedType || ApplicationId != _lastLoadedApplicationId)
+        {
+            _lastLoadedType = AuthenticationType;
+            _lastLoadedApplicationId = ApplicationId;
+            _credentialValue = LoadCredential();
+        }
+    }
+
+    private string LoadCredential()
+    {
+        if (AuthenticationType != AuthenticationType.Basic && AuthenticationType != AuthenticationType.BearerToken)
+            return string.Empty;
+        return CredentialService.GetPassword(CredentialTargetHelper.Build(ApplicationId, AuthenticationType)) ?? string.Empty;
+    }
+
+    private async Task OnAuthTypeChanged(ChangeEventArgs e)
+    {
+        if (Enum.TryParse<AuthenticationType>(e.Value?.ToString(), out var newType))
+        {
+            AuthenticationType = newType;
+            await AuthenticationTypeChanged.InvokeAsync(newType);
+            _lastLoadedType = newType;
+            _credentialValue = LoadCredential();
+        }
+    }
+
+    private void OnCredentialChanged(ChangeEventArgs e)
+    {
+        _credentialValue = e.Value?.ToString() ?? string.Empty;
+        if (AuthenticationType != AuthenticationType.Basic && AuthenticationType != AuthenticationType.BearerToken)
+            return;
+        var target = CredentialTargetHelper.Build(ApplicationId, AuthenticationType);
+        CredentialService.SavePassword(target, target, _credentialValue);
+    }
+
+}

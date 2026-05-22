@@ -1,0 +1,65 @@
+<div class="card mt-3">
+    <div class="card-header">
+        <h5 class="mb-0">Ordner umbenennen</h5>
+    </div>
+    <div class="card-body">
+        <EditForm Model="_model" OnValidSubmit="SaveAsync">
+            <DataAnnotationsValidator />
+
+            <div class="mb-3">
+                <label class="form-label">Name</label>
+                <InputText class="form-control" @bind-Value="_model.Name" />
+            </div>
+
+            @if (!string.IsNullOrEmpty(_errorMessage))
+            {
+                <div class="alert alert-danger mt-2">@_errorMessage</div>
+            }
+
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary" disabled="@(string.IsNullOrWhiteSpace(_model.Name))">Speichern</button>
+                <button type="button" class="btn btn-secondary" @onclick="Cancel">Abbrechen</button>
+            </div>
+        </EditForm>
+    </div>
+</div>
+
+@code {
+    [Parameter] public EndpointGroup Group { get; set; } = default!;
+    [Parameter] public EventCallback<EndpointGroup> OnSaved { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    private EndpointGroup _model = new();
+    private string? _errorMessage;
+
+    protected override void OnParametersSet()
+    {
+        _model = new EndpointGroup
+        {
+            Id = Group.Id,
+            Name = Group.Name,
+            ApplicationId = Group.ApplicationId,
+            RowVersion = Group.RowVersion
+        };
+    }
+
+    private async Task SaveAsync()
+    {
+        _errorMessage = null;
+        if (string.IsNullOrWhiteSpace(_model.Name))
+        {
+            _errorMessage = "Der Name darf nicht leer sein.";
+            return;
+        }
+        try
+        {
+            await OnSaved.InvokeAsync(_model);
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Speichern fehlgeschlagen: {ex.Message}";
+        }
+    }
+
+    private async Task Cancel() => await OnCancel.InvokeAsync();
+}

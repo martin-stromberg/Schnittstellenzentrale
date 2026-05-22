@@ -1,14 +1,18 @@
-#pragma warning disable CS1591
-using System.Net;
+using System.Diagnostics;
 using System.Net.Http.Headers;
 using System.Security.Principal;
 using System.Text;
 using Schnittstellenzentrale.Core.Enums;
+using Schnittstellenzentrale.Core.Helpers;
 using Schnittstellenzentrale.Core.Interfaces;
 using Schnittstellenzentrale.Core.Models;
 
 namespace Schnittstellenzentrale.Infrastructure.Services;
 
+/// <summary>
+/// Führt einen Endpunkt unter Berücksichtigung der konfigurierten Authentifizierung aus
+/// und liefert ein <see cref="EndpointExecutionResult"/> mit Statuscode, Antwortdaten und Laufzeitmetriken.
+/// </summary>
 public class EndpointExecutionService : IEndpointExecutionService
 {
     private const string DefaultContentType = "application/json";
@@ -16,6 +20,7 @@ public class EndpointExecutionService : IEndpointExecutionService
     private readonly IHealthCheckService _healthCheckService;
     private readonly ICredentialService _credentialService;
 
+    /// <summary>Initialisiert eine neue Instanz des <see cref="EndpointExecutionService"/>.</summary>
     public EndpointExecutionService(
         IHttpClientFactory httpClientFactory,
         IHealthCheckService healthCheckService,
@@ -26,6 +31,7 @@ public class EndpointExecutionService : IEndpointExecutionService
         _credentialService = credentialService;
     }
 
+    /// <inheritdoc/>
     public async Task<EndpointExecutionResult> ExecuteAsync(Core.Models.Endpoint endpoint)
     {
         if (endpoint.Application == null)
@@ -62,7 +68,9 @@ public class EndpointExecutionService : IEndpointExecutionService
             ? _httpClientFactory.CreateClient("negotiate")
             : _httpClientFactory.CreateClient();
 
-        return await SendAndBuildResultAsync(client, endpoint, applyAuthentication: true);
+        using var request = BuildRequest(endpoint);
+        ApplyAuthentication(request, endpoint);
+        return await SendAndBuildResultAsync(client, endpoint, request);
     }
 
     private async Task<EndpointExecutionResult> ExecuteImpersonatedAsync(Core.Models.Endpoint endpoint)
@@ -72,32 +80,40 @@ public class EndpointExecutionService : IEndpointExecutionService
         return await WindowsIdentity.RunImpersonatedAsync(windowsIdentity.AccessToken, async () =>
         {
             var client = _httpClientFactory.CreateClient("negotiate");
-            return await SendAndBuildResultAsync(client, endpoint);
+            using var request = BuildRequest(endpoint);
+            return await SendAndBuildResultAsync(client, endpoint, request);
         });
     }
 
-    private async Task<EndpointExecutionResult> SendAndBuildResultAsync(
+    private static async Task<EndpointExecutionResult> SendAndBuildResultAsync(
         HttpClient client,
         Core.Models.Endpoint endpoint,
-        bool applyAuthentication = false)
+        HttpRequestMessage request)
     {
-        using var request = BuildRequest(endpoint);
-        if (applyAuthentication)
-            ApplyAuthentication(request, endpoint);
-
+        var stopwatch = Stopwatch.StartNew();
         using var response = await client.SendAsync(request);
-        return await BuildResult(endpoint, response);
+        stopwatch.Stop();
+        return await BuildResult(endpoint, response, stopwatch.ElapsedMilliseconds);
     }
 
-    private static async Task<EndpointExecutionResult> BuildResult(Core.Models.Endpoint endpoint, HttpResponseMessage response)
+    private static async Task<EndpointExecutionResult> BuildResult(Core.Models.Endpoint endpoint, HttpResponseMessage response, long durationMs)
     {
         var body = await response.Content.ReadAsStringAsync();
+        var responseHeaders = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var header in response.Headers)
+            responseHeaders[header.Key] = string.Join(", ", header.Value);
+        foreach (var header in response.Content.Headers)
+            responseHeaders[header.Key] = string.Join(", ", header.Value);
+
         return new EndpointExecutionResult
         {
             Success = response.IsSuccessStatusCode,
             StatusCode = (int)response.StatusCode,
             RequestDetails = $"{endpoint.Method} {endpoint.Application?.BaseUrl ?? string.Empty}{endpoint.RelativePath}",
-            ResponseBody = body
+            ResponseBody = body,
+            ResponseHeaders = responseHeaders,
+            DurationMs = durationMs,
+            ResponseSizeBytes = Encoding.UTF8.GetByteCount(body)
         };
     }
 
@@ -120,7 +136,7 @@ public class EndpointExecutionService : IEndpointExecutionService
             Core.Enums.HttpMethod.PATCH => System.Net.Http.HttpMethod.Patch,
             Core.Enums.HttpMethod.HEAD => System.Net.Http.HttpMethod.Head,
             Core.Enums.HttpMethod.OPTIONS => System.Net.Http.HttpMethod.Options,
-            _ => System.Net.Http.HttpMethod.Get
+            _ => throw new ArgumentOutOfRangeException(nameof(endpoint.Method), endpoint.Method, null)
         };
 
         var request = new HttpRequestMessage(method, url);
@@ -141,7 +157,7 @@ public class EndpointExecutionService : IEndpointExecutionService
 
     private void ApplyAuthentication(HttpRequestMessage request, Core.Models.Endpoint endpoint)
     {
-        var target = BuildCredentialTarget(endpoint.ApplicationId, endpoint.AuthenticationType);
+        var target = CredentialTargetHelper.Build(endpoint.ApplicationId, endpoint.AuthenticationType);
 
         switch (endpoint.AuthenticationType)
         {
@@ -162,6 +178,4 @@ public class EndpointExecutionService : IEndpointExecutionService
         }
     }
 
-    private static string BuildCredentialTarget(int applicationId, AuthenticationType authenticationType)
-        => $"Schnittstellenzentrale:{applicationId}:{authenticationType}";
 }

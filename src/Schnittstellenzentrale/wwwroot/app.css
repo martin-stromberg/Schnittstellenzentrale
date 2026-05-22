@@ -36,8 +36,153 @@ a, .btn-link {
   box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
 }
 
-.content {
-    padding-top: 1.1rem;
+/* Seitenstruktur Home */
+.sz-page-layout {
+    display: flex;
+    height: 100%;
+    overflow: hidden;
+}
+
+.sz-tree-sidebar {
+    width: 280px;
+    flex-shrink: 0;
+    border-right: 1px solid var(--bs-border-color);
+    background-color: var(--bs-body-bg);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.application-group-tree {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    overflow: hidden;
+    position: relative;
+}
+
+.sz-content-pane {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1rem 1.5rem;
+    min-width: 0;
+}
+
+/* Sidebar-Kopfzeile (Neue Gruppe / Neue Anwendung) */
+.sz-tree-topbar {
+    padding: 0.5rem 0.5rem 0.25rem;
+    flex-shrink: 0;
+    display: flex;
+    gap: 0.375rem;
+    border-bottom: 1px solid var(--bs-border-color);
+}
+
+/* Scrollbarer Baum-Bereich */
+.sz-tree-body {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 0.25rem 0;
+}
+
+/* Zeile im Baum */
+.sz-tree-row {
+    display: flex;
+    align-items: center;
+    border-radius: 0.25rem;
+    margin: 0 0.25rem;
+    position: relative;
+}
+
+.sz-tree-row:hover {
+    background-color: rgba(128, 128, 128, 0.1);
+}
+
+[data-bs-theme="dark"] .sz-tree-row:hover {
+    background-color: rgba(255, 255, 255, 0.07);
+}
+
+/* Pfeil-Button (Auf-/Zuklappen) */
+.sz-tree-chevron-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.4rem;
+    min-width: 1.4rem;
+    height: 1.75rem;
+    background: transparent;
+    border: none;
+    color: var(--bs-secondary-color);
+    cursor: pointer;
+    padding: 0;
+    flex-shrink: 0;
+    font-size: 0.7rem;
+}
+
+.sz-tree-chevron-btn:hover {
+    color: var(--bs-body-color);
+}
+
+/* Haupt-Button (anklickbarer Eintrag) */
+.sz-tree-item-btn {
+    flex: 1;
+    min-width: 0;
+    padding: 0.25rem 0.25rem 0.25rem 0;
+    background: transparent;
+    border: none;
+    text-align: left;
+    color: var(--bs-body-color);
+    font-size: 0.85rem;
+    cursor: pointer;
+    line-height: 1.25;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.sz-tree-item-btn:hover {
+    color: var(--bs-body-color);
+}
+
+/* Nicht-anklickbares Label (z. B. Ordner-Gruppe) */
+.sz-tree-item-label {
+    flex: 1;
+    min-width: 0;
+    padding: 0.25rem 0.25rem 0.25rem 0;
+    font-size: 0.85rem;
+    color: var(--bs-body-color);
+    line-height: 1.25;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Icon */
+.sz-tree-icon {
+    flex-shrink: 0;
+    font-size: 0.8rem;
+    opacity: 0.75;
+}
+
+/* Text-Label */
+.sz-tree-node-text {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Einrückung für Kinder */
+.sz-tree-children {
+    padding-left: 1.4rem;
+}
+
+/* Platzhalter für Ausrichtung ohne Chevron */
+.sz-tree-indent {
+    width: 1.4rem;
+    min-width: 1.4rem;
+    flex-shrink: 0;
 }
 
 h1:focus {
@@ -95,10 +240,6 @@ h1:focus {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    position: relative;
-}
-
-.collapsible-section > .d-flex {
     position: relative;
 }
 
@@ -162,8 +303,8 @@ h1:focus {
 
 .tree-leaf:hover .context-menu-toggle,
 .tree-leaf:focus-within .context-menu-toggle,
-.collapsible-section > .d-flex:hover .context-menu-toggle,
-.collapsible-section > .d-flex:focus-within .context-menu-toggle {
+.sz-tree-row:hover .context-menu-toggle,
+.sz-tree-row:focus-within .context-menu-toggle {
     opacity: 1;
 }
 

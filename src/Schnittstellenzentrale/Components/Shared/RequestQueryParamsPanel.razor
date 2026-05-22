@@ -1,0 +1,63 @@
+<div class="request-query-params-panel">
+    <table class="table table-sm">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Wert</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var param in QueryParameters)
+            {
+                <tr @key="param">
+                    <td>
+                        <input class="form-control form-control-sm" value="@param.Key" @oninput="(e) => OnKeyChanged(param, e)" />
+                    </td>
+                    <td>
+                        <input class="form-control form-control-sm" value="@param.Value" @oninput="(e) => OnValueChanged(param, e)" />
+                    </td>
+                    <td>
+                        <button type="button" class="btn btn-outline-danger btn-sm" @onclick="() => RemoveParam(param)">&#x2715;</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+    <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="AddParam">+ Parameter</button>
+</div>
+
+@code {
+    [Parameter] public List<QueryParamEntry> QueryParameters { get; set; } = [];
+    [Parameter] public EventCallback OnChanged { get; set; }
+
+    public class QueryParamEntry
+    {
+        public string Key { get; set; } = string.Empty;
+        public string Value { get; set; } = string.Empty;
+    }
+
+    private async Task OnKeyChanged(QueryParamEntry entry, ChangeEventArgs e)
+    {
+        entry.Key = e.Value?.ToString() ?? string.Empty;
+        await OnChanged.InvokeAsync();
+    }
+
+    private async Task OnValueChanged(QueryParamEntry entry, ChangeEventArgs e)
+    {
+        entry.Value = e.Value?.ToString() ?? string.Empty;
+        await OnChanged.InvokeAsync();
+    }
+
+    private async Task AddParam()
+    {
+        QueryParameters.Add(new QueryParamEntry());
+        await OnChanged.InvokeAsync();
+    }
+
+    private async Task RemoveParam(QueryParamEntry entry)
+    {
+        QueryParameters.Remove(entry);
+        await OnChanged.InvokeAsync();
+    }
+}
