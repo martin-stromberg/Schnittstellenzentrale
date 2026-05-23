@@ -109,6 +109,56 @@ public class EndpointRepositoryIntegrationTests
     }
 
     [Fact]
+    public async Task UpdateEndpoint_WithApplicationIncluded_CalledTwiceWithDifferentInstances_DoesNotThrowTrackingConflict()
+    {
+        // Reproduces: after the first UpdateEndpointAsync the Application entity stays tracked in
+        // the long-lived Blazor Server DbContext (only the Endpoint itself is detached). When a
+        // second Update is called with a *different* Endpoint instance (e.g. after navigating away
+        // and back), EF Core's relationship-fixup tries to re-attach the old Endpoint reference
+        // that is still sitting in Application.Endpoints, causing the "another instance with the
+        // same key value is already being tracked" conflict.
+        var (context, connection) = TestHelpers.CreateInMemoryDbContext();
+        try
+        {
+            var app = new Core.Models.Application { Name = "App", BaseUrl = "http://app" };
+            context.Applications.Add(app);
+            await context.SaveChangesAsync();
+            context.Entry(app).State = EntityState.Detached;
+
+            var repository = new EndpointRepository(context);
+
+            var added = await repository.AddEndpointAsync(new Core.Models.Endpoint
+            {
+                Name = "Original",
+                Method = Core.Enums.HttpMethod.GET,
+                RelativePath = "/test",
+                ApplicationId = app.Id
+            });
+
+            // First load with Application included – same as what happens in the UI after
+            // a new endpoint is created (Home.razor calls GetEndpointByIdAsync with Include(Application)).
+            var loaded1 = await repository.GetEndpointByIdAsync(added.Id);
+            await repository.UpdateEndpointAsync(loaded1!);
+            // At this point Application is still tracked; Application.Endpoints references loaded1.
+
+            // Second load returns a *different* C# object for the same endpoint + application.
+            var loaded2 = await repository.GetEndpointByIdAsync(added.Id);
+            loaded2!.Name = "Updated";
+
+            // This must not throw InvalidOperationException about tracking conflict.
+            await repository.UpdateEndpointAsync(loaded2);
+
+            var final = await repository.GetEndpointByIdAsync(added.Id);
+            Assert.Equal("Updated", final!.Name);
+        }
+        finally
+        {
+            await context.DisposeAsync();
+            await connection.DisposeAsync();
+        }
+    }
+
+    [Fact]
     public async Task DeleteEndpointGroup_WithEndpoints_CascadesDelete()
     {
         var (context, connection) = TestHelpers.CreateInMemoryDbContext();

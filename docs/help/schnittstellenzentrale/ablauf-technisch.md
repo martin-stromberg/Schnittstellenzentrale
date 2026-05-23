@@ -15,8 +15,50 @@ Die Anwendung folgt einem klassischen Blazor-Server-Muster: UI-Komponenten rufen
 - `DatabaseProviderFactory.RegisterDbContext` wertet `DatabaseProvider` aus und registriert `AppDbContext` mit SQLite oder SQL Server.
 - Windows-Authentifizierung wird über `AddNegotiate()` konfiguriert.
 - Alle Services werden als Scoped (`IApplicationRepository`, `IEndpointRepository`, `IStorageModeService`, `IEndpointExecutionService`, `ISwaggerImportService`, `IODataImportService`, `ISignalRNotificationService`) oder Singleton (`IHealthCheckService`, `ICredentialService`, `ICurrentUserService`) registriert.
+- `SystemEndpointSyncService` wird als `IHostedService` via `AddHostedService<SystemEndpointSyncService>()` registriert.
 - `EndpointHub` wird unter `/hubs/endpoint` gemappt.
 - Serilog wird als Logging-Provider mit EventLog- und Datei-Sink konfiguriert.
+
+### 2. Datenbankinitialisierung und Systemeinträge
+
+Nach `app.Build()` und vor `app.Run()` werden zwei vorbereitende Schritte ausgeführt:
+
+- `EnsureDatabaseInitializedAsync` führt EF-Core-Migrationen aus (`dbContext.Database.MigrateAsync()`).
+- `SystemEntryInitializer.InitializeAsync` legt — sofern `Api:BaseUrl` konfiguriert ist — die Systemgruppe und -anwendung „Schnittstellenzentrale" an oder aktualisiert deren `BaseUrl` / `InterfaceUrl`.
+
+### 3. Automatischer Endpunktabgleich (SystemEndpointSyncService)
+
+Nach `app.Run()` startet der Host den registrierten `SystemEndpointSyncService`. `ExecuteAsync` wird einmalig ausgeführt:
+
+1. Ein neuer DI-Scope wird über `IServiceScopeFactory.CreateScope()` erzeugt.
+2. `IApplicationRepository.GetSystemGroupAsync()` liefert die Systemgruppe. Gibt sie `null` zurück, wird eine Warnung geloggt und der Abgleich übersprungen.
+3. Aus der Systemgruppe wird die Anwendung mit `IsSystem == true` ermittelt. Ist keine vorhanden, analog: Warnung loggen und beenden.
+4. `ISwaggerImportService.ImportAsync(systemApp)` ruft die Swagger-Definition ab und berechnet den Diff.
+5. Ist `diff.ErrorMessage != null`, wird ein Fehler geloggt und `ExecuteAsync` beendet.
+6. Für jeden Eintrag in `diff.NewEndpoints` → `IEndpointRepository.AddEndpointAsync`.
+7. Für jeden Eintrag in `diff.RemovedEndpoints` → `IEndpointRepository.DeleteEndpointAsync`.
+8. Für jeden Eintrag in `diff.ChangedEndpoints` → `IEndpointRepository.UpdateEndpointNameAsync` (nur der `Name` wird überschrieben).
+9. Unerwartete Exceptions werden im `catch`-Block auf `Error`-Level geloggt; die Anwendung startet in jedem Fall normal weiter.
+
+Beteiligte Komponenten: `SystemEndpointSyncService`, `IServiceScopeFactory`, `IApplicationRepository`, `ISwaggerImportService`, `IEndpointRepository`, `ImportDiff`
+
+```mermaid
+flowchart TD
+    A[app.Run] --> B[SystemEndpointSyncService.ExecuteAsync]
+    B --> C[GetSystemGroupAsync]
+    C --> D{Systemgruppe vorhanden?}
+    D -- Nein --> E[Warnung loggen\nAbbruch]
+    D -- Ja --> F[IsSystem-Anwendung ermitteln]
+    F --> G{Systemanwendung vorhanden?}
+    G -- Nein --> E
+    G -- Ja --> H[SwaggerImportService.ImportAsync]
+    H --> I{diff.ErrorMessage != null?}
+    I -- Ja --> J[Fehler loggen\nAbbruch]
+    I -- Nein --> K[NewEndpoints anlegen\nAddEndpointAsync]
+    K --> L[RemovedEndpoints löschen\nDeleteEndpointAsync]
+    L --> M[ChangedEndpoints umbenennen\nUpdateEndpointNameAsync]
+    M --> N[Scope disposed\nExecuteAsync endet]
+```
 
 ---
 

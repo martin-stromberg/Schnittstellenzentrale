@@ -92,8 +92,10 @@ CRUD-Operationen für Anwendungen und Anwendungsgruppen mit StorageMode-Bewussts
 | Methode | Rückgabe | Beschreibung |
 |---------|----------|--------------|
 | `GetEndpointsAsync(int applicationId)` | `Task<IList<Endpoint>>` | Alle Endpunkte einer Anwendung inkl. Header, Query-Parameter, Gruppe |
+| `GetEndpointByIdAsync(int id)` | `Task<Endpoint?>` | Einzelner Endpunkt inkl. Anwendung, Header, Query-Parameter, Gruppe |
 | `AddEndpointAsync(Endpoint)` | `Task<Endpoint>` | Endpunkt anlegen |
-| `UpdateEndpointAsync(Endpoint)` | `Task<Endpoint>` | Endpunkt aktualisieren |
+| `UpdateEndpointAsync(Endpoint)` | `Task<Endpoint>` | Endpunkt vollständig aktualisieren |
+| `UpdateEndpointNameAsync(int id, string name)` | `Task` | Ausschließlich den `Name` eines Endpunkts aktualisieren; alle anderen Felder bleiben unverändert |
 | `DeleteEndpointAsync(int id)` | `Task` | Endpunkt löschen (Cascade auf Header und Query-Parameter) |
 | `AddHeaderAsync(EndpointHeader)` | `Task<EndpointHeader>` | Header hinzufügen |
 | `DeleteHeaderAsync(int id)` | `Task` | Header entfernen |

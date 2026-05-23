@@ -395,6 +395,43 @@
         _dragEnterCountUngrouped = 0;
     }
 
+    private RenderFragment RenderEndpointGroup(
+        EndpointGroup group,
+        Dictionary<int, IEnumerable<EndpointGroup>> childrenByParent,
+        IEnumerable<Core.Models.Endpoint> endpoints,
+        Application app) => __builder =>
+    {
+        <div @key="@($"eg-{group.Id}")">
+            <div class="sz-tree-row">
+                <span class="sz-tree-indent"></span>
+                <i class="bi bi-folder sz-tree-icon"></i>
+                <span class="sz-tree-item-label">@group.Name</span>
+                <EndpointGroupContextMenu Group="group"
+                                         OnCreateEndpointRequested="@(g => RequestCreateEndpointForGroup(app, g))"
+                                         OnRenameEndpointGroupRequested="RequestRenameEndpointGroup"
+                                         OnDeleteEndpointGroupRequested="RequestDeleteEndpointGroup" />
+            </div>
+            <div class="sz-tree-children">
+                @foreach (var endpoint in endpoints.Where(e => e.EndpointGroupId == group.Id))
+                {
+                    <div class="sz-tree-row" @key="@($"ep-{endpoint.Id}")">
+                        <span class="sz-tree-indent"></span>
+                        <i class="bi bi-lightning sz-tree-icon"></i>
+                        <button class="sz-tree-item-btn" @onclick="() => RequestSelectEndpoint(endpoint)">@endpoint.Name</button>
+                        <EndpointContextMenu Endpoint="endpoint" OnDeleteRequested="RequestDeleteEndpoint" />
+                    </div>
+                }
+                @if (childrenByParent.TryGetValue(group.Id, out var children))
+                {
+                    @foreach (var child in children)
+                    {
+                        @RenderEndpointGroup(child, childrenByParent, endpoints, app)
+                    }
+                }
+            </div>
+        </div>
+    };
+
     private RenderFragment RenderApplication(Application app) => __builder =>
     {
         <div @key="app.Id">
@@ -413,49 +450,26 @@
             </div>
             @if (_expandedApplicationIds.Contains(app.Id))
             {
+                var allGroups = _endpointGroups.TryGetValue(app.Id, out var ag) ? ag : Array.Empty<EndpointGroup>();
+                var allEndpoints = _endpoints.TryGetValue(app.Id, out var ae) ? ae : Array.Empty<Core.Models.Endpoint>();
+                var childrenByParent = allGroups
+                    .Where(g => g.ParentGroupId != null)
+                    .GroupBy(g => g.ParentGroupId!.Value)
+                    .ToDictionary(g => g.Key, g => (IEnumerable<EndpointGroup>)g);
+
                 <div class="sz-tree-children">
-                    @if (_endpointGroups.TryGetValue(app.Id, out var appGroups))
+                    @foreach (var rootGroup in allGroups.Where(g => g.ParentGroupId == null))
                     {
-                        @foreach (var endpointGroup in appGroups)
-                        {
-                            <div @key="endpointGroup.Id">
-                                <div class="sz-tree-row">
-                                    <span class="sz-tree-indent"></span>
-                                    <i class="bi bi-folder sz-tree-icon"></i>
-                                    <span class="sz-tree-item-label">@endpointGroup.Name</span>
-                                    <EndpointGroupContextMenu Group="endpointGroup"
-                                                              OnCreateEndpointRequested="@(g => RequestCreateEndpointForGroup(app, g))"
-                                                              OnRenameEndpointGroupRequested="RequestRenameEndpointGroup"
-                                                              OnDeleteEndpointGroupRequested="RequestDeleteEndpointGroup" />
-                                </div>
-                                <div class="sz-tree-children">
-                                    @if (_endpoints.TryGetValue(app.Id, out var groupEndpoints))
-                                    {
-                                        @foreach (var endpoint in groupEndpoints.Where(e => e.EndpointGroupId == endpointGroup.Id))
-                                        {
-                                            <div class="sz-tree-row" @key="endpoint.Id">
-                                                <span class="sz-tree-indent"></span>
-                                                <i class="bi bi-lightning sz-tree-icon"></i>
-                                                <button class="sz-tree-item-btn" @onclick="() => RequestSelectEndpoint(endpoint)">@endpoint.Name</button>
-                                                <EndpointContextMenu Endpoint="endpoint" OnDeleteRequested="RequestDeleteEndpoint" />
-                                            </div>
-                                        }
-                                    }
-                                </div>
-                            </div>
-                        }
+                        @RenderEndpointGroup(rootGroup, childrenByParent, allEndpoints, app)
                     }
-                    @if (_endpoints.TryGetValue(app.Id, out var ungroupedEndpoints))
+                    @foreach (var endpoint in allEndpoints.Where(e => e.EndpointGroupId == null))
                     {
-                        @foreach (var endpoint in ungroupedEndpoints.Where(e => e.EndpointGroupId == null))
-                        {
-                            <div class="sz-tree-row" @key="endpoint.Id">
-                                <span class="sz-tree-indent"></span>
-                                <i class="bi bi-lightning sz-tree-icon"></i>
-                                <button class="sz-tree-item-btn" @onclick="() => RequestSelectEndpoint(endpoint)">@endpoint.Name</button>
-                                <EndpointContextMenu Endpoint="endpoint" OnDeleteRequested="RequestDeleteEndpoint" />
-                            </div>
-                        }
+                        <div class="sz-tree-row" @key="@($"ep-{endpoint.Id}")">
+                            <span class="sz-tree-indent"></span>
+                            <i class="bi bi-lightning sz-tree-icon"></i>
+                            <button class="sz-tree-item-btn" @onclick="() => RequestSelectEndpoint(endpoint)">@endpoint.Name</button>
+                            <EndpointContextMenu Endpoint="endpoint" OnDeleteRequested="RequestDeleteEndpoint" />
+                        </div>
                     }
                 </div>
             }

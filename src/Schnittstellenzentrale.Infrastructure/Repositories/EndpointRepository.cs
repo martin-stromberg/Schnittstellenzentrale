@@ -43,6 +43,7 @@ public class EndpointRepository : IEndpointRepository
     /// <inheritdoc/>
     public async Task<Core.Models.Endpoint> AddEndpointAsync(Core.Models.Endpoint endpoint)
     {
+        _context.ChangeTracker.Clear();
         _context.Endpoints.Add(endpoint);
         await _context.SaveChangesAsync();
         _context.Entry(endpoint).State = EntityState.Detached;
@@ -52,6 +53,10 @@ public class EndpointRepository : IEndpointRepository
     /// <inheritdoc/>
     public async Task<Core.Models.Endpoint> UpdateEndpointAsync(Core.Models.Endpoint endpoint)
     {
+        // Clear all tracked entities before Update so that navigation-property relationship
+        // fixup cannot find stale references from a previous operation in the long-lived
+        // Blazor Server DbContext (e.g. Application.Endpoints still pointing to an old instance).
+        _context.ChangeTracker.Clear();
         _context.Endpoints.Update(endpoint);
         await _context.SaveChangesAsync();
         _context.Entry(endpoint).State = EntityState.Detached;
@@ -85,6 +90,7 @@ public class EndpointRepository : IEndpointRepository
     /// <inheritdoc/>
     public async Task<EndpointGroup> AddEndpointGroupAsync(EndpointGroup group)
     {
+        _context.ChangeTracker.Clear();
         _context.EndpointGroups.Add(group);
         await _context.SaveChangesAsync();
         _context.Entry(group).State = EntityState.Detached;
@@ -94,6 +100,7 @@ public class EndpointRepository : IEndpointRepository
     /// <inheritdoc/>
     public async Task<EndpointGroup> UpdateEndpointGroupAsync(EndpointGroup group)
     {
+        _context.ChangeTracker.Clear();
         _context.EndpointGroups.Update(group);
         await _context.SaveChangesAsync();
         _context.Entry(group).State = EntityState.Detached;

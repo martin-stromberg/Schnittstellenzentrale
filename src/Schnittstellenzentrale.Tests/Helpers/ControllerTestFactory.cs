@@ -50,6 +50,8 @@ public class ControllerTestFactory : WebApplicationFactory<Program>
             services.RemoveAll<IApplicationRepository>();
             services.AddScoped<IApplicationRepository, ApplicationRepository>();
 
+            services.RemoveAll<IHostedService>();
+
             var signalRMock = new Mock<ISignalRNotificationService>();
             services.RemoveAll<ISignalRNotificationService>();
             services.AddScoped(_ => signalRMock.Object);

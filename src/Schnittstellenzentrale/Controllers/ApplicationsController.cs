@@ -3,6 +3,7 @@ using Schnittstellenzentrale.Core.Contracts;
 using Schnittstellenzentrale.Core.Enums;
 using Schnittstellenzentrale.Core.Interfaces;
 using Schnittstellenzentrale.Core.Models;
+using Schnittstellenzentrale.Filters;
 
 namespace Schnittstellenzentrale.Controllers;
 
@@ -33,6 +34,7 @@ public class ApplicationsController : ApiControllerBase
     /// <response code="200">List of applications.</response>
     /// <response code="401">Missing or invalid bearer token.</response>
     [HttpGet]
+    [RequiresContextHeaders(includeOwner: true)]
     [ProducesResponseType(typeof(IList<ApplicationResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> GetAllAsync()
@@ -54,6 +56,7 @@ public class ApplicationsController : ApiControllerBase
     /// <response code="200">List of ungrouped applications.</response>
     /// <response code="401">Missing or invalid bearer token.</response>
     [HttpGet("ungrouped")]
+    [RequiresContextHeaders(includeOwner: true)]
     [ProducesResponseType(typeof(IList<ApplicationResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> GetUngroupedAsync()
@@ -100,6 +103,7 @@ public class ApplicationsController : ApiControllerBase
     /// <response code="400">Invalid request body.</response>
     /// <response code="401">Missing or invalid bearer token.</response>
     [HttpPost]
+    [RequiresContextHeaders]
     [ProducesResponseType(typeof(ApplicationResponse), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -133,6 +137,7 @@ public class ApplicationsController : ApiControllerBase
     /// <response code="401">Missing or invalid bearer token.</response>
     /// <response code="404">Application not found.</response>
     [HttpPut("{id:int}")]
+    [RequiresContextHeaders]
     [ProducesResponseType(typeof(ApplicationResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -170,6 +175,7 @@ public class ApplicationsController : ApiControllerBase
     /// <response code="401">Missing or invalid bearer token.</response>
     /// <response code="404">Application not found.</response>
     [HttpDelete("{id:int}")]
+    [RequiresContextHeaders]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
