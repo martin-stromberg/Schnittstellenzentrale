@@ -3,6 +3,7 @@ using Serilog;
 using Schnittstellenzentrale;
 using Schnittstellenzentrale.Components;
 using Schnittstellenzentrale.Core.Interfaces;
+using Schnittstellenzentrale.Filters;
 using Schnittstellenzentrale.Hubs;
 using Schnittstellenzentrale.Infrastructure.Data;
 using Schnittstellenzentrale.Infrastructure.Repositories;
@@ -37,10 +38,14 @@ builder.Services.AddSwaggerGen(c =>
         Type = SecuritySchemeType.Http,
         Scheme = "bearer"
     });
-    c.AddSecurityRequirement(doc => new OpenApiSecurityRequirement
+    c.AddSecurityDefinition("Negotiate", new OpenApiSecurityScheme
     {
-        { new OpenApiSecuritySchemeReference("Bearer", doc), new List<string>() }
+        Description = "Windows-Authentifizierung (NTLM/Kerberos)",
+        Type = SecuritySchemeType.Http,
+        Scheme = "negotiate"
     });
+    c.OperationFilter<SecurityOperationFilter>();
+    c.OperationFilter<ContextHeadersOperationFilter>();
     var xmlPath = Path.Combine(AppContext.BaseDirectory, "Schnittstellenzentrale.xml");
     if (File.Exists(xmlPath))
         c.IncludeXmlComments(xmlPath);
@@ -72,6 +77,7 @@ builder.Services.AddScoped<ISignalRNotificationService, SignalRNotificationServi
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddSingleton<ITokenStore, TokenStore>();
 builder.Services.AddHttpClient<IApplicationApiClient, ApplicationApiClient>();
+builder.Services.AddHostedService<SystemEndpointSyncService>();
 
 var app = builder.Build();
 

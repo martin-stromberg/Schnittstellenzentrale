@@ -70,7 +70,7 @@
         }
         else if (_activeRequestTab == "body")
         {
-            <RequestBodyPanel Body="_model.Body" BodyChanged="OnBodyChanged"
+            <RequestBodyPanel Body="@_model.Body" BodyChanged="OnBodyChanged"
                               BodyMode="_model.BodyMode" BodyModeChanged="OnBodyModeChanged" />
         }
     </div>
@@ -105,7 +105,7 @@
             <div class="response-panel-body border border-top-0 p-3">
                 @if (_activeResponseTab == "body")
                 {
-                    <ResponseBodyPanel Body="_result.ResponseBody" />
+                    <ResponseBodyPanel Body="@_result.ResponseBody" />
                 }
                 else
                 {

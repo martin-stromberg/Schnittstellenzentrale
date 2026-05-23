@@ -6,6 +6,9 @@ public class EndpointGroup
     public string Name { get; set; } = string.Empty;
     public int ApplicationId { get; set; }
     public Application Application { get; set; } = null!;
+    public int? ParentGroupId { get; set; }
+    public EndpointGroup? ParentGroup { get; set; }
     public byte[] RowVersion { get; set; } = [];
     public ICollection<Endpoint> Endpoints { get; set; } = [];
+    public ICollection<EndpointGroup> ChildGroups { get; set; } = [];
 }

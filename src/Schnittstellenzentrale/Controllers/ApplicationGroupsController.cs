@@ -3,6 +3,7 @@ using Schnittstellenzentrale.Core.Contracts;
 using Schnittstellenzentrale.Core.Enums;
 using Schnittstellenzentrale.Core.Interfaces;
 using Schnittstellenzentrale.Core.Models;
+using Schnittstellenzentrale.Filters;
 
 namespace Schnittstellenzentrale.Controllers;
 
@@ -33,6 +34,7 @@ public class ApplicationGroupsController : ApiControllerBase
     /// <response code="200">List of application groups.</response>
     /// <response code="401">Missing or invalid bearer token.</response>
     [HttpGet]
+    [RequiresContextHeaders(includeOwner: true)]
     [ProducesResponseType(typeof(IList<ApplicationGroupResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> GetAllAsync()
@@ -79,6 +81,7 @@ public class ApplicationGroupsController : ApiControllerBase
     /// <response code="400">Invalid request body.</response>
     /// <response code="401">Missing or invalid bearer token.</response>
     [HttpPost]
+    [RequiresContextHeaders]
     [ProducesResponseType(typeof(ApplicationGroupResponse), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -110,6 +113,7 @@ public class ApplicationGroupsController : ApiControllerBase
     /// <response code="401">Missing or invalid bearer token.</response>
     /// <response code="404">Application group not found.</response>
     [HttpPut("{id:int}")]
+    [RequiresContextHeaders]
     [ProducesResponseType(typeof(ApplicationGroupResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -146,6 +150,7 @@ public class ApplicationGroupsController : ApiControllerBase
     /// <response code="401">Missing or invalid bearer token.</response>
     /// <response code="404">Application group not found.</response>
     [HttpDelete("{id:int}")]
+    [RequiresContextHeaders]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
