@@ -10,11 +10,10 @@ public class ApplicationRepositoryIntegrationTests
 {
     private static async Task ExecuteWithContextAsync(Func<ApplicationRepository, Task> test)
     {
-        var (context, connection) = TestHelpers.CreateInMemoryDbContext();
+        var (factory, connection) = TestHelpers.CreateInMemoryDbContext();
         await using (connection)
-        await using (context)
         {
-            await test(new ApplicationRepository(context));
+            await test(new ApplicationRepository(factory));
         }
     }
 

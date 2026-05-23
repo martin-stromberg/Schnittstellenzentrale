@@ -22,7 +22,8 @@ public class DatabaseProviderFactoryTests
         DatabaseProviderFactory.RegisterDbContext(services, config);
         var provider = services.BuildServiceProvider();
 
-        var context = provider.GetRequiredService<AppDbContext>();
+        var factory = provider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+        using var context = factory.CreateDbContext();
 
         Assert.NotNull(context);
         Assert.Contains("Sqlite", context.Database.ProviderName, StringComparison.OrdinalIgnoreCase);
@@ -43,7 +44,8 @@ public class DatabaseProviderFactoryTests
         DatabaseProviderFactory.RegisterDbContext(services, config);
         var provider = services.BuildServiceProvider();
 
-        var context = provider.GetRequiredService<AppDbContext>();
+        var factory = provider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+        using var context = factory.CreateDbContext();
 
         Assert.NotNull(context);
         Assert.Contains("SqlServer", context.Database.ProviderName, StringComparison.OrdinalIgnoreCase);

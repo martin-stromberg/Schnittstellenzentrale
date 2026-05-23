@@ -9,21 +9,22 @@ namespace Schnittstellenzentrale.Infrastructure.Repositories;
 /// <summary>EF-Core-Implementierung von <see cref="IApplicationRepository"/>.</summary>
 public class ApplicationRepository : IApplicationRepository
 {
-    private readonly AppDbContext _context;
+    private readonly IDbContextFactory<AppDbContext> _factory;
 
     /// <summary>Initialisiert eine neue Instanz von <see cref="ApplicationRepository"/>.</summary>
-    public ApplicationRepository(AppDbContext context)
+    public ApplicationRepository(IDbContextFactory<AppDbContext> factory)
     {
-        _context = context;
+        _factory = factory;
     }
 
     /// <inheritdoc/>
     public async Task<IList<ApplicationGroup>> GetGroupsAsync(StorageMode storageMode, string owner)
     {
-        var query = _context.ApplicationGroups.AsNoTracking().Include(g => g.Applications).AsQueryable();
+        await using var context = await _factory.CreateDbContextAsync();
+        var query = context.ApplicationGroups.Include(g => g.Applications).AsQueryable();
         if (storageMode == StorageMode.User)
         {
-            var ownerGroupIds = await ApplyOwnerFilter(_context.Applications.AsQueryable(), storageMode, owner)
+            var ownerGroupIds = await ApplyOwnerFilter(context.Applications.AsQueryable(), storageMode, owner)
                 .Where(a => a.ApplicationGroupId != null)
                 .Select(a => a.ApplicationGroupId!.Value)
                 .Distinct()
@@ -37,8 +38,8 @@ public class ApplicationRepository : IApplicationRepository
     /// <inheritdoc/>
     public async Task<ApplicationGroup?> GetGroupByIdAsync(int id)
     {
-        return await _context.ApplicationGroups
-            .AsNoTracking()
+        await using var context = await _factory.CreateDbContextAsync();
+        return await context.ApplicationGroups
             .Include(g => g.Applications)
             .FirstOrDefaultAsync(g => g.Id == id);
     }
@@ -46,8 +47,8 @@ public class ApplicationRepository : IApplicationRepository
     /// <inheritdoc/>
     public async Task<ApplicationGroup?> GetSystemGroupAsync()
     {
-        return await _context.ApplicationGroups
-            .AsNoTracking()
+        await using var context = await _factory.CreateDbContextAsync();
+        return await context.ApplicationGroups
             .Include(g => g.Applications)
             .FirstOrDefaultAsync(g => g.IsSystem);
     }
@@ -55,41 +56,42 @@ public class ApplicationRepository : IApplicationRepository
     /// <inheritdoc/>
     public async Task<ApplicationGroup> AddGroupAsync(ApplicationGroup group)
     {
-        _context.ApplicationGroups.Add(group);
-        await _context.SaveChangesAsync();
+        await using var context = await _factory.CreateDbContextAsync();
+        context.ApplicationGroups.Add(group);
+        await context.SaveChangesAsync();
         return group;
     }
 
     /// <inheritdoc/>
     public async Task<ApplicationGroup> UpdateGroupAsync(ApplicationGroup group)
     {
-        var tracked = _context.ChangeTracker.Entries<ApplicationGroup>()
-            .FirstOrDefault(e => e.Entity.Id == group.Id);
-        if (tracked != null)
-            tracked.State = EntityState.Detached;
-
-        _context.ApplicationGroups.Update(group);
-        await _context.SaveChangesAsync();
-        return group;
+        await using var context = await _factory.CreateDbContextAsync();
+        var existing = await context.ApplicationGroups.FindAsync(group.Id)
+            ?? throw new InvalidOperationException($"Gruppe {group.Id} nicht gefunden.");
+        context.Entry(existing).Property(e => e.RowVersion).OriginalValue = group.RowVersion;
+        existing.ApplyUpdate(group);
+        await context.SaveChangesAsync();
+        return existing;
     }
 
     /// <inheritdoc/>
     public async Task DeleteGroupAsync(int id)
     {
-        var group = await _context.ApplicationGroups.FindAsync(id);
+        await using var context = await _factory.CreateDbContextAsync();
+        var group = await context.ApplicationGroups.FindAsync(id);
         if (group != null)
         {
-            _context.ApplicationGroups.Remove(group);
-            await _context.SaveChangesAsync();
+            context.ApplicationGroups.Remove(group);
+            await context.SaveChangesAsync();
         }
     }
 
     /// <inheritdoc/>
     public async Task<IList<Core.Models.Application>> GetApplicationsAsync(StorageMode storageMode, string owner)
     {
+        await using var context = await _factory.CreateDbContextAsync();
         var query = ApplyOwnerFilter(
-                _context.Applications
-            .AsNoTracking()
+                context.Applications
             .Include(a => a.ApplicationGroup)
             .AsQueryable(),
                 storageMode,
@@ -101,9 +103,9 @@ public class ApplicationRepository : IApplicationRepository
     /// <inheritdoc/>
     public async Task<IList<Core.Models.Application>> GetUngroupedApplicationsAsync(StorageMode storageMode, string owner)
     {
+        await using var context = await _factory.CreateDbContextAsync();
         var query = ApplyOwnerFilter(
-            _context.Applications
-            .AsNoTracking()
+            context.Applications
             .Where(a => a.ApplicationGroupId == null)
             .AsQueryable(),
             storageMode,
@@ -115,8 +117,8 @@ public class ApplicationRepository : IApplicationRepository
     /// <inheritdoc/>
     public async Task<Core.Models.Application?> GetApplicationByIdAsync(int id)
     {
-        return await _context.Applications
-            .AsNoTracking()
+        await using var context = await _factory.CreateDbContextAsync();
+        return await context.Applications
             .Include(a => a.ApplicationGroup)
             .Include(a => a.Endpoints).ThenInclude(e => e.Headers)
             .Include(a => a.Endpoints).ThenInclude(e => e.QueryParameters)
@@ -127,43 +129,33 @@ public class ApplicationRepository : IApplicationRepository
     /// <inheritdoc/>
     public async Task<Core.Models.Application> AddApplicationAsync(Core.Models.Application application)
     {
-        _context.Applications.Add(application);
-        await _context.SaveChangesAsync();
+        await using var context = await _factory.CreateDbContextAsync();
+        context.Applications.Add(application);
+        await context.SaveChangesAsync();
         return application;
     }
 
     /// <inheritdoc/>
     public async Task<Core.Models.Application> UpdateApplicationAsync(Core.Models.Application application)
     {
-        var trackedApp = _context.ChangeTracker.Entries<Core.Models.Application>()
-            .FirstOrDefault(e => e.Entity.Id == application.Id);
-        if (trackedApp != null)
-            trackedApp.State = EntityState.Detached;
-
-        // AsNoTracking queries set ApplicationGroup via fixup, which causes a tracking conflict
-        // when Update() traverses the graph and finds an already-tracked ApplicationGroup instance.
-        if (application.ApplicationGroup != null)
-        {
-            var trackedGroup = _context.ChangeTracker.Entries<ApplicationGroup>()
-                .FirstOrDefault(e => e.Entity.Id == application.ApplicationGroup.Id);
-            if (trackedGroup != null)
-                trackedGroup.State = EntityState.Detached;
-            application.ApplicationGroup = null;
-        }
-
-        _context.Applications.Update(application);
-        await _context.SaveChangesAsync();
-        return application;
+        await using var context = await _factory.CreateDbContextAsync();
+        var existing = await context.Applications.FindAsync(application.Id)
+            ?? throw new InvalidOperationException($"Anwendung {application.Id} nicht gefunden.");
+        context.Entry(existing).Property(e => e.RowVersion).OriginalValue = application.RowVersion;
+        existing.ApplyUpdate(application);
+        await context.SaveChangesAsync();
+        return existing;
     }
 
     /// <inheritdoc/>
     public async Task DeleteApplicationAsync(int id)
     {
-        var application = await _context.Applications.FindAsync(id);
+        await using var context = await _factory.CreateDbContextAsync();
+        var application = await context.Applications.FindAsync(id);
         if (application != null)
         {
-            _context.Applications.Remove(application);
-            await _context.SaveChangesAsync();
+            context.Applications.Remove(application);
+            await context.SaveChangesAsync();
         }
     }
 

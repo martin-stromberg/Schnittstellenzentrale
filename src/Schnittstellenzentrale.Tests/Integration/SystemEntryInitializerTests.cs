@@ -10,14 +10,13 @@ public class SystemEntryInitializerTests
 {
     private static (IServiceProvider Services, IDisposable Cleanup) BuildServices(string? baseUrl)
     {
-        var (context, connection) = TestHelpers.CreateInMemoryDbContext();
+        var (factory, connection) = TestHelpers.CreateInMemoryDbContext();
 
         var services = new ServiceCollection();
-        services.AddSingleton(context);
-        services.AddScoped<IApplicationRepository>(sp => new ApplicationRepository(context));
+        services.AddScoped<IApplicationRepository>(sp => new ApplicationRepository(factory));
         var provider = services.BuildServiceProvider();
 
-        var cleanup = new CompositeDisposable(context, connection);
+        var cleanup = new CompositeDisposable(connection);
         return (provider, cleanup);
     }
 

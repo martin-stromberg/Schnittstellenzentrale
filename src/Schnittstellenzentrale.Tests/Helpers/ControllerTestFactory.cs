@@ -43,9 +43,9 @@ public class ControllerTestFactory : WebApplicationFactory<Program>
                 .AddScheme<AuthenticationSchemeOptions, TestAuthHandler>("Test", _ => { });
 
             services.RemoveAll<DbContextOptions<AppDbContext>>();
-            services.RemoveAll<AppDbContext>();
+            services.RemoveAll<IDbContextFactory<AppDbContext>>();
 
-            services.AddDbContext<AppDbContext>(options => options.UseSqlite(_connection));
+            services.AddDbContextFactory<AppDbContext>(options => options.UseSqlite(_connection));
 
             services.RemoveAll<IApplicationRepository>();
             services.AddScoped<IApplicationRepository, ApplicationRepository>();
@@ -69,7 +69,8 @@ public class ControllerTestFactory : WebApplicationFactory<Program>
         var host = base.CreateHost(builder);
 
         using var scope = host.Services.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var factory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+        using var db = factory.CreateDbContext();
         db.Database.EnsureCreated();
 
         return host;
