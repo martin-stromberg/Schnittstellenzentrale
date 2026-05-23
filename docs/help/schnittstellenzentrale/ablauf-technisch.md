@@ -12,7 +12,7 @@ Die Anwendung folgt einem klassischen Blazor-Server-Muster: UI-Komponenten rufen
 
 `Program.cs` liest `appsettings.json` und registriert alle Dienste in der DI:
 
-- `DatabaseProviderFactory.RegisterDbContext` wertet `DatabaseProvider` aus und registriert `AppDbContext` mit SQLite oder SQL Server.
+- `DatabaseProviderFactory.RegisterDbContext` wertet `DatabaseProvider` aus und registriert `IDbContextFactory<AppDbContext>` mit SQLite oder SQL Server.
 - Windows-Authentifizierung wird über `AddNegotiate()` konfiguriert.
 - Alle Services werden als Scoped (`IApplicationRepository`, `IEndpointRepository`, `IStorageModeService`, `IEndpointExecutionService`, `ISwaggerImportService`, `IODataImportService`, `ISignalRNotificationService`) oder Singleton (`IHealthCheckService`, `ICredentialService`, `ICurrentUserService`) registriert.
 - `SystemEndpointSyncService` wird als `IHostedService` via `AddHostedService<SystemEndpointSyncService>()` registriert.

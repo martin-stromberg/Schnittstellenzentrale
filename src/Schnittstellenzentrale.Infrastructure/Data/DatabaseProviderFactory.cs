@@ -17,13 +17,13 @@ public static class DatabaseProviderFactory
 
         if (provider.Equals("SqlServer", StringComparison.OrdinalIgnoreCase))
         {
-            services.AddDbContext<AppDbContext>(options =>
+            services.AddDbContextFactory<AppDbContext>(options =>
                 options.UseSqlServer(connectionString)
                        .ReplaceService<IMigrationsAssembly, SqlServerMigrationsAssembly>());
         }
         else
         {
-            services.AddDbContext<AppDbContext>(options =>
+            services.AddDbContextFactory<AppDbContext>(options =>
                 options.UseSqlite(connectionString)
                        .ReplaceService<IMigrationsAssembly, SqliteMigrationsAssembly>());
         }

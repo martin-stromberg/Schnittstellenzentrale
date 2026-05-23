@@ -8,11 +8,11 @@ namespace Schnittstellenzentrale.Tests.Helpers;
 public static class TestHelpers
 {
     /// <summary>
-    /// Erstellt einen <see cref="AppDbContext"/> mit SQLite In-Memory-Provider.
-    /// Der Aufrufer muss beide Objekte disposen: zuerst den <see cref="AppDbContext"/>,
-    /// dann die <see cref="SqliteConnection"/>. Eine umgekehrte Reihenfolge führt zu SQLite-Fehlern.
+    /// Erstellt eine <see cref="IDbContextFactory{AppDbContext}"/> mit SQLite In-Memory-Provider.
+    /// Der Aufrufer muss die <see cref="SqliteConnection"/> disposen, nachdem alle Factory-erstellten
+    /// Contexts disposed wurden.
     /// </summary>
-    public static (AppDbContext Context, SqliteConnection Connection) CreateInMemoryDbContext()
+    public static (IDbContextFactory<AppDbContext> Factory, SqliteConnection Connection) CreateInMemoryDbContext()
     {
         var connection = new SqliteConnection("Data Source=:memory:");
         connection.Open();
@@ -21,9 +21,12 @@ public static class TestHelpers
             .UseSqlite(connection)
             .Options;
 
-        var context = new AppDbContext(options);
-        context.Database.EnsureCreated();
-        return (context, connection);
+        using (var context = new AppDbContext(options))
+        {
+            context.Database.EnsureCreated();
+        }
+
+        return (new FixedOptionsDbContextFactory(options), connection);
     }
 
     /// <summary>
@@ -42,34 +45,20 @@ public static class TestHelpers
 
         await using (connection)
         {
-            await using var context1 = new AppDbContext(options);
-            context1.Database.EnsureCreated();
-            await using var context2 = new AppDbContext(options);
-            await test(new ApplicationRepository(context1), new ApplicationRepository(context2));
+            using (var initContext = new AppDbContext(options))
+            {
+                initContext.Database.EnsureCreated();
+            }
+
+            var factory1 = new FixedOptionsDbContextFactory(options);
+            var factory2 = new FixedOptionsDbContextFactory(options);
+            await test(new ApplicationRepository(factory1), new ApplicationRepository(factory2));
         }
     }
 
-    /// <summary>
-    /// Wie <see cref="ExecuteWithTwoContextsAsync"/>, jedoch für <see cref="EndpointRepository"/>.
-    /// Übergibt jeweils ein Tupel aus <see cref="AppDbContext"/> und <see cref="EndpointRepository"/>,
-    /// damit Tests sowohl Repository-Methoden als auch direkte Kontextoperationen (z. B. für Setup) nutzen können.
-    /// </summary>
-    public static async Task ExecuteWithTwoEndpointContextsAsync(
-        Func<(AppDbContext Context, EndpointRepository Repo), (AppDbContext Context, EndpointRepository Repo), Task> test)
+    private sealed class FixedOptionsDbContextFactory(DbContextOptions<AppDbContext> options)
+        : IDbContextFactory<AppDbContext>
     {
-        var connection = new SqliteConnection("Data Source=:memory:");
-        connection.Open();
-
-        var options = new DbContextOptionsBuilder<AppDbContext>()
-            .UseSqlite(connection)
-            .Options;
-
-        await using (connection)
-        {
-            await using var context1 = new AppDbContext(options);
-            context1.Database.EnsureCreated();
-            await using var context2 = new AppDbContext(options);
-            await test((context1, new EndpointRepository(context1)), (context2, new EndpointRepository(context2)));
-        }
+        public AppDbContext CreateDbContext() => new(options);
     }
 }
