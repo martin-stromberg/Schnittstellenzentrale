@@ -10,6 +10,7 @@ using Schnittstellenzentrale.Infrastructure.Services;
 
 namespace Schnittstellenzentrale.Tests.Services;
 
+/// <summary>SwaggerImportServiceTests</summary>
 public class SwaggerImportServiceTests
 {
     private const string SwaggerWithGetPost = """
@@ -46,6 +47,7 @@ public class SwaggerImportServiceTests
         return new SwaggerImportService(factoryMock.Object, repoMock.Object, NullLogger<SwaggerImportService>.Instance);
     }
 
+    /// <summary>Import_NewSwaggerDefinition_ReturnsCorrectDiff</summary>
     [Fact]
     public async Task Import_NewSwaggerDefinition_ReturnsCorrectDiff()
     {
@@ -61,6 +63,7 @@ public class SwaggerImportServiceTests
         Assert.Empty(diff.RemovedEndpoints);
     }
 
+    /// <summary>Import_ChangedSwaggerOperation_ReturnsChangedInDiff</summary>
     [Fact]
     public async Task Import_ChangedSwaggerOperation_ReturnsChangedInDiff()
     {
@@ -78,6 +81,7 @@ public class SwaggerImportServiceTests
         Assert.Contains(diff.ChangedEndpoints, e => e.RelativePath == "/items" && e.Method == Core.Enums.HttpMethod.GET);
     }
 
+    /// <summary>Import_RemovedSwaggerOperation_ReturnsRemovedInDiff</summary>
     [Fact]
     public async Task Import_RemovedSwaggerOperation_ReturnsRemovedInDiff()
     {

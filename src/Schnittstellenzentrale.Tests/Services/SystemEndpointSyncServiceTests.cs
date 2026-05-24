@@ -11,11 +11,13 @@ using HttpMethod = System.Net.Http.HttpMethod;
 
 namespace Schnittstellenzentrale.Tests.Services;
 
+/// <summary>SystemEndpointSyncServiceTests</summary>
 public class SystemEndpointSyncServiceTests
 {
     private sealed class TestableSyncService(IServiceScopeFactory scopeFactory, ILogger<SystemEndpointSyncService> logger)
         : SystemEndpointSyncService(scopeFactory, logger)
     {
+        /// <summary>RunAsync</summary>
         public Task RunAsync() => ExecuteAsync(CancellationToken.None);
     }
 
@@ -83,6 +85,7 @@ public class SystemEndpointSyncServiceTests
         return doc;
     }
 
+    /// <summary>ExecuteAsync_NewEndpoints_AreAdded</summary>
     [Fact]
     public async Task ExecuteAsync_NewEndpoints_AreAdded()
     {
@@ -97,6 +100,7 @@ public class SystemEndpointSyncServiceTests
         endpointRepoMock.Verify(r => r.DeleteEndpointAsync(It.IsAny<int>()), Times.Never);
     }
 
+    /// <summary>ExecuteAsync_RemovedEndpoints_AreDeleted</summary>
     [Fact]
     public async Task ExecuteAsync_RemovedEndpoints_AreDeleted()
     {
@@ -113,6 +117,7 @@ public class SystemEndpointSyncServiceTests
         endpointRepoMock.Verify(r => r.AddEndpointAsync(It.IsAny<Endpoint>()), Times.Never);
     }
 
+    /// <summary>ExecuteAsync_ExistingEndpoints_AreLeftUntouched</summary>
     [Fact]
     public async Task ExecuteAsync_ExistingEndpoints_AreLeftUntouched()
     {
@@ -129,6 +134,7 @@ public class SystemEndpointSyncServiceTests
         endpointRepoMock.Verify(r => r.DeleteEndpointAsync(It.IsAny<int>()), Times.Never);
     }
 
+    /// <summary>ExecuteAsync_WhenSwaggerProviderThrows_LogsErrorAndDoesNotThrow</summary>
     [Fact]
     public async Task ExecuteAsync_WhenSwaggerProviderThrows_LogsErrorAndDoesNotThrow()
     {
@@ -152,6 +158,7 @@ public class SystemEndpointSyncServiceTests
         endpointRepoMock.Verify(r => r.DeleteEndpointAsync(It.IsAny<int>()), Times.Never);
     }
 
+    /// <summary>ExecuteAsync_WhenDbThrows_DoesNotThrow</summary>
     [Fact]
     public async Task ExecuteAsync_WhenDbThrows_DoesNotThrow()
     {
@@ -167,6 +174,7 @@ public class SystemEndpointSyncServiceTests
         Assert.Null(exception);
     }
 
+    /// <summary>ExecuteAsync_IsIdempotent_OnRepeatedCall</summary>
     [Fact]
     public async Task ExecuteAsync_IsIdempotent_OnRepeatedCall()
     {
@@ -183,6 +191,7 @@ public class SystemEndpointSyncServiceTests
         endpointRepoMock.Verify(r => r.DeleteEndpointAsync(It.IsAny<int>()), Times.Never);
     }
 
+    /// <summary>ExecuteAsync_WhenSystemGroupMissing_LogsWarningAndSkips</summary>
     [Fact]
     public async Task ExecuteAsync_WhenSystemGroupMissing_LogsWarningAndSkips()
     {
@@ -197,6 +206,7 @@ public class SystemEndpointSyncServiceTests
         endpointRepoMock.Verify(r => r.DeleteEndpointAsync(It.IsAny<int>()), Times.Never);
     }
 
+    /// <summary>ExecuteAsync_WhenSystemAppMissing_LogsWarningAndSkips</summary>
     [Fact]
     public async Task ExecuteAsync_WhenSystemAppMissing_LogsWarningAndSkips()
     {
@@ -225,6 +235,7 @@ public class SystemEndpointSyncServiceTests
         endpointRepoMock.Verify(r => r.DeleteEndpointAsync(It.IsAny<int>()), Times.Never);
     }
 
+    /// <summary>ExecuteAsync_NewEndpoint_GroupsAreCreatedFromUrlSegments</summary>
     [Fact]
     public async Task ExecuteAsync_NewEndpoint_GroupsAreCreatedFromUrlSegments()
     {
@@ -249,6 +260,7 @@ public class SystemEndpointSyncServiceTests
         endpointRepoMock.Verify(r => r.AddEndpointAsync(It.Is<Endpoint>(e => e.EndpointGroupId == 11)), Times.Once);
     }
 
+    /// <summary>ExecuteAsync_PathParameterSegments_AreSkipped</summary>
     [Fact]
     public async Task ExecuteAsync_PathParameterSegments_AreSkipped()
     {
@@ -270,6 +282,7 @@ public class SystemEndpointSyncServiceTests
         endpointRepoMock.Verify(r => r.AddEndpointAsync(It.Is<Endpoint>(e => e.EndpointGroupId == 20)), Times.Once);
     }
 
+    /// <summary>ExecuteAsync_ExistingGroups_AreReusedAndNotCreatedAgain</summary>
     [Fact]
     public async Task ExecuteAsync_ExistingGroups_AreReusedAndNotCreatedAgain()
     {
@@ -289,6 +302,7 @@ public class SystemEndpointSyncServiceTests
         endpointRepoMock.Verify(r => r.AddEndpointAsync(It.Is<Endpoint>(e => e.EndpointGroupId == 5)), Times.Exactly(2));
     }
 
+    /// <summary>ExecuteAsync_WithNegotiateSecurityScheme_SetsNegotiateAuthenticationType</summary>
     [Fact]
     public async Task ExecuteAsync_WithNegotiateSecurityScheme_SetsNegotiateAuthenticationType()
     {
@@ -308,6 +322,7 @@ public class SystemEndpointSyncServiceTests
         Assert.Equal(AuthenticationType.Negotiate, addedEndpoints[0].AuthenticationType);
     }
 
+    /// <summary>ExecuteAsync_WithoutNegotiateSecurityScheme_SetsNoneAuthenticationType</summary>
     [Fact]
     public async Task ExecuteAsync_WithoutNegotiateSecurityScheme_SetsNoneAuthenticationType()
     {

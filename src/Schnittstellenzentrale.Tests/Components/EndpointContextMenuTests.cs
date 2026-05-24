@@ -4,6 +4,7 @@ using Schnittstellenzentrale.Core.Models;
 
 namespace Schnittstellenzentrale.Tests.Components;
 
+/// <summary>bUnit-Tests für die <see cref="EndpointContextMenu"/>-Komponente.</summary>
 public class EndpointContextMenuTests : BunitContext
 {
     private static Core.Models.Endpoint CreateEndpoint() => new()
@@ -13,6 +14,7 @@ public class EndpointContextMenuTests : BunitContext
         ApplicationId = 1
     };
 
+    /// <summary>Klick auf „Endpunkt löschen" löst den Callback aus und schließt das Menü.</summary>
     [Fact]
     public void LöschenEintrag_LöstCallbackAus()
     {

@@ -6,15 +6,18 @@ using Schnittstellenzentrale.Tests.Helpers;
 
 namespace Schnittstellenzentrale.Tests.Integration;
 
+/// <summary>AuthControllerIntegrationTests</summary>
 public class AuthControllerIntegrationTests : IClassFixture<ControllerTestFactory>
 {
     private readonly ControllerTestFactory _factory;
 
+    /// <summary>Initialisiert AuthControllerIntegrationTests.</summary>
     public AuthControllerIntegrationTests(ControllerTestFactory factory)
     {
         _factory = factory;
     }
 
+    /// <summary>Authenticate_WithValidWindowsIdentity_Returns200WithToken</summary>
     [Fact]
     public async Task Authenticate_WithValidWindowsIdentity_Returns200WithToken()
     {
@@ -29,6 +32,7 @@ public class AuthControllerIntegrationTests : IClassFixture<ControllerTestFactor
         Assert.True(Guid.TryParse(body.Token, out _));
     }
 
+    /// <summary>Authenticate_CreatesTokenInTokenStore</summary>
     [Fact]
     public async Task Authenticate_CreatesTokenInTokenStore()
     {

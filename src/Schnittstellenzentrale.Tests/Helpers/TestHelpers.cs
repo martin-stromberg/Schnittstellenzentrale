@@ -5,6 +5,7 @@ using Schnittstellenzentrale.Infrastructure.Repositories;
 
 namespace Schnittstellenzentrale.Tests.Helpers;
 
+/// <summary>Statische Hilfsklasse mit Hilfsmethoden für Datenbankcontexte in Tests.</summary>
 public static class TestHelpers
 {
     /// <summary>

@@ -5,8 +5,10 @@ using Schnittstellenzentrale.Infrastructure.Data;
 
 namespace Schnittstellenzentrale.Tests.Services;
 
+/// <summary>DatabaseProviderFactoryTests</summary>
 public class DatabaseProviderFactoryTests
 {
+    /// <summary>CreateSqliteContext_ReturnsSqliteDbContext</summary>
     [Fact]
     public void CreateSqliteContext_ReturnsSqliteDbContext()
     {
@@ -29,6 +31,7 @@ public class DatabaseProviderFactoryTests
         Assert.Contains("Sqlite", context.Database.ProviderName, StringComparison.OrdinalIgnoreCase);
     }
 
+    /// <summary>CreateSqlServerContext_ReturnsSqlServerDbContext</summary>
     [Fact]
     public void CreateSqlServerContext_ReturnsSqlServerDbContext()
     {

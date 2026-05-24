@@ -4,6 +4,7 @@ using Schnittstellenzentrale.Core.Models;
 
 namespace Schnittstellenzentrale.Tests.Components;
 
+/// <summary>bUnit-Tests für die <see cref="ApplicationContextMenu"/>-Komponente.</summary>
 public class ApplicationContextMenuTests : BunitContext
 {
     private static Application InGroup() =>
@@ -15,6 +16,7 @@ public class ApplicationContextMenuTests : BunitContext
     private static Application SystemApplication() =>
         new() { Id = 3, Name = "Schnittstellenzentrale", BaseUrl = "http://app", IsSystem = true };
 
+    /// <summary>Der Menüeintrag „Aus Gruppe entfernen" ist nur sichtbar, wenn die Anwendung einer Gruppe zugeordnet ist.</summary>
     [Fact]
     public void AusGruppeEntfernen_NurSichtbar_WennAnwendungInGruppe()
     {
@@ -28,6 +30,7 @@ public class ApplicationContextMenuTests : BunitContext
             b => b.TextContent.Contains("Aus Gruppe entfernen"));
     }
 
+    /// <summary>Der Menüeintrag „Aus Gruppe entfernen" ist nicht sichtbar, wenn die Anwendung keiner Gruppe zugeordnet ist.</summary>
     [Fact]
     public void AusGruppeEntfernen_NichtSichtbar_WennAnwendungOhneGruppe()
     {
@@ -41,6 +44,7 @@ public class ApplicationContextMenuTests : BunitContext
             b => b.TextContent.Contains("Aus Gruppe entfernen"));
     }
 
+    /// <summary>Klick auf „Aus Gruppe entfernen" löst den Callback aus und schließt das Menü.</summary>
     [Fact]
     public void AusGruppeEntfernen_LöstCallbackAus_UndSchliestMenu()
     {
@@ -60,6 +64,7 @@ public class ApplicationContextMenuTests : BunitContext
         Assert.Empty(cut.FindAll(".context-menu-dropdown"));
     }
 
+    /// <summary>Der „Bearbeiten"-Button ist deaktiviert, wenn die Anwendung eine Systemanwendung ist.</summary>
     [Fact]
     public void Bearbeiten_Deaktiviert_WennIsSystem()
     {
@@ -74,6 +79,7 @@ public class ApplicationContextMenuTests : BunitContext
         Assert.True(bearbeitenButton.HasAttribute("disabled"));
     }
 
+    /// <summary>Der „Löschen"-Button ist deaktiviert, wenn die Anwendung eine Systemanwendung ist.</summary>
     [Fact]
     public void Löschen_Deaktiviert_WennIsSystem()
     {

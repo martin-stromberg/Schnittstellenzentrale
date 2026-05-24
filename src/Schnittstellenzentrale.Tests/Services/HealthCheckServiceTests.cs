@@ -8,6 +8,7 @@ using Schnittstellenzentrale.Infrastructure.Services;
 
 namespace Schnittstellenzentrale.Tests.Services;
 
+/// <summary>HealthCheckServiceTests</summary>
 public class HealthCheckServiceTests
 {
     private static HealthCheckService CreateService(
@@ -41,6 +42,7 @@ public class HealthCheckServiceTests
         return handlerMock;
     }
 
+    /// <summary>CheckAsync_WithinCooldown_DoesNotSendRequest</summary>
     [Fact]
     public async Task CheckAsync_WithinCooldown_DoesNotSendRequest()
     {
@@ -57,6 +59,7 @@ public class HealthCheckServiceTests
             ItExpr.IsAny<CancellationToken>());
     }
 
+    /// <summary>CheckAsync_AfterCooldownExpired_SendsRequest</summary>
     [Fact]
     public async Task CheckAsync_AfterCooldownExpired_SendsRequest()
     {
@@ -73,6 +76,7 @@ public class HealthCheckServiceTests
             ItExpr.IsAny<CancellationToken>());
     }
 
+    /// <summary>CheckAsync_UnreachableUrl_ReturnsFalse</summary>
     [Fact]
     public async Task CheckAsync_UnreachableUrl_ReturnsFalse()
     {

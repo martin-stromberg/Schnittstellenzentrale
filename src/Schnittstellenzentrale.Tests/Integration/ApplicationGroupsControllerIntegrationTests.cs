@@ -8,15 +8,18 @@ using Schnittstellenzentrale.Tests.Helpers;
 
 namespace Schnittstellenzentrale.Tests.Integration;
 
+/// <summary>Integrationstests für den ApplicationGroupsController.</summary>
 public class ApplicationGroupsControllerIntegrationTests : IClassFixture<ControllerTestFactory>
 {
     private readonly ControllerTestFactory _factory;
 
+    /// <summary>Initialisiert den Test mit der gemeinsamen Controller-Factory.</summary>
     public ApplicationGroupsControllerIntegrationTests(ControllerTestFactory factory)
     {
         _factory = factory;
     }
 
+    /// <summary>POST mit gültigem Token und Request gibt 201 und Location-Header zurück.</summary>
     [Fact]
     public async Task PostApplicationGroup_WithValidTokenAndRequest_Returns201AndLocation()
     {
@@ -40,6 +43,7 @@ public class ApplicationGroupsControllerIntegrationTests : IClassFixture<Control
         Assert.True(body.Id > 0);
     }
 
+    /// <summary>PostApplicationGroup_WithoutToken_Returns401</summary>
     [Fact]
     public async Task PostApplicationGroup_WithoutToken_Returns401()
     {
@@ -53,6 +57,7 @@ public class ApplicationGroupsControllerIntegrationTests : IClassFixture<Control
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
+    /// <summary>PostApplicationGroup_WithExpiredToken_Returns401</summary>
     [Fact]
     public async Task PostApplicationGroup_WithExpiredToken_Returns401()
     {
@@ -74,6 +79,7 @@ public class ApplicationGroupsControllerIntegrationTests : IClassFixture<Control
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
+    /// <summary>PostApplicationGroup_WithMissingName_Returns400</summary>
     [Fact]
     public async Task PostApplicationGroup_WithMissingName_Returns400()
     {
@@ -90,6 +96,7 @@ public class ApplicationGroupsControllerIntegrationTests : IClassFixture<Control
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
+    /// <summary>PostApplicationGroup_Returns_NewTokenHeader</summary>
     [Fact]
     public async Task PostApplicationGroup_Returns_NewTokenHeader()
     {
@@ -109,6 +116,7 @@ public class ApplicationGroupsControllerIntegrationTests : IClassFixture<Control
         Assert.NotEqual(originalToken, newToken);
     }
 
+    /// <summary>PostApplicationGroup_AfterRotation_OldTokenIsUnauthorized</summary>
     [Fact]
     public async Task PostApplicationGroup_AfterRotation_OldTokenIsUnauthorized()
     {
@@ -132,6 +140,7 @@ public class ApplicationGroupsControllerIntegrationTests : IClassFixture<Control
         Assert.Equal(HttpStatusCode.Unauthorized, response2.StatusCode);
     }
 
+    /// <summary>PostApplicationGroup_AfterRotation_NewTokenIsValid</summary>
     [Fact]
     public async Task PostApplicationGroup_AfterRotation_NewTokenIsValid()
     {
@@ -157,6 +166,7 @@ public class ApplicationGroupsControllerIntegrationTests : IClassFixture<Control
         Assert.Equal(HttpStatusCode.Created, response3.StatusCode);
     }
 
+    /// <summary>GetApplicationGroups_WithValidToken_Returns200WithList</summary>
     [Fact]
     public async Task GetApplicationGroups_WithValidToken_Returns200WithList()
     {
@@ -188,6 +198,7 @@ public class ApplicationGroupsControllerIntegrationTests : IClassFixture<Control
         Assert.All(body, g => Assert.NotNull(g.Applications));
     }
 
+    /// <summary>GetApplicationGroups_WithoutToken_Returns401</summary>
     [Fact]
     public async Task GetApplicationGroups_WithoutToken_Returns401()
     {
@@ -201,6 +212,7 @@ public class ApplicationGroupsControllerIntegrationTests : IClassFixture<Control
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
+    /// <summary>GetApplicationGroupById_WithValidId_Returns200</summary>
     [Fact]
     public async Task GetApplicationGroupById_WithValidId_Returns200()
     {
@@ -231,6 +243,7 @@ public class ApplicationGroupsControllerIntegrationTests : IClassFixture<Control
         Assert.Equal("GetByIdGruppe", body.Name);
     }
 
+    /// <summary>GetApplicationGroupById_WithInvalidId_Returns404</summary>
     [Fact]
     public async Task GetApplicationGroupById_WithInvalidId_Returns404()
     {
@@ -245,6 +258,7 @@ public class ApplicationGroupsControllerIntegrationTests : IClassFixture<Control
         Assert.Equal(HttpStatusCode.NotFound, getResponse.StatusCode);
     }
 
+    /// <summary>PutApplicationGroup_WithValidRequest_Returns200AndRotatesToken</summary>
     [Fact]
     public async Task PutApplicationGroup_WithValidRequest_Returns200AndRotatesToken()
     {
@@ -276,6 +290,7 @@ public class ApplicationGroupsControllerIntegrationTests : IClassFixture<Control
         Assert.Equal("UmbenenntGruppe", body.Name);
     }
 
+    /// <summary>PutApplicationGroup_WithInvalidId_Returns404</summary>
     [Fact]
     public async Task PutApplicationGroup_WithInvalidId_Returns404()
     {
@@ -292,6 +307,7 @@ public class ApplicationGroupsControllerIntegrationTests : IClassFixture<Control
         Assert.Equal(HttpStatusCode.NotFound, putResponse.StatusCode);
     }
 
+    /// <summary>PutApplicationGroup_WithMissingName_Returns400</summary>
     [Fact]
     public async Task PutApplicationGroup_WithMissingName_Returns400()
     {
@@ -318,6 +334,7 @@ public class ApplicationGroupsControllerIntegrationTests : IClassFixture<Control
         Assert.Equal(HttpStatusCode.BadRequest, putResponse.StatusCode);
     }
 
+    /// <summary>DeleteApplicationGroup_WithValidId_Returns204AndRotatesToken</summary>
     [Fact]
     public async Task DeleteApplicationGroup_WithValidId_Returns204AndRotatesToken()
     {
@@ -344,6 +361,7 @@ public class ApplicationGroupsControllerIntegrationTests : IClassFixture<Control
         Assert.True(deleteResponse.Headers.Contains("X-New-Token"));
     }
 
+    /// <summary>DeleteApplicationGroup_WithInvalidId_Returns404</summary>
     [Fact]
     public async Task DeleteApplicationGroup_WithInvalidId_Returns404()
     {
@@ -359,6 +377,7 @@ public class ApplicationGroupsControllerIntegrationTests : IClassFixture<Control
         Assert.Equal(HttpStatusCode.NotFound, deleteResponse.StatusCode);
     }
 
+    /// <summary>DeleteApplicationGroup_WithSystemGroup_Returns403</summary>
     [Fact]
     public async Task DeleteApplicationGroup_WithSystemGroup_Returns403()
     {
@@ -381,6 +400,7 @@ public class ApplicationGroupsControllerIntegrationTests : IClassFixture<Control
         Assert.Equal(HttpStatusCode.Forbidden, deleteResponse.StatusCode);
     }
 
+    /// <summary>PutApplicationGroup_WithSystemGroup_Returns403</summary>
     [Fact]
     public async Task PutApplicationGroup_WithSystemGroup_Returns403()
     {

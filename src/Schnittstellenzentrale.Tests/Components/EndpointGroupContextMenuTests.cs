@@ -4,6 +4,7 @@ using Schnittstellenzentrale.Core.Models;
 
 namespace Schnittstellenzentrale.Tests.Components;
 
+/// <summary>bUnit-Tests für die <see cref="EndpointGroupContextMenu"/>-Komponente.</summary>
 public class EndpointGroupContextMenuTests : BunitContext
 {
     private static EndpointGroup CreateGroup() => new()
@@ -13,6 +14,7 @@ public class EndpointGroupContextMenuTests : BunitContext
         ApplicationId = 1
     };
 
+    /// <summary>Klick auf „Endpunkt anlegen" löst den entsprechenden Callback aus.</summary>
     [Fact]
     public void EndpunktAnlegen_LöstCallbackAus()
     {
@@ -31,6 +33,7 @@ public class EndpointGroupContextMenuTests : BunitContext
         Assert.Equal(group, received);
     }
 
+    /// <summary>Klick auf „Ordner umbenennen" löst den entsprechenden Callback aus.</summary>
     [Fact]
     public void OrdnerUmbenennen_LöstCallbackAus()
     {
@@ -49,6 +52,7 @@ public class EndpointGroupContextMenuTests : BunitContext
         Assert.Equal(group, received);
     }
 
+    /// <summary>Klick auf „Ordner löschen" löst den entsprechenden Callback aus.</summary>
     [Fact]
     public void OrdnerLöschen_LöstCallbackAus()
     {

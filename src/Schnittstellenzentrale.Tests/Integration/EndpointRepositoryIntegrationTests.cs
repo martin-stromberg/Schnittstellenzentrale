@@ -6,8 +6,10 @@ using Schnittstellenzentrale.Tests.Helpers;
 
 namespace Schnittstellenzentrale.Tests.Integration;
 
+/// <summary>EndpointRepositoryIntegrationTests</summary>
 public class EndpointRepositoryIntegrationTests
 {
+    /// <summary>AddThenUpdate_WithDifferentInstance_DoesNotThrowTrackingConflict</summary>
     [Fact]
     public async Task AddThenUpdate_WithDifferentInstance_DoesNotThrowTrackingConflict()
     {
@@ -46,6 +48,7 @@ public class EndpointRepositoryIntegrationTests
         }
     }
 
+    /// <summary>AddThenUpdate_EndpointGroup_WithDifferentInstance_DoesNotThrowTrackingConflict</summary>
     [Fact]
     public async Task AddThenUpdate_EndpointGroup_WithDifferentInstance_DoesNotThrowTrackingConflict()
     {
@@ -82,6 +85,7 @@ public class EndpointRepositoryIntegrationTests
         }
     }
 
+    /// <summary>SaveEndpoint_ConcurrentWrite_DetectsConflict</summary>
     [Fact]
     public async Task SaveEndpoint_ConcurrentWrite_DetectsConflict()
     {
@@ -118,6 +122,7 @@ public class EndpointRepositoryIntegrationTests
         }
     }
 
+    /// <summary>UpdateEndpoint_WithApplicationIncluded_CalledTwiceWithDifferentInstances_DoesNotThrowTrackingConflict</summary>
     [Fact]
     public async Task UpdateEndpoint_WithApplicationIncluded_CalledTwiceWithDifferentInstances_DoesNotThrowTrackingConflict()
     {
@@ -164,6 +169,7 @@ public class EndpointRepositoryIntegrationTests
         }
     }
 
+    /// <summary>DeleteEndpointGroup_WithEndpoints_CascadesDelete</summary>
     [Fact]
     public async Task DeleteEndpointGroup_WithEndpoints_CascadesDelete()
     {
@@ -216,6 +222,7 @@ public class EndpointRepositoryIntegrationTests
         }
     }
 
+    /// <summary>DeleteEndpointGroup_WithoutEndpoints_DeletesGroup</summary>
     [Fact]
     public async Task DeleteEndpointGroup_WithoutEndpoints_DeletesGroup()
     {

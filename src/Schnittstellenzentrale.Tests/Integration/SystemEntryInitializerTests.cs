@@ -6,9 +6,10 @@ using Schnittstellenzentrale.Tests.Helpers;
 
 namespace Schnittstellenzentrale.Tests.Integration;
 
+/// <summary>SystemEntryInitializerTests</summary>
 public class SystemEntryInitializerTests
 {
-    private static (IServiceProvider Services, IDisposable Cleanup) BuildServices(string? baseUrl)
+    private static (IServiceProvider Services, IDisposable Cleanup) BuildServices()
     {
         var (factory, connection) = TestHelpers.CreateInMemoryDbContext();
 
@@ -28,10 +29,11 @@ public class SystemEntryInitializerTests
         return new ConfigurationBuilder().AddInMemoryCollection(data).Build();
     }
 
+    /// <summary>InitializeAsync_WhenGroupAndApplicationMissing_CreatesBoth</summary>
     [Fact]
     public async Task InitializeAsync_WhenGroupAndApplicationMissing_CreatesBoth()
     {
-        var (services, cleanup) = BuildServices("https://localhost:5001");
+        var (services, cleanup) = BuildServices();
         using (cleanup)
         {
             var config = BuildConfiguration("https://localhost:5001");
@@ -50,10 +52,11 @@ public class SystemEntryInitializerTests
         }
     }
 
+    /// <summary>InitializeAsync_WhenGroupExistsButApplicationMissing_CreatesApplication</summary>
     [Fact]
     public async Task InitializeAsync_WhenGroupExistsButApplicationMissing_CreatesApplication()
     {
-        var (services, cleanup) = BuildServices("https://localhost:5001");
+        var (services, cleanup) = BuildServices();
         using (cleanup)
         {
             var config = BuildConfiguration("https://localhost:5001");
@@ -72,10 +75,11 @@ public class SystemEntryInitializerTests
         }
     }
 
+    /// <summary>InitializeAsync_WhenUrlDiffers_UpdatesBaseUrlAndInterfaceUrl</summary>
     [Fact]
     public async Task InitializeAsync_WhenUrlDiffers_UpdatesBaseUrlAndInterfaceUrl()
     {
-        var (services, cleanup) = BuildServices("https://localhost:5001");
+        var (services, cleanup) = BuildServices();
         using (cleanup)
         {
             var config = BuildConfiguration("https://localhost:5001");
@@ -92,10 +96,11 @@ public class SystemEntryInitializerTests
         }
     }
 
+    /// <summary>InitializeAsync_WhenUrlMatches_MakesNoChanges</summary>
     [Fact]
     public async Task InitializeAsync_WhenUrlMatches_MakesNoChanges()
     {
-        var (services, cleanup) = BuildServices("https://localhost:5001");
+        var (services, cleanup) = BuildServices();
         using (cleanup)
         {
             var config = BuildConfiguration("https://localhost:5001");
@@ -108,10 +113,11 @@ public class SystemEntryInitializerTests
         }
     }
 
+    /// <summary>InitializeAsync_IsIdempotent_OnRepeatedCall</summary>
     [Fact]
     public async Task InitializeAsync_IsIdempotent_OnRepeatedCall()
     {
-        var (services, cleanup) = BuildServices("https://localhost:5001");
+        var (services, cleanup) = BuildServices();
         using (cleanup)
         {
             var config = BuildConfiguration("https://localhost:5001");
@@ -126,6 +132,7 @@ public class SystemEntryInitializerTests
         }
     }
 
+    /// <summary>InitializeAsync_WhenDbThrows_DoesNotPropagateException</summary>
     [Fact]
     public async Task InitializeAsync_WhenDbThrows_DoesNotPropagateException()
     {
@@ -141,10 +148,11 @@ public class SystemEntryInitializerTests
         Assert.Null(exception);
     }
 
+    /// <summary>InitializeAsync_WhenBaseUrlMissing_SkipsAndLogs</summary>
     [Fact]
     public async Task InitializeAsync_WhenBaseUrlMissing_SkipsAndLogs()
     {
-        var (services, cleanup) = BuildServices(null);
+        var (services, cleanup) = BuildServices();
         using (cleanup)
         {
             var config = BuildConfiguration(null);
@@ -164,11 +172,13 @@ public class SystemEntryInitializerTests
     {
         private readonly IDisposable[] _disposables;
 
+        /// <summary>Initialisiert CompositeDisposable.</summary>
         public CompositeDisposable(params IDisposable[] disposables)
         {
             _disposables = disposables;
         }
 
+        /// <summary>Dispose</summary>
         public void Dispose()
         {
             foreach (var d in _disposables)
@@ -178,19 +188,31 @@ public class SystemEntryInitializerTests
 
     private sealed class ThrowingApplicationRepository : IApplicationRepository
     {
+        /// <summary>GetSystemGroupAsync</summary>
         public Task<Schnittstellenzentrale.Core.Models.ApplicationGroup?> GetSystemGroupAsync() =>
             throw new InvalidOperationException("Simulierter Datenbankfehler");
 
+        /// <summary>GetGroupsAsync</summary>
         public Task<System.Collections.Generic.IList<Schnittstellenzentrale.Core.Models.ApplicationGroup>> GetGroupsAsync(Schnittstellenzentrale.Core.Enums.StorageMode storageMode, string owner) => throw new NotImplementedException();
+        /// <summary>GetGroupByIdAsync</summary>
         public Task<Schnittstellenzentrale.Core.Models.ApplicationGroup?> GetGroupByIdAsync(int id) => throw new NotImplementedException();
+        /// <summary>AddGroupAsync</summary>
         public Task<Schnittstellenzentrale.Core.Models.ApplicationGroup> AddGroupAsync(Schnittstellenzentrale.Core.Models.ApplicationGroup group) => throw new NotImplementedException();
+        /// <summary>UpdateGroupAsync</summary>
         public Task<Schnittstellenzentrale.Core.Models.ApplicationGroup> UpdateGroupAsync(Schnittstellenzentrale.Core.Models.ApplicationGroup group) => throw new NotImplementedException();
+        /// <summary>DeleteGroupAsync</summary>
         public Task DeleteGroupAsync(int id) => throw new NotImplementedException();
+        /// <summary>GetApplicationsAsync</summary>
         public Task<System.Collections.Generic.IList<Schnittstellenzentrale.Core.Models.Application>> GetApplicationsAsync(Schnittstellenzentrale.Core.Enums.StorageMode storageMode, string owner) => throw new NotImplementedException();
+        /// <summary>GetUngroupedApplicationsAsync</summary>
         public Task<System.Collections.Generic.IList<Schnittstellenzentrale.Core.Models.Application>> GetUngroupedApplicationsAsync(Schnittstellenzentrale.Core.Enums.StorageMode storageMode, string owner) => throw new NotImplementedException();
+        /// <summary>GetApplicationByIdAsync</summary>
         public Task<Schnittstellenzentrale.Core.Models.Application?> GetApplicationByIdAsync(int id) => throw new NotImplementedException();
+        /// <summary>AddApplicationAsync</summary>
         public Task<Schnittstellenzentrale.Core.Models.Application> AddApplicationAsync(Schnittstellenzentrale.Core.Models.Application application) => throw new NotImplementedException();
+        /// <summary>UpdateApplicationAsync</summary>
         public Task<Schnittstellenzentrale.Core.Models.Application> UpdateApplicationAsync(Schnittstellenzentrale.Core.Models.Application application) => throw new NotImplementedException();
+        /// <summary>DeleteApplicationAsync</summary>
         public Task DeleteApplicationAsync(int id) => throw new NotImplementedException();
     }
 }
