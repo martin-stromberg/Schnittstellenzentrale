@@ -129,36 +129,32 @@
         _variables.Remove(variable);
     }
 
-    private async Task SaveAsync()
+    private bool ValidateInput()
     {
-        _nameError = null;
-        _variableError = null;
-        _errorMessage = null;
-
         if (string.IsNullOrWhiteSpace(_name))
         {
             _nameError = "Name darf nicht leer sein.";
-            return;
+            return false;
         }
 
         if (_name.Length > 200)
         {
             _nameError = "Name darf maximal 200 Zeichen lang sein.";
-            return;
+            return false;
         }
 
         var longNamedVariable = _variables.FirstOrDefault(v => v.Name.Length > 200);
         if (longNamedVariable != null)
         {
             _variableError = $"Variablenname '{longNamedVariable.Name[..20]}…' überschreitet 200 Zeichen.";
-            return;
+            return false;
         }
 
         var longValuedVariable = _variables.FirstOrDefault(v => v.Value.Length > 4000);
         if (longValuedVariable != null)
         {
             _variableError = $"Variablenwert von '{longValuedVariable.Name}' überschreitet 4000 Zeichen.";
-            return;
+            return false;
         }
 
         var duplicateVariable = _variables
@@ -168,15 +164,27 @@
         if (duplicateVariable != null)
         {
             _variableError = $"Variablenname '{duplicateVariable.Key}' ist mehrfach vorhanden.";
-            return;
+            return false;
         }
 
         var emptyNamedVariable = _variables.FirstOrDefault(v => string.IsNullOrWhiteSpace(v.Name));
         if (emptyNamedVariable != null)
         {
             _variableError = "Variablenname darf nicht leer sein.";
-            return;
+            return false;
         }
+
+        return true;
+    }
+
+    private async Task SaveAsync()
+    {
+        _nameError = null;
+        _variableError = null;
+        _errorMessage = null;
+
+        if (!ValidateInput())
+            return;
 
         var mode = StorageModeService.CurrentMode;
         var owner = StorageModeService.GetCurrentOwner(CurrentUserService);

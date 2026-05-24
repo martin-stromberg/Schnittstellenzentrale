@@ -541,6 +541,26 @@ public class EndpointExecutionServiceTests
         Assert.Equal("secret123", capturedRequest.Headers.Authorization.Parameter);
     }
 
+    /// <summary>BuildRequest_ResolvesDoubleBracePlaceholdersBeforeSingleBrace</summary>
+    [Fact]
+    public async Task BuildRequest_ResolvesDoubleBracePlaceholdersBeforeSingleBrace()
+    {
+        var envMock = CreateActiveEnvironmentMock(new Dictionary<string, string> { ["env"] = "prod" });
+        var (service, getSentUri) = CreateServiceCapturingUri(envMock);
+        var endpoint = CreateEndpoint(AuthenticationType.None, "/api/{{env}}/{id}/items",
+        [
+            new EndpointQueryParameter { Key = "id", Value = "42" }
+        ]);
+
+        await service.ExecuteAsync(endpoint);
+
+        var sentUri = getSentUri();
+        Assert.NotNull(sentUri);
+        Assert.Contains("/api/prod/42/items", sentUri!.PathAndQuery);
+        Assert.DoesNotContain("{{", sentUri.PathAndQuery);
+        Assert.DoesNotContain("{id}", sentUri.PathAndQuery);
+    }
+
     /// <summary>BuildRequest_ResolvesPlaceholdersInBody</summary>
     [Fact]
     public async Task BuildRequest_ResolvesPlaceholdersInBody()

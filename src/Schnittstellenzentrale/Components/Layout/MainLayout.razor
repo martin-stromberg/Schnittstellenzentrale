@@ -113,6 +113,7 @@
         }
         catch
         {
+            // JSException bei Server-Prerendering ignorieren
             return;
         }
 
@@ -189,7 +190,7 @@
             }
             catch
             {
-                // Fehler beim Dispose der Hub-Verbindung ignorieren (z. B. bereits getrennt)
+                // Fehler beim Dispose der Hub-Verbindung ignorieren (z. B. Verbindung bereits getrennt)
             }
         }
     }

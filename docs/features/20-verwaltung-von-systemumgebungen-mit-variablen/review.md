@@ -2,7 +2,7 @@
 
 ## Ergebnis
 
-**Status:** Offene Aufgaben vorhanden
+**Status:** Vollständig umgesetzt
 
 ## Umgesetzte Planelemente
 
@@ -63,7 +63,7 @@
 - [x] `BuildRequest` — `ResolvePlaceholders` für Header-Namen und -Werte — vorhanden
 - [x] `BuildRequest` — `ResolvePlaceholders` für Query-Parameter-Namen und -Werte — vorhanden
 - [x] `BuildRequest` — `ResolvePlaceholders` für Body — vorhanden
-- [x] `BuildRequest` — `ResolvePlaceholders` für Bearer-Token — vorhanden (in `ApplyAuthentication`, nicht in `BuildRequest` selbst)
+- [x] `BuildRequest` — `ResolvePlaceholders` für Bearer-Token — vorhanden (in `ApplyAuthentication`, aufgerufen nach `BuildRequest`)
 
 #### `MainLayout`
 
@@ -73,8 +73,8 @@
 - [x] Methode `RestoreEnvironmentFromLocalStorageAsync(StorageMode mode)` — vorhanden
 - [x] `OnAfterRenderAsync` — ruft `RestoreEnvironmentFromLocalStorageAsync` beim ersten Render auf — vorhanden
 - [x] `OnStorageModeChanged` — ruft `RestoreEnvironmentFromLocalStorageAsync` für den neuen Modus auf — vorhanden
-- [x] Methode `OnEnvironmentChanged` — Handler vorhanden (lädt Umgebung neu, setzt `IActiveEnvironmentService` auf `null` bei gelöschter Umgebung, aktualisiert `EnvironmentSelector`)
-- [x] SignalR-Abonnement `EnvironmentChanged` — vorhanden (via `ConnectHubAsync` in `OnAfterRenderAsync`; `HubConnection.On("EnvironmentChanged", ...)` ruft `OnEnvironmentChanged` auf)
+- [x] Methode `OnEnvironmentChanged` — vorhanden; lädt Umgebung via `GetByIdAsync` neu, setzt `IActiveEnvironmentService` auf `null` bei gelöschter Umgebung, löscht `localStorage`-Eintrag, aktualisiert `EnvironmentSelector`
+- [x] SignalR-Abonnement `EnvironmentChanged` — vorhanden (via `ConnectHubAsync`, aufgerufen in `OnAfterRenderAsync`; `HubConnection.On("EnvironmentChanged", ...)` ruft `OnEnvironmentChanged` auf)
 - [x] `Dispose` — meldet SignalR-Abonnement ab — vorhanden (`DisposeAsync` disposed `_hubConnection`)
 - [x] `EnvironmentSelector`-Komponente im Header integriert — vorhanden
 - [x] Zahnrad-Icon im Header als Trigger für `EnvironmentManagementOverlay.OpenAsync()` — vorhanden
@@ -83,7 +83,7 @@
 
 - [x] Methode `ExecuteWithTwoSystemEnvironmentRepositoriesAsync(Func<SystemEnvironmentRepository, SystemEnvironmentRepository, Task>)` — vorhanden
 
-#### `EndpointExecutionServiceTests` (bestehende Tests)
+#### `EndpointExecutionServiceTests` (bestehende Tests angepasst)
 
 - [x] Bestehende Tests verwenden `IActiveEnvironmentService`-Mock im Konstruktor — vorhanden (alle Tests nutzen `CreateEmptyActiveEnvironmentMock()`)
 
@@ -107,6 +107,7 @@
 - [x] `GetEnvironments_WithStorageModeUser_ReturnsOnlyOwnedEnvironments` in `SystemEnvironmentRepositoryIntegrationTests` — vorhanden
 - [x] `GetEnvironments_WithStorageModeTeam_ReturnsAllTeamEnvironments` in `SystemEnvironmentRepositoryIntegrationTests` — vorhanden
 - [x] `UpdateEnvironment_PersistsChanges` in `SystemEnvironmentRepositoryIntegrationTests` — vorhanden
+- [x] `BuildRequest_ResolvesDoubleBracePlaceholdersBeforeSingleBrace` in `EndpointExecutionServiceTests` — vorhanden
 - [x] `BuildRequest_MissingVariable_ReplacesWithEmptyString` in `EndpointExecutionServiceTests` — vorhanden
 - [x] `BuildRequest_NoActiveEnvironment_ReplacesAllDoubleBracePlaceholdersWithEmptyString` in `EndpointExecutionServiceTests` — vorhanden
 - [x] `BuildRequest_ResolvesPlaceholdersInBaseUrl` in `EndpointExecutionServiceTests` — vorhanden
@@ -121,9 +122,10 @@
 
 ## Offene Aufgaben
 
-- [ ] `BuildRequest_ResolvesDoubleBracePlaceholdersBeforeSingleBrace` in `EndpointExecutionServiceTests` — teilweise umgesetzt: Die Auflösung von `{{...}}` vor `{...}` ist funktional implementiert und die einzelnen Auflösungen werden durch `BuildRequest_ResolvesDoubleBracePlaceholders` sowie `BuildRequest_ResolvesSingleBracePlaceholdersFromQueryParameters` getrennt geprüft. Ein dedizierter Test, der **beide Auflösungsschritte kombiniert in einem einzigen Szenario** (z. B. Pfad `{{base}}/{id}` mit Variablen-Dictionary und Query-Parameter) und damit explizit die Reihenfolge `{{...}}` vor `{...}` belegt, fehlt.
+Keine.
 
 ## Hinweise
 
 - Der Bearer-Token wird plankonform durch `ResolvePlaceholders` aufgelöst, jedoch geschieht dies in `ApplyAuthentication` statt in `BuildRequest`. Der Plan ordnet die Auflösung explizit `BuildRequest` zu; die funktionale Wirkung ist identisch.
-- Mocks von `ISignalRNotificationService` in bestehenden Tests (`ControllerTestFactory`, `PlaywrightTestFactory`, `MainLayoutTests`, `EndpointPageTests`) verwenden alle `new Mock<ISignalRNotificationService>()` ohne `MockBehavior.Strict`. Moq erzeugt damit automatisch eine leere Stub-Implementierung für `NotifyEnvironmentChangedAsync`, sodass kein Test-Bruch durch das neue Interface-Mitglied entsteht.
+- Das SignalR-Abonnement für `EnvironmentChanged` wird im Plan als Teil von `OnInitialized` beschrieben, ist aber in `ConnectHubAsync` implementiert, das in `OnAfterRenderAsync` (beim ersten Render) aufgerufen wird. Funktional äquivalent, da die Verbindung ebenfalls beim Start der Komponente aufgebaut wird.
+- Mocks von `ISignalRNotificationService` in bestehenden Tests (`ControllerTestFactory`, `PlaywrightTestFactory`, `MainLayoutTests`, `EndpointPageTests`) verwenden `new Mock<ISignalRNotificationService>()` ohne `MockBehavior.Strict`. Moq erzeugt damit automatisch eine leere Stub-Implementierung für `NotifyEnvironmentChangedAsync`, sodass kein Test-Bruch durch das neue Interface-Mitglied entsteht.

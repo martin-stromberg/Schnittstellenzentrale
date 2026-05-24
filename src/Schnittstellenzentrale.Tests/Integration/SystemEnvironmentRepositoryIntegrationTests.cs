@@ -15,7 +15,7 @@ public class SystemEnvironmentRepositoryIntegrationTests
         var (factory, connection) = TestHelpers.CreateInMemoryDbContext();
         await using (connection)
         {
-            var currentUserService = new FixedCurrentUserService(currentUser);
+            var currentUserService = new TestHelpers.FixedCurrentUserService(currentUser);
             await test(new SystemEnvironmentRepository(factory, currentUserService));
         }
     }
@@ -26,17 +26,12 @@ public class SystemEnvironmentRepositoryIntegrationTests
         var (factory, connection) = TestHelpers.CreateInMemoryDbContext();
         await using (connection)
         {
-            var user1Service = new FixedCurrentUserService("DOMAIN\\testuser");
-            var user2Service = new FixedCurrentUserService("DOMAIN\\anderer");
+            var user1Service = new TestHelpers.FixedCurrentUserService("DOMAIN\\testuser");
+            var user2Service = new TestHelpers.FixedCurrentUserService("DOMAIN\\anderer");
             await test(
                 new SystemEnvironmentRepository(factory, user1Service),
                 new SystemEnvironmentRepository(factory, user2Service));
         }
-    }
-
-    private sealed class FixedCurrentUserService(string userName) : Core.Interfaces.ICurrentUserService
-    {
-        public string GetCurrentUserName() => userName;
     }
 
     /// <summary>AddEnvironment_PersistsEnvironment</summary>

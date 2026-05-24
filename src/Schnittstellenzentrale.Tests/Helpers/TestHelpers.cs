@@ -84,7 +84,7 @@ public static class TestHelpers
         }
     }
 
-    private sealed class FixedCurrentUserService(string userName) : ICurrentUserService
+    internal sealed class FixedCurrentUserService(string userName) : ICurrentUserService
     {
         public string GetCurrentUserName() => userName;
     }

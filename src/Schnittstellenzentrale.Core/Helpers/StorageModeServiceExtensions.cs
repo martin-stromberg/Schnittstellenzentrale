@@ -1,6 +1,7 @@
 using Schnittstellenzentrale.Core.Enums;
+using Schnittstellenzentrale.Core.Interfaces;
 
-namespace Schnittstellenzentrale.Core.Interfaces;
+namespace Schnittstellenzentrale.Core.Helpers;
 
 public static class StorageModeServiceExtensions
 {
