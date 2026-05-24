@@ -19,7 +19,7 @@
     public async Task RefreshAsync()
     {
         await LoadEnvironmentsAsync();
-        StateHasChanged();
+        await InvokeAsync(StateHasChanged);
     }
 
     protected override async Task OnInitializedAsync()
