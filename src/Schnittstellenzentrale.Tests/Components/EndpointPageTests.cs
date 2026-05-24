@@ -154,10 +154,10 @@ public class EndpointPageTests : BunitContext
             .First(b => b.TextContent.Trim() == "Query-Parameter")
             .Click();
 
-        // Wert für den Platzhalter eingeben
+        // Wert für den Platzhalter eingeben (Change löst @onchange aus)
         var rows = cut.FindAll(".request-query-params-panel tbody tr");
         var valueInput = rows[0].QuerySelectorAll("input")[1];
-        valueInput.Input("42");
+        valueInput.Change("42");
 
         // Pfadfeld blur — SyncPathParameters wird erneut aufgerufen, Pfad unverändert
         var pathInput = cut.Find("input[placeholder='Relativer Pfad']");
@@ -169,6 +169,35 @@ public class EndpointPageTests : BunitContext
         var inputs = rows[0].QuerySelectorAll("input");
         Assert.Equal("id", inputs[0].GetAttribute("value"));
         Assert.Equal("42", inputs[1].GetAttribute("value"));
+    }
+
+    /// <summary>Ein aus der DB geladener Platzhalter-Wert wird nicht als Duplikat-Eintrag angelegt.</summary>
+    [Fact]
+    public void GespeicherterPlatzhalterWert_WirdNachLadenNichtDupliziert()
+    {
+        // Endpunkt so, wie er nach einem Speichern aus der DB zurückkommt:
+        // RelativePath enthält den Platzhalter, QueryParameters den gespeicherten Wert (ohne IsPathParameter-Flag)
+        var queryParams = new[]
+        {
+            new RequestQueryParamsPanel.QueryParamEntry { Key = "id", Value = "42" }
+        };
+        var endpoint = CreateEndpoint(relPath: "/api/{id}/items", queryParameters: queryParams);
+
+        var cut = Render<EndpointPage>(p => p.Add(x => x.Endpoint, endpoint));
+        cut.FindAll("button.nav-link")
+            .First(b => b.TextContent.Trim() == "Query-Parameter")
+            .Click();
+
+        // Es darf nur einen einzigen Eintrag für "id" geben
+        var rows = cut.FindAll(".request-query-params-panel tbody tr");
+        Assert.Single(rows);
+
+        var inputs = rows[0].QuerySelectorAll("input");
+        Assert.Equal("id", inputs[0].GetAttribute("value"));
+        Assert.Equal("42", inputs[1].GetAttribute("value"));
+
+        // Kein Löschen-Button — der Eintrag wurde zum Pfad-Parameter hochgestuft
+        Assert.Empty(cut.FindAll(".request-query-params-panel tbody tr .btn-outline-danger"));
     }
 
     /// <summary>Nach OnPathBlur mit geändertem Pfad werden entfernte Platzhalter gelöscht und neue hinzugefügt.</summary>
@@ -224,7 +253,7 @@ public class EndpointPageTests : BunitContext
         Assert.Equal("/api/items", pathPart);
     }
 
-    /// <summary>ResolveDisplayUrl gibt den Pfad mit ersetzten Platzhaltern und angehängten Query-Parametern zurück.</summary>
+    /// <summary>ResolveDisplayUrl zeigt bei leerem Wert den Platzhalter; nach Werteingabe die aufgelöste URL.</summary>
     [Fact]
     public void AufgeloesteUrl_WirdImPfadfeldAngezeigt()
     {
@@ -236,18 +265,23 @@ public class EndpointPageTests : BunitContext
         var endpoint = CreateEndpoint(relPath: "/api/{id}/items", queryParameters: queryParams);
 
         var cut = Render<EndpointPage>(p => p.Add(x => x.Endpoint, endpoint));
+
+        // Vor der Werteingabe: Platzhalter bleibt im Pfadfeld sichtbar (leer → {id} beibehalten)
+        var pathInput = cut.Find("input[placeholder='Relativer Pfad']");
+        Assert.Contains("{id}", pathInput.GetAttribute("value") ?? string.Empty);
+
         cut.FindAll("button.nav-link")
             .First(b => b.TextContent.Trim() == "Query-Parameter")
             .Click();
 
-        // Wert für den Platzhalter eingeben
+        // Wert für den Platzhalter eingeben (Change löst @onchange aus)
         var rows = cut.FindAll(".request-query-params-panel tbody tr");
         var idRow = rows.First(r => r.QuerySelector("input")?.GetAttribute("value") == "id");
         var idValueInput = idRow.QuerySelectorAll("input")[1];
-        idValueInput.Input("42");
+        idValueInput.Change("42");
 
         // Pfadfeld zeigt die aufgelöste URL (Platzhalter ersetzt, Query-Parameter angehängt)
-        var pathInput = cut.Find("input[placeholder='Relativer Pfad']");
+        pathInput = cut.Find("input[placeholder='Relativer Pfad']");
         var displayValue = pathInput.GetAttribute("value") ?? string.Empty;
 
         Assert.Contains("42", displayValue);

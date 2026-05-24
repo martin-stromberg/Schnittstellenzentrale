@@ -407,7 +407,8 @@
     private string ResolveDisplayUrl()
         => EndpointUrlBuilder.Resolve(
             _model.RelativePath,
-            _queryParameters.Select(p => (p.Key, p.Value)));
+            _queryParameters.Select(p => (p.Key, p.Value)),
+            keepEmptyPlaceholders: true);
 
     private void ExtractAndStripQueryString()
     {
@@ -451,13 +452,33 @@
             if (_queryParameters.Any(p => p.IsPathParameter && p.Key == key))
                 continue;
 
-            _queryParameters.Insert(0, new RequestQueryParamsPanel.QueryParamEntry
+            // Aus der DB geladene Einträge haben kein IsPathParameter-Flag.
+            // Statt einen Duplikat-Eintrag anzulegen, wird der vorhandene Eintrag hochgestuft.
+            var existing = _queryParameters.FirstOrDefault(p => !p.IsPathParameter && p.Key == key);
+            if (existing != null)
             {
-                Key = key,
-                Value = string.Empty,
-                IsPathParameter = true
-            });
+                existing.IsPathParameter = true;
+            }
+            else
+            {
+                _queryParameters.Insert(0, new RequestQueryParamsPanel.QueryParamEntry
+                {
+                    Key = key,
+                    Value = string.Empty,
+                    IsPathParameter = true
+                });
+            }
         }
+
+        // Pfad-Platzhalter in Pfad-Reihenfolge vorne, reguläre Parameter hinten
+        var pathParams = _queryParameters
+            .Where(p => p.IsPathParameter)
+            .OrderBy(p => _model.RelativePath.IndexOf("{" + p.Key + "}", StringComparison.Ordinal))
+            .ToList();
+        var regularParams = _queryParameters.Where(p => !p.IsPathParameter).ToList();
+        _queryParameters.Clear();
+        _queryParameters.AddRange(pathParams);
+        _queryParameters.AddRange(regularParams);
     }
 
     private void OnPathBlur()

@@ -8,7 +8,11 @@ public static class EndpointUrlBuilder
     /// verbleibende Parameter werden als Query-String angehängt.
     /// Einträge mit leerem Key werden übersprungen.
     /// </summary>
-    public static string Resolve(string path, IEnumerable<(string Key, string Value)> parameters)
+    /// <param name="keepEmptyPlaceholders">
+    /// Wenn <c>true</c>, werden Platzhalter mit leerem Wert nicht ersetzt (Anzeige-Modus).
+    /// Wenn <c>false</c> (Standard), wird ein leerer Wert als leerer String eingesetzt (Request-Modus).
+    /// </param>
+    public static string Resolve(string path, IEnumerable<(string Key, string Value)> parameters, bool keepEmptyPlaceholders = false)
     {
         var queryParams = new List<(string Key, string Value)>();
 
@@ -17,8 +21,12 @@ public static class EndpointUrlBuilder
             if (string.IsNullOrWhiteSpace(key))
                 continue;
 
-            if (path.Contains("{" + key + "}"))
-                path = path.Replace("{" + key + "}", Uri.EscapeDataString(value));
+            var placeholder = "{" + key + "}";
+            if (path.Contains(placeholder))
+            {
+                if (!keepEmptyPlaceholders || !string.IsNullOrEmpty(value))
+                    path = path.Replace(placeholder, Uri.EscapeDataString(value));
+            }
             else
                 queryParams.Add((key, value));
         }
