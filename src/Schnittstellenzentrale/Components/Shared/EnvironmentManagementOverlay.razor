@@ -1,0 +1,166 @@
+@inject ISystemEnvironmentRepository EnvironmentRepository
+@inject IStorageModeService StorageModeService
+@inject ICurrentUserService CurrentUserService
+@inject ISignalRNotificationService SignalRNotificationService
+
+@if (_isVisible)
+{
+    <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Systemumgebungen verwalten</h5>
+                    <button type="button" class="btn-close" @onclick="Close"></button>
+                </div>
+                <div class="modal-body">
+                    @if (_editingEnvironment != null || _isCreating)
+                    {
+                        <EnvironmentEditor
+                            ExistingEnvironment="_editingEnvironment"
+                            OnSaved="OnEnvironmentSaved"
+                            OnCancel="OnEditorCancelled" />
+                    }
+                    else if (_confirmDeleteEnvironment != null)
+                    {
+                        <div class="alert alert-warning">
+                            <p>Umgebung '<strong>@_confirmDeleteEnvironment.Name</strong>' wirklich löschen?</p>
+                            @if (!string.IsNullOrEmpty(_deleteError))
+                            {
+                                <div class="alert alert-danger mt-2">@_deleteError</div>
+                            }
+                            <div class="d-flex gap-2">
+                                <button type="button" class="btn btn-danger" @onclick="ConfirmDeleteAsync">Löschen</button>
+                                <button type="button" class="btn btn-secondary" @onclick="CancelDelete">Abbrechen</button>
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="mb-3">
+                            <button type="button" class="btn btn-primary" @onclick="StartCreate">Neu</button>
+                        </div>
+                        @if (_environments.Count == 0)
+                        {
+                            <p class="text-muted">Keine Umgebungen vorhanden.</p>
+                        }
+                        else
+                        {
+                            <ul class="list-group">
+                                @foreach (var env in _environments)
+                                {
+                                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                                        <span>@env.Name</span>
+                                        <div class="d-flex gap-2">
+                                            <button type="button" class="btn btn-sm btn-outline-primary"
+                                                    @onclick="() => StartEdit(env)">
+                                                Bearbeiten
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-outline-danger"
+                                                    @onclick="() => StartDelete(env)">
+                                                Löschen
+                                            </button>
+                                        </div>
+                                    </li>
+                                }
+                            </ul>
+                        }
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public EventCallback OnEnvironmentsChanged { get; set; }
+
+    private bool _isVisible;
+    private bool _isCreating;
+    private SystemEnvironment? _editingEnvironment;
+    private SystemEnvironment? _confirmDeleteEnvironment;
+    private string? _deleteError;
+    private IList<SystemEnvironment> _environments = [];
+
+    public async Task OpenAsync()
+    {
+        _isVisible = true;
+        _isCreating = false;
+        _editingEnvironment = null;
+        _confirmDeleteEnvironment = null;
+        await LoadEnvironmentsAsync();
+        StateHasChanged();
+    }
+
+    private async Task LoadEnvironmentsAsync()
+    {
+        var mode = StorageModeService.CurrentMode;
+        var owner = StorageModeService.GetCurrentOwner(CurrentUserService);
+        _environments = await EnvironmentRepository.GetEnvironmentsAsync(mode, owner);
+    }
+
+    private void StartCreate()
+    {
+        _isCreating = true;
+        _editingEnvironment = null;
+    }
+
+    private void StartEdit(SystemEnvironment environment)
+    {
+        _editingEnvironment = environment;
+        _isCreating = false;
+    }
+
+    private void StartDelete(SystemEnvironment environment)
+    {
+        _confirmDeleteEnvironment = environment;
+    }
+
+    private void CancelDelete()
+    {
+        _confirmDeleteEnvironment = null;
+    }
+
+    private async Task ConfirmDeleteAsync()
+    {
+        if (_confirmDeleteEnvironment == null) return;
+
+        _deleteError = null;
+        try
+        {
+            await EnvironmentRepository.DeleteAsync(_confirmDeleteEnvironment.Id);
+
+            if (StorageModeService.CurrentMode == StorageMode.Team)
+                await SignalRNotificationService.NotifyEnvironmentChangedAsync();
+
+            _confirmDeleteEnvironment = null;
+            await LoadEnvironmentsAsync();
+            await OnEnvironmentsChanged.InvokeAsync();
+        }
+        catch (Exception ex)
+        {
+            _deleteError = $"Löschen fehlgeschlagen: {ex.Message}";
+        }
+    }
+
+    private async Task OnEnvironmentSaved(SystemEnvironment environment)
+    {
+        if (StorageModeService.CurrentMode == StorageMode.Team)
+            await SignalRNotificationService.NotifyEnvironmentChangedAsync();
+
+        _editingEnvironment = null;
+        _isCreating = false;
+        await LoadEnvironmentsAsync();
+        await OnEnvironmentsChanged.InvokeAsync();
+    }
+
+    private void OnEditorCancelled()
+    {
+        _editingEnvironment = null;
+        _isCreating = false;
+    }
+
+    private void Close()
+    {
+        _isVisible = false;
+    }
+}

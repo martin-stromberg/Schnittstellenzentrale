@@ -16,4 +16,7 @@ public interface ISignalRNotificationService
 
     /// <summary>Benachrichtigt Clients über Änderungen an einer Endpunktgruppe; <paramref name="applicationId"/> bestimmt die SignalR-Gruppe.</summary>
     Task NotifyEndpointGroupChangedAsync(int endpointGroupId, int applicationId);
+
+    /// <summary>Benachrichtigt Clients über Änderungen an Systemumgebungen (nur im Team-Modus).</summary>
+    Task NotifyEnvironmentChangedAsync();
 }

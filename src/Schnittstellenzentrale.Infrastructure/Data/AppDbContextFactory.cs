@@ -21,9 +21,11 @@ public class AppDbContextFactory : IDesignTimeDbContextFactory<AppDbContext>
 
         var optionsBuilder = new DbContextOptionsBuilder<AppDbContext>();
         if (provider.Equals("SqlServer", StringComparison.OrdinalIgnoreCase))
-            optionsBuilder.UseSqlServer("Server=(localdb)\\mssqllocaldb;Database=Schnittstellenzentrale;Trusted_Connection=True;TrustServerCertificate=True;");
+            optionsBuilder.UseSqlServer("Server=(localdb)\\mssqllocaldb;Database=Schnittstellenzentrale;Trusted_Connection=True;TrustServerCertificate=True;")
+                          .ReplaceService<Microsoft.EntityFrameworkCore.Migrations.IMigrationsAssembly, SqlServerMigrationsAssembly>();
         else
-            optionsBuilder.UseSqlite("Data Source=schnittstellenzentrale.db");
+            optionsBuilder.UseSqlite("Data Source=schnittstellenzentrale.db")
+                          .ReplaceService<Microsoft.EntityFrameworkCore.Migrations.IMigrationsAssembly, SqliteMigrationsAssembly>();
 
         return new AppDbContext(optionsBuilder.Options);
     }

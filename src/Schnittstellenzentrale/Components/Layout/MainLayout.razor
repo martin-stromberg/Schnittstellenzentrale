@@ -1,7 +1,13 @@
 @inherits LayoutComponentBase
 @inject IStorageModeService StorageModeService
 @inject IThemeService ThemeService
-@implements IDisposable
+@inject IActiveEnvironmentService ActiveEnvironmentService
+@inject ISystemEnvironmentRepository SystemEnvironmentRepository
+@inject IJSRuntime JSRuntime
+@inject NavigationManager NavigationManager
+@inject ILogger<MainLayout> Logger
+@using Microsoft.AspNetCore.SignalR.Client
+@implements IAsyncDisposable
 
 <div class="page">
     <div class="sidebar">
@@ -15,6 +21,11 @@
                 <option value="@StorageMode.Team">Team</option>
                 <option value="@StorageMode.User">Benutzer</option>
             </select>
+            <EnvironmentSelector @ref="_environmentSelector" />
+            <button type="button" class="btn btn-outline-secondary" title="Umgebungen verwalten"
+                    @onclick="OpenEnvironmentManagementAsync">
+                &#9881;
+            </button>
             <ThemeToggle />
         </div>
 
@@ -24,6 +35,9 @@
     </main>
 </div>
 
+<EnvironmentManagementOverlay @ref="_environmentManagementOverlay"
+    OnEnvironmentsChanged="OnEnvironmentChanged" />
+
 <div id="blazor-error-ui" data-nosnippet>
     Ein unbehandelter Fehler ist aufgetreten.
     <a href="." class="reload">Neu laden</a>
@@ -31,10 +45,15 @@
 </div>
 
 @code {
+    private EnvironmentSelector? _environmentSelector;
+    private EnvironmentManagementOverlay? _environmentManagementOverlay;
+    private HubConnection? _hubConnection;
+
     protected override void OnInitialized()
     {
         StorageModeService.OnModeChanged += OnStateChanged;
         ThemeService.OnThemeChanged += OnStateChanged;
+        ActiveEnvironmentService.OnActiveEnvironmentChanged += OnStateChanged;
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -42,14 +61,112 @@
         if (firstRender)
         {
             await ThemeService.InitializeAsync();
+            await RestoreEnvironmentFromLocalStorageAsync(StorageModeService.CurrentMode);
+            await ConnectHubAsync();
             await InvokeAsync(StateHasChanged);
         }
     }
 
-    private void OnStorageModeChanged(ChangeEventArgs e)
+    private async Task ConnectHubAsync()
+    {
+        try
+        {
+            _hubConnection = new HubConnectionBuilder()
+                .WithUrl(NavigationManager.ToAbsoluteUri("/hubs/endpoint"))
+                .WithAutomaticReconnect()
+                .Build();
+
+            _hubConnection.On("EnvironmentChanged", async () =>
+            {
+                await OnEnvironmentChanged();
+                await InvokeAsync(StateHasChanged);
+            });
+
+            await _hubConnection.StartAsync();
+            await _hubConnection.InvokeAsync("SubscribeToEnvironments");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogDebug(ex, "SignalR-Verbindung konnte nicht aufgebaut werden – Live-Updates für Umgebungen nicht verfügbar");
+            _hubConnection = null;
+        }
+    }
+
+    private async Task OnStorageModeChanged(ChangeEventArgs e)
     {
         if (Enum.TryParse<StorageMode>(e.Value?.ToString(), out var mode))
+        {
             StorageModeService.SetMode(mode);
+            await RestoreEnvironmentFromLocalStorageAsync(mode);
+            if (_environmentSelector != null)
+                await _environmentSelector.RefreshAsync();
+        }
+    }
+
+    private async Task RestoreEnvironmentFromLocalStorageAsync(StorageMode mode)
+    {
+        var key = LocalStorageKeys.SelectedEnvironmentId(mode);
+        string? storedId = null;
+        try
+        {
+            storedId = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", key);
+        }
+        catch
+        {
+            // JSException bei Server-Prerendering ignorieren
+            return;
+        }
+
+        if (string.IsNullOrEmpty(storedId) || !int.TryParse(storedId, out var id))
+        {
+            ActiveEnvironmentService.SetActiveEnvironment(null);
+            return;
+        }
+
+        var environment = await SystemEnvironmentRepository.GetByIdAsync(id);
+        if (environment != null)
+        {
+            ActiveEnvironmentService.SetActiveEnvironment(environment);
+        }
+        else
+        {
+            ActiveEnvironmentService.SetActiveEnvironment(null);
+            try
+            {
+                await JSRuntime.InvokeVoidAsync("localStorage.removeItem", key);
+            }
+            catch { } // JSException bei Server-Prerendering ignorieren
+        }
+    }
+
+    private async Task OnEnvironmentChanged()
+    {
+        var mode = StorageModeService.CurrentMode;
+        var activeId = ActiveEnvironmentService.ActiveEnvironment?.Id;
+
+        if (activeId.HasValue)
+        {
+            var updated = await SystemEnvironmentRepository.GetByIdAsync(activeId.Value);
+            if (updated == null)
+            {
+                ActiveEnvironmentService.SetActiveEnvironment(null);
+                var key = LocalStorageKeys.SelectedEnvironmentId(mode);
+                try { await JSRuntime.InvokeVoidAsync("localStorage.removeItem", key); } catch { } // JSException bei Server-Prerendering ignorieren
+            }
+            else
+            {
+                ActiveEnvironmentService.SetActiveEnvironment(updated);
+            }
+        }
+
+        if (_environmentSelector != null)
+            await _environmentSelector.RefreshAsync();
+    }
+
+    private async Task OpenEnvironmentManagementAsync()
+    {
+        if (_environmentManagementOverlay != null)
+            await _environmentManagementOverlay.OpenAsync();
     }
 
     private void OnStateChanged()
@@ -57,9 +174,24 @@
         InvokeAsync(StateHasChanged);
     }
 
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
         StorageModeService.OnModeChanged -= OnStateChanged;
         ThemeService.OnThemeChanged -= OnStateChanged;
+        ActiveEnvironmentService.OnActiveEnvironmentChanged -= OnStateChanged;
+
+        if (_hubConnection != null)
+        {
+            try
+            {
+                if (_hubConnection.State == HubConnectionState.Connected)
+                    await _hubConnection.InvokeAsync("UnsubscribeFromEnvironments");
+                await _hubConnection.DisposeAsync();
+            }
+            catch
+            {
+                // Fehler beim Dispose der Hub-Verbindung ignorieren (z. B. Verbindung bereits getrennt)
+            }
+        }
     }
 }

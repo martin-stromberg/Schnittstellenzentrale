@@ -21,6 +21,10 @@ public class AppDbContext : DbContext
     public DbSet<EndpointHeader> EndpointHeaders => Set<EndpointHeader>();
     /// <summary>Endpunkt-Abfrageparameter.</summary>
     public DbSet<EndpointQueryParameter> EndpointQueryParameters => Set<EndpointQueryParameter>();
+    /// <summary>Systemumgebungen.</summary>
+    public DbSet<Core.Models.SystemEnvironment> SystemEnvironments => Set<Core.Models.SystemEnvironment>();
+    /// <summary>Umgebungsvariablen.</summary>
+    public DbSet<EnvironmentVariable> EnvironmentVariables => Set<EnvironmentVariable>();
 
     /// <inheritdoc/>
     public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
@@ -127,6 +131,26 @@ public class AppDbContext : DbContext
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Key).IsRequired().HasMaxLength(200);
             entity.Property(e => e.Value).IsRequired().HasMaxLength(2000);
+        });
+
+        modelBuilder.Entity<Core.Models.SystemEnvironment>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.Owner).HasMaxLength(256);
+            entity.HasIndex(e => new { e.Name, e.Mode, e.Owner }).IsUnique();
+            entity.HasMany(e => e.Variables)
+                  .WithOne(v => v.SystemEnvironment)
+                  .HasForeignKey(v => v.SystemEnvironmentId)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<EnvironmentVariable>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.Value).IsRequired().HasMaxLength(4000);
+            entity.HasIndex(e => new { e.Name, e.SystemEnvironmentId }).IsUnique();
         });
     }
 }

@@ -1,5 +1,6 @@
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Schnittstellenzentrale.Core.Interfaces;
 using Schnittstellenzentrale.Infrastructure.Data;
 using Schnittstellenzentrale.Infrastructure.Repositories;
 
@@ -37,6 +38,32 @@ public static class TestHelpers
     /// </summary>
     public static async Task ExecuteWithTwoContextsAsync(Func<ApplicationRepository, ApplicationRepository, Task> test)
     {
+        await ExecuteWithSharedConnectionAsync(async (factory1, factory2) =>
+        {
+            await test(new ApplicationRepository(factory1), new ApplicationRepository(factory2));
+        });
+    }
+
+    /// <summary>
+    /// Führt einen Test mit zwei unabhängigen <see cref="SystemEnvironmentRepository"/>-Instanzen über
+    /// dieselbe SQLite-Connection aus. Ermöglicht Concurrency-Tests, bei denen zwei Kontexte
+    /// denselben Datenbankzustand sehen müssen.
+    /// </summary>
+    public static async Task ExecuteWithTwoSystemEnvironmentRepositoriesAsync(
+        Func<SystemEnvironmentRepository, SystemEnvironmentRepository, Task> test)
+    {
+        await ExecuteWithSharedConnectionAsync(async (factory1, factory2) =>
+        {
+            var currentUserService = new FixedCurrentUserService("DOMAIN\\testuser");
+            await test(
+                new SystemEnvironmentRepository(factory1, currentUserService),
+                new SystemEnvironmentRepository(factory2, currentUserService));
+        });
+    }
+
+    private static async Task ExecuteWithSharedConnectionAsync(
+        Func<FixedOptionsDbContextFactory, FixedOptionsDbContextFactory, Task> test)
+    {
         var connection = new SqliteConnection("Data Source=:memory:");
         connection.Open();
 
@@ -53,8 +80,13 @@ public static class TestHelpers
 
             var factory1 = new FixedOptionsDbContextFactory(options);
             var factory2 = new FixedOptionsDbContextFactory(options);
-            await test(new ApplicationRepository(factory1), new ApplicationRepository(factory2));
+            await test(factory1, factory2);
         }
+    }
+
+    internal sealed class FixedCurrentUserService(string userName) : ICurrentUserService
+    {
+        public string GetCurrentUserName() => userName;
     }
 
     private sealed class FixedOptionsDbContextFactory(DbContextOptions<AppDbContext> options)

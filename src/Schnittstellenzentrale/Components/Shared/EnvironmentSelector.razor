@@ -1,0 +1,67 @@
+@inject ISystemEnvironmentRepository EnvironmentRepository
+@inject IActiveEnvironmentService ActiveEnvironmentService
+@inject IStorageModeService StorageModeService
+@inject ICurrentUserService CurrentUserService
+@inject IJSRuntime JSRuntime
+
+<select class="form-select w-auto" value="@_selectedId" @onchange="OnSelectionChanged">
+    <option value="">— Keine Umgebung —</option>
+    @foreach (var env in _environments)
+    {
+        <option value="@env.Id">@env.Name</option>
+    }
+</select>
+
+@code {
+    private IList<SystemEnvironment> _environments = [];
+    private string _selectedId = string.Empty;
+
+    public async Task RefreshAsync()
+    {
+        await LoadEnvironmentsAsync();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadEnvironmentsAsync();
+    }
+
+    private async Task LoadEnvironmentsAsync()
+    {
+        var mode = StorageModeService.CurrentMode;
+        var owner = StorageModeService.GetCurrentOwner(CurrentUserService);
+        _environments = await EnvironmentRepository.GetEnvironmentsAsync(mode, owner);
+
+        var activeId = ActiveEnvironmentService.ActiveEnvironment?.Id;
+        _selectedId = activeId.HasValue ? activeId.Value.ToString() : string.Empty;
+    }
+
+    private async Task OnSelectionChanged(ChangeEventArgs e)
+    {
+        _selectedId = e.Value?.ToString() ?? string.Empty;
+
+        var mode = StorageModeService.CurrentMode;
+        var key = LocalStorageKeys.SelectedEnvironmentId(mode);
+
+        if (string.IsNullOrEmpty(_selectedId))
+        {
+            await JSRuntime.InvokeVoidAsync("localStorage.removeItem", key);
+            ActiveEnvironmentService.SetActiveEnvironment(null);
+        }
+        else if (int.TryParse(_selectedId, out var id))
+        {
+            var environment = _environments.FirstOrDefault(e => e.Id == id);
+            if (environment != null)
+            {
+                await JSRuntime.InvokeVoidAsync("localStorage.setItem", key, _selectedId);
+                ActiveEnvironmentService.SetActiveEnvironment(environment);
+            }
+            else
+            {
+                await JSRuntime.InvokeVoidAsync("localStorage.removeItem", key);
+                ActiveEnvironmentService.SetActiveEnvironment(null);
+            }
+        }
+    }
+}
