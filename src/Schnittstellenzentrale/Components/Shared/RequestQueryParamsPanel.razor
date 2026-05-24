@@ -38,7 +38,7 @@
     {
         public string Key { get; set; } = string.Empty;
         public string Value { get; set; } = string.Empty;
-        public bool IsPathParameter { get; set; } = false;
+        public bool IsPathParameter { get; set; }
     }
 
     private async Task OnFieldChanged(QueryParamEntry entry, ChangeEventArgs e, bool isKey)

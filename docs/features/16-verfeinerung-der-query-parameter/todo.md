@@ -16,6 +16,6 @@ Branch: `16-verfeinerung-der-query-parameter`
 | [x] | 8 | Code-Review (Unteragent) | `review-code.md` |
 | [x] | – | Iteration oder Abschluss entscheiden | – |
 | [x] | 8a | Folgeaufgaben dokumentieren (bei Schleifenabbruch) | `continue.md` |
-| [ ] | 10 | Nacharbeiten abschließen (offene Punkte aus `continue.md`) | `continue-done.md` |
+| [x] | 10 | Nacharbeiten abschließen (offene Punkte aus `continue.md`) | `continue-done.md` |
 | [x] | 9 | Dokumentation erstellen (Unteragent) | `docs/help/` |
 | [x] | – | Commit durchführen | – |

@@ -6,6 +6,7 @@
 @inject ISignalRNotificationService SignalRNotificationService
 @using Microsoft.EntityFrameworkCore
 @using System.Text.RegularExpressions
+@using Schnittstellenzentrale.Core.Helpers
 @implements IAsyncDisposable
 
 <div class="endpoint-page">
@@ -404,25 +405,9 @@
     }
 
     private string ResolveDisplayUrl()
-    {
-        var path = _model.RelativePath;
-        var queryParams = new List<RequestQueryParamsPanel.QueryParamEntry>();
-
-        foreach (var entry in _queryParameters.Where(p => !string.IsNullOrWhiteSpace(p.Key)))
-        {
-            if (path.Contains("{" + entry.Key + "}"))
-                path = path.Replace("{" + entry.Key + "}", Uri.EscapeDataString(entry.Value));
-            else
-                queryParams.Add(entry);
-        }
-
-        if (queryParams.Count == 0)
-            return path;
-
-        var query = string.Join("&", queryParams.Select(p =>
-            $"{Uri.EscapeDataString(p.Key)}={Uri.EscapeDataString(p.Value)}"));
-        return path + "?" + query;
-    }
+        => EndpointUrlBuilder.Resolve(
+            _model.RelativePath,
+            _queryParameters.Select(p => (p.Key, p.Value)));
 
     private void ExtractAndStripQueryString()
     {
@@ -477,9 +462,14 @@
 
     private void OnPathBlur()
     {
+        var pathBefore = _model.RelativePath;
+        var countBefore = _queryParameters.Count;
+
         ExtractAndStripQueryString();
         SyncPathParameters();
-        MarkDirty();
+
+        if (_model.RelativePath != pathBefore || _queryParameters.Count != countBefore)
+            MarkDirty();
     }
 
     public async ValueTask DisposeAsync()

@@ -66,6 +66,21 @@ public class EndpointExecutionServiceTests
         return (service, handlerMock);
     }
 
+    private static (EndpointExecutionService service, Func<Uri?> getSentUri) CreateServiceCapturingUri()
+    {
+        var healthMock = new Mock<IHealthCheckService>();
+        var credMock = new Mock<ICredentialService>();
+        Uri? sentUri = null;
+        var (service, handlerMock) = CreateService(healthMock, credMock);
+        handlerMock.Protected()
+            .Setup<Task<HttpResponseMessage>>("SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>())
+            .Callback<HttpRequestMessage, CancellationToken>((req, _) => sentUri = req.RequestUri)
+            .ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("{}") });
+        return (service, () => sentUri);
+    }
+
     /// <summary>Execute_WithAuthTypeNone_SendsRequestWithoutCredentials</summary>
     [Fact]
     public async Task Execute_WithAuthTypeNone_SendsRequestWithoutCredentials()
@@ -262,23 +277,7 @@ public class EndpointExecutionServiceTests
     [Fact]
     public async Task BuildRequest_ErsetztPfadPlatzhalterDurchGespeicherteWerte()
     {
-        var healthMock = new Mock<IHealthCheckService>();
-        var credMock = new Mock<ICredentialService>();
-
-        Uri? sentUri = null;
-        var handlerMock = new Mock<HttpMessageHandler>();
-        handlerMock.Protected()
-            .Setup<Task<HttpResponseMessage>>("SendAsync",
-                ItExpr.IsAny<HttpRequestMessage>(),
-                ItExpr.IsAny<CancellationToken>())
-            .Callback<HttpRequestMessage, CancellationToken>((req, _) => sentUri = req.RequestUri)
-            .ReturnsAsync(new HttpResponseMessage(System.Net.HttpStatusCode.OK) { Content = new StringContent("{}") });
-
-        var httpClient = new HttpClient(handlerMock.Object);
-        var factoryMock = new Mock<IHttpClientFactory>();
-        factoryMock.Setup(f => f.CreateClient(It.IsAny<string>())).Returns(httpClient);
-
-        var service = new EndpointExecutionService(factoryMock.Object, healthMock.Object, credMock.Object);
+        var (service, getSentUri) = CreateServiceCapturingUri();
         var endpoint = CreateEndpoint(AuthenticationType.None, "/api/{id}/items",
         [
             new EndpointQueryParameter { Key = "id", Value = "42" }
@@ -286,6 +285,7 @@ public class EndpointExecutionServiceTests
 
         await service.ExecuteAsync(endpoint);
 
+        var sentUri = getSentUri();
         Assert.NotNull(sentUri);
         Assert.Contains("/api/42/items", sentUri!.PathAndQuery);
         Assert.DoesNotContain("{id}", sentUri.PathAndQuery);
@@ -295,23 +295,7 @@ public class EndpointExecutionServiceTests
     [Fact]
     public async Task BuildRequest_HaengtNurNichtPlatzhalterParameterAlsQueryStringAn()
     {
-        var healthMock = new Mock<IHealthCheckService>();
-        var credMock = new Mock<ICredentialService>();
-
-        Uri? sentUri = null;
-        var handlerMock = new Mock<HttpMessageHandler>();
-        handlerMock.Protected()
-            .Setup<Task<HttpResponseMessage>>("SendAsync",
-                ItExpr.IsAny<HttpRequestMessage>(),
-                ItExpr.IsAny<CancellationToken>())
-            .Callback<HttpRequestMessage, CancellationToken>((req, _) => sentUri = req.RequestUri)
-            .ReturnsAsync(new HttpResponseMessage(System.Net.HttpStatusCode.OK) { Content = new StringContent("{}") });
-
-        var httpClient = new HttpClient(handlerMock.Object);
-        var factoryMock = new Mock<IHttpClientFactory>();
-        factoryMock.Setup(f => f.CreateClient(It.IsAny<string>())).Returns(httpClient);
-
-        var service = new EndpointExecutionService(factoryMock.Object, healthMock.Object, credMock.Object);
+        var (service, getSentUri) = CreateServiceCapturingUri();
         var endpoint = CreateEndpoint(AuthenticationType.None, "/api/{id}/items",
         [
             new EndpointQueryParameter { Key = "id", Value = "42" },
@@ -320,6 +304,7 @@ public class EndpointExecutionServiceTests
 
         await service.ExecuteAsync(endpoint);
 
+        var sentUri = getSentUri();
         Assert.NotNull(sentUri);
         var fullUrl = sentUri!.PathAndQuery;
         Assert.Contains("/api/42/items", fullUrl);

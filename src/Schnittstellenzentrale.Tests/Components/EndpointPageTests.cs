@@ -35,25 +35,16 @@ public class EndpointPageTests : BunitContext
         jsModule.SetupVoid("unregisterSaveShortcut");
     }
 
-    private static Core.Models.Endpoint CreateEndpoint(string? body = null) => new()
-    {
-        Id = 1,
-        Name = "Test",
-        RelativePath = "/test",
-        Method = Core.Enums.HttpMethod.GET,
-        Body = body,
-        ApplicationId = 1,
-        Application = new Application { Id = 1, Name = "App", BaseUrl = "http://example.com" },
-        Headers = [],
-        QueryParameters = []
-    };
-
-    private static Core.Models.Endpoint CreateEndpointWithPath(string relPath, RequestQueryParamsPanel.QueryParamEntry[]? queryParameters = null) => new()
+    private static Core.Models.Endpoint CreateEndpoint(
+        string? body = null,
+        string relPath = "/test",
+        RequestQueryParamsPanel.QueryParamEntry[]? queryParameters = null) => new()
     {
         Id = 1,
         Name = "Test",
         RelativePath = relPath,
         Method = Core.Enums.HttpMethod.GET,
+        Body = body,
         ApplicationId = 1,
         Application = new Application { Id = 1, Name = "App", BaseUrl = "http://example.com" },
         Headers = [],
@@ -135,7 +126,7 @@ public class EndpointPageTests : BunitContext
     [Fact]
     public void PfadMitPlatzhalter_WirdBeimLadenAlsNichtLoeschbarerEintragAngezeigt()
     {
-        var endpoint = CreateEndpointWithPath("/api/{id}/items");
+        var endpoint = CreateEndpoint(relPath: "/api/{id}/items");
 
         var cut = Render<EndpointPage>(p => p.Add(x => x.Endpoint, endpoint));
         cut.FindAll("button.nav-link")
@@ -156,7 +147,7 @@ public class EndpointPageTests : BunitContext
     [Fact]
     public void PfadMitPlatzhalter_VorhandenerWertBleibtErhalten_WennPlatzhalterUnveraendert()
     {
-        var endpoint = CreateEndpointWithPath("/api/{id}/items");
+        var endpoint = CreateEndpoint(relPath: "/api/{id}/items");
 
         var cut = Render<EndpointPage>(p => p.Add(x => x.Endpoint, endpoint));
         cut.FindAll("button.nav-link")
@@ -184,7 +175,7 @@ public class EndpointPageTests : BunitContext
     [Fact]
     public void GeaenderterPfad_EntferntWeggefalleneUndFuegtNeueHinzu()
     {
-        var endpoint = CreateEndpointWithPath("/api/{alterId}/items");
+        var endpoint = CreateEndpoint(relPath: "/api/{alterId}/items");
 
         var cut = Render<EndpointPage>(p => p.Add(x => x.Endpoint, endpoint));
         cut.FindAll("button.nav-link")
@@ -211,7 +202,7 @@ public class EndpointPageTests : BunitContext
     [Fact]
     public void PfadMitQueryString_WirdExtrahiertUndPfadBereinigt()
     {
-        var endpoint = CreateEndpointWithPath("/api/items?filter=active&page=1");
+        var endpoint = CreateEndpoint(relPath: "/api/items?filter=active&page=1");
 
         var cut = Render<EndpointPage>(p => p.Add(x => x.Endpoint, endpoint));
         cut.FindAll("button.nav-link")
@@ -242,7 +233,7 @@ public class EndpointPageTests : BunitContext
         {
             new RequestQueryParamsPanel.QueryParamEntry { Key = "filter", Value = "active" }
         };
-        var endpoint = CreateEndpointWithPath("/api/{id}/items", queryParams);
+        var endpoint = CreateEndpoint(relPath: "/api/{id}/items", queryParameters: queryParams);
 
         var cut = Render<EndpointPage>(p => p.Add(x => x.Endpoint, endpoint));
         cut.FindAll("button.nav-link")
