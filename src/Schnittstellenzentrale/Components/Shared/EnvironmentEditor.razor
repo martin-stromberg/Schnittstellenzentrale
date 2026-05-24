@@ -1,0 +1,230 @@
+@inject ISystemEnvironmentRepository EnvironmentRepository
+@inject IStorageModeService StorageModeService
+@inject ICurrentUserService CurrentUserService
+
+<div class="environment-editor">
+    <div class="mb-3">
+        <label class="form-label">Name</label>
+        <input type="text" class="form-control" @bind="_name" @bind:event="oninput" />
+        @if (!string.IsNullOrEmpty(_nameError))
+        {
+            <div class="text-danger mt-1">@_nameError</div>
+        }
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Variablen</label>
+        <table class="table table-sm">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Wert</th>
+                    <th>Maskiert</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var variable in _variables)
+                {
+                    <tr>
+                        <td>
+                            <input type="text" class="form-control form-control-sm"
+                                   value="@variable.Name"
+                                   @onchange="e => variable.Name = e.Value?.ToString() ?? string.Empty" />
+                        </td>
+                        <td>
+                            <input type="@(variable.IsValueMasked ? "password" : "text")"
+                                   class="form-control form-control-sm"
+                                   value="@variable.Value"
+                                   @onchange="e => variable.Value = e.Value?.ToString() ?? string.Empty" />
+                        </td>
+                        <td class="text-center align-middle">
+                            <button type="button" class="btn btn-sm btn-link p-0"
+                                    title="@(variable.IsValueMasked ? "Wert anzeigen" : "Wert maskieren")"
+                                    @onclick="() => variable.IsValueMasked = !variable.IsValueMasked">
+                                @if (variable.IsValueMasked)
+                                {
+                                    <span>&#128065;</span>
+                                }
+                                else
+                                {
+                                    <span>&#128274;</span>
+                                }
+                            </button>
+                        </td>
+                        <td>
+                            <button type="button" class="btn btn-sm btn-outline-danger"
+                                    @onclick="() => RemoveVariable(variable)">
+                                &times;
+                            </button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+        <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="AddVariable">
+            + Variable hinzufügen
+        </button>
+        @if (!string.IsNullOrEmpty(_variableError))
+        {
+            <div class="text-danger mt-1">@_variableError</div>
+        }
+    </div>
+
+    @if (!string.IsNullOrEmpty(_errorMessage))
+    {
+        <div class="alert alert-danger mt-2">@_errorMessage</div>
+    }
+
+    <div class="d-flex gap-2">
+        <button type="button" class="btn btn-primary" @onclick="SaveAsync">Speichern</button>
+        <button type="button" class="btn btn-secondary" @onclick="Cancel">Abbrechen</button>
+    </div>
+</div>
+
+@code {
+    [Parameter] public SystemEnvironment? ExistingEnvironment { get; set; }
+    [Parameter] public EventCallback<SystemEnvironment> OnSaved { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    private string _name = string.Empty;
+    private List<EnvironmentVariable> _variables = [];
+    private string? _nameError;
+    private string? _variableError;
+    private string? _errorMessage;
+
+    protected override void OnParametersSet()
+    {
+        if (ExistingEnvironment != null)
+        {
+            _name = ExistingEnvironment.Name;
+            _variables = ExistingEnvironment.Variables
+                .Select(v => new EnvironmentVariable
+                {
+                    Id = v.Id,
+                    Name = v.Name,
+                    Value = v.Value,
+                    IsValueMasked = v.IsValueMasked,
+                    SystemEnvironmentId = v.SystemEnvironmentId
+                })
+                .ToList();
+        }
+        else
+        {
+            _name = string.Empty;
+            _variables = [];
+        }
+        _nameError = null;
+        _variableError = null;
+        _errorMessage = null;
+    }
+
+    private void AddVariable()
+    {
+        _variables.Add(new EnvironmentVariable());
+    }
+
+    private void RemoveVariable(EnvironmentVariable variable)
+    {
+        _variables.Remove(variable);
+    }
+
+    private async Task SaveAsync()
+    {
+        _nameError = null;
+        _variableError = null;
+        _errorMessage = null;
+
+        if (string.IsNullOrWhiteSpace(_name))
+        {
+            _nameError = "Name darf nicht leer sein.";
+            return;
+        }
+
+        if (_name.Length > 200)
+        {
+            _nameError = "Name darf maximal 200 Zeichen lang sein.";
+            return;
+        }
+
+        var longNamedVariable = _variables.FirstOrDefault(v => v.Name.Length > 200);
+        if (longNamedVariable != null)
+        {
+            _variableError = $"Variablenname '{longNamedVariable.Name[..20]}…' überschreitet 200 Zeichen.";
+            return;
+        }
+
+        var longValuedVariable = _variables.FirstOrDefault(v => v.Value.Length > 4000);
+        if (longValuedVariable != null)
+        {
+            _variableError = $"Variablenwert von '{longValuedVariable.Name}' überschreitet 4000 Zeichen.";
+            return;
+        }
+
+        var duplicateVariable = _variables
+            .Where(v => !string.IsNullOrWhiteSpace(v.Name))
+            .GroupBy(v => v.Name)
+            .FirstOrDefault(g => g.Count() > 1);
+        if (duplicateVariable != null)
+        {
+            _variableError = $"Variablenname '{duplicateVariable.Key}' ist mehrfach vorhanden.";
+            return;
+        }
+
+        var emptyNamedVariable = _variables.FirstOrDefault(v => string.IsNullOrWhiteSpace(v.Name));
+        if (emptyNamedVariable != null)
+        {
+            _variableError = "Variablenname darf nicht leer sein.";
+            return;
+        }
+
+        var mode = StorageModeService.CurrentMode;
+        var owner = StorageModeService.GetCurrentOwner(CurrentUserService);
+
+        var existingEnvironments = await EnvironmentRepository.GetEnvironmentsAsync(mode, owner);
+        var duplicate = existingEnvironments.FirstOrDefault(e =>
+            e.Name.Equals(_name, StringComparison.OrdinalIgnoreCase) &&
+            e.Id != (ExistingEnvironment?.Id ?? 0));
+        if (duplicate != null)
+        {
+            _nameError = "Eine Umgebung mit diesem Namen existiert bereits.";
+            return;
+        }
+
+        try
+        {
+            SystemEnvironment environment;
+            if (ExistingEnvironment != null)
+            {
+                environment = new SystemEnvironment
+                {
+                    Id = ExistingEnvironment.Id,
+                    Name = _name,
+                    Mode = ExistingEnvironment.Mode,
+                    Owner = ExistingEnvironment.Owner,
+                    Variables = _variables
+                };
+                environment = await EnvironmentRepository.UpdateAsync(environment);
+            }
+            else
+            {
+                environment = new SystemEnvironment
+                {
+                    Name = _name,
+                    Mode = mode,
+                    Owner = owner,
+                    Variables = _variables
+                };
+                environment = await EnvironmentRepository.AddAsync(environment);
+            }
+
+            await OnSaved.InvokeAsync(environment);
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Speichern fehlgeschlagen: {ex.Message}";
+        }
+    }
+
+    private async Task Cancel() => await OnCancel.InvokeAsync();
+}

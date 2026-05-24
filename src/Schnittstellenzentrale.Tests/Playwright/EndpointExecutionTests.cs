@@ -36,6 +36,52 @@ public class EndpointExecutionTests : PlaywrightTestBase
     }
 
     /// <summary>
+    /// E2E: Umgebung mit Variable anlegen, aktivieren, Endpunkt mit {{pfad}}-Platzhalter ausführen,
+    /// aufgelöste URL im Pfadfeld und Antwortanzeige prüfen.
+    /// </summary>
+    [Fact]
+    public async Task UmgebungMitVariable_Aktivieren_EndpunktSendetAufgeloestUrl()
+    {
+        await Page.GotoAsync(BaseUrl);
+
+        // Umgebung mit Variable anlegen
+        await Page.GetByTitle("Umgebungen verwalten").ClickAsync();
+        await Page.GetByRole(AriaRole.Button, new() { Name = "Neu" }).ClickAsync();
+        await Page.Locator(".environment-editor input[type='text']").First.FillAsync("VariablenTestUmgebung");
+        await Page.GetByRole(AriaRole.Button, new() { Name = "+ Variable hinzufügen" }).ClickAsync();
+        var variableRows = Page.Locator(".environment-editor table tbody tr");
+        await variableRows.First.Locator("input").First.FillAsync("pfad");
+        await variableRows.First.Locator("input").Nth(1).FillAsync("api/application-groups");
+        await Page.GetByRole(AriaRole.Button, new() { Name = "Speichern" }).ClickAsync();
+        await Page.Locator(".btn-close").ClickAsync();
+
+        // Umgebung aktivieren
+        var envSelector = Page.Locator(".top-row select").Last;
+        await envSelector.SelectOptionAsync(new SelectOptionValue { Label = "VariablenTestUmgebung" });
+
+        // Endpunkt mit {{pfad}}-Platzhalter anlegen
+        var systemAppRow = Page.Locator(".sz-tree-row", new() { Has = Page.GetByText("Schnittstellenzentrale") }).First;
+        await systemAppRow.Locator("[data-testid=\"context-menu-toggle\"]").ClickAsync();
+        await Page.GetByRole(AriaRole.Button, new() { Name = "Endpunkt anlegen" }).ClickAsync();
+
+        var pathInput = Page.GetByPlaceholder("Relativer Pfad");
+        await pathInput.FillAsync("/{{pfad}}");
+        await pathInput.BlurAsync();
+
+        // Pfadfeld zeigt die aufgelöste URL an
+        await Assertions.Expect(pathInput).ToHaveValueAsync("/api/application-groups");
+
+        // Anfrage senden und Antwort prüfen
+        await Page.GetByRole(AriaRole.Button, new() { Name = "Anfrage senden" }).ClickAsync();
+
+        var statusText = Page.Locator(".response-section strong").First;
+        await Assertions.Expect(statusText).ToBeVisibleAsync();
+        var statusCode = await statusText.TextContentAsync();
+        Assert.True(int.TryParse(statusCode?.Trim(), out var code) && code >= 200 && code <= 299,
+            $"Erwarteter 2xx-Statuscode, erhalten: '{statusCode}'");
+    }
+
+    /// <summary>
     /// Eingabe eines Pfads mit Platzhalter und Query-String: Pfad wird bereinigt, Parameter werden korrekt
     /// als löschbare bzw. nicht löschbare Einträge angezeigt, und die gesendete URL enthält den aufgelösten Pfad mit Query-String.
     /// </summary>

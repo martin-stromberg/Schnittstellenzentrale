@@ -63,6 +63,8 @@ DatabaseProviderFactory.RegisterDbContext(builder.Services, builder.Configuratio
 
 builder.Services.AddScoped<IApplicationRepository, ApplicationRepository>();
 builder.Services.AddScoped<IEndpointRepository, EndpointRepository>();
+builder.Services.AddScoped<ISystemEnvironmentRepository, SystemEnvironmentRepository>();
+builder.Services.AddScoped<IActiveEnvironmentService, ActiveEnvironmentService>();
 // Scoped ist in Blazor Server korrekt: ein Scope entspricht genau einem Circuit (Verbindung),
 // sodass jede Benutzersitzung eine eigene Instanz erhält.
 builder.Services.AddScoped<IStorageModeService, StorageModeService>();

@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Net.Http.Headers;
 using System.Security.Principal;
 using System.Text;
+using System.Text.RegularExpressions;
 using Schnittstellenzentrale.Core.Enums;
 using Schnittstellenzentrale.Core.Helpers;
 using Schnittstellenzentrale.Core.Interfaces;
@@ -16,19 +17,23 @@ namespace Schnittstellenzentrale.Infrastructure.Services;
 public class EndpointExecutionService : IEndpointExecutionService
 {
     private const string DefaultContentType = "application/json";
+    private static readonly Regex DoubleBracePlaceholderRegex = new(@"\{\{([^}]+)\}\}", RegexOptions.Compiled);
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly IHealthCheckService _healthCheckService;
     private readonly ICredentialService _credentialService;
+    private readonly IActiveEnvironmentService _activeEnvironmentService;
 
     /// <summary>Initialisiert eine neue Instanz des <see cref="EndpointExecutionService"/>.</summary>
     public EndpointExecutionService(
         IHttpClientFactory httpClientFactory,
         IHealthCheckService healthCheckService,
-        ICredentialService credentialService)
+        ICredentialService credentialService,
+        IActiveEnvironmentService activeEnvironmentService)
     {
         _httpClientFactory = httpClientFactory;
         _healthCheckService = healthCheckService;
         _credentialService = credentialService;
+        _activeEnvironmentService = activeEnvironmentService;
     }
 
     /// <inheritdoc/>
@@ -119,11 +124,17 @@ public class EndpointExecutionService : IEndpointExecutionService
 
     private HttpRequestMessage BuildRequest(Core.Models.Endpoint endpoint)
     {
-        var resolvedPath = EndpointUrlBuilder.Resolve(
-            endpoint.RelativePath,
-            endpoint.QueryParameters.Select(p => (p.Key, p.Value)));
+        var variables = _activeEnvironmentService.ActiveVariables;
 
-        var url = endpoint.Application.BaseUrl.TrimEnd('/') + "/" + resolvedPath.TrimStart('/');
+        var baseUrl = ResolvePlaceholders(endpoint.Application.BaseUrl, variables);
+        var relativePath = ResolvePlaceholders(endpoint.RelativePath, variables);
+
+        var resolvedQueryParameters = endpoint.QueryParameters
+            .Select(p => (ResolvePlaceholders(p.Key, variables), ResolvePlaceholders(p.Value, variables)));
+
+        var resolvedPath = EndpointUrlBuilder.Resolve(relativePath, resolvedQueryParameters);
+
+        var url = baseUrl.TrimEnd('/') + "/" + resolvedPath.TrimStart('/');
 
         var method = endpoint.Method switch
         {
@@ -140,17 +151,35 @@ public class EndpointExecutionService : IEndpointExecutionService
         var request = new HttpRequestMessage(method, url);
 
         foreach (var header in endpoint.Headers)
-            request.Headers.TryAddWithoutValidation(header.Key, header.Value);
+            request.Headers.TryAddWithoutValidation(
+                ResolvePlaceholders(header.Key, variables),
+                ResolvePlaceholders(header.Value, variables));
 
-        if (!string.IsNullOrEmpty(endpoint.Body))
+        var resolvedBody = string.IsNullOrEmpty(endpoint.Body)
+            ? endpoint.Body
+            : ResolvePlaceholders(endpoint.Body, variables);
+
+        if (!string.IsNullOrEmpty(resolvedBody))
         {
             var contentType = endpoint.Headers
                 .FirstOrDefault(h => h.Key.Equals("Content-Type", StringComparison.OrdinalIgnoreCase))
                 ?.Value ?? DefaultContentType;
-            request.Content = new StringContent(endpoint.Body, Encoding.UTF8, contentType);
+            request.Content = new StringContent(resolvedBody, Encoding.UTF8, contentType);
         }
 
         return request;
+    }
+
+    private static string ResolvePlaceholders(string input, IReadOnlyDictionary<string, string> variables)
+    {
+        if (string.IsNullOrEmpty(input))
+            return input ?? string.Empty;
+
+        return DoubleBracePlaceholderRegex.Replace(input, match =>
+        {
+            var name = match.Groups[1].Value;
+            return variables.TryGetValue(name, out var value) ? value : string.Empty;
+        });
     }
 
     private void ApplyAuthentication(HttpRequestMessage request, Core.Models.Endpoint endpoint)
@@ -171,7 +200,10 @@ public class EndpointExecutionService : IEndpointExecutionService
             case AuthenticationType.BearerToken:
                 var token = _credentialService.GetPassword(target);
                 if (!string.IsNullOrEmpty(token))
-                    request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+                {
+                    var resolvedToken = ResolvePlaceholders(token, _activeEnvironmentService.ActiveVariables);
+                    request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", resolvedToken);
+                }
                 break;
         }
     }

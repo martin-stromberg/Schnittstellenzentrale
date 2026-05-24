@@ -80,10 +80,13 @@ public class EndpointExecutionIntegrationTests : IAsyncLifetime
             .Setup(f => f.CreateClient(It.IsAny<string>()))
             .Returns(new HttpClient(_factory.Server.CreateHandler()));
 
+        var activeEnvMock = new Mock<IActiveEnvironmentService>();
+        activeEnvMock.Setup(s => s.ActiveVariables).Returns(new Dictionary<string, string>());
         var executionService = new EndpointExecutionService(
             httpClientFactoryMock.Object,
             new Mock<IHealthCheckService>().Object,
-            credentialServiceMock.Object);
+            credentialServiceMock.Object,
+            activeEnvMock.Object);
 
         // Act
         var result = await executionService.ExecuteAsync(endpoint);

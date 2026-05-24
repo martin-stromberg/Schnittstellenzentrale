@@ -54,4 +54,13 @@ public class SignalRNotificationService<THub> : ISignalRNotificationService
         await _hubContext.Clients.Group($"application:{applicationId}")
             .SendAsync("EndpointGroupChanged", endpointGroupId, applicationId);
     }
+
+    /// <summary>
+    /// Benachrichtigt alle Clients in der Gruppe <c>environments</c> über eine Änderung an Systemumgebungen.
+    /// </summary>
+    public async Task NotifyEnvironmentChangedAsync()
+    {
+        await _hubContext.Clients.Group("environments")
+            .SendAsync("EnvironmentChanged");
+    }
 }
