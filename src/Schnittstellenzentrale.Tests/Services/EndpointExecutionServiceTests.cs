@@ -9,6 +9,7 @@ using Schnittstellenzentrale.Infrastructure.Services;
 
 namespace Schnittstellenzentrale.Tests.Services;
 
+/// <summary>EndpointExecutionServiceTests</summary>
 public class EndpointExecutionServiceTests
 {
     private static Core.Models.Application CreateApp() => new()
@@ -52,6 +53,7 @@ public class EndpointExecutionServiceTests
         return (service, handlerMock);
     }
 
+    /// <summary>Execute_WithAuthTypeNone_SendsRequestWithoutCredentials</summary>
     [Fact]
     public async Task Execute_WithAuthTypeNone_SendsRequestWithoutCredentials()
     {
@@ -69,6 +71,7 @@ public class EndpointExecutionServiceTests
             ItExpr.IsAny<CancellationToken>());
     }
 
+    /// <summary>Execute_WithAuthTypeBasic_SendsBasicAuthHeader</summary>
     [Fact]
     public async Task Execute_WithAuthTypeBasic_SendsBasicAuthHeader()
     {
@@ -88,6 +91,7 @@ public class EndpointExecutionServiceTests
             ItExpr.IsAny<CancellationToken>());
     }
 
+    /// <summary>Execute_WithNegotiateAuthType_UsesNegotiateHandler</summary>
     [Theory]
     [InlineData(AuthenticationType.Negotiate)]
     [InlineData(AuthenticationType.NegotiateWithImpersonation)]
@@ -112,6 +116,7 @@ public class EndpointExecutionServiceTests
         factoryMock.Verify(f => f.CreateClient("negotiate"), Times.Once());
     }
 
+    /// <summary>Execute_WithAuthTypeBearerToken_SendsBearerHeader</summary>
     [Fact]
     public async Task Execute_WithAuthTypeBearerToken_SendsBearerHeader()
     {
@@ -132,6 +137,7 @@ public class EndpointExecutionServiceTests
             ItExpr.IsAny<CancellationToken>());
     }
 
+    /// <summary>Execute_SetsResponseHeaders</summary>
     [Fact]
     public async Task Execute_SetsResponseHeaders()
     {
@@ -163,6 +169,7 @@ public class EndpointExecutionServiceTests
         Assert.Equal("headerValue", result.ResponseHeaders["X-Custom-Header"]);
     }
 
+    /// <summary>Execute_SetsDurationMs</summary>
     [Fact]
     public async Task Execute_SetsDurationMs()
     {
@@ -192,6 +199,7 @@ public class EndpointExecutionServiceTests
         Assert.True(result.DurationMs > 0);
     }
 
+    /// <summary>Execute_SetsResponseSizeBytes</summary>
     [Fact]
     public async Task Execute_SetsResponseSizeBytes()
     {
@@ -207,6 +215,7 @@ public class EndpointExecutionServiceTests
         Assert.Equal(System.Text.Encoding.UTF8.GetByteCount(body), result.ResponseSizeBytes);
     }
 
+    /// <summary>Execute_OnConnectionError_DoesNotCallHealthCheck</summary>
     [Fact]
     public async Task Execute_OnConnectionError_DoesNotCallHealthCheck()
     {

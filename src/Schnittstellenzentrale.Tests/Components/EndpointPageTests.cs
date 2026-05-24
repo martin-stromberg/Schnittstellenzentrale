@@ -8,6 +8,7 @@ using Schnittstellenzentrale.Core.Models;
 
 namespace Schnittstellenzentrale.Tests.Components;
 
+/// <summary>bUnit-Tests für die <see cref="EndpointPage"/>-Komponente.</summary>
 public class EndpointPageTests : BunitContext
 {
     private readonly Mock<IEndpointRepository> _repoMock = new();
@@ -16,6 +17,7 @@ public class EndpointPageTests : BunitContext
     private readonly Mock<ISignalRNotificationService> _signalRMock = new();
     private readonly Mock<ICredentialService> _credentialMock = new();
 
+    /// <summary>Initialisiert die Test-Services und JS-Interop-Mocks.</summary>
     public EndpointPageTests()
     {
         _storageMock.Setup(s => s.CurrentMode).Returns(StorageMode.User);
@@ -46,6 +48,7 @@ public class EndpointPageTests : BunitContext
         QueryParameters = []
     };
 
+    /// <summary>Ohne Anfrageergebnis ist der Antwortbereich nicht sichtbar.</summary>
     [Fact]
     public void OhneAnfrageergebnis_AntwortBereichNichtSichtbar()
     {
@@ -54,6 +57,7 @@ public class EndpointPageTests : BunitContext
         Assert.Empty(cut.FindAll(".response-section"));
     }
 
+    /// <summary>Das Anfrageergebnis zeigt den Response-Body korrekt an.</summary>
     [Fact]
     public void AnfrageErgebnis_ResponseBodyWirdKorrektAngezeigt()
     {
@@ -77,6 +81,7 @@ public class EndpointPageTests : BunitContext
         Assert.Contains("ok", cut.Find("pre").TextContent);
     }
 
+    /// <summary>Das Anfrageergebnis zeigt den HTTP-Statuscode an.</summary>
     [Fact]
     public void AnfrageErgebnis_StatusCodeWirdAngezeigt()
     {
@@ -97,6 +102,7 @@ public class EndpointPageTests : BunitContext
         Assert.Contains("404", cut.Find(".response-section").TextContent);
     }
 
+    /// <summary>Die Body-Textarea zeigt den gespeicherten Body-Inhalt des Endpunkts an.</summary>
     [Fact]
     public void EndpunktMitBody_TextareaZeigtGespeichertenBody()
     {

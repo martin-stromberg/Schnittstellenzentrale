@@ -5,6 +5,7 @@ using Schnittstellenzentrale.Infrastructure.Services;
 
 namespace Schnittstellenzentrale.Tests.Services;
 
+/// <summary>ThemeServiceTests</summary>
 public class ThemeServiceTests
 {
     private static (ThemeService service, Mock<IJSRuntime> jsRuntimeMock, Mock<IJSObjectReference> moduleMock)
@@ -30,6 +31,7 @@ public class ThemeServiceTests
         return (service, jsRuntimeMock, moduleMock);
     }
 
+    /// <summary>InitialTheme_IsLight_WhenNoStoredPreference</summary>
     [Fact]
     public async Task InitialTheme_IsLight_WhenNoStoredPreference()
     {
@@ -40,6 +42,7 @@ public class ThemeServiceTests
         Assert.Equal(ColorScheme.Light, service.CurrentScheme);
     }
 
+    /// <summary>InitialTheme_IsStoredValue_WhenPreferenceExists</summary>
     [Fact]
     public async Task InitialTheme_IsStoredValue_WhenPreferenceExists()
     {
@@ -50,6 +53,7 @@ public class ThemeServiceTests
         Assert.Equal(ColorScheme.Dark, service.CurrentScheme);
     }
 
+    /// <summary>SetTheme_FiresOnThemeChanged</summary>
     [Fact]
     public async Task SetTheme_FiresOnThemeChanged()
     {
@@ -62,6 +66,7 @@ public class ThemeServiceTests
         Assert.True(fired);
     }
 
+    /// <summary>SetTheme_DoesNotFire_WhenValueUnchanged</summary>
     [Fact]
     public async Task SetTheme_DoesNotFire_WhenValueUnchanged()
     {
@@ -74,6 +79,7 @@ public class ThemeServiceTests
         Assert.False(fired);
     }
 
+    /// <summary>InitialTheme_IsLight_WhenStoredValueIsInvalid</summary>
     [Fact]
     public async Task InitialTheme_IsLight_WhenStoredValueIsInvalid()
     {
@@ -84,6 +90,7 @@ public class ThemeServiceTests
         Assert.Equal(ColorScheme.Light, service.CurrentScheme);
     }
 
+    /// <summary>InitializeAsync_ImportsModuleOnlyOnce_WhenCalledTwice</summary>
     [Fact]
     public async Task InitializeAsync_ImportsModuleOnlyOnce_WhenCalledTwice()
     {
@@ -97,6 +104,7 @@ public class ThemeServiceTests
             Times.Once);
     }
 
+    /// <summary>SetTheme_PersistsValueToLocalStorage</summary>
     [Fact]
     public async Task SetTheme_PersistsValueToLocalStorage()
     {
@@ -111,6 +119,7 @@ public class ThemeServiceTests
             Times.Once);
     }
 
+    /// <summary>SetTheme_AppliesThemeToDocument</summary>
     [Fact]
     public async Task SetTheme_AppliesThemeToDocument()
     {
@@ -125,6 +134,7 @@ public class ThemeServiceTests
             Times.Once);
     }
 
+    /// <summary>SetTheme_ThrowsArgumentOutOfRangeException_WhenSchemeIsUndefined</summary>
     [Fact]
     public async Task SetTheme_ThrowsArgumentOutOfRangeException_WhenSchemeIsUndefined()
     {

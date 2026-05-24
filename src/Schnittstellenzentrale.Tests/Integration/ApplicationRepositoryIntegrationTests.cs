@@ -6,6 +6,7 @@ using Schnittstellenzentrale.Tests.Helpers;
 
 namespace Schnittstellenzentrale.Tests.Integration;
 
+/// <summary>ApplicationRepositoryIntegrationTests</summary>
 public class ApplicationRepositoryIntegrationTests
 {
     private static async Task ExecuteWithContextAsync(Func<ApplicationRepository, Task> test)
@@ -17,6 +18,7 @@ public class ApplicationRepositoryIntegrationTests
         }
     }
 
+    /// <summary>GetApplications_WithStorageModeUser_ReturnsOnlyUserData</summary>
     [Fact]
     public async Task GetApplications_WithStorageModeUser_ReturnsOnlyUserData()
     {
@@ -32,6 +34,7 @@ public class ApplicationRepositoryIntegrationTests
         });
     }
 
+    /// <summary>GetApplications_WithStorageModeTeam_ReturnsTeamData</summary>
     [Fact]
     public async Task GetApplications_WithStorageModeTeam_ReturnsTeamData()
     {
@@ -46,6 +49,7 @@ public class ApplicationRepositoryIntegrationTests
         });
     }
 
+    /// <summary>AddGroup_PersistsNewGroup</summary>
     [Fact]
     public async Task AddGroup_PersistsNewGroup()
     {
@@ -60,6 +64,7 @@ public class ApplicationRepositoryIntegrationTests
         });
     }
 
+    /// <summary>AddApplication_WithGroup_PersistsApplication</summary>
     [Fact]
     public async Task AddApplication_WithGroup_PersistsApplication()
     {
@@ -76,6 +81,7 @@ public class ApplicationRepositoryIntegrationTests
         });
     }
 
+    /// <summary>AddApplication_WithoutGroup_PersistsUngroupedApplication</summary>
     [Fact]
     public async Task AddApplication_WithoutGroup_PersistsUngroupedApplication()
     {
@@ -90,6 +96,7 @@ public class ApplicationRepositoryIntegrationTests
         });
     }
 
+    /// <summary>AddApplication_WithStorageModeUser_FiltersToCurrentOwner</summary>
     [Fact]
     public async Task AddApplication_WithStorageModeUser_FiltersToCurrentOwner()
     {
@@ -104,6 +111,7 @@ public class ApplicationRepositoryIntegrationTests
         });
     }
 
+    /// <summary>UpdateGroup_RenamesGroup</summary>
     [Fact]
     public async Task UpdateGroup_RenamesGroup()
     {
@@ -120,6 +128,7 @@ public class ApplicationRepositoryIntegrationTests
         });
     }
 
+    /// <summary>UpdateApplication_ChangesGroup</summary>
     [Fact]
     public async Task UpdateApplication_ChangesGroup()
     {
@@ -138,6 +147,7 @@ public class ApplicationRepositoryIntegrationTests
         });
     }
 
+    /// <summary>UpdateApplication_SetsGroupToNull</summary>
     [Fact]
     public async Task UpdateApplication_SetsGroupToNull()
     {
@@ -155,6 +165,7 @@ public class ApplicationRepositoryIntegrationTests
         });
     }
 
+    /// <summary>DeleteGroup_SetsMemberApplicationsGroupless</summary>
     [Fact]
     public async Task DeleteGroup_SetsMemberApplicationsGroupless()
     {
@@ -171,6 +182,7 @@ public class ApplicationRepositoryIntegrationTests
         });
     }
 
+    /// <summary>DeleteApplication_RemovesApplication</summary>
     [Fact]
     public async Task DeleteApplication_RemovesApplication()
     {
@@ -185,6 +197,7 @@ public class ApplicationRepositoryIntegrationTests
         });
     }
 
+    /// <summary>DeleteGroup_WithApplicationsDeletedFirst_RemovesGroupAndApplications</summary>
     [Fact]
     public async Task DeleteGroup_WithApplicationsDeletedFirst_RemovesGroupAndApplications()
     {
@@ -205,6 +218,7 @@ public class ApplicationRepositoryIntegrationTests
         });
     }
 
+    /// <summary>GetGroups_WithStorageModeUser_ReturnsOnlyGroupsWithOwnedApplications</summary>
     [Fact]
     public async Task GetGroups_WithStorageModeUser_ReturnsOnlyGroupsWithOwnedApplications()
     {
@@ -222,6 +236,7 @@ public class ApplicationRepositoryIntegrationTests
         });
     }
 
+    /// <summary>GetUngroupedApplications_WithStorageModeUser_ReturnsOnlyOwnUngroupedApplications</summary>
     [Fact]
     public async Task GetUngroupedApplications_WithStorageModeUser_ReturnsOnlyOwnUngroupedApplications()
     {
@@ -241,6 +256,7 @@ public class ApplicationRepositoryIntegrationTests
         });
     }
 
+    /// <summary>UpdateApplication_WithStaleRowVersion_ThrowsDbUpdateConcurrencyException</summary>
     [Fact]
     public async Task UpdateApplication_WithStaleRowVersion_ThrowsDbUpdateConcurrencyException()
     {
@@ -265,6 +281,7 @@ public class ApplicationRepositoryIntegrationTests
         });
     }
 
+    /// <summary>UpdateGroup_WithNewInstanceAfterAdd_ShouldRenameGroup</summary>
     [Fact]
     public async Task UpdateGroup_WithNewInstanceAfterAdd_ShouldRenameGroup()
     {
@@ -283,6 +300,7 @@ public class ApplicationRepositoryIntegrationTests
         });
     }
 
+    /// <summary>UpdateGroup_WithNewInstanceAfterGetGroups_ShouldRenameGroup</summary>
     [Fact]
     public async Task UpdateGroup_WithNewInstanceAfterGetGroups_ShouldRenameGroup()
     {
@@ -301,6 +319,7 @@ public class ApplicationRepositoryIntegrationTests
         });
     }
 
+    /// <summary>UpdateApplication_WithNewInstanceAfterAdd_ShouldUpdateApplication</summary>
     [Fact]
     public async Task UpdateApplication_WithNewInstanceAfterAdd_ShouldUpdateApplication()
     {
@@ -325,6 +344,7 @@ public class ApplicationRepositoryIntegrationTests
         });
     }
 
+    /// <summary>UpdateApplication_WithNewInstanceAfterGetApplications_ShouldUpdateApplication</summary>
     [Fact]
     public async Task UpdateApplication_WithNewInstanceAfterGetApplications_ShouldUpdateApplication()
     {
@@ -349,6 +369,7 @@ public class ApplicationRepositoryIntegrationTests
         });
     }
 
+    /// <summary>AusGruppeEntfernen_NachGetGroupsAsync_PersistiertInDb</summary>
     [Fact]
     public async Task AusGruppeEntfernen_NachGetGroupsAsync_PersistiertInDb()
     {
@@ -371,6 +392,7 @@ public class ApplicationRepositoryIntegrationTests
         });
     }
 
+    /// <summary>UpdateGroup_WithStaleRowVersion_ThrowsDbUpdateConcurrencyException</summary>
     [Fact]
     public async Task UpdateGroup_WithStaleRowVersion_ThrowsDbUpdateConcurrencyException()
     {

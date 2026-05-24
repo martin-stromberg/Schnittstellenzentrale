@@ -1,5 +1,5 @@
 <div class="context-menu-container @(_isOpen ? "menu-open" : "")">
-    <button type="button" class="btn btn-link btn-sm context-menu-toggle" @onclick="ToggleMenu">⚙️</button>
+    <button type="button" class="btn btn-link btn-sm context-menu-toggle" data-testid="context-menu-toggle" @onclick="ToggleMenu">⚙️</button>
     @if (_isOpen)
     {
         <div class="context-menu-overlay" @onclick="() => _isOpen = false"></div>

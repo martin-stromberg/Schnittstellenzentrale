@@ -2,8 +2,10 @@ using Schnittstellenzentrale.Services;
 
 namespace Schnittstellenzentrale.Tests.Services;
 
+/// <summary>TokenStoreTests</summary>
 public class TokenStoreTests
 {
+    /// <summary>CreateTokenAsync_ReturnsValidToken</summary>
     [Fact]
     public async Task CreateTokenAsync_ReturnsValidToken()
     {
@@ -17,6 +19,7 @@ public class TokenStoreTests
         Assert.True(token.ExpiresAt > DateTime.UtcNow);
     }
 
+    /// <summary>ValidateAndRotateAsync_WithValidToken_ReturnsNewToken</summary>
     [Fact]
     public async Task ValidateAndRotateAsync_WithValidToken_ReturnsNewToken()
     {
@@ -30,6 +33,7 @@ public class TokenStoreTests
         Assert.True(newToken.ExpiresAt > DateTime.UtcNow);
     }
 
+    /// <summary>ValidateAndRotateAsync_AfterRotation_OldTokenIsInvalid</summary>
     [Fact]
     public async Task ValidateAndRotateAsync_AfterRotation_OldTokenIsInvalid()
     {
@@ -42,6 +46,7 @@ public class TokenStoreTests
         Assert.Null(shouldBeNull);
     }
 
+    /// <summary>ValidateAndRotateAsync_WithExpiredToken_ReturnsNull</summary>
     [Fact]
     public async Task ValidateAndRotateAsync_WithExpiredToken_ReturnsNull()
     {
@@ -56,6 +61,7 @@ public class TokenStoreTests
         Assert.Null(result);
     }
 
+    /// <summary>ValidateAndRotateAsync_WithUnknownToken_ReturnsNull</summary>
     [Fact]
     public async Task ValidateAndRotateAsync_WithUnknownToken_ReturnsNull()
     {

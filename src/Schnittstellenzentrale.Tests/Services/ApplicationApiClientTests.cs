@@ -14,6 +14,7 @@ using HttpMethod = System.Net.Http.HttpMethod;
 
 namespace Schnittstellenzentrale.Tests.Services;
 
+/// <summary>ApplicationApiClientTests</summary>
 public class ApplicationApiClientTests
 {
     private const string BaseUrl = "https://localhost:5001";
@@ -93,6 +94,7 @@ public class ApplicationApiClientTests
         return handlerMock;
     }
 
+    /// <summary>AddGroupAsync_IssuesTokenViaTokenStoreAndSendsCorrectRequest_ReturnsResponse</summary>
     [Fact]
     public async Task AddGroupAsync_IssuesTokenViaTokenStoreAndSendsCorrectRequest_ReturnsResponse()
     {
@@ -122,6 +124,7 @@ public class ApplicationApiClientTests
             ItExpr.IsAny<CancellationToken>());
     }
 
+    /// <summary>AddGroupAsync_TokenIssuedOnlyOnceForMultipleCalls</summary>
     [Fact]
     public async Task AddGroupAsync_TokenIssuedOnlyOnceForMultipleCalls()
     {
@@ -130,45 +133,7 @@ public class ApplicationApiClientTests
         var groupResponse = new ApplicationGroupResponse { Id = 1, Name = "TestGruppe" };
         var groupResponseJson = JsonSerializer.Serialize(groupResponse);
 
-        var handlerMock = new Mock<HttpMessageHandler>(MockBehavior.Strict);
-        handlerMock.Protected()
-            .Setup<Task<HttpResponseMessage>>(
-                "SendAsync",
-                ItExpr.Is<HttpRequestMessage>(r => r.RequestUri!.AbsolutePath == "/api/application-groups"),
-                ItExpr.IsAny<CancellationToken>())
-            .ReturnsAsync(() =>
-            {
-                var response = new HttpResponseMessage(HttpStatusCode.Created)
-                {
-                    Content = new StringContent(groupResponseJson, System.Text.Encoding.UTF8, "application/json")
-                };
-                response.Headers.Add("X-New-Token", Guid.NewGuid().ToString());
-                return response;
-            });
-
-        var httpClient = CreateHttpClient(handlerMock);
-
-        var tokenStoreMock = new Mock<ITokenStore>();
-        tokenStoreMock
-            .Setup(s => s.CreateTokenAsync(It.IsAny<string>()))
-            .ReturnsAsync(new AuthToken { TokenValue = authToken, ExpiresAt = DateTime.UtcNow.AddMinutes(5), WindowsUsername = "testuser" });
-
-        var httpContextAccessorMock = new Mock<IHttpContextAccessor>();
-        httpContextAccessorMock.Setup(a => a.HttpContext).Returns((HttpContext?)null);
-        var configurationMock = new Mock<IConfiguration>();
-        configurationMock.Setup(c => c["Api:BaseUrl"]).Returns(BaseUrl);
-        var storageModeServiceMock = new Mock<IStorageModeService>();
-        storageModeServiceMock.Setup(s => s.CurrentMode).Returns(StorageMode.Team);
-        var currentUserServiceMock = new Mock<ICurrentUserService>();
-        currentUserServiceMock.Setup(s => s.GetCurrentUserName()).Returns("testuser");
-
-        var apiClient = new ApplicationApiClient(
-            httpClient,
-            httpContextAccessorMock.Object,
-            configurationMock.Object,
-            tokenStoreMock.Object,
-            storageModeServiceMock.Object,
-            currentUserServiceMock.Object);
+        var (apiClient, handlerMock, tokenStoreMock) = CreateClient(authToken, newToken, HttpStatusCode.Created, groupResponseJson);
 
         await apiClient.AddGroupAsync(new ApplicationGroup { Name = "TestGruppe" });
         await apiClient.AddGroupAsync(new ApplicationGroup { Name = "ZweiterAufruf" });
@@ -182,6 +147,7 @@ public class ApplicationApiClientTests
             ItExpr.IsAny<CancellationToken>());
     }
 
+    /// <summary>AddApplicationAsync_IssuesTokenAndSendsCorrectRequest_ReturnsResponse</summary>
     [Fact]
     public async Task AddApplicationAsync_IssuesTokenAndSendsCorrectRequest_ReturnsResponse()
     {
@@ -212,6 +178,7 @@ public class ApplicationApiClientTests
             ItExpr.IsAny<CancellationToken>());
     }
 
+    /// <summary>GetGroupsAsync_SendsCorrectHeadersAndReturnsMappedList</summary>
     [Fact]
     public async Task GetGroupsAsync_SendsCorrectHeadersAndReturnsMappedList()
     {
@@ -244,6 +211,7 @@ public class ApplicationApiClientTests
             ItExpr.IsAny<CancellationToken>());
     }
 
+    /// <summary>GetUngroupedApplicationsAsync_SendsCorrectHeadersAndReturnsMappedList</summary>
     [Fact]
     public async Task GetUngroupedApplicationsAsync_SendsCorrectHeadersAndReturnsMappedList()
     {
@@ -274,48 +242,21 @@ public class ApplicationApiClientTests
             ItExpr.IsAny<CancellationToken>());
     }
 
+    /// <summary>GetApplicationByIdAsync_ReturnsNullOn404</summary>
     [Fact]
     public async Task GetApplicationByIdAsync_ReturnsNullOn404()
     {
         var authToken = Guid.NewGuid().ToString();
+        var newToken = Guid.NewGuid().ToString();
 
-        var handlerMock = new Mock<HttpMessageHandler>(MockBehavior.Strict);
-        handlerMock.Protected()
-            .Setup<Task<HttpResponseMessage>>(
-                "SendAsync",
-                ItExpr.IsAny<HttpRequestMessage>(),
-                ItExpr.IsAny<CancellationToken>())
-            .ReturnsAsync(new HttpResponseMessage(HttpStatusCode.NotFound));
-
-        var httpClient = CreateHttpClient(handlerMock);
-
-        var tokenStoreMock = new Mock<ITokenStore>();
-        tokenStoreMock
-            .Setup(s => s.CreateTokenAsync(It.IsAny<string>()))
-            .ReturnsAsync(new AuthToken { TokenValue = authToken, ExpiresAt = DateTime.UtcNow.AddMinutes(5), WindowsUsername = "testuser" });
-
-        var httpContextAccessorMock = new Mock<IHttpContextAccessor>();
-        httpContextAccessorMock.Setup(a => a.HttpContext).Returns((HttpContext?)null);
-        var configurationMock = new Mock<IConfiguration>();
-        configurationMock.Setup(c => c["Api:BaseUrl"]).Returns(BaseUrl);
-        var storageModeServiceMock = new Mock<IStorageModeService>();
-        storageModeServiceMock.Setup(s => s.CurrentMode).Returns(StorageMode.Team);
-        var currentUserServiceMock = new Mock<ICurrentUserService>();
-        currentUserServiceMock.Setup(s => s.GetCurrentUserName()).Returns("testuser");
-
-        var apiClient = new ApplicationApiClient(
-            httpClient,
-            httpContextAccessorMock.Object,
-            configurationMock.Object,
-            tokenStoreMock.Object,
-            storageModeServiceMock.Object,
-            currentUserServiceMock.Object);
+        var (apiClient, _, _) = CreateClient(authToken, newToken, HttpStatusCode.NotFound, "null");
 
         var result = await apiClient.GetApplicationByIdAsync(999);
 
         Assert.Null(result);
     }
 
+    /// <summary>UpdateGroupAsync_SendsCorrectPutRequestAndReturnsMappedGroup</summary>
     [Fact]
     public async Task UpdateGroupAsync_SendsCorrectPutRequestAndReturnsMappedGroup()
     {
@@ -343,46 +284,14 @@ public class ApplicationApiClientTests
             ItExpr.IsAny<CancellationToken>());
     }
 
+    /// <summary>DeleteGroupAsync_SendsCorrectDeleteRequest</summary>
     [Fact]
     public async Task DeleteGroupAsync_SendsCorrectDeleteRequest()
     {
         var authToken = Guid.NewGuid().ToString();
         var newToken = Guid.NewGuid().ToString();
 
-        var handlerMock = new Mock<HttpMessageHandler>(MockBehavior.Strict);
-        handlerMock.Protected()
-            .Setup<Task<HttpResponseMessage>>(
-                "SendAsync",
-                ItExpr.IsAny<HttpRequestMessage>(),
-                ItExpr.IsAny<CancellationToken>())
-            .ReturnsAsync(() =>
-            {
-                var response = new HttpResponseMessage(HttpStatusCode.NoContent);
-                response.Headers.Add("X-New-Token", newToken);
-                return response;
-            });
-
-        var httpClient = CreateHttpClient(handlerMock);
-        var tokenStoreMock = new Mock<ITokenStore>();
-        tokenStoreMock
-            .Setup(s => s.CreateTokenAsync(It.IsAny<string>()))
-            .ReturnsAsync(new AuthToken { TokenValue = authToken, ExpiresAt = DateTime.UtcNow.AddMinutes(5), WindowsUsername = "testuser" });
-        var httpContextAccessorMock = new Mock<IHttpContextAccessor>();
-        httpContextAccessorMock.Setup(a => a.HttpContext).Returns((HttpContext?)null);
-        var configurationMock = new Mock<IConfiguration>();
-        configurationMock.Setup(c => c["Api:BaseUrl"]).Returns(BaseUrl);
-        var storageModeServiceMock = new Mock<IStorageModeService>();
-        storageModeServiceMock.Setup(s => s.CurrentMode).Returns(StorageMode.Team);
-        var currentUserServiceMock = new Mock<ICurrentUserService>();
-        currentUserServiceMock.Setup(s => s.GetCurrentUserName()).Returns("testuser");
-
-        var apiClient = new ApplicationApiClient(
-            httpClient,
-            httpContextAccessorMock.Object,
-            configurationMock.Object,
-            tokenStoreMock.Object,
-            storageModeServiceMock.Object,
-            currentUserServiceMock.Object);
+        var (apiClient, handlerMock, _) = CreateClient(authToken, newToken, HttpStatusCode.NoContent, "");
 
         await apiClient.DeleteGroupAsync(3);
 
@@ -395,6 +304,7 @@ public class ApplicationApiClientTests
             ItExpr.IsAny<CancellationToken>());
     }
 
+    /// <summary>UpdateApplicationAsync_SendsCorrectPutRequestAndReturnsMappedApplication</summary>
     [Fact]
     public async Task UpdateApplicationAsync_SendsCorrectPutRequestAndReturnsMappedApplication()
     {
@@ -444,46 +354,14 @@ public class ApplicationApiClientTests
             ItExpr.IsAny<CancellationToken>());
     }
 
+    /// <summary>DeleteApplicationAsync_SendsCorrectDeleteRequest</summary>
     [Fact]
     public async Task DeleteApplicationAsync_SendsCorrectDeleteRequest()
     {
         var authToken = Guid.NewGuid().ToString();
         var newToken = Guid.NewGuid().ToString();
 
-        var handlerMock = new Mock<HttpMessageHandler>(MockBehavior.Strict);
-        handlerMock.Protected()
-            .Setup<Task<HttpResponseMessage>>(
-                "SendAsync",
-                ItExpr.IsAny<HttpRequestMessage>(),
-                ItExpr.IsAny<CancellationToken>())
-            .ReturnsAsync(() =>
-            {
-                var response = new HttpResponseMessage(HttpStatusCode.NoContent);
-                response.Headers.Add("X-New-Token", newToken);
-                return response;
-            });
-
-        var httpClient = CreateHttpClient(handlerMock);
-        var tokenStoreMock = new Mock<ITokenStore>();
-        tokenStoreMock
-            .Setup(s => s.CreateTokenAsync(It.IsAny<string>()))
-            .ReturnsAsync(new AuthToken { TokenValue = authToken, ExpiresAt = DateTime.UtcNow.AddMinutes(5), WindowsUsername = "testuser" });
-        var httpContextAccessorMock = new Mock<IHttpContextAccessor>();
-        httpContextAccessorMock.Setup(a => a.HttpContext).Returns((HttpContext?)null);
-        var configurationMock = new Mock<IConfiguration>();
-        configurationMock.Setup(c => c["Api:BaseUrl"]).Returns(BaseUrl);
-        var storageModeServiceMock = new Mock<IStorageModeService>();
-        storageModeServiceMock.Setup(s => s.CurrentMode).Returns(StorageMode.Team);
-        var currentUserServiceMock = new Mock<ICurrentUserService>();
-        currentUserServiceMock.Setup(s => s.GetCurrentUserName()).Returns("testuser");
-
-        var apiClient = new ApplicationApiClient(
-            httpClient,
-            httpContextAccessorMock.Object,
-            configurationMock.Object,
-            tokenStoreMock.Object,
-            storageModeServiceMock.Object,
-            currentUserServiceMock.Object);
+        var (apiClient, handlerMock, _) = CreateClient(authToken, newToken, HttpStatusCode.NoContent, "");
 
         await apiClient.DeleteApplicationAsync(42);
 

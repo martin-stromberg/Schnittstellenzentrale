@@ -10,15 +10,18 @@ using HttpMethod = System.Net.Http.HttpMethod;
 
 namespace Schnittstellenzentrale.Tests.Integration;
 
+/// <summary>ApplicationsControllerIntegrationTests</summary>
 public class ApplicationsControllerIntegrationTests : IClassFixture<ControllerTestFactory>
 {
     private readonly ControllerTestFactory _factory;
 
+    /// <summary>Initialisiert ApplicationsControllerIntegrationTests.</summary>
     public ApplicationsControllerIntegrationTests(ControllerTestFactory factory)
     {
         _factory = factory;
     }
 
+    /// <summary>PostApplication_WithValidTokenAndRequest_Returns201AndLocation</summary>
     [Fact]
     public async Task PostApplication_WithValidTokenAndRequest_Returns201AndLocation()
     {
@@ -47,6 +50,7 @@ public class ApplicationsControllerIntegrationTests : IClassFixture<ControllerTe
         Assert.True(body.Id > 0);
     }
 
+    /// <summary>PostApplication_WithoutToken_Returns401</summary>
     [Fact]
     public async Task PostApplication_WithoutToken_Returns401()
     {
@@ -64,6 +68,7 @@ public class ApplicationsControllerIntegrationTests : IClassFixture<ControllerTe
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
+    /// <summary>PostApplication_WithMissingName_Returns400</summary>
     [Fact]
     public async Task PostApplication_WithMissingName_Returns400()
     {
@@ -84,6 +89,7 @@ public class ApplicationsControllerIntegrationTests : IClassFixture<ControllerTe
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
+    /// <summary>PostApplication_WithMissingBaseUrl_Returns400</summary>
     [Fact]
     public async Task PostApplication_WithMissingBaseUrl_Returns400()
     {
@@ -104,6 +110,7 @@ public class ApplicationsControllerIntegrationTests : IClassFixture<ControllerTe
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
+    /// <summary>GetApplications_WithValidToken_Returns200WithList</summary>
     [Fact]
     public async Task GetApplications_WithValidToken_Returns200WithList()
     {
@@ -138,6 +145,7 @@ public class ApplicationsControllerIntegrationTests : IClassFixture<ControllerTe
         Assert.Contains(body, a => a.Name == "GetAllApp");
     }
 
+    /// <summary>GetApplications_WithoutToken_Returns401</summary>
     [Fact]
     public async Task GetApplications_WithoutToken_Returns401()
     {
@@ -151,6 +159,7 @@ public class ApplicationsControllerIntegrationTests : IClassFixture<ControllerTe
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
+    /// <summary>GetUngroupedApplications_WithValidToken_Returns200WithList</summary>
     [Fact]
     public async Task GetUngroupedApplications_WithValidToken_Returns200WithList()
     {
@@ -185,6 +194,7 @@ public class ApplicationsControllerIntegrationTests : IClassFixture<ControllerTe
         Assert.Contains(body, a => a.Name == "UngroupedApp");
     }
 
+    /// <summary>GetApplicationById_WithValidId_Returns200WithAllFields</summary>
     [Fact]
     public async Task GetApplicationById_WithValidId_Returns200WithAllFields()
     {
@@ -227,6 +237,7 @@ public class ApplicationsControllerIntegrationTests : IClassFixture<ControllerTe
         Assert.Equal("owner1", body.Owner);
     }
 
+    /// <summary>GetApplicationById_WithInvalidId_Returns404</summary>
     [Fact]
     public async Task GetApplicationById_WithInvalidId_Returns404()
     {
@@ -241,6 +252,7 @@ public class ApplicationsControllerIntegrationTests : IClassFixture<ControllerTe
         Assert.Equal(HttpStatusCode.NotFound, getResponse.StatusCode);
     }
 
+    /// <summary>PutApplication_WithValidRequest_Returns200AndRotatesToken</summary>
     [Fact]
     public async Task PutApplication_WithValidRequest_Returns200AndRotatesToken()
     {
@@ -283,6 +295,7 @@ public class ApplicationsControllerIntegrationTests : IClassFixture<ControllerTe
         Assert.Equal("Neue Beschreibung", body.Description);
     }
 
+    /// <summary>PutApplication_WithInvalidId_Returns404</summary>
     [Fact]
     public async Task PutApplication_WithInvalidId_Returns404()
     {
@@ -303,6 +316,7 @@ public class ApplicationsControllerIntegrationTests : IClassFixture<ControllerTe
         Assert.Equal(HttpStatusCode.NotFound, putResponse.StatusCode);
     }
 
+    /// <summary>PutApplication_WithMissingBaseUrl_Returns400</summary>
     [Fact]
     public async Task PutApplication_WithMissingBaseUrl_Returns400()
     {
@@ -337,6 +351,7 @@ public class ApplicationsControllerIntegrationTests : IClassFixture<ControllerTe
         Assert.Equal(HttpStatusCode.BadRequest, putResponse.StatusCode);
     }
 
+    /// <summary>DeleteApplication_WithValidId_Returns204AndRotatesToken</summary>
     [Fact]
     public async Task DeleteApplication_WithValidId_Returns204AndRotatesToken()
     {
@@ -367,6 +382,7 @@ public class ApplicationsControllerIntegrationTests : IClassFixture<ControllerTe
         Assert.True(deleteResponse.Headers.Contains("X-New-Token"));
     }
 
+    /// <summary>DeleteApplication_WithInvalidId_Returns404</summary>
     [Fact]
     public async Task DeleteApplication_WithInvalidId_Returns404()
     {
@@ -382,6 +398,7 @@ public class ApplicationsControllerIntegrationTests : IClassFixture<ControllerTe
         Assert.Equal(HttpStatusCode.NotFound, deleteResponse.StatusCode);
     }
 
+    /// <summary>DeleteApplication_WithSystemApplication_Returns403</summary>
     [Fact]
     public async Task DeleteApplication_WithSystemApplication_Returns403()
     {
@@ -405,6 +422,7 @@ public class ApplicationsControllerIntegrationTests : IClassFixture<ControllerTe
         Assert.Equal(HttpStatusCode.Forbidden, deleteResponse.StatusCode);
     }
 
+    /// <summary>PutApplication_WithSystemApplication_Returns403</summary>
     [Fact]
     public async Task PutApplication_WithSystemApplication_Returns403()
     {

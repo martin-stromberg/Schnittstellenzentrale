@@ -10,6 +10,7 @@ using Schnittstellenzentrale.Infrastructure.Services;
 
 namespace Schnittstellenzentrale.Tests.Services;
 
+/// <summary>ODataImportServiceTests</summary>
 public class ODataImportServiceTests
 {
     private const string ODataMetadata = """
@@ -49,6 +50,7 @@ public class ODataImportServiceTests
         return new ODataImportService(factoryMock.Object, repoMock.Object, NullLogger<ODataImportService>.Instance);
     }
 
+    /// <summary>Import_NewODataMetadata_ReturnsCorrectDiff</summary>
     [Fact]
     public async Task Import_NewODataMetadata_ReturnsCorrectDiff()
     {
@@ -64,6 +66,7 @@ public class ODataImportServiceTests
         Assert.Empty(diff.RemovedEndpoints);
     }
 
+    /// <summary>Import_ChangedODataMetadata_ReturnsChangedInDiff</summary>
     [Fact]
     public async Task Import_ChangedODataMetadata_ReturnsChangedInDiff()
     {
@@ -81,6 +84,7 @@ public class ODataImportServiceTests
         Assert.Contains(diff.ChangedEndpoints, e => e.RelativePath == "Products" && e.Method == Core.Enums.HttpMethod.GET);
     }
 
+    /// <summary>Import_RemovedODataEndpoint_ReturnsRemovedInDiff</summary>
     [Fact]
     public async Task Import_RemovedODataEndpoint_ReturnsRemovedInDiff()
     {

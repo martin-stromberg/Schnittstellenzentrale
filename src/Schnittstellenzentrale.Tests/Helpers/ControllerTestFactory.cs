@@ -17,18 +17,22 @@ using Schnittstellenzentrale.Services;
 
 namespace Schnittstellenzentrale.Tests.Helpers;
 
+/// <summary>WebApplicationFactory für Controller-Integrationstests mit Auth-Bypass und SQLite In-Memory.</summary>
 public class ControllerTestFactory : WebApplicationFactory<Program>
 {
     private readonly SqliteConnection _connection;
 
+    /// <summary>Überschreibt die Standard-Token-Lebenszeit im <see cref="ITokenStore"/>.</summary>
     public TimeSpan? TokenLifetime { get; set; }
 
+    /// <summary>Öffnet eine SQLite In-Memory-Verbindung für den Testlauf.</summary>
     public ControllerTestFactory()
     {
         _connection = new SqliteConnection("Data Source=:memory:");
         _connection.Open();
     }
 
+    /// <inheritdoc/>
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Testing");
@@ -64,6 +68,7 @@ public class ControllerTestFactory : WebApplicationFactory<Program>
         });
     }
 
+    /// <inheritdoc/>
     protected override IHost CreateHost(IHostBuilder builder)
     {
         var host = base.CreateHost(builder);
@@ -76,6 +81,7 @@ public class ControllerTestFactory : WebApplicationFactory<Program>
         return host;
     }
 
+    /// <summary>Ruft <c>POST /authenticate</c> auf und gibt den zurückgelieferten Bearer-Token zurück.</summary>
     public async Task<string> ObtainTokenAsync(HttpClient client)
     {
         var response = await client.PostAsync("/authenticate", null);
@@ -84,6 +90,7 @@ public class ControllerTestFactory : WebApplicationFactory<Program>
         return body!.Token;
     }
 
+    /// <inheritdoc/>
     protected override void Dispose(bool disposing)
     {
         base.Dispose(disposing);
