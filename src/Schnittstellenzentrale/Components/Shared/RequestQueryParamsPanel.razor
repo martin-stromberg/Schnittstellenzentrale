@@ -8,17 +8,20 @@
             </tr>
         </thead>
         <tbody>
-            @foreach (var param in QueryParameters)
+            @foreach (var param in QueryParameters.OrderByDescending(p => p.IsPathParameter))
             {
                 <tr @key="param">
                     <td>
-                        <input class="form-control form-control-sm" value="@param.Key" @oninput="(e) => OnKeyChanged(param, e)" />
+                        <input class="form-control form-control-sm" value="@param.Key" @onchange="(e) => OnFieldChanged(param, e, isKey: true)" />
                     </td>
                     <td>
-                        <input class="form-control form-control-sm" value="@param.Value" @oninput="(e) => OnValueChanged(param, e)" />
+                        <input class="form-control form-control-sm" value="@param.Value" @onchange="(e) => OnFieldChanged(param, e, isKey: false)" />
                     </td>
                     <td>
-                        <button type="button" class="btn btn-outline-danger btn-sm" @onclick="() => RemoveParam(param)">&#x2715;</button>
+                        @if (!param.IsPathParameter)
+                        {
+                            <button type="button" class="btn btn-outline-danger btn-sm" @onclick="() => RemoveParam(param)">&#x2715;</button>
+                        }
                     </td>
                 </tr>
             }
@@ -35,17 +38,16 @@
     {
         public string Key { get; set; } = string.Empty;
         public string Value { get; set; } = string.Empty;
+        public bool IsPathParameter { get; set; } = false;
     }
 
-    private async Task OnKeyChanged(QueryParamEntry entry, ChangeEventArgs e)
+    private async Task OnFieldChanged(QueryParamEntry entry, ChangeEventArgs e, bool isKey)
     {
-        entry.Key = e.Value?.ToString() ?? string.Empty;
-        await OnChanged.InvokeAsync();
-    }
-
-    private async Task OnValueChanged(QueryParamEntry entry, ChangeEventArgs e)
-    {
-        entry.Value = e.Value?.ToString() ?? string.Empty;
+        var value = e.Value?.ToString() ?? string.Empty;
+        if (isKey)
+            entry.Key = value;
+        else
+            entry.Value = value;
         await OnChanged.InvokeAsync();
     }
 

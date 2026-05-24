@@ -48,6 +48,20 @@ public class EndpointPageTests : BunitContext
         QueryParameters = []
     };
 
+    private static Core.Models.Endpoint CreateEndpointWithPath(string relPath, RequestQueryParamsPanel.QueryParamEntry[]? queryParameters = null) => new()
+    {
+        Id = 1,
+        Name = "Test",
+        RelativePath = relPath,
+        Method = Core.Enums.HttpMethod.GET,
+        ApplicationId = 1,
+        Application = new Application { Id = 1, Name = "App", BaseUrl = "http://example.com" },
+        Headers = [],
+        QueryParameters = queryParameters?
+            .Select(p => new EndpointQueryParameter { Key = p.Key, Value = p.Value })
+            .ToList() ?? []
+    };
+
     /// <summary>Ohne Anfrageergebnis ist der Antwortbereich nicht sichtbar.</summary>
     [Fact]
     public void OhneAnfrageergebnis_AntwortBereichNichtSichtbar()
@@ -115,5 +129,138 @@ public class EndpointPageTests : BunitContext
             .Click();
 
         Assert.Equal(body, cut.Find("textarea").GetAttribute("value"));
+    }
+
+    /// <summary>Platzhalter in RelativePath erscheinen beim Laden als IsPathParameter=true-Einträge im Query-Parameter-Panel.</summary>
+    [Fact]
+    public void PfadMitPlatzhalter_WirdBeimLadenAlsNichtLoeschbarerEintragAngezeigt()
+    {
+        var endpoint = CreateEndpointWithPath("/api/{id}/items");
+
+        var cut = Render<EndpointPage>(p => p.Add(x => x.Endpoint, endpoint));
+        cut.FindAll("button.nav-link")
+            .First(b => b.TextContent.Trim() == "Query-Parameter")
+            .Click();
+
+        var rows = cut.FindAll(".request-query-params-panel tbody tr");
+        Assert.Single(rows);
+
+        var deleteButtons = cut.FindAll(".request-query-params-panel tbody tr .btn-outline-danger");
+        Assert.Empty(deleteButtons);
+
+        var inputs = rows[0].QuerySelectorAll("input");
+        Assert.Equal("id", inputs[0].GetAttribute("value"));
+    }
+
+    /// <summary>Beim erneuten Aufruf von SyncPathParameters bleiben gespeicherte Werte für unveränderte Platzhalter erhalten.</summary>
+    [Fact]
+    public void PfadMitPlatzhalter_VorhandenerWertBleibtErhalten_WennPlatzhalterUnveraendert()
+    {
+        var endpoint = CreateEndpointWithPath("/api/{id}/items");
+
+        var cut = Render<EndpointPage>(p => p.Add(x => x.Endpoint, endpoint));
+        cut.FindAll("button.nav-link")
+            .First(b => b.TextContent.Trim() == "Query-Parameter")
+            .Click();
+
+        // Wert für den Platzhalter eingeben
+        var rows = cut.FindAll(".request-query-params-panel tbody tr");
+        var valueInput = rows[0].QuerySelectorAll("input")[1];
+        valueInput.Input("42");
+
+        // Pfadfeld blur — SyncPathParameters wird erneut aufgerufen, Pfad unverändert
+        var pathInput = cut.Find("input[placeholder='Relativer Pfad']");
+        pathInput.Blur();
+
+        // Wert muss noch vorhanden sein
+        rows = cut.FindAll(".request-query-params-panel tbody tr");
+        Assert.Single(rows);
+        var inputs = rows[0].QuerySelectorAll("input");
+        Assert.Equal("id", inputs[0].GetAttribute("value"));
+        Assert.Equal("42", inputs[1].GetAttribute("value"));
+    }
+
+    /// <summary>Nach OnPathBlur mit geändertem Pfad werden entfernte Platzhalter gelöscht und neue hinzugefügt.</summary>
+    [Fact]
+    public void GeaenderterPfad_EntferntWeggefalleneUndFuegtNeueHinzu()
+    {
+        var endpoint = CreateEndpointWithPath("/api/{alterId}/items");
+
+        var cut = Render<EndpointPage>(p => p.Add(x => x.Endpoint, endpoint));
+        cut.FindAll("button.nav-link")
+            .First(b => b.TextContent.Trim() == "Query-Parameter")
+            .Click();
+
+        var pathInput = cut.Find("input[placeholder='Relativer Pfad']");
+        pathInput.Input("/api/{neuerId}/data");
+        pathInput.Blur();
+
+        var rows = cut.FindAll(".request-query-params-panel tbody tr");
+        Assert.Single(rows);
+
+        var firstRowInputs = rows[0].QuerySelectorAll("input");
+        Assert.Equal("neuerId", firstRowInputs[0].GetAttribute("value"));
+
+        var allKeyValues = rows
+            .Select(r => r.QuerySelectorAll("input")[0].GetAttribute("value"))
+            .ToList();
+        Assert.DoesNotContain("alterId", allKeyValues);
+    }
+
+    /// <summary>ExtractAndStripQueryString trennt den Query-String vom Pfad und fügt die Parameter als löschbare Einträge hinzu.</summary>
+    [Fact]
+    public void PfadMitQueryString_WirdExtrahiertUndPfadBereinigt()
+    {
+        var endpoint = CreateEndpointWithPath("/api/items?filter=active&page=1");
+
+        var cut = Render<EndpointPage>(p => p.Add(x => x.Endpoint, endpoint));
+        cut.FindAll("button.nav-link")
+            .First(b => b.TextContent.Trim() == "Query-Parameter")
+            .Click();
+
+        // Query-Parameter wurden als löschbare Einträge extrahiert
+        var rows = cut.FindAll(".request-query-params-panel tbody tr");
+        Assert.Equal(2, rows.Count);
+
+        var deleteButtons = cut.FindAll(".request-query-params-panel tbody tr .btn-outline-danger");
+        Assert.Equal(2, deleteButtons.Count);
+
+        // Der Pfad wird intern bereinigt — ResolveDisplayUrl() hängt die Parameter als Query-String an,
+        // daher zeigt das Pfadfeld die rekonstruierte URL; der Pfad-Anteil selbst enthält kein '?'
+        var pathInput = cut.Find("input[placeholder='Relativer Pfad']");
+        var displayValue = pathInput.GetAttribute("value") ?? string.Empty;
+        var pathPart = displayValue.Contains('?') ? displayValue[..displayValue.IndexOf('?')] : displayValue;
+        Assert.Equal("/api/items", pathPart);
+    }
+
+    /// <summary>ResolveDisplayUrl gibt den Pfad mit ersetzten Platzhaltern und angehängten Query-Parametern zurück.</summary>
+    [Fact]
+    public void AufgeloesteUrl_WirdImPfadfeldAngezeigt()
+    {
+        // Endpunkt mit Pfad-Platzhalter und einem regulären Query-Parameter laden
+        var queryParams = new[]
+        {
+            new RequestQueryParamsPanel.QueryParamEntry { Key = "filter", Value = "active" }
+        };
+        var endpoint = CreateEndpointWithPath("/api/{id}/items", queryParams);
+
+        var cut = Render<EndpointPage>(p => p.Add(x => x.Endpoint, endpoint));
+        cut.FindAll("button.nav-link")
+            .First(b => b.TextContent.Trim() == "Query-Parameter")
+            .Click();
+
+        // Wert für den Platzhalter eingeben
+        var rows = cut.FindAll(".request-query-params-panel tbody tr");
+        var idRow = rows.First(r => r.QuerySelector("input")?.GetAttribute("value") == "id");
+        var idValueInput = idRow.QuerySelectorAll("input")[1];
+        idValueInput.Input("42");
+
+        // Pfadfeld zeigt die aufgelöste URL (Platzhalter ersetzt, Query-Parameter angehängt)
+        var pathInput = cut.Find("input[placeholder='Relativer Pfad']");
+        var displayValue = pathInput.GetAttribute("value") ?? string.Empty;
+
+        Assert.Contains("42", displayValue);
+        Assert.Contains("filter=active", displayValue);
+        Assert.DoesNotContain("{id}", displayValue);
     }
 }

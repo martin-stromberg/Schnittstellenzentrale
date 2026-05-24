@@ -119,11 +119,25 @@ public class EndpointExecutionService : IEndpointExecutionService
 
     private HttpRequestMessage BuildRequest(Core.Models.Endpoint endpoint)
     {
-        var url = endpoint.Application.BaseUrl.TrimEnd('/') + "/" + endpoint.RelativePath.TrimStart('/');
+        var relativePath = endpoint.RelativePath;
+        var queryParams = new List<EndpointQueryParameter>();
 
-        if (endpoint.QueryParameters.Any())
+        foreach (var param in endpoint.QueryParameters)
         {
-            var query = string.Join("&", endpoint.QueryParameters.Select(p => $"{Uri.EscapeDataString(p.Key)}={Uri.EscapeDataString(p.Value)}"));
+            if (string.IsNullOrWhiteSpace(param.Key))
+                continue;
+
+            if (relativePath.Contains("{" + param.Key + "}"))
+                relativePath = relativePath.Replace("{" + param.Key + "}", Uri.EscapeDataString(param.Value));
+            else
+                queryParams.Add(param);
+        }
+
+        var url = endpoint.Application.BaseUrl.TrimEnd('/') + "/" + relativePath.TrimStart('/');
+
+        if (queryParams.Count > 0)
+        {
+            var query = string.Join("&", queryParams.Select(p => $"{Uri.EscapeDataString(p.Key)}={Uri.EscapeDataString(p.Value)}"));
             url += "?" + query;
         }
 

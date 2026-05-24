@@ -5,6 +5,7 @@
 @inject IStorageModeService StorageModeService
 @inject ISignalRNotificationService SignalRNotificationService
 @using Microsoft.EntityFrameworkCore
+@using System.Text.RegularExpressions
 @implements IAsyncDisposable
 
 <div class="endpoint-page">
@@ -34,7 +35,7 @@
                 <option value="@method">@method</option>
             }
         </select>
-        <input class="form-control flex-grow-1" placeholder="Relativer Pfad" value="@_model.RelativePath" @oninput="OnPathChanged" />
+        <input class="form-control flex-grow-1" placeholder="Relativer Pfad" value="@ResolveDisplayUrl()" @oninput="OnPathChanged" @onblur="OnPathBlur" />
         <button class="btn btn-success" @onclick="SendRequestAsync">Anfrage senden</button>
     </div>
 
@@ -180,6 +181,8 @@
             .Select(p => new RequestQueryParamsPanel.QueryParamEntry { Key = p.Key, Value = p.Value })
             .ToList();
         SyncAutoContentType();
+        ExtractAndStripQueryString();
+        SyncPathParameters();
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -398,6 +401,85 @@
         }
 
         _result = await ExecutionService.ExecuteAsync(refreshed);
+    }
+
+    private string ResolveDisplayUrl()
+    {
+        var path = _model.RelativePath;
+        var queryParams = new List<RequestQueryParamsPanel.QueryParamEntry>();
+
+        foreach (var entry in _queryParameters.Where(p => !string.IsNullOrWhiteSpace(p.Key)))
+        {
+            if (path.Contains("{" + entry.Key + "}"))
+                path = path.Replace("{" + entry.Key + "}", Uri.EscapeDataString(entry.Value));
+            else
+                queryParams.Add(entry);
+        }
+
+        if (queryParams.Count == 0)
+            return path;
+
+        var query = string.Join("&", queryParams.Select(p =>
+            $"{Uri.EscapeDataString(p.Key)}={Uri.EscapeDataString(p.Value)}"));
+        return path + "?" + query;
+    }
+
+    private void ExtractAndStripQueryString()
+    {
+        if (!_model.RelativePath.Contains('?'))
+            return;
+
+        var parts = _model.RelativePath.Split('?', 2);
+        _model.RelativePath = parts[0];
+        var queryString = parts[1];
+
+        foreach (var pair in queryString.Split('&', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var kv = pair.Split('=', 2);
+            var key = Uri.UnescapeDataString(kv[0]);
+            var value = kv.Length > 1 ? Uri.UnescapeDataString(kv[1]) : string.Empty;
+
+            if (string.IsNullOrWhiteSpace(key))
+                continue;
+
+            if (_queryParameters.Any(p => p.Key == key))
+                continue;
+
+            _queryParameters.Add(new RequestQueryParamsPanel.QueryParamEntry
+            {
+                Key = key,
+                Value = value,
+                IsPathParameter = false
+            });
+        }
+    }
+
+    private void SyncPathParameters()
+    {
+        var matches = Regex.Matches(_model.RelativePath, @"\{([^}]+)\}");
+        var placeholderKeys = matches.Select(m => m.Groups[1].Value).ToList();
+
+        _queryParameters.RemoveAll(p => p.IsPathParameter && !placeholderKeys.Contains(p.Key));
+
+        foreach (var key in placeholderKeys)
+        {
+            if (_queryParameters.Any(p => p.IsPathParameter && p.Key == key))
+                continue;
+
+            _queryParameters.Insert(0, new RequestQueryParamsPanel.QueryParamEntry
+            {
+                Key = key,
+                Value = string.Empty,
+                IsPathParameter = true
+            });
+        }
+    }
+
+    private void OnPathBlur()
+    {
+        ExtractAndStripQueryString();
+        SyncPathParameters();
+        MarkDirty();
     }
 
     public async ValueTask DisposeAsync()
