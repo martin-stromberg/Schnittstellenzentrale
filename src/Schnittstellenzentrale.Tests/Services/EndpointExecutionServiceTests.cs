@@ -32,6 +32,19 @@ public class EndpointExecutionServiceTests
         QueryParameters = []
     };
 
+    private static Core.Models.Endpoint CreateEndpoint(AuthenticationType authType, string relPath, EndpointQueryParameter[]? queryParameters = null) => new()
+    {
+        Id = 1,
+        Name = "Test",
+        Method = Core.Enums.HttpMethod.GET,
+        RelativePath = relPath,
+        AuthenticationType = authType,
+        ApplicationId = 1,
+        Application = CreateApp(),
+        Headers = [],
+        QueryParameters = queryParameters ?? []
+    };
+
     private static (EndpointExecutionService, Mock<HttpMessageHandler>) CreateService(
         Mock<IHealthCheckService> healthCheckMock,
         Mock<ICredentialService> credentialMock,
@@ -51,6 +64,21 @@ public class EndpointExecutionServiceTests
 
         var service = new EndpointExecutionService(factoryMock.Object, healthCheckMock.Object, credentialMock.Object);
         return (service, handlerMock);
+    }
+
+    private static (EndpointExecutionService service, Func<Uri?> getSentUri) CreateServiceCapturingUri()
+    {
+        var healthMock = new Mock<IHealthCheckService>();
+        var credMock = new Mock<ICredentialService>();
+        Uri? sentUri = null;
+        var (service, handlerMock) = CreateService(healthMock, credMock);
+        handlerMock.Protected()
+            .Setup<Task<HttpResponseMessage>>("SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>())
+            .Callback<HttpRequestMessage, CancellationToken>((req, _) => sentUri = req.RequestUri)
+            .ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("{}") });
+        return (service, () => sentUri);
     }
 
     /// <summary>Execute_WithAuthTypeNone_SendsRequestWithoutCredentials</summary>
@@ -243,5 +271,44 @@ public class EndpointExecutionServiceTests
         Assert.False(result.Success);
         Assert.Null(result.StatusCode);
         healthMock.Verify(h => h.CheckAsync(It.IsAny<Core.Models.Application>()), Times.Never);
+    }
+
+    /// <summary>Platzhalter im RelativePath werden durch den zugehörigen QueryParameter-Wert ersetzt; fehlende Werte ergeben leere Strings.</summary>
+    [Fact]
+    public async Task BuildRequest_ErsetztPfadPlatzhalterDurchGespeicherteWerte()
+    {
+        var (service, getSentUri) = CreateServiceCapturingUri();
+        var endpoint = CreateEndpoint(AuthenticationType.None, "/api/{id}/items",
+        [
+            new EndpointQueryParameter { Key = "id", Value = "42" }
+        ]);
+
+        await service.ExecuteAsync(endpoint);
+
+        var sentUri = getSentUri();
+        Assert.NotNull(sentUri);
+        Assert.Contains("/api/42/items", sentUri!.PathAndQuery);
+        Assert.DoesNotContain("{id}", sentUri.PathAndQuery);
+    }
+
+    /// <summary>Parameter ohne Platzhalter-Treffer im Pfad landen im Query-String; Platzhalter-Werte werden nicht erneut angehängt.</summary>
+    [Fact]
+    public async Task BuildRequest_HaengtNurNichtPlatzhalterParameterAlsQueryStringAn()
+    {
+        var (service, getSentUri) = CreateServiceCapturingUri();
+        var endpoint = CreateEndpoint(AuthenticationType.None, "/api/{id}/items",
+        [
+            new EndpointQueryParameter { Key = "id", Value = "42" },
+            new EndpointQueryParameter { Key = "filter", Value = "active" }
+        ]);
+
+        await service.ExecuteAsync(endpoint);
+
+        var sentUri = getSentUri();
+        Assert.NotNull(sentUri);
+        var fullUrl = sentUri!.PathAndQuery;
+        Assert.Contains("/api/42/items", fullUrl);
+        Assert.Contains("filter=active", fullUrl);
+        Assert.DoesNotContain("id=42", fullUrl);
     }
 }

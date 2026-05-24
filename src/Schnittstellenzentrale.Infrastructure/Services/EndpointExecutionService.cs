@@ -119,13 +119,11 @@ public class EndpointExecutionService : IEndpointExecutionService
 
     private HttpRequestMessage BuildRequest(Core.Models.Endpoint endpoint)
     {
-        var url = endpoint.Application.BaseUrl.TrimEnd('/') + "/" + endpoint.RelativePath.TrimStart('/');
+        var resolvedPath = EndpointUrlBuilder.Resolve(
+            endpoint.RelativePath,
+            endpoint.QueryParameters.Select(p => (p.Key, p.Value)));
 
-        if (endpoint.QueryParameters.Any())
-        {
-            var query = string.Join("&", endpoint.QueryParameters.Select(p => $"{Uri.EscapeDataString(p.Key)}={Uri.EscapeDataString(p.Value)}"));
-            url += "?" + query;
-        }
+        var url = endpoint.Application.BaseUrl.TrimEnd('/') + "/" + resolvedPath.TrimStart('/');
 
         var method = endpoint.Method switch
         {

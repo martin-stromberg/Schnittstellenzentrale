@@ -5,6 +5,8 @@
 @inject IStorageModeService StorageModeService
 @inject ISignalRNotificationService SignalRNotificationService
 @using Microsoft.EntityFrameworkCore
+@using System.Text.RegularExpressions
+@using Schnittstellenzentrale.Core.Helpers
 @implements IAsyncDisposable
 
 <div class="endpoint-page">
@@ -34,7 +36,7 @@
                 <option value="@method">@method</option>
             }
         </select>
-        <input class="form-control flex-grow-1" placeholder="Relativer Pfad" value="@_model.RelativePath" @oninput="OnPathChanged" />
+        <input class="form-control flex-grow-1" placeholder="Relativer Pfad" value="@ResolveDisplayUrl()" @oninput="OnPathChanged" @onblur="OnPathBlur" />
         <button class="btn btn-success" @onclick="SendRequestAsync">Anfrage senden</button>
     </div>
 
@@ -180,6 +182,8 @@
             .Select(p => new RequestQueryParamsPanel.QueryParamEntry { Key = p.Key, Value = p.Value })
             .ToList();
         SyncAutoContentType();
+        ExtractAndStripQueryString();
+        SyncPathParameters();
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -398,6 +402,95 @@
         }
 
         _result = await ExecutionService.ExecuteAsync(refreshed);
+    }
+
+    private string ResolveDisplayUrl()
+        => EndpointUrlBuilder.Resolve(
+            _model.RelativePath,
+            _queryParameters.Select(p => (p.Key, p.Value)),
+            keepEmptyPlaceholders: true);
+
+    private void ExtractAndStripQueryString()
+    {
+        if (!_model.RelativePath.Contains('?'))
+            return;
+
+        var parts = _model.RelativePath.Split('?', 2);
+        _model.RelativePath = parts[0];
+        var queryString = parts[1];
+
+        foreach (var pair in queryString.Split('&', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var kv = pair.Split('=', 2);
+            var key = Uri.UnescapeDataString(kv[0]);
+            var value = kv.Length > 1 ? Uri.UnescapeDataString(kv[1]) : string.Empty;
+
+            if (string.IsNullOrWhiteSpace(key))
+                continue;
+
+            if (_queryParameters.Any(p => p.Key == key))
+                continue;
+
+            _queryParameters.Add(new RequestQueryParamsPanel.QueryParamEntry
+            {
+                Key = key,
+                Value = value,
+                IsPathParameter = false
+            });
+        }
+    }
+
+    private void SyncPathParameters()
+    {
+        var matches = Regex.Matches(_model.RelativePath, @"\{([^}]+)\}");
+        var placeholderKeys = matches.Select(m => m.Groups[1].Value).ToList();
+
+        _queryParameters.RemoveAll(p => p.IsPathParameter && !placeholderKeys.Contains(p.Key));
+
+        foreach (var key in placeholderKeys)
+        {
+            if (_queryParameters.Any(p => p.IsPathParameter && p.Key == key))
+                continue;
+
+            // Aus der DB geladene Einträge haben kein IsPathParameter-Flag.
+            // Statt einen Duplikat-Eintrag anzulegen, wird der vorhandene Eintrag hochgestuft.
+            var existing = _queryParameters.FirstOrDefault(p => !p.IsPathParameter && p.Key == key);
+            if (existing != null)
+            {
+                existing.IsPathParameter = true;
+            }
+            else
+            {
+                _queryParameters.Insert(0, new RequestQueryParamsPanel.QueryParamEntry
+                {
+                    Key = key,
+                    Value = string.Empty,
+                    IsPathParameter = true
+                });
+            }
+        }
+
+        // Pfad-Platzhalter in Pfad-Reihenfolge vorne, reguläre Parameter hinten
+        var pathParams = _queryParameters
+            .Where(p => p.IsPathParameter)
+            .OrderBy(p => _model.RelativePath.IndexOf("{" + p.Key + "}", StringComparison.Ordinal))
+            .ToList();
+        var regularParams = _queryParameters.Where(p => !p.IsPathParameter).ToList();
+        _queryParameters.Clear();
+        _queryParameters.AddRange(pathParams);
+        _queryParameters.AddRange(regularParams);
+    }
+
+    private void OnPathBlur()
+    {
+        var pathBefore = _model.RelativePath;
+        var countBefore = _queryParameters.Count;
+
+        ExtractAndStripQueryString();
+        SyncPathParameters();
+
+        if (_model.RelativePath != pathBefore || _queryParameters.Count != countBefore)
+            MarkDirty();
     }
 
     public async ValueTask DisposeAsync()
