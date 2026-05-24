@@ -18,4 +18,4 @@ Branch: `13-playwright-testing-framework`
 | [x] | 8a | Folgeaufgaben dokumentieren (bei Schleifenabbruch) | `continue.md` |
 | [x] | 9 | Dokumentation erstellen (Unteragent) | `docs/help/` |
 | [x] | 10 | Nacharbeiten abschließen (offene Punkte aus `continue.md`) | `continue-done.md` |
-| [ ] | – | Commit durchführen | – |
+| [x] | – | Commit durchführen | – |
