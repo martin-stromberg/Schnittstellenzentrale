@@ -19,6 +19,8 @@ public class SzExtensionsOperationFilter : IOperationFilter
     /// <inheritdoc/>
     public void Apply(OpenApiOperation operation, OperationFilterContext context)
     {
+        operation.Extensions ??= new Dictionary<string, IOpenApiExtension>();
+
         var path = context.ApiDescription.RelativePath ?? string.Empty;
         var method = context.ApiDescription.HttpMethod ?? string.Empty;
 
