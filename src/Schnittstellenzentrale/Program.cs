@@ -70,6 +70,7 @@ builder.Services.AddScoped<IActiveEnvironmentService, ActiveEnvironmentService>(
 builder.Services.AddScoped<IStorageModeService, StorageModeService>();
 builder.Services.AddScoped<IThemeService, ThemeService>();
 builder.Services.AddSingleton<IHealthCheckService, HealthCheckService>();
+builder.Services.AddScoped<IEndpointScriptRunner, EndpointScriptRunner>();
 builder.Services.AddScoped<IEndpointExecutionService, EndpointExecutionService>();
 builder.Services.AddScoped<ISwaggerImportService, SwaggerImportService>();
 builder.Services.AddScoped<IODataImportService, ODataImportService>();

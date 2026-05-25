@@ -82,11 +82,22 @@ public class EndpointExecutionIntegrationTests : IAsyncLifetime
 
         var activeEnvMock = new Mock<IActiveEnvironmentService>();
         activeEnvMock.Setup(s => s.ActiveVariables).Returns(new Dictionary<string, string>());
+
+        var scriptRunnerMock = new Mock<IEndpointScriptRunner>();
+        scriptRunnerMock.Setup(r => r.ExecuteAsync(It.IsAny<string>(), It.IsAny<ScriptContext>()))
+            .ReturnsAsync(new ScriptExecutionResult { Success = true });
+
+        var endpointRepoMock = new Mock<IEndpointRepository>();
+        endpointRepoMock.Setup(r => r.GetEndpointByNameAsync(It.IsAny<int>(), It.IsAny<string>()))
+            .ReturnsAsync(new List<Core.Models.Endpoint>());
+
         var executionService = new EndpointExecutionService(
             httpClientFactoryMock.Object,
             new Mock<IHealthCheckService>().Object,
             credentialServiceMock.Object,
-            activeEnvMock.Object);
+            activeEnvMock.Object,
+            scriptRunnerMock.Object,
+            endpointRepoMock.Object);
 
         // Act
         var result = await executionService.ExecuteAsync(endpoint);

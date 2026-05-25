@@ -53,6 +53,12 @@
         <li class="nav-item">
             <button class="nav-link @(_activeRequestTab == "body" ? "active" : "")" @onclick='() => _activeRequestTab = "body"'>Body</button>
         </li>
+        <li class="nav-item">
+            <button class="nav-link @(_activeRequestTab == "pre-script" ? "active" : "")" @onclick='() => _activeRequestTab = "pre-script"'>Pre-Request-Skript</button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link @(_activeRequestTab == "post-script" ? "active" : "")" @onclick='() => _activeRequestTab = "post-script"'>Post-Request-Skript</button>
+        </li>
     </ul>
 
     <div class="request-panel-body border border-top-0 p-3 mb-3">
@@ -74,6 +80,18 @@
         {
             <RequestBodyPanel Body="@_model.Body" BodyChanged="OnBodyChanged"
                               BodyMode="_model.BodyMode" BodyModeChanged="OnBodyModeChanged" />
+        }
+        else if (_activeRequestTab == "pre-script")
+        {
+            <textarea class="form-control font-monospace" rows="12"
+                      value="@_model.PreRequestScript"
+                      @oninput="OnPreRequestScriptChanged"></textarea>
+        }
+        else if (_activeRequestTab == "post-script")
+        {
+            <textarea class="form-control font-monospace" rows="12"
+                      value="@_model.PostRequestScript"
+                      @oninput="OnPostRequestScriptChanged"></textarea>
         }
     </div>
 
@@ -173,7 +191,9 @@
             Application = Endpoint.Application,
             EndpointGroupId = Endpoint.EndpointGroupId,
             EndpointGroup = Endpoint.EndpointGroup,
-            RowVersion = Endpoint.RowVersion
+            RowVersion = Endpoint.RowVersion,
+            PreRequestScript = Endpoint.PreRequestScript,
+            PostRequestScript = Endpoint.PostRequestScript
         };
         _headers = Endpoint.Headers
             .Select(h => new RequestHeadersPanel.HeaderEntry { Key = h.Key, Value = h.Value })
@@ -239,6 +259,18 @@
     {
         _model.BodyMode = mode;
         SyncAutoContentType();
+        MarkDirty();
+    }
+
+    private void OnPreRequestScriptChanged(ChangeEventArgs e)
+    {
+        _model.PreRequestScript = e.Value?.ToString();
+        MarkDirty();
+    }
+
+    private void OnPostRequestScriptChanged(ChangeEventArgs e)
+    {
+        _model.PostRequestScript = e.Value?.ToString();
         MarkDirty();
     }
 

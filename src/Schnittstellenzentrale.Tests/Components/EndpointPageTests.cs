@@ -253,6 +253,62 @@ public class EndpointPageTests : BunitContext
         Assert.Equal("/api/items", pathPart);
     }
 
+    /// <summary>Registerkarte „Pre-Request-Skript" ist im DOM vorhanden.</summary>
+    [Fact]
+    public void PreRequestSkript_RegistorkarteWirdGerendert()
+    {
+        var endpoint = CreateEndpoint();
+
+        var cut = Render<EndpointPage>(p => p.Add(x => x.Endpoint, endpoint));
+
+        var tab = cut.FindAll("button.nav-link").FirstOrDefault(b => b.TextContent.Trim() == "Pre-Request-Skript");
+        Assert.NotNull(tab);
+    }
+
+    /// <summary>Registerkarte „Post-Request-Skript" ist im DOM vorhanden.</summary>
+    [Fact]
+    public void PostRequestSkript_RegistorkarteWirdGerendert()
+    {
+        var endpoint = CreateEndpoint();
+
+        var cut = Render<EndpointPage>(p => p.Add(x => x.Endpoint, endpoint));
+
+        var tab = cut.FindAll("button.nav-link").FirstOrDefault(b => b.TextContent.Trim() == "Post-Request-Skript");
+        Assert.NotNull(tab);
+    }
+
+    /// <summary>Textänderung im Pre-Skript-Textarea ruft MarkDirty() auf.</summary>
+    [Fact]
+    public void PreRequestSkript_AenderungLoestMarkDirtyAus()
+    {
+        var endpoint = CreateEndpoint();
+
+        var cut = Render<EndpointPage>(p => p.Add(x => x.Endpoint, endpoint));
+        cut.FindAll("button.nav-link")
+            .First(b => b.TextContent.Trim() == "Pre-Request-Skript")
+            .Click();
+
+        cut.Find("textarea").Input("sz.environment.set('x', '1');");
+
+        Assert.NotEmpty(cut.FindAll(".badge.bg-warning"));
+    }
+
+    /// <summary>Textänderung im Post-Skript-Textarea ruft MarkDirty() auf.</summary>
+    [Fact]
+    public void PostRequestSkript_AenderungLoestMarkDirtyAus()
+    {
+        var endpoint = CreateEndpoint();
+
+        var cut = Render<EndpointPage>(p => p.Add(x => x.Endpoint, endpoint));
+        cut.FindAll("button.nav-link")
+            .First(b => b.TextContent.Trim() == "Post-Request-Skript")
+            .Click();
+
+        cut.Find("textarea").Input("sz.environment.set('x', '1');");
+
+        Assert.NotEmpty(cut.FindAll(".badge.bg-warning"));
+    }
+
     /// <summary>ResolveDisplayUrl zeigt bei leerem Wert den Platzhalter; nach Werteingabe die aufgelöste URL.</summary>
     [Fact]
     public void AufgeloesteUrl_WirdImPfadfeldAngezeigt()

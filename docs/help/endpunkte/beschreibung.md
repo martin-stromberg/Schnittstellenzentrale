@@ -61,9 +61,48 @@ Nach dem Verlassen: Pfad wird zu `/api/{id}` bereinigt; im Tab erscheinen `id` (
 Bei eingetragenem Wert `42` für `id` und `active` für `filter` lautet die tatsächlich gesendete URL:
 `http://example.com/api/applications/42?filter=active`
 
+## Pre/Post-Request-Skripte
+
+Jeder Endpunkt kann optional zwei JavaScript-Skripte enthalten:
+
+- **Pre-Request-Skript** (`PreRequestScript`): Wird ausgeführt, bevor die `{{...}}`-Platzhalter in URL, Headern und Body aufgelöst werden. Schlägt das Skript fehl, wird der HTTP-Request nicht gesendet.
+- **Post-Request-Skript** (`PostRequestScript`): Wird ausgeführt, nachdem der HTTP-Request abgeschlossen ist. Schlägt das Skript fehl, bleibt das HTTP-Ergebnis erhalten — die Fehlermeldung wird ergänzend angezeigt.
+
+Innerhalb der Skripte steht ein `sz`-API-Objekt bereit:
+
+- `sz.environment.get(name)` — liest eine Umgebungsvariable aus der aktiven Systemumgebung.
+- `sz.environment.set(name, value)` — setzt eine Umgebungsvariable im Arbeitsspeicher (nicht persistiert); nachfolgende `{{...}}`-Auflösungen sehen den neuen Wert sofort.
+- `sz.request.url` / `sz.request.method` / `sz.request.headers` — Zugriff auf die Request-Daten.
+- `sz.request.body.raw` / `sz.request.body.asJson()` / `sz.request.body.asXml()` — Zugriff auf den Request-Body.
+- `sz.response.body.raw` / `sz.response.body.asJson()` / `sz.response.body.asXml()` / `sz.response.headers` — im Post-Skript: Zugriff auf die HTTP-Antwort.
+- `sz.execute(name)` — führt einen anderen Endpunkt der gleichen Anwendung synchron aus und gibt dessen Ergebnis zurück (`success`, `statusCode`, `responseBody`, `errorMessage`).
+
+Endpunkte ohne Skript verhalten sich unverändert wie bisher.
+
+## Beispiele
+
+**Token aus Response lesen und als Umgebungsvariable speichern:**
+
+Post-Request-Skript:
+```javascript
+var body = sz.response.body.asJson();
+sz.environment.set("token", body.access_token);
+```
+
+**Zweiten Endpunkt aufrufen (z. B. Login vor eigentlichem Request):**
+
+Pre-Request-Skript:
+```javascript
+var result = sz.execute("Login");
+sz.environment.set("bearer", result.responseBody);
+```
+
 ## Einschränkungen
 
 - Das Pfadfeld zeigt die aufgelöste URL, nicht das Template. Wer den Pfad bearbeiten möchte, sieht also die ersetzten Werte, nicht die `{name}`-Platzhalter — nach dem Verlassen des Felds wird der neue Pfad analysiert und neu aufgelöst.
 - Wird ein Platzhalter im Pfad umbenannt, kann ein vorhandener Parameterwert nicht mehr automatisch zugeordnet werden; er verbleibt als regulärer (löschbarer) Query-Parameter.
 - Einträge mit leerem Key werden beim Aufbau des Query-Strings und bei der Platzhalter-Ersetzung übersprungen.
 - Ein im extrahierten Query-String vorhandener Key, der bereits manuell angelegt wurde, überschreibt den vorhandenen Wert nicht — der bestehende Eintrag bleibt erhalten.
+- Skripte haben ein Ausführungs-Timeout von 5 Sekunden; Endlosschleifen werden nach dieser Zeit abgebrochen.
+- `sz.environment.set()` ändert nur den In-Memory-Zustand der aktiven Umgebung — die Datenbank wird nicht aktualisiert. Die Änderung ist nicht über Session-Grenzen hinaus persistent.
+- `sz.execute()` schlägt fehl, wenn der angegebene Name innerhalb der Anwendung nicht eindeutig ist (mehrere Treffer). Ein Rekursionsschutz verhindert, dass derselbe Endpunkt mehr als zweimal im gleichen Aufrufbaum aufgerufen wird.

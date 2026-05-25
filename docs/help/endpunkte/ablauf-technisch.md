@@ -100,22 +100,66 @@ Beteiligte Komponenten:
 
 `EndpointPage.SendRequestAsync()` ruft `ExecutionService.ExecuteAsync(refreshed)` auf.
 
-### 2. URL-Aufbau in BuildRequest
+### 2. Rekursionsschutz-Initialisierung
 
-`EndpointExecutionService.BuildRequest()` iteriert über alle `endpoint.QueryParameters`:
+`EndpointExecutionService.ExecuteAsync(endpoint)` legt ein leeres `Dictionary<int, int> callDepth` an und delegiert an die interne Überladung. Vor jeder Ausführung wird `callDepth[endpoint.Id]` geprüft: ist der Wert `>= 2`, wird sofort ein `EndpointExecutionResult { Success = false }` zurückgegeben.
 
-- Key als `{Key}` im Template vorhanden → `relativePath.Replace("{Key}", Uri.EscapeDataString(Value))`
-- Key nicht im Template → wird in `queryParams`-Liste gesammelt
+Beteiligte Komponenten:
+- `EndpointExecutionService.ExecuteAsync(endpoint, callDepth)` — Rekursionsschutz und Ausführungssteuerung
+
+### 3. Pre-Request-Skript ausführen (optional)
+
+Falls `endpoint.PreRequestScript` nicht leer ist, wird ein `ScriptContext` mit `ScriptRequestData` (Rohwerte vor Platzhalterauflösung), `IActiveEnvironmentService` und dem `ExecuteEndpoint`-Callback aufgebaut. `IEndpointScriptRunner.ExecuteAsync` wird aufgerufen.
+
+- Bei `ScriptExecutionResult.Success == false`: `EndpointExecutionResult` mit `ErrorMessage` zurückgeben, Ausführung abbrechen — kein HTTP-Request.
+- Bei Erfolg: Umgebungsvariablen ggf. durch `sz.environment.set()` bereits aktualisiert.
+
+Beteiligte Komponenten:
+- `EndpointExecutionService.BuildScriptContext()` — erstellt `ScriptContext`
+- `EndpointScriptRunner.ExecuteAsync()` — führt das Skript im Jint-Interpreter aus
+- `ScriptContext` / `ScriptRequestData` / `ScriptExecutionResult`
+
+### 4. URL-Aufbau und HTTP-Anfrage senden
+
+`EndpointExecutionService.BuildRequest()` löst `{{...}}`-Platzhalter in Basis-URL, relativem Pfad, Header-Namen/-Werten und Body via `IActiveEnvironmentService.ActiveVariables` auf — die vom Pre-Skript ggf. geänderten Werte sind bereits enthalten. Anschließend werden `{pfadparameter}` ersetzt und Query-Parameter angehängt.
 
 Die endgültige URL wird zusammengesetzt:
 ```
 baseUrl.TrimEnd('/') + "/" + resolvedPath.TrimStart('/')
 ```
-Bei vorhandenen `queryParams` wird `?key=value&...` angehängt.
 
 Beteiligte Komponenten:
 - `EndpointExecutionService.BuildRequest()` — URL-Zusammensetzung mit Platzhalter-Ersetzung
-- `EndpointExecutionService.ExecuteAsync()` — Authentifizierung und HTTP-Ausführung
+- `EndpointExecutionService.ExecuteWithAuthAsync()` / `ExecuteImpersonatedAsync()` — Authentifizierung und HTTP-Ausführung
+
+### 5. Post-Request-Skript ausführen (optional)
+
+Falls `endpoint.PostRequestScript` nicht leer ist, wird `ScriptResponseData` aus der HTTP-Antwort befüllt (Body, Headers) und der `ScriptContext` damit erweitert. `IEndpointScriptRunner.ExecuteAsync` wird aufgerufen.
+
+- Bei `ScriptExecutionResult.Success == false`: `EndpointExecutionResult.ErrorMessage` wird gesetzt oder ergänzt; das HTTP-Ergebnis bleibt erhalten.
+
+Beteiligte Komponenten:
+- `EndpointScriptRunner.ExecuteAsync()` — führt das Post-Skript aus
+- `ScriptResponseData` — Snapshot der HTTP-Antwort
+
+### 6. Ergebnis zurückgeben
+
+`callDepth[endpoint.Id]` wird dekrementiert; das `EndpointExecutionResult` wird zurückgegeben.
+
+---
+
+## Ablauf: `sz.execute()` im Skript
+
+1. Das Skript ruft `sz.execute(name)` auf.
+2. `EndpointScriptRunner` ruft den `ExecuteEndpoint`-Callback im `ScriptContext` auf via `Task.Run(...).GetAwaiter().GetResult()`.
+3. `EndpointExecutionService` sucht via `IEndpointRepository.GetEndpointByNameAsync(applicationId, name)` nach dem Endpunkt. Bei 0 oder mehreren Treffern wird ein Fehler zurückgegeben.
+4. `ExecuteAsync` wird rekursiv mit dem bestehenden `callDepth` aufgerufen. Der Rekursionsschutz greift bei `callDepth[id] >= 2`.
+5. Das Ergebnis wird als JavaScript-Objekt zurückgegeben: `{ success, statusCode, responseBody, errorMessage }`.
+
+Beteiligte Komponenten:
+- `EndpointScriptRunner` — synchroner Callback-Aufruf
+- `EndpointExecutionService.ExecuteEndpoint`-Callback — Endpunkt-Lookup und rekursiver Aufruf
+- `IEndpointRepository.GetEndpointByNameAsync()` — Namens-Lookup
 
 ---
 
@@ -123,24 +167,31 @@ Beteiligte Komponenten:
 
 ```mermaid
 flowchart TD
-    A[OnParametersSetAsync] --> B[LoadModelFromParameter]
-    B --> C[_queryParameters aus Endpoint.QueryParameters befüllen]
-    C --> D[ExtractAndStripQueryString]
-    D --> E{RelativePath enthält ?}
-    E -- Ja --> F[Query-String abtrennen, Einträge als IsPathParameter=false hinzufügen]
-    F --> G[SyncPathParameters]
-    E -- Nein --> G
-    G --> H{Platzhalter in RelativePath}
-    H -- Neue --> I[QueryParamEntry IsPathParameter=true einfügen]
-    H -- Entfernte --> J[QueryParamEntry entfernen]
-    H -- Unveränderte --> K[Wert beibehalten]
-    I --> L[Render: ResolveDisplayUrl]
-    J --> L
-    K --> L
+    A[SendRequestAsync] --> B[ExecuteAsync - callDepth prüfen]
+    B --> C{callDepth >= 2?}
+    C -- Ja --> D[Fehler: Rekursionsschutz]
+    C -- Nein --> E{PreRequestScript?}
+    E -- Ja --> F[ScriptContext aufbauen]
+    F --> G[EndpointScriptRunner.ExecuteAsync Pre]
+    G --> H{Success?}
+    H -- Nein --> I[Fehler zurückgeben - kein HTTP]
+    H -- Ja --> J[BuildRequest mit aufgelösten Variablen]
+    E -- Nein --> J
+    J --> K[HTTP-Request senden]
+    K --> L{PostRequestScript?}
+    L -- Ja --> M[ScriptResponseData befüllen]
+    M --> N[EndpointScriptRunner.ExecuteAsync Post]
+    N --> O{Success?}
+    O -- Nein --> P[ErrorMessage ergänzen]
+    P --> Q[EndpointExecutionResult zurückgeben]
+    O -- Ja --> Q
+    L -- Nein --> Q
 
-    M[OnPathBlur] --> D
-    N[SendRequestAsync] --> O[BuildRequest: Platzhalter ersetzen, Query-String anhängen]
-    O --> P[HTTP-Anfrage senden]
+    G2[sz.execute in Skript] --> R[ExecuteEndpoint-Callback]
+    R --> S[GetEndpointByNameAsync]
+    S --> T{Eindeutiger Treffer?}
+    T -- Nein --> U[Fehler]
+    T -- Ja --> B
 ```
 
 ---
@@ -149,4 +200,7 @@ flowchart TD
 
 - `SaveAsync()` fängt `DbUpdateConcurrencyException` und zeigt den `ConcurrencyWarningDialog`.
 - `ExecuteAsync()` fängt allgemeine Ausnahmen und gibt ein `EndpointExecutionResult` mit `Success = false` und `ErrorMessage` zurück.
+- Pre-Skript-Fehler (Syntaxfehler, Runtime-Exception, Timeout) verhindern den HTTP-Request; `ErrorMessage` enthält die Fehlerbeschreibung.
+- Post-Skript-Fehler hängen die Fehlermeldung an ein ansonsten vollständiges `EndpointExecutionResult` an.
+- `EndpointScriptRunner` begrenzt die Skriptlaufzeit auf `ScriptTimeoutMs = 5000 ms` und den Arbeitsspeicher auf 4 MB.
 - Einträge mit leerem `Key` werden in `BuildRequest()` und in `ResolveDisplayUrl()` übersprungen.

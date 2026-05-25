@@ -41,6 +41,19 @@ public class EndpointRepository : IEndpointRepository
     }
 
     /// <inheritdoc/>
+    public async Task<IList<Core.Models.Endpoint>> GetEndpointByNameAsync(int applicationId, string name)
+    {
+        await using var context = await _factory.CreateDbContextAsync();
+        return await context.Endpoints
+            .Include(e => e.Application)
+            .Include(e => e.Headers)
+            .Include(e => e.QueryParameters)
+            .Include(e => e.EndpointGroup)
+            .Where(e => e.ApplicationId == applicationId && e.Name == name)
+            .ToListAsync();
+    }
+
+    /// <inheritdoc/>
     public async Task<Core.Models.Endpoint> AddEndpointAsync(Core.Models.Endpoint endpoint)
     {
         await using var context = await _factory.CreateDbContextAsync();

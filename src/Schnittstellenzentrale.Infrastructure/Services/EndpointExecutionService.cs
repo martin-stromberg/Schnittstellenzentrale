@@ -22,22 +22,33 @@ public class EndpointExecutionService : IEndpointExecutionService
     private readonly IHealthCheckService _healthCheckService;
     private readonly ICredentialService _credentialService;
     private readonly IActiveEnvironmentService _activeEnvironmentService;
+    private readonly IEndpointScriptRunner _scriptRunner;
+    private readonly IEndpointRepository _endpointRepository;
 
     /// <summary>Initialisiert eine neue Instanz des <see cref="EndpointExecutionService"/>.</summary>
     public EndpointExecutionService(
         IHttpClientFactory httpClientFactory,
         IHealthCheckService healthCheckService,
         ICredentialService credentialService,
-        IActiveEnvironmentService activeEnvironmentService)
+        IActiveEnvironmentService activeEnvironmentService,
+        IEndpointScriptRunner scriptRunner,
+        IEndpointRepository endpointRepository)
     {
         _httpClientFactory = httpClientFactory;
         _healthCheckService = healthCheckService;
         _credentialService = credentialService;
         _activeEnvironmentService = activeEnvironmentService;
+        _scriptRunner = scriptRunner;
+        _endpointRepository = endpointRepository;
     }
 
     /// <inheritdoc/>
     public async Task<EndpointExecutionResult> ExecuteAsync(Core.Models.Endpoint endpoint)
+    {
+        return await ExecuteAsync(endpoint, new Dictionary<int, int>());
+    }
+
+    private async Task<EndpointExecutionResult> ExecuteAsync(Core.Models.Endpoint endpoint, Dictionary<int, int> callDepth)
     {
         if (endpoint.Application == null)
             return new EndpointExecutionResult
@@ -46,25 +57,111 @@ public class EndpointExecutionService : IEndpointExecutionService
                 ErrorMessage = $"[Endpoint {endpoint.Id} {endpoint.RelativePath}] Application ist nicht geladen."
             };
 
-        try
-        {
-            if (endpoint.AuthenticationType == AuthenticationType.NegotiateWithImpersonation)
-                return await ExecuteImpersonatedAsync(endpoint);
-
-            return await ExecuteWithAuthAsync(endpoint);
-        }
-        catch (OperationCanceledException)
-        {
-            throw;
-        }
-        catch (Exception ex)
-        {
+        callDepth.TryGetValue(endpoint.Id, out var currentDepth);
+        if (currentDepth >= 2)
             return new EndpointExecutionResult
             {
                 Success = false,
-                ErrorMessage = $"[Endpoint {endpoint.Id} {endpoint.RelativePath}] {ex.Message}"
+                ErrorMessage = $"[Endpoint {endpoint.Id} {endpoint.RelativePath}] Rekursionsschutz: maximale Aufruftiefe erreicht."
             };
+
+        callDepth[endpoint.Id] = currentDepth + 1;
+
+        try
+        {
+            if (!string.IsNullOrEmpty(endpoint.PreRequestScript))
+            {
+                var preContext = BuildScriptContext(endpoint, callDepth, response: null);
+                var preResult = await _scriptRunner.ExecuteAsync(endpoint.PreRequestScript, preContext);
+                if (!preResult.Success)
+                    return new EndpointExecutionResult
+                    {
+                        Success = false,
+                        ErrorMessage = preResult.ErrorMessage
+                    };
+            }
+
+            EndpointExecutionResult result;
+            try
+            {
+                if (endpoint.AuthenticationType == AuthenticationType.NegotiateWithImpersonation)
+                    result = await ExecuteImpersonatedAsync(endpoint);
+                else
+                    result = await ExecuteWithAuthAsync(endpoint);
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                return new EndpointExecutionResult
+                {
+                    Success = false,
+                    ErrorMessage = $"[Endpoint {endpoint.Id} {endpoint.RelativePath}] {ex.Message}"
+                };
+            }
+
+            if (!string.IsNullOrEmpty(endpoint.PostRequestScript))
+            {
+                var responseData = new ScriptResponseData
+                {
+                    Body = result.ResponseBody,
+                    Headers = result.ResponseHeaders ?? new Dictionary<string, string>()
+                };
+                var postContext = BuildScriptContext(endpoint, callDepth, response: responseData);
+                var postResult = await _scriptRunner.ExecuteAsync(endpoint.PostRequestScript, postContext);
+                if (!postResult.Success)
+                    result.ErrorMessage = string.IsNullOrEmpty(result.ErrorMessage)
+                        ? postResult.ErrorMessage
+                        : $"{result.ErrorMessage}\n{postResult.ErrorMessage}";
+            }
+
+            return result;
         }
+        finally
+        {
+            callDepth[endpoint.Id] = callDepth[endpoint.Id] - 1;
+        }
+    }
+
+    private ScriptContext BuildScriptContext(
+        Core.Models.Endpoint endpoint,
+        Dictionary<int, int> callDepth,
+        ScriptResponseData? response)
+    {
+        var requestData = new ScriptRequestData
+        {
+            Url = (endpoint.Application?.BaseUrl ?? string.Empty).TrimEnd('/') + "/" + endpoint.RelativePath.TrimStart('/'),
+            Method = endpoint.Method.ToString(),
+            Headers = endpoint.Headers.ToDictionary(h => h.Key, h => h.Value),
+            Body = endpoint.Body
+        };
+
+        return new ScriptContext
+        {
+            EnvironmentService = _activeEnvironmentService,
+            Request = requestData,
+            Response = response,
+            CallDepth = callDepth,
+            ExecuteEndpoint = async name =>
+            {
+                var matches = await _endpointRepository.GetEndpointByNameAsync(endpoint.ApplicationId, name);
+                if (matches.Count == 0)
+                    return new EndpointExecutionResult
+                    {
+                        Success = false,
+                        ErrorMessage = $"sz.execute: Kein Endpunkt mit dem Namen \"{name}\" gefunden."
+                    };
+                if (matches.Count > 1)
+                    return new EndpointExecutionResult
+                    {
+                        Success = false,
+                        ErrorMessage = $"sz.execute: Mehrdeutiger Endpunktname \"{name}\" — {matches.Count} Treffer gefunden."
+                    };
+                return await ExecuteAsync(matches[0], callDepth);
+            }
+        };
     }
 
     private async Task<EndpointExecutionResult> ExecuteWithAuthAsync(Core.Models.Endpoint endpoint)
@@ -207,5 +304,4 @@ public class EndpointExecutionService : IEndpointExecutionService
                 break;
         }
     }
-
 }
