@@ -19,10 +19,4 @@ public class ScriptContext
 
     /// <summary>Rekursionsschutz: Aufrufzähler pro Endpunkt-ID.</summary>
     public Dictionary<int, int> CallDepth { get; set; } = [];
-
-    /// <summary>Ermöglicht <c>EndpointScriptRunner</c> den Zugriff auf das Repository für die gezielte Persistierung einer einzelnen Variable. Nullable, weil <c>ScriptContext</c> auch außerhalb von <c>EndpointExecutionService</c> erzeugt werden kann.</summary>
-    public ISystemEnvironmentRepository? EnvironmentRepository { get; set; }
-
-    /// <summary>Ermöglicht <c>EndpointScriptRunner</c> den Aufruf von <c>NotifyEnvironmentChangedAsync()</c> nach der Persistierung. Nullable aus demselben Grund wie <c>EnvironmentRepository</c>.</summary>
-    public ISignalRNotificationService? SignalRNotificationService { get; set; }
 }

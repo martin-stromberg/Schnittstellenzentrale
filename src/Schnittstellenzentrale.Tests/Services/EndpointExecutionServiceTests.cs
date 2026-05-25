@@ -33,7 +33,7 @@ public class EndpointExecutionServiceTests
     {
         Id = id,
         Name = name,
-        Method = body != null ? Core.Enums.HttpMethod.POST : method,
+        Method = method,
         RelativePath = relPath,
         AuthenticationType = authType,
         ApplicationId = 1,
@@ -754,7 +754,9 @@ public class EndpointExecutionServiceTests
         repoMock.Setup(r => r.GetEndpointByNameAsync(1, "Rekursiv"))
             .ReturnsAsync(new List<Core.Models.Endpoint> { endpoint });
 
-        var scriptRunner = new EndpointScriptRunner();
+        var scriptRunner = new EndpointScriptRunner(
+            CreateEmptyEnvironmentRepositoryMock().Object,
+            CreateEmptySignalRNotificationServiceMock().Object);
 
         var healthMock = new Mock<IHealthCheckService>();
         var credMock = new Mock<ICredentialService>();

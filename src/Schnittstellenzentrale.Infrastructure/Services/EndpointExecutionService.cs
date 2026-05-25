@@ -140,9 +140,13 @@ public class EndpointExecutionService : IEndpointExecutionService
         Dictionary<int, int> callDepth,
         ScriptResponseData? response)
     {
+        var variables = _activeEnvironmentService.ActiveVariables;
+        var baseUrl = ResolvePlaceholders(endpoint.Application?.BaseUrl ?? string.Empty, variables);
+        var relativePath = ResolvePlaceholders(endpoint.RelativePath, variables);
+
         var requestData = new ScriptRequestData
         {
-            Url = (endpoint.Application?.BaseUrl ?? string.Empty).TrimEnd('/') + "/" + endpoint.RelativePath.TrimStart('/'),
+            Url = baseUrl.TrimEnd('/') + "/" + relativePath.TrimStart('/'),
             Method = endpoint.Method.ToString(),
             Headers = endpoint.Headers.ToDictionary(h => h.Key, h => h.Value),
             Body = endpoint.Body
@@ -154,9 +158,7 @@ public class EndpointExecutionService : IEndpointExecutionService
             Request = requestData,
             Response = response,
             CallDepth = callDepth,
-            ExecuteEndpoint = name => ExecuteEndpointByNameAsync(endpoint.ApplicationId, name, callDepth),
-            EnvironmentRepository = _environmentRepository,
-            SignalRNotificationService = _signalRNotificationService
+            ExecuteEndpoint = name => ExecuteEndpointByNameAsync(endpoint.ApplicationId, name, callDepth)
         };
     }
 

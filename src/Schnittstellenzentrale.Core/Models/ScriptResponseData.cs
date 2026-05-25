@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Xml;
 using System.Xml.Linq;
+using Schnittstellenzentrale.Core.Helpers;
 
 namespace Schnittstellenzentrale.Core.Models;
 
@@ -21,7 +22,7 @@ public class ScriptResponseData
         try
         {
             var element = JsonSerializer.Deserialize<JsonElement>(Body);
-            return ScriptRequestData.ConvertJsonElement(element);
+            return ScriptBodyParser.ConvertJsonElement(element);
         }
         catch (JsonException ex)
         {
@@ -37,7 +38,7 @@ public class ScriptResponseData
         try
         {
             var doc = XDocument.Parse(Body);
-            return ScriptRequestData.ConvertXmlToObject(doc.Root);
+            return ScriptBodyParser.ConvertXmlToObject(doc.Root);
         }
         catch (XmlException ex)
         {
