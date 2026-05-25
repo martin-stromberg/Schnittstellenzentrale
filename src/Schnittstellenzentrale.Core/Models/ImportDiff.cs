@@ -7,4 +7,13 @@ public class ImportDiff
     public IList<Endpoint> RemovedEndpoints { get; init; } = [];
     public string? ErrorMessage { get; init; }
     public IDictionary<string, string> BearerTokens { get; init; } = new Dictionary<string, string>();
+
+    public ImportDiff WithBearerTokens(IDictionary<string, string> bearerTokens) => new()
+    {
+        NewEndpoints = NewEndpoints,
+        ChangedEndpoints = ChangedEndpoints,
+        RemovedEndpoints = RemovedEndpoints,
+        ErrorMessage = ErrorMessage,
+        BearerTokens = bearerTokens
+    };
 }

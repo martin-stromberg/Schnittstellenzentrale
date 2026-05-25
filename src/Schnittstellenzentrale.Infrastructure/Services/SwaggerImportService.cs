@@ -32,11 +32,10 @@ public class SwaggerImportService : ISwaggerImportService
         if (string.IsNullOrEmpty(application.InterfaceUrl))
             return new ImportDiff();
 
-        Stream? fetchedStream;
+        Stream fetchedStream;
         try
         {
-            var client = _httpClientFactory.CreateClient();
-            fetchedStream = await client.GetStreamAsync(application.InterfaceUrl);
+            fetchedStream = await FetchSwaggerStreamAsync(application.InterfaceUrl);
         }
         catch (HttpRequestException ex)
         {
@@ -45,24 +44,49 @@ public class SwaggerImportService : ISwaggerImportService
         }
 
         await using var stream = fetchedStream;
-        var reader = new OpenApiJsonReader();
-        var result = await reader.ReadAsync(stream, null, new OpenApiReaderSettings(), default);
-        var document = result.Document;
-        var diagnostics = result.Diagnostic;
-
-        if (diagnostics.Errors.Any())
+        var (document, parseError) = await ParseSwaggerDocumentAsync(stream);
+        if (document == null)
         {
-            var errors = string.Join("; ", diagnostics.Errors.Select(e => e.Message));
-            _logger.LogWarning("Swagger-Import Parsing-Fehler für Anwendung {ApplicationId}: {Errors}", application.Id, errors);
-            return new ImportDiff { ErrorMessage = $"Fehler beim Parsen der Swagger-Definition: {errors}" };
+            _logger.LogWarning("Swagger-Import Parsing-Fehler für Anwendung {ApplicationId}", application.Id);
+            return parseError!;
         }
 
-        var importedEndpoints = new List<Core.Models.Endpoint>();
+        var (importedEndpoints, bearerTokens) = MapToEndpoints(document, application.Id);
+
+        var existingEndpoints = await _endpointRepository.GetEndpointsAsync(application.Id);
+        return ImportDiffCalculator.Calculate(existingEndpoints, importedEndpoints).WithBearerTokens(bearerTokens);
+    }
+
+    private async Task<Stream> FetchSwaggerStreamAsync(string url)
+    {
+        var client = _httpClientFactory.CreateClient();
+        return await client.GetStreamAsync(url);
+    }
+
+    private static async Task<(Microsoft.OpenApi.OpenApiDocument? document, ImportDiff? error)> ParseSwaggerDocumentAsync(Stream stream)
+    {
+        var reader = new OpenApiJsonReader();
+        var result = await reader.ReadAsync(stream, null, new OpenApiReaderSettings(), default);
+        var diagnostics = result.Diagnostic;
+
+        if (diagnostics?.Errors.Any() == true)
+        {
+            var errors = string.Join("; ", diagnostics.Errors.Select(e => e.Message));
+            return (null, new ImportDiff { ErrorMessage = $"Fehler beim Parsen der Swagger-Definition: {errors}" });
+        }
+
+        return (result.Document, null);
+    }
+
+    private static (List<Core.Models.Endpoint> endpoints, Dictionary<string, string> bearerTokens) MapToEndpoints(
+        Microsoft.OpenApi.OpenApiDocument document, int applicationId)
+    {
+        var endpoints = new List<Core.Models.Endpoint>();
         var bearerTokens = new Dictionary<string, string>();
 
         foreach (var path in document.Paths)
         {
-            foreach (var operation in path.Value.Operations)
+            foreach (var operation in path.Value.Operations ?? [])
             {
                 var method = MapHttpMethod(operation.Key.ToString());
                 var endpoint = new Core.Models.Endpoint
@@ -70,7 +94,7 @@ public class SwaggerImportService : ISwaggerImportService
                     Name = operation.Value.OperationId ?? $"{operation.Key} {path.Key}",
                     Method = method,
                     RelativePath = path.Key,
-                    ApplicationId = application.Id,
+                    ApplicationId = applicationId,
                     PreRequestScript = ReadExtensionString(operation.Value.Extensions, "x-sz-pre-request-script"),
                     PostRequestScript = ReadExtensionString(operation.Value.Extensions, "x-sz-post-request-script")
                 };
@@ -79,24 +103,14 @@ public class SwaggerImportService : ISwaggerImportService
                 if (!string.IsNullOrEmpty(bearerToken))
                 {
                     endpoint.AuthenticationType = AuthenticationType.BearerToken;
-                    var key = $"{method}:{path.Key}";
-                    bearerTokens[key] = bearerToken;
+                    bearerTokens[$"{method}:{path.Key}"] = bearerToken;
                 }
 
-                importedEndpoints.Add(endpoint);
+                endpoints.Add(endpoint);
             }
         }
 
-        var existingEndpoints = await _endpointRepository.GetEndpointsAsync(application.Id);
-        var calculated = ImportDiffCalculator.Calculate(existingEndpoints, importedEndpoints);
-        return new ImportDiff
-        {
-            NewEndpoints = calculated.NewEndpoints,
-            ChangedEndpoints = calculated.ChangedEndpoints,
-            RemovedEndpoints = calculated.RemovedEndpoints,
-            ErrorMessage = calculated.ErrorMessage,
-            BearerTokens = bearerTokens
-        };
+        return (endpoints, bearerTokens);
     }
 
     /// <inheritdoc/>

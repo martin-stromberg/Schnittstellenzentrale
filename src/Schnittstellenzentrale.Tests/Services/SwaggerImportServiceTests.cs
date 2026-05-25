@@ -26,6 +26,9 @@ public class SwaggerImportServiceTests
         }
         """;
 
+    private static Core.Models.Application CreateTestApplication() =>
+        new() { Id = 1, InterfaceUrl = "http://localhost/swagger.json", InterfaceType = Core.Enums.InterfaceType.Rest, BaseUrl = "http://localhost" };
+
     private static SwaggerImportService CreateService(
         string swaggerJson,
         Mock<IEndpointRepository> repoMock,
@@ -56,7 +59,7 @@ public class SwaggerImportServiceTests
         var repoMock = new Mock<IEndpointRepository>();
         repoMock.Setup(r => r.GetEndpointsAsync(It.IsAny<int>())).ReturnsAsync([]);
         var service = CreateService(SwaggerWithGetPost, repoMock);
-        var app = new Core.Models.Application { Id = 1, InterfaceUrl = "http://localhost/swagger.json", InterfaceType = Core.Enums.InterfaceType.Rest, BaseUrl = "http://localhost" };
+        var app = CreateTestApplication();
 
         var diff = await service.ImportAsync(app);
 
@@ -76,7 +79,7 @@ public class SwaggerImportServiceTests
         var repoMock = new Mock<IEndpointRepository>();
         repoMock.Setup(r => r.GetEndpointsAsync(It.IsAny<int>())).ReturnsAsync(existing);
         var service = CreateService(SwaggerWithGetPost, repoMock);
-        var app = new Core.Models.Application { Id = 1, InterfaceUrl = "http://localhost/swagger.json", InterfaceType = Core.Enums.InterfaceType.Rest, BaseUrl = "http://localhost" };
+        var app = CreateTestApplication();
 
         var diff = await service.ImportAsync(app);
 
@@ -94,7 +97,7 @@ public class SwaggerImportServiceTests
         var repoMock = new Mock<IEndpointRepository>();
         repoMock.Setup(r => r.GetEndpointsAsync(It.IsAny<int>())).ReturnsAsync(existing);
         var service = CreateService(SwaggerWithGetPost, repoMock);
-        var app = new Core.Models.Application { Id = 1, InterfaceUrl = "http://localhost/swagger.json", InterfaceType = Core.Enums.InterfaceType.Rest, BaseUrl = "http://localhost" };
+        var app = CreateTestApplication();
 
         var diff = await service.ImportAsync(app);
 
@@ -123,7 +126,7 @@ public class SwaggerImportServiceTests
         var repoMock = new Mock<IEndpointRepository>();
         repoMock.Setup(r => r.GetEndpointsAsync(It.IsAny<int>())).ReturnsAsync([]);
         var service = CreateService(swagger, repoMock);
-        var app = new Core.Models.Application { Id = 1, InterfaceUrl = "http://localhost/swagger.json", InterfaceType = Core.Enums.InterfaceType.Rest, BaseUrl = "http://localhost" };
+        var app = CreateTestApplication();
 
         var diff = await service.ImportAsync(app);
 
@@ -152,7 +155,7 @@ public class SwaggerImportServiceTests
         var repoMock = new Mock<IEndpointRepository>();
         repoMock.Setup(r => r.GetEndpointsAsync(It.IsAny<int>())).ReturnsAsync([]);
         var service = CreateService(swagger, repoMock);
-        var app = new Core.Models.Application { Id = 1, InterfaceUrl = "http://localhost/swagger.json", InterfaceType = Core.Enums.InterfaceType.Rest, BaseUrl = "http://localhost" };
+        var app = CreateTestApplication();
 
         var diff = await service.ImportAsync(app);
 
@@ -181,7 +184,7 @@ public class SwaggerImportServiceTests
         var repoMock = new Mock<IEndpointRepository>();
         repoMock.Setup(r => r.GetEndpointsAsync(It.IsAny<int>())).ReturnsAsync([]);
         var service = CreateService(swagger, repoMock);
-        var app = new Core.Models.Application { Id = 1, InterfaceUrl = "http://localhost/swagger.json", InterfaceType = Core.Enums.InterfaceType.Rest, BaseUrl = "http://localhost" };
+        var app = CreateTestApplication();
 
         var diff = await service.ImportAsync(app);
 
@@ -197,7 +200,7 @@ public class SwaggerImportServiceTests
         var repoMock = new Mock<IEndpointRepository>();
         repoMock.Setup(r => r.GetEndpointsAsync(It.IsAny<int>())).ReturnsAsync([]);
         var service = CreateService(SwaggerWithGetPost, repoMock);
-        var app = new Core.Models.Application { Id = 1, InterfaceUrl = "http://localhost/swagger.json", InterfaceType = Core.Enums.InterfaceType.Rest, BaseUrl = "http://localhost" };
+        var app = CreateTestApplication();
 
         var diff = await service.ImportAsync(app);
 
@@ -230,7 +233,7 @@ public class SwaggerImportServiceTests
         var repoMock = new Mock<IEndpointRepository>();
         repoMock.Setup(r => r.GetEndpointsAsync(It.IsAny<int>())).ReturnsAsync(existing);
         var service = CreateService(SwaggerWithGetPost, repoMock);
-        var app = new Core.Models.Application { Id = 1, InterfaceUrl = "http://localhost/swagger.json", InterfaceType = Core.Enums.InterfaceType.Rest, BaseUrl = "http://localhost" };
+        var app = CreateTestApplication();
 
         var diff = await service.ImportAsync(app);
 

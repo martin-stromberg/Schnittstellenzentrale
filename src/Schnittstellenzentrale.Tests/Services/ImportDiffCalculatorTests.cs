@@ -63,6 +63,7 @@ public class ImportDiffCalculatorTests
         Assert.Equal("post", changed.PostRequestScript);
     }
 
+    /// <summary>Calculate_WhenImportedEndpointHasNullScripts_OverwritesExistingScripts</summary>
     [Fact]
     public void Calculate_WhenImportedEndpointHasNullScripts_OverwritesExistingScripts()
     {
