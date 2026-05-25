@@ -16,6 +16,8 @@ public class Endpoint
     public int? EndpointGroupId { get; set; }
     public EndpointGroup? EndpointGroup { get; set; }
     public byte[] RowVersion { get; set; } = [];
+    public string? PreRequestScript { get; set; }
+    public string? PostRequestScript { get; set; }
     public ICollection<EndpointHeader> Headers { get; set; } = [];
     public ICollection<EndpointQueryParameter> QueryParameters { get; set; } = [];
 }

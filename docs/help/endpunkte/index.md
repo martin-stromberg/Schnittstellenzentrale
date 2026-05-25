@@ -1,6 +1,6 @@
 # Endpunkte
 
-Endpunkte sind einzelne HTTP-Anfragen, die einer Anwendung zugeordnet sind. Sie können Pfad-Platzhalter (`{name}`) und Query-Parameter enthalten, die vor dem Senden einer Anfrage mit konkreten Werten befüllt werden. Die Schnittstellenzentrale analysiert den relativen Pfad automatisch, trennt Platzhalter von regulären Query-Parametern und zeigt die aufgelöste URL im Pfadfeld an.
+Endpunkte sind einzelne HTTP-Anfragen, die einer Anwendung zugeordnet sind. Sie können Pfad-Platzhalter (`{name}`), Query-Parameter und optionale JavaScript-Skripte enthalten. Pre-Request-Skripte werden vor dem Senden ausgeführt und können Umgebungsvariablen setzen oder andere Endpunkte aufrufen; Post-Request-Skripte verarbeiten die Antwort. Die Schnittstellenzentrale analysiert den relativen Pfad automatisch, trennt Platzhalter von regulären Query-Parametern und zeigt die aufgelöste URL im Pfadfeld an.
 
 ## Inhalt
 

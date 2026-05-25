@@ -100,22 +100,152 @@ Beteiligte Komponenten:
 
 `EndpointPage.SendRequestAsync()` ruft `ExecutionService.ExecuteAsync(refreshed)` auf.
 
-### 2. URL-Aufbau in BuildRequest
+### 2. Rekursionsschutz-Initialisierung
 
-`EndpointExecutionService.BuildRequest()` iteriert über alle `endpoint.QueryParameters`:
+`EndpointExecutionService.ExecuteAsync(endpoint)` legt ein leeres `Dictionary<int, int> callDepth` an und delegiert an die interne Überladung. Vor jeder Ausführung wird `callDepth[endpoint.Id]` geprüft: ist der Wert `>= 2`, wird sofort ein `EndpointExecutionResult { Success = false }` zurückgegeben.
 
-- Key als `{Key}` im Template vorhanden → `relativePath.Replace("{Key}", Uri.EscapeDataString(Value))`
-- Key nicht im Template → wird in `queryParams`-Liste gesammelt
+Beteiligte Komponenten:
+- `EndpointExecutionService.ExecuteAsync(endpoint, callDepth)` — Rekursionsschutz und Ausführungssteuerung
+
+### 3. Pre-Request-Skript ausführen (optional)
+
+Falls `endpoint.PreRequestScript` nicht leer ist, wird ein `ScriptContext` mit `ScriptRequestData` (Rohwerte vor Platzhalterauflösung), `IActiveEnvironmentService` und dem `ExecuteEndpoint`-Callback aufgebaut. `IEndpointScriptRunner.ExecuteAsync` wird aufgerufen.
+
+- Bei `ScriptExecutionResult.Success == false`: `EndpointExecutionResult` mit `ErrorMessage` zurückgeben, Ausführung abbrechen — kein HTTP-Request.
+- Bei Erfolg: Umgebungsvariablen ggf. durch `sz.environment.set()` bereits aktualisiert.
+
+Beteiligte Komponenten:
+- `EndpointExecutionService.BuildScriptContext()` — erstellt `ScriptContext`
+- `EndpointScriptRunner.ExecuteAsync()` — führt das Skript im Jint-Interpreter aus
+- `ScriptContext` / `ScriptRequestData` / `ScriptExecutionResult`
+
+### 4. URL-Aufbau und HTTP-Anfrage senden
+
+`EndpointExecutionService.BuildRequest()` löst `{{...}}`-Platzhalter in Basis-URL, relativem Pfad, Header-Namen/-Werten und Body via `IActiveEnvironmentService.ActiveVariables` auf — die vom Pre-Skript ggf. geänderten Werte sind bereits enthalten. Anschließend werden `{pfadparameter}` ersetzt und Query-Parameter angehängt.
 
 Die endgültige URL wird zusammengesetzt:
 ```
 baseUrl.TrimEnd('/') + "/" + resolvedPath.TrimStart('/')
 ```
-Bei vorhandenen `queryParams` wird `?key=value&...` angehängt.
 
 Beteiligte Komponenten:
 - `EndpointExecutionService.BuildRequest()` — URL-Zusammensetzung mit Platzhalter-Ersetzung
-- `EndpointExecutionService.ExecuteAsync()` — Authentifizierung und HTTP-Ausführung
+- `EndpointExecutionService.ExecuteWithAuthAsync()` / `ExecuteImpersonatedAsync()` — Authentifizierung und HTTP-Ausführung
+
+### 5. Post-Request-Skript ausführen (optional)
+
+Falls `endpoint.PostRequestScript` nicht leer ist, wird `ScriptResponseData` aus der HTTP-Antwort befüllt (Body, Headers) und der `ScriptContext` damit erweitert. `IEndpointScriptRunner.ExecuteAsync` wird aufgerufen.
+
+- Bei `ScriptExecutionResult.Success == false`: `EndpointExecutionResult.ErrorMessage` wird gesetzt oder ergänzt; das HTTP-Ergebnis bleibt erhalten.
+
+Beteiligte Komponenten:
+- `EndpointScriptRunner.ExecuteAsync()` — führt das Post-Skript aus
+- `ScriptResponseData` — Snapshot der HTTP-Antwort
+
+### 6. Ergebnis zurückgeben
+
+`callDepth[endpoint.Id]` wird dekrementiert; das `EndpointExecutionResult` wird zurückgegeben.
+
+---
+
+## Ablauf: `sz.environment.set()` im Skript
+
+### Mit aktiver Systemumgebung (Persistierungsfall)
+
+1. Das Skript ruft `sz.environment.set(name, value)` auf.
+2. `EndpointScriptRunner.BuildEnvironmentObject` liest `context.EnvironmentService.ActiveEnvironment` — Ergebnis ist nicht `null`.
+3. Aus `context.EnvironmentService.ActiveVariables` wird ein aktualisiertes Dictionary aufgebaut (`updatedVariables[name] = value`).
+4. Beim Neuaufbau der `EnvironmentVariable`-Objekte werden `Id` und `IsValueMasked` aus `ActiveEnvironment.Variables` für Variablen mit übereinstimmendem Namen übernommen. Die Maskierungsflagge geht damit nicht verloren.
+5. `context.EnvironmentService.SetActiveEnvironment(updatedEnv)` aktualisiert den In-Memory-Zustand.
+6. Da `activeEnv != null` und `context.EnvironmentRepository != null`, wird `PersistVariable` aufgerufen:
+   - `context.EnvironmentRepository.UpdateVariableAsync(activeEnv.Id, name, value)` wird via `Task.Run(...).GetAwaiter().GetResult()` blockierend ausgeführt.
+   - Anschließend wird `context.SignalRNotificationService.NotifyEnvironmentChangedAsync()` aufgerufen (falls gesetzt), damit verbundene Clients die Änderung sofort erhalten.
+7. Wirft einer der Aufrufe eine Exception, wird diese propagiert; `ExecuteAsync` gibt ein `ScriptExecutionResult { Success = false }` zurück.
+
+Beteiligte Komponenten:
+- `EndpointScriptRunner.BuildEnvironmentObject` — Lambda-Implementierung mit Persistierungslogik
+- `EndpointScriptRunner.PersistVariable` — blockierender Aufruf von Repository und SignalR
+- `ScriptContext.EnvironmentRepository` (`ISystemEnvironmentRepository`) — Zugriff auf `UpdateVariableAsync`
+- `ScriptContext.SignalRNotificationService` (`ISignalRNotificationService`) — Benachrichtigung verbundener Clients
+- `IActiveEnvironmentService.SetActiveEnvironment` — In-Memory-Aktualisierung
+
+### Ohne aktive Systemumgebung (unverändertes Verhalten)
+
+1. Das Skript ruft `sz.environment.set(name, value)` auf.
+2. `context.EnvironmentService.ActiveEnvironment` ist `null`.
+3. Der In-Memory-Zustand wird via `SetActiveEnvironment` aktualisiert.
+4. Da `activeEnv == null`, werden weder `UpdateVariableAsync` noch `NotifyEnvironmentChangedAsync` aufgerufen.
+
+---
+
+## Ablauf: `sz.execute()` im Skript
+
+1. Das Skript ruft `sz.execute(name)` auf.
+2. `EndpointScriptRunner` ruft den `ExecuteEndpoint`-Callback im `ScriptContext` auf via `Task.Run(...).GetAwaiter().GetResult()`.
+3. `EndpointExecutionService` sucht via `IEndpointRepository.GetEndpointByNameAsync(applicationId, name)` nach dem Endpunkt. Bei 0 oder mehreren Treffern wird ein Fehler zurückgegeben.
+4. `ExecuteAsync` wird rekursiv mit dem bestehenden `callDepth` aufgerufen. Der Rekursionsschutz greift bei `callDepth[id] >= 2`.
+5. Das Ergebnis wird als JavaScript-Objekt zurückgegeben: `{ success, statusCode, responseBody, errorMessage }`.
+
+Beteiligte Komponenten:
+- `EndpointScriptRunner` — synchroner Callback-Aufruf
+- `EndpointExecutionService.ExecuteEndpoint`-Callback — Endpunkt-Lookup und rekursiver Aufruf
+- `IEndpointRepository.GetEndpointByNameAsync()` — Namens-Lookup
+
+---
+
+## Ablauf: Swagger-Import mit Erweiterungsfeldern
+
+### 1. Auslöser
+
+Die UI ruft `ISwaggerImportService.ImportAsync(application)` auf.
+
+### 2. Swagger-Definition laden und parsen
+
+`SwaggerImportService.ImportAsync` lädt das Swagger-JSON per HTTP über `IHttpClientFactory` und parst es mit `OpenApiJsonReader`. Treten Parsing-Fehler auf, wird ein `ImportDiff { ErrorMessage = ... }` zurückgegeben.
+
+Beteiligte Komponenten:
+- `SwaggerImportService.ImportAsync` — HTTP-Abruf und Parsing
+- `OpenApiJsonReader` — Parsing der OpenAPI-Definition
+
+### 3. Endpunkte mit Erweiterungsfeldern erzeugen
+
+Für jede `OpenApiOperation` in `document.Paths` wird ein `Endpoint` erzeugt. Zusätzlich zu `Name`, `Method`, `RelativePath` und `ApplicationId` werden folgende Felder gesetzt:
+
+- `x-sz-pre-request-script` → `Endpoint.PreRequestScript`
+- `x-sz-post-request-script` → `Endpoint.PostRequestScript`
+- `x-sz-bearer-token` → `Endpoint.AuthenticationType = BearerToken`; Token-Wert wird unter dem Schlüssel `"{Method}:{RelativePath}"` in einem lokalen Dictionary gesammelt.
+
+Fehlende Erweiterungsfelder belassen die Felder auf `null` bzw. `None`.
+
+Beteiligte Komponenten:
+- `SwaggerImportService.ReadExtensionString(extensions, key)` — liest einen OpenAPI-Erweiterungswert als `string?`; gibt `null` zurück, wenn der Schlüssel fehlt oder der Wert kein String ist
+- `ImportDiff.BearerTokens` (`IDictionary<string, string>`) — transportiert die Token-Werte zwischen `ImportAsync` und `ApplyDiffAsync`
+
+### 4. Diff berechnen
+
+`ImportDiffCalculator.Calculate(existing, imported)` vergleicht bestehende und importierte Endpunkte. `ImportDiffCalculator.HasChanged` berücksichtigt jetzt auch `PreRequestScript` und `PostRequestScript`. `ImportDiffCalculator.MergeExistingIdentity` überträgt diese Felder vom importierten Endpunkt auf den zusammengeführten Eintrag (einschließlich `null`-Werte).
+
+Beteiligte Komponenten:
+- `ImportDiffCalculator.Calculate` — Diff-Berechnung
+- `ImportDiffCalculator.HasChanged` — Änderungserkennung inkl. Skriptfelder
+- `ImportDiffCalculator.MergeExistingIdentity` — Zusammenführung mit bestehender Identität
+
+Das lokale Bearer-Token-Dictionary wird als `ImportDiff.BearerTokens` in das zurückgegebene `ImportDiff` übernommen.
+
+### 5. Diff anwenden
+
+Die UI ruft `ISwaggerImportService.ApplyDiffAsync(diff)` auf. Für neue und geänderte Endpunkte werden zunächst die Datenbankoperationen ausgeführt (`IEndpointRepository.AddEndpointAsync` / `UpdateEndpointAsync`). Anschließend wird `SaveBearerTokenIfPresent` aufgerufen:
+
+- `endpoint.AuthenticationType == BearerToken` → Schlüssel `"{Method}:{RelativePath}"` in `ImportDiff.BearerTokens` nachschlagen → `ICredentialService.SavePassword(credentialTarget, "", tokenValue)` aufrufen.
+- Fehler beim Credential-Zugriff werden per `_logger.LogWarning` geloggt und unterbrechen den Import nicht.
+- Der `credentialTarget` wird durch `CredentialTargetHelper.Build(applicationId, AuthenticationType.BearerToken)` erzeugt.
+
+Beteiligte Komponenten:
+- `SwaggerImportService.ApplyDiffAsync` — Persistierung und Credential-Ablage
+- `SwaggerImportService.SaveBearerTokenIfPresent` — private Hilfsmethode für Credential-Speicherung
+- `IEndpointRepository.AddEndpointAsync` / `UpdateEndpointAsync` — Datenbankoperationen
+- `ICredentialService.SavePassword` — Ablage im Windows Credential Manager
+- `CredentialTargetHelper.Build` — Schlüsselbildung für den Credential Manager
 
 ---
 
@@ -123,24 +253,71 @@ Beteiligte Komponenten:
 
 ```mermaid
 flowchart TD
-    A[OnParametersSetAsync] --> B[LoadModelFromParameter]
-    B --> C[_queryParameters aus Endpoint.QueryParameters befüllen]
-    C --> D[ExtractAndStripQueryString]
-    D --> E{RelativePath enthält ?}
-    E -- Ja --> F[Query-String abtrennen, Einträge als IsPathParameter=false hinzufügen]
-    F --> G[SyncPathParameters]
-    E -- Nein --> G
-    G --> H{Platzhalter in RelativePath}
-    H -- Neue --> I[QueryParamEntry IsPathParameter=true einfügen]
-    H -- Entfernte --> J[QueryParamEntry entfernen]
-    H -- Unveränderte --> K[Wert beibehalten]
-    I --> L[Render: ResolveDisplayUrl]
-    J --> L
-    K --> L
+    A[SendRequestAsync] --> B[ExecuteAsync - callDepth prüfen]
+    B --> C{callDepth >= 2?}
+    C -- Ja --> D[Fehler: Rekursionsschutz]
+    C -- Nein --> E{PreRequestScript?}
+    E -- Ja --> F[ScriptContext aufbauen]
+    F --> G[EndpointScriptRunner.ExecuteAsync Pre]
+    G --> H{Success?}
+    H -- Nein --> I[Fehler zurückgeben - kein HTTP]
+    H -- Ja --> J[BuildRequest mit aufgelösten Variablen]
+    E -- Nein --> J
+    J --> K[HTTP-Request senden]
+    K --> L{PostRequestScript?}
+    L -- Ja --> M[ScriptResponseData befüllen]
+    M --> N[EndpointScriptRunner.ExecuteAsync Post]
+    N --> O{Success?}
+    O -- Nein --> P[ErrorMessage ergänzen]
+    P --> Q[EndpointExecutionResult zurückgeben]
+    O -- Ja --> Q
+    L -- Nein --> Q
 
-    M[OnPathBlur] --> D
-    N[SendRequestAsync] --> O[BuildRequest: Platzhalter ersetzen, Query-String anhängen]
-    O --> P[HTTP-Anfrage senden]
+    G2[sz.execute in Skript] --> R[ExecuteEndpoint-Callback]
+    R --> S[GetEndpointByNameAsync]
+    S --> T{Eindeutiger Treffer?}
+    T -- Nein --> U[Fehler]
+    T -- Ja --> B
+
+    G3[sz.environment.set in Skript] --> V{ActiveEnvironment != null?}
+    V -- Nein --> W[Nur In-Memory aktualisieren]
+    V -- Ja --> X[SetActiveEnvironment - In-Memory]
+    X --> Y[UpdateVariableAsync - Datenbank]
+    Y --> Z[NotifyEnvironmentChangedAsync - SignalR]
+    Y -- Exception --> AA[ScriptExecutionResult - Success=false]
+    Z -- Exception --> AA
+```
+
+---
+
+## Diagramm: Swagger-Import
+
+```mermaid
+flowchart TD
+    A[ImportAsync] --> B{HTTP-Fehler?}
+    B -- Ja --> C[ImportDiff mit ErrorMessage]
+    B -- Nein --> D[OpenApiJsonReader.ReadAsync]
+    D --> E{Parsing-Fehler?}
+    E -- Ja --> C
+    E -- Nein --> F[Für jede OpenApiOperation]
+    F --> G[Endpoint erzeugen]
+    G --> H[ReadExtensionString x-sz-pre-request-script]
+    H --> I[ReadExtensionString x-sz-post-request-script]
+    I --> J{x-sz-bearer-token vorhanden?}
+    J -- Ja --> K[AuthenticationType = BearerToken; bearerTokens-Dict füllen]
+    J -- Nein --> L[ImportDiffCalculator.Calculate]
+    K --> L
+    L --> M[ImportDiff mit BearerTokens zurückgeben]
+    M --> N[ApplyDiffAsync]
+    N --> O[AddEndpointAsync / UpdateEndpointAsync]
+    O --> P{AuthenticationType = BearerToken?}
+    P -- Ja --> Q[SaveBearerTokenIfPresent]
+    Q --> R{Credential-Fehler?}
+    R -- Ja --> S[LogWarning - Import fortsetzen]
+    R -- Nein --> T[ICredentialService.SavePassword]
+    P -- Nein --> U[Nächster Endpunkt]
+    T --> U
+    S --> U
 ```
 
 ---
@@ -149,4 +326,10 @@ flowchart TD
 
 - `SaveAsync()` fängt `DbUpdateConcurrencyException` und zeigt den `ConcurrencyWarningDialog`.
 - `ExecuteAsync()` fängt allgemeine Ausnahmen und gibt ein `EndpointExecutionResult` mit `Success = false` und `ErrorMessage` zurück.
+- Pre-Skript-Fehler (Syntaxfehler, Runtime-Exception, Timeout) verhindern den HTTP-Request; `ErrorMessage` enthält die Fehlerbeschreibung.
+- Post-Skript-Fehler hängen die Fehlermeldung an ein ansonsten vollständiges `EndpointExecutionResult` an.
+- `EndpointScriptRunner` begrenzt die Skriptlaufzeit auf `ScriptTimeoutMs = 5000 ms` und den Arbeitsspeicher auf 4 MB.
+- `sz.environment.set()` propagiert Exceptions aus `UpdateVariableAsync` oder `NotifyEnvironmentChangedAsync` ohne Behandlung; das Skript schlägt damit fehl und das `EndpointExecutionResult` enthält die Fehlermeldung.
 - Einträge mit leerem `Key` werden in `BuildRequest()` und in `ResolveDisplayUrl()` übersprungen.
+- Import-Fehler beim Laden oder Parsen des Swagger-JSONs erzeugen ein `ImportDiff { ErrorMessage = ... }` und verhindern jede weitere Verarbeitung.
+- Fehler beim Schreiben in den Windows Credential Manager werden per `_logger.LogWarning` protokolliert; die restlichen Endpunkte des Imports werden trotzdem persistiert.

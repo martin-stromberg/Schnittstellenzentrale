@@ -10,4 +10,5 @@ public interface ISystemEnvironmentRepository
     Task<SystemEnvironment> AddAsync(SystemEnvironment systemEnvironment);
     Task<SystemEnvironment> UpdateAsync(SystemEnvironment systemEnvironment);
     Task DeleteAsync(int id);
+    Task UpdateVariableAsync(int environmentId, string name, string value);
 }

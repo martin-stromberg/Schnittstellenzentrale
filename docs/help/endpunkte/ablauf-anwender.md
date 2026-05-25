@@ -44,7 +44,18 @@ Tragen Sie in der Spalte **Wert** die gewünschten Werte ein. Verlassen Sie das 
 
 > **Hinweis:** Bei Pfad-Platzhaltern wird der eingetragene Wert in den Pfad eingebaut. Bei leerem Wert bleibt der Platzhalter leer in der angezeigten URL.
 
-### 6. Anfrage senden
+### 6. Skripte eingeben (optional)
+
+Wenn Sie vor oder nach dem HTTP-Request JavaScript-Code ausführen möchten, wechseln Sie zu einem der Skript-Tabs:
+
+- **Pre-Request-Skript**: Wird vor dem Senden ausgeführt. Über `sz.environment.set(name, value)` können Sie Umgebungsvariablen setzen, die dann in der `{{...}}`-Platzhalterauflösung des Requests verwendet werden. Ist eine Systemumgebung aktiv, wird die Änderung dauerhaft in der Datenbank gespeichert.
+- **Post-Request-Skript**: Wird nach dem Empfangen der Antwort ausgeführt. Über `sz.response.body.asJson()` können Sie die Antwort auswerten und z. B. ein Token in eine Umgebungsvariable schreiben. `sz.environment.set()` speichert den Wert ebenfalls dauerhaft, wenn eine Systemumgebung aktiv ist.
+
+Geben Sie den JavaScript-Code in das mehrzeilige Eingabefeld ein. Sie können den Code direkt eintippen — ein Syntaxcheck findet erst zur Laufzeit statt.
+
+> **Hinweis:** Das `sz`-Objekt stellt folgende Funktionen bereit: `sz.environment.get(name)`, `sz.environment.set(name, value)`, `sz.request.*`, `sz.response.*` (nur im Post-Skript) und `sz.execute(name)` zum Aufrufen anderer Endpunkte.
+
+### 7. Anfrage senden
 
 Klicken Sie auf **Anfrage senden**. Wenn noch ungespeicherte Änderungen vorhanden sind, werden diese automatisch gespeichert, bevor die Anfrage abgeschickt wird.
 
@@ -52,7 +63,7 @@ Die tatsächlich gesendete URL enthält:
 - Den Pfad mit allen ersetzten Platzhaltern.
 - Alle regulären Query-Parameter als `?key=value`-Anhang.
 
-### 7. Ergebnis prüfen
+### 8. Ergebnis prüfen
 
 Unterhalb der Endpunkt-Seite erscheint der Antwortbereich mit:
 - HTTP-Statuscode
@@ -61,8 +72,10 @@ Unterhalb der Endpunkt-Seite erscheint der Antwortbereich mit:
 - Antwort-Body (Register **Body**)
 - Antwort-Header (Register **Headers**)
 
+Wurde ein Skript ausgeführt und ist dabei ein Fehler aufgetreten, erscheint eine Fehlermeldung im Antwortbereich. Bei einem Pre-Skript-Fehler wird keine Antwort angezeigt, da der HTTP-Request nicht gesendet wurde.
+
 ---
 
 ## Ergebnis
 
-Nach dem Senden sehen Sie den HTTP-Statuscode und den Antwort-Body der Anfrage. Der gespeicherte Endpunkt enthält den bereinigten Pfad (ohne Query-String) sowie alle Parameter als separate Einträge.
+Nach dem Senden sehen Sie den HTTP-Statuscode und den Antwort-Body der Anfrage. Der gespeicherte Endpunkt enthält den bereinigten Pfad (ohne Query-String) sowie alle Parameter als separate Einträge. Enthält der Endpunkt Skripte, werden diese bei jedem Senden automatisch ausgeführt.

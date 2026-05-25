@@ -35,5 +35,7 @@ internal static class ModelUpdateExtensions
         existing.BodyMode = source.BodyMode;
         existing.AuthenticationType = source.AuthenticationType;
         existing.EndpointGroupId = source.EndpointGroupId;
+        existing.PreRequestScript = source.PreRequestScript;
+        existing.PostRequestScript = source.PostRequestScript;
     }
 }

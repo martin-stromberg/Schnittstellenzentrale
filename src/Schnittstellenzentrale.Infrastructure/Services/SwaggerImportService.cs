@@ -1,34 +1,40 @@
-#pragma warning disable CS1591
 using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi.Reader;
+using Schnittstellenzentrale.Core.Enums;
+using Schnittstellenzentrale.Core.Helpers;
 using Schnittstellenzentrale.Core.Interfaces;
 using Schnittstellenzentrale.Core.Models;
+using Schnittstellenzentrale.Infrastructure.Helpers;
 
 namespace Schnittstellenzentrale.Infrastructure.Services;
 
+/// <summary>Importiert Endpunkte aus einer Swagger/OpenAPI-Definition und berechnet den Diff zum bestehenden Bestand.</summary>
 public class SwaggerImportService : ISwaggerImportService
 {
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly IEndpointRepository _endpointRepository;
+    private readonly ICredentialService _credentialService;
     private readonly ILogger<SwaggerImportService> _logger;
 
-    public SwaggerImportService(IHttpClientFactory httpClientFactory, IEndpointRepository endpointRepository, ILogger<SwaggerImportService> logger)
+    /// <summary>Initialisiert eine neue Instanz von <see cref="SwaggerImportService"/>.</summary>
+    public SwaggerImportService(IHttpClientFactory httpClientFactory, IEndpointRepository endpointRepository, ICredentialService credentialService, ILogger<SwaggerImportService> logger)
     {
         _httpClientFactory = httpClientFactory;
         _endpointRepository = endpointRepository;
+        _credentialService = credentialService;
         _logger = logger;
     }
 
+    /// <inheritdoc/>
     public async Task<ImportDiff> ImportAsync(Core.Models.Application application)
     {
         if (string.IsNullOrEmpty(application.InterfaceUrl))
             return new ImportDiff();
 
-        Stream? fetchedStream;
+        Stream fetchedStream;
         try
         {
-            var client = _httpClientFactory.CreateClient();
-            fetchedStream = await client.GetStreamAsync(application.InterfaceUrl);
+            fetchedStream = await FetchSwaggerStreamAsync(application.InterfaceUrl);
         }
         catch (HttpRequestException ex)
         {
@@ -37,64 +43,112 @@ public class SwaggerImportService : ISwaggerImportService
         }
 
         await using var stream = fetchedStream;
-        var reader = new OpenApiJsonReader();
-        var result = await reader.ReadAsync(stream, null, new OpenApiReaderSettings(), default);
-        var document = result.Document;
-        var diagnostics = result.Diagnostic;
-
-        if (diagnostics.Errors.Any())
+        var (document, parseError) = await ParseSwaggerDocumentAsync(stream);
+        if (document == null)
         {
-            var errors = string.Join("; ", diagnostics.Errors.Select(e => e.Message));
-            _logger.LogWarning("Swagger-Import Parsing-Fehler für Anwendung {ApplicationId}: {Errors}", application.Id, errors);
-            return new ImportDiff { ErrorMessage = $"Fehler beim Parsen der Swagger-Definition: {errors}" };
+            _logger.LogWarning("Swagger-Import Parsing-Fehler für Anwendung {ApplicationId}", application.Id);
+            return parseError!;
         }
 
-        var importedEndpoints = new List<Core.Models.Endpoint>();
+        var (importedEndpoints, bearerTokens) = MapToEndpoints(document, application.Id);
+
+        var existingEndpoints = await _endpointRepository.GetEndpointsAsync(application.Id);
+        return ImportDiffCalculator.Calculate(existingEndpoints, importedEndpoints).WithBearerTokens(bearerTokens);
+    }
+
+    private async Task<Stream> FetchSwaggerStreamAsync(string url)
+    {
+        var client = _httpClientFactory.CreateClient();
+        return await client.GetStreamAsync(url);
+    }
+
+    private static async Task<(Microsoft.OpenApi.OpenApiDocument? document, ImportDiff? error)> ParseSwaggerDocumentAsync(Stream stream)
+    {
+        var reader = new OpenApiJsonReader();
+        var result = await reader.ReadAsync(stream, null, new OpenApiReaderSettings(), default);
+        var diagnostics = result.Diagnostic;
+
+        if (diagnostics?.Errors.Any() == true)
+        {
+            var errors = string.Join("; ", diagnostics.Errors.Select(e => e.Message));
+            return (null, new ImportDiff { ErrorMessage = $"Fehler beim Parsen der Swagger-Definition: {errors}" });
+        }
+
+        return (result.Document, null);
+    }
+
+    private static (List<Core.Models.Endpoint> endpoints, Dictionary<string, string> bearerTokens) MapToEndpoints(
+        Microsoft.OpenApi.OpenApiDocument document, int applicationId)
+    {
+        var endpoints = new List<Core.Models.Endpoint>();
+        var bearerTokens = new Dictionary<string, string>();
 
         foreach (var path in document.Paths)
         {
-            foreach (var operation in path.Value.Operations)
+            foreach (var operation in path.Value.Operations ?? [])
             {
-                var method = MapHttpMethod(operation.Key.ToString());
+                var method = SwaggerOperationHelper.MapHttpMethod(operation.Key.ToString());
                 var endpoint = new Core.Models.Endpoint
                 {
                     Name = operation.Value.OperationId ?? $"{operation.Key} {path.Key}",
                     Method = method,
                     RelativePath = path.Key,
-                    ApplicationId = application.Id
+                    ApplicationId = applicationId,
+                    PreRequestScript = SwaggerOperationHelper.ReadExtensionString(operation.Value.Extensions, "x-sz-pre-request-script"),
+                    PostRequestScript = SwaggerOperationHelper.ReadExtensionString(operation.Value.Extensions, "x-sz-post-request-script")
                 };
-                importedEndpoints.Add(endpoint);
+
+                var bearerToken = SwaggerOperationHelper.ReadExtensionString(operation.Value.Extensions, "x-sz-bearer-token");
+                if (!string.IsNullOrEmpty(bearerToken))
+                {
+                    endpoint.AuthenticationType = AuthenticationType.BearerToken;
+                    bearerTokens[EndpointKeyHelper.BuildKey(endpoint)] = bearerToken;
+                }
+
+                endpoints.Add(endpoint);
             }
         }
 
-        var existingEndpoints = await _endpointRepository.GetEndpointsAsync(application.Id);
-        return ImportDiffCalculator.Calculate(existingEndpoints, importedEndpoints);
+        return (endpoints, bearerTokens);
     }
 
+    /// <inheritdoc/>
     public async Task ApplyDiffAsync(ImportDiff diff)
     {
         foreach (var endpoint in diff.NewEndpoints)
+        {
             await _endpointRepository.AddEndpointAsync(endpoint);
+            SaveBearerTokenIfPresent(endpoint, diff);
+        }
 
         foreach (var endpoint in diff.ChangedEndpoints)
+        {
             await _endpointRepository.UpdateEndpointAsync(endpoint);
+            SaveBearerTokenIfPresent(endpoint, diff);
+        }
 
         foreach (var endpoint in diff.RemovedEndpoints)
             await _endpointRepository.DeleteEndpointAsync(endpoint.Id);
     }
 
-    private Core.Enums.HttpMethod MapHttpMethod(string method)
+    private void SaveBearerTokenIfPresent(Core.Models.Endpoint endpoint, ImportDiff diff)
     {
-        return method.ToUpperInvariant() switch
+        if (endpoint.AuthenticationType != AuthenticationType.BearerToken)
+            return;
+
+        var key = EndpointKeyHelper.BuildKey(endpoint);
+        if (!diff.BearerTokens.TryGetValue(key, out var tokenValue))
+            return;
+
+        try
         {
-            "GET" => Core.Enums.HttpMethod.GET,
-            "POST" => Core.Enums.HttpMethod.POST,
-            "PUT" => Core.Enums.HttpMethod.PUT,
-            "DELETE" => Core.Enums.HttpMethod.DELETE,
-            "PATCH" => Core.Enums.HttpMethod.PATCH,
-            "HEAD" => Core.Enums.HttpMethod.HEAD,
-            "OPTIONS" => Core.Enums.HttpMethod.OPTIONS,
-            _ => throw new ArgumentOutOfRangeException(nameof(method), method, "Unbekannte HTTP-Methode in Swagger-Definition.")
-        };
+            var credentialTarget = CredentialTargetHelper.Build(endpoint.ApplicationId, AuthenticationType.BearerToken);
+            _credentialService.SavePassword(credentialTarget, string.Empty, tokenValue);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Credential Manager konnte für Endpunkt {Key} nicht beschrieben werden.", key);
+        }
     }
+
 }

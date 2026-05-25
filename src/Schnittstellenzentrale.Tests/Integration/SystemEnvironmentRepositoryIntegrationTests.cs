@@ -151,4 +151,54 @@ public class SystemEnvironmentRepositoryIntegrationTests
             Assert.Equal("neu", result.Variables.First().Value);
         });
     }
+
+    /// <summary>UpdateVariableAsync_ExistingVariable_UpdatesValue</summary>
+    [Fact]
+    public async Task UpdateVariableAsync_ExistingVariable_UpdatesValue()
+    {
+        await ExecuteWithContextAsync(async repo =>
+        {
+            var environment = new SystemEnvironment
+            {
+                Name = "TestUmgebung",
+                Mode = StorageMode.Team,
+                Variables = [new EnvironmentVariable { Name = "host", Value = "old", IsValueMasked = true }]
+            };
+            var added = await repo.AddAsync(environment);
+
+            await repo.UpdateVariableAsync(added.Id, "host", "new");
+
+            var result = await repo.GetByIdAsync(added.Id);
+            Assert.NotNull(result);
+            var variable = result!.Variables.FirstOrDefault(v => v.Name == "host");
+            Assert.NotNull(variable);
+            Assert.Equal("new", variable!.Value);
+            Assert.True(variable.IsValueMasked);
+        });
+    }
+
+    /// <summary>UpdateVariableAsync_NewVariable_InsertsVariable</summary>
+    [Fact]
+    public async Task UpdateVariableAsync_NewVariable_InsertsVariable()
+    {
+        await ExecuteWithContextAsync(async repo =>
+        {
+            var environment = new SystemEnvironment
+            {
+                Name = "TestUmgebung",
+                Mode = StorageMode.Team,
+                Variables = []
+            };
+            var added = await repo.AddAsync(environment);
+
+            await repo.UpdateVariableAsync(added.Id, "newvar", "newvalue");
+
+            var result = await repo.GetByIdAsync(added.Id);
+            Assert.NotNull(result);
+            Assert.Single(result!.Variables);
+            var variable = result.Variables.First();
+            Assert.Equal("newvar", variable.Name);
+            Assert.Equal("newvalue", variable.Value);
+        });
+    }
 }

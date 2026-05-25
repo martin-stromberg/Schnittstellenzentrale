@@ -1,3 +1,4 @@
+using Schnittstellenzentrale.Core.Helpers;
 using Schnittstellenzentrale.Core.Models;
 
 namespace Schnittstellenzentrale.Infrastructure.Services;
@@ -55,13 +56,15 @@ internal static class ImportDiffCalculator
         return true;
     }
 
-    private static string BuildKey(Core.Models.Endpoint endpoint) => $"{endpoint.Method}:{endpoint.RelativePath}";
+    private static string BuildKey(Core.Models.Endpoint endpoint) => EndpointKeyHelper.BuildKey(endpoint);
 
     private static bool HasChanged(Core.Models.Endpoint existing, Core.Models.Endpoint imported)
     {
         return existing.Name != imported.Name
             || existing.Body != imported.Body
-            || existing.AuthenticationType != imported.AuthenticationType;
+            || existing.AuthenticationType != imported.AuthenticationType
+            || existing.PreRequestScript != imported.PreRequestScript
+            || existing.PostRequestScript != imported.PostRequestScript;
     }
 
     private static Core.Models.Endpoint MergeExistingIdentity(Core.Models.Endpoint existing, Core.Models.Endpoint imported)
@@ -78,7 +81,9 @@ internal static class ImportDiffCalculator
             EndpointGroupId = existing.EndpointGroupId,
             RowVersion = existing.RowVersion,
             Headers = existing.Headers,
-            QueryParameters = existing.QueryParameters
+            QueryParameters = existing.QueryParameters,
+            PreRequestScript = imported.PreRequestScript,
+            PostRequestScript = imported.PostRequestScript
         };
     }
 }

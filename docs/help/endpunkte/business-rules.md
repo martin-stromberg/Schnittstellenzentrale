@@ -83,3 +83,161 @@
 - Ein Endpunkt mit gespeichertem Query-String im Pfad wird beim nächsten Laden automatisch bereinigt; `_isDirty` wird dabei nicht gesetzt (keine Benutzeraktion nötig zum Speichern der Bereinigung).
 
 **Umsetzung:** `EndpointPage.LoadModelFromParameter()` und `EndpointPage.OnPathBlur()`.
+
+---
+
+## Pre-Skript-Fehler verhindert HTTP-Request
+
+**Beschreibung:** Wenn das Pre-Request-Skript fehlschlägt (Syntaxfehler, Runtime-Exception oder Timeout), wird der HTTP-Request nicht abgeschickt.
+
+**Bedingungen:**
+- `endpoint.PreRequestScript` ist nicht leer.
+- `ScriptExecutionResult.Success == false`.
+
+**Verhalten:**
+- `EndpointExecutionService.ExecuteAsync` gibt sofort `EndpointExecutionResult { Success = false, ErrorMessage = ... }` zurück.
+- Es wird keine HTTP-Anfrage gesendet.
+
+**Umsetzung:** `EndpointExecutionService.ExecuteAsync()` — schützt vor unbeabsichtigten Requests bei fehlerhaften Skripten.
+
+---
+
+## Post-Skript-Fehler erhält das HTTP-Ergebnis
+
+**Beschreibung:** Wenn das Post-Request-Skript fehlschlägt, bleibt das HTTP-Ergebnis vollständig erhalten; der Fehler wird nur als Ergänzung in `ErrorMessage` angezeigt.
+
+**Bedingungen:**
+- `endpoint.PostRequestScript` ist nicht leer.
+- `ScriptExecutionResult.Success == false`.
+
+**Verhalten:**
+- `EndpointExecutionResult.ErrorMessage` wird gesetzt oder per `\n` ergänzt.
+- `StatusCode`, `ResponseBody`, `ResponseHeaders`, `DurationMs` und `ResponseSizeBytes` bleiben unverändert.
+
+**Umsetzung:** `EndpointExecutionService.ExecuteAsync()` — das HTTP-Ergebnis soll auch bei Skript-Problemen auswertbar bleiben.
+
+---
+
+## Rekursionsschutz für `sz.execute()`
+
+**Beschreibung:** `sz.execute()` kann nicht beliebig tief rekursiv aufgerufen werden; ein Endpunkt darf im selben Aufrufbaum höchstens zweimal ausgeführt werden.
+
+**Bedingungen:**
+- Ein Skript ruft `sz.execute(name)` auf, und der Zielendpunkt ruft seinerseits `sz.execute()` mit demselben oder einem anderen Endpunkt auf.
+
+**Verhalten:**
+- Wenn `callDepth[id] >= 2`: Ausführung mit Fehler abgebrochen (`ErrorMessage` enthält Hinweis auf Rekursionsschutz).
+- Der `CallDepth`-Zähler lebt im `ScriptContext` (nicht als Instanzfeld), damit parallele Requests sich nicht gegenseitig beeinflussen.
+
+**Umsetzung:** `EndpointExecutionService.ExecuteAsync(endpoint, callDepth)` — verhindert Endlosrekursionen ohne globalen Zustand.
+
+---
+
+## Mehrdeutiger Endpunktname bei `sz.execute()` ergibt Fehler
+
+**Beschreibung:** Gibt es innerhalb einer Anwendung mehrere Endpunkte mit demselben Namen, schlägt `sz.execute()` mit einem Fehler fehl — es wird kein „erster Treffer"-Verhalten angewendet.
+
+**Bedingungen:**
+- `IEndpointRepository.GetEndpointByNameAsync(applicationId, name)` gibt mehr als einen Eintrag zurück.
+
+**Verhalten:**
+- `EndpointExecutionResult { Success = false, ErrorMessage = "... Mehrdeutiger Endpunktname ..." }` wird zurückgegeben.
+
+**Umsetzung:** `EndpointExecutionService.ExecuteEndpoint`-Callback — explizite Fehlerbehandlung vermeidet nicht-deterministisches Verhalten.
+
+---
+
+## `sz.environment.set()` persistiert bei aktiver Systemumgebung
+
+**Beschreibung:** `sz.environment.set(name, value)` aktualisiert die aktive Umgebung zunächst im Arbeitsspeicher und persistiert die Änderung anschließend gezielt in der Datenbank, sofern eine Systemumgebung aktiv ist. Ist keine Systemumgebung aktiv, erfolgt ausschließlich die In-Memory-Aktualisierung.
+
+**Bedingungen:**
+- Das Skript ruft `sz.environment.set(name, value)` auf.
+
+**Verhalten:**
+- In beiden Fällen: `IActiveEnvironmentService.SetActiveEnvironment` wird mit einer aktualisierten Kopie der `SystemEnvironment` aufgerufen; alle Blazor-Komponenten, die auf `OnActiveEnvironmentChanged` reagieren, werden neu gerendert.
+- Wenn `ActiveEnvironment != null` und `context.EnvironmentRepository != null`: `ISystemEnvironmentRepository.UpdateVariableAsync(environmentId, name, value)` wird blockierend aufgerufen (nur die eine geänderte Variable wird aktualisiert).
+- Nach erfolgreicher Persistierung: `ISignalRNotificationService.NotifyEnvironmentChangedAsync()` wird aufgerufen, damit verbundene Clients die Änderung sofort erhalten.
+- Wenn `ActiveEnvironment == null`: keine Datenbankoperation, die Änderung gilt nur für die Laufzeit des Requests.
+
+**Umsetzung:** `EndpointScriptRunner.BuildEnvironmentObject()` und `EndpointScriptRunner.PersistVariable()` — der gezielte Einzelvariablen-Update über `UpdateVariableAsync` verhindert, dass gleichzeitig laufende Änderungen anderer Clients durch ein vollständiges Überschreiben verloren gehen.
+
+---
+
+## `sz.environment.set()` überträgt IsValueMasked und Id aus bestehenden Variablen
+
+**Beschreibung:** Beim Neuaufbau der Variablenliste innerhalb von `sz.environment.set()` werden `Id` und `IsValueMasked` aus der bestehenden aktiven Umgebung für Variablen mit übereinstimmendem Namen übernommen.
+
+**Bedingungen:**
+- Das Skript ruft `sz.environment.set(name, value)` auf.
+- Die aktive Umgebung enthält bereits eine Variable mit demselben Namen.
+
+**Verhalten:**
+- Wenn eine Variable mit diesem Namen in `ActiveEnvironment.Variables` existiert: das neue `EnvironmentVariable`-Objekt erhält `Id = existing.Id` und `IsValueMasked = existing.IsValueMasked`.
+- Wenn keine Variable mit diesem Namen existiert (neue Variable): `Id = 0`, `IsValueMasked = false`.
+
+**Umsetzung:** `EndpointScriptRunner.BuildEnvironmentObject()` — `existing?.Id ?? 0` und `existing?.IsValueMasked ?? false` im LINQ-Select beim Aufbau von `variableList`.
+
+---
+
+## Fehler in `sz.environment.set()` lassen das Skript fehlschlagen
+
+**Beschreibung:** Wirft `UpdateVariableAsync` oder `NotifyEnvironmentChangedAsync` eine Exception, wird diese nicht still protokolliert, sondern propagiert — das Skript gilt als fehlgeschlagen.
+
+**Bedingungen:**
+- `UpdateVariableAsync` oder `NotifyEnvironmentChangedAsync` wirft eine Exception (z. B. Datenbankfehler, SignalR-Verbindungsfehler).
+
+**Verhalten:**
+- Die Exception wird aus `PersistVariable` heraus propagiert.
+- `EndpointScriptRunner.ExecuteAsync` fängt die Exception im äußeren `catch (Exception ex)` und gibt `ScriptExecutionResult { Success = false, ErrorMessage = "Skriptausführung fehlgeschlagen: ..." }` zurück.
+- Das `EndpointExecutionResult` enthält eine Fehlermeldung; bereits erfolgte In-Memory-Änderungen an der aktiven Umgebung bleiben erhalten.
+
+**Umsetzung:** `EndpointScriptRunner.PersistVariable()` — explizites Durchreichen der Exception verhindert inkonsistente Zustände (Datenbank nicht aktualisiert, aber Skript als erfolgreich gewertet).
+
+---
+
+## Swagger-Import: Erweiterungsfelder steuern Skripte und Authentifizierung
+
+**Beschreibung:** Beim Import einer Swagger/OpenAPI-Definition werden Skripte und `AuthenticationType` ausschließlich über die OpenAPI-Erweiterungsfelder der einzelnen Operationen gesteuert — es gibt keine hartcodierten Sonderfälle nach Pfad, Endpunktname oder Position in der Swagger-Definition.
+
+**Bedingungen:**
+- `operation.Value.Extensions` enthält einen Eintrag mit dem Schlüssel `x-sz-pre-request-script`, `x-sz-post-request-script` oder `x-sz-bearer-token`.
+
+**Verhalten:**
+- `x-sz-pre-request-script`: Wert wird auf `Endpoint.PreRequestScript` gesetzt.
+- `x-sz-post-request-script`: Wert wird auf `Endpoint.PostRequestScript` gesetzt.
+- `x-sz-bearer-token`: `Endpoint.AuthenticationType` wird auf `BearerToken` gesetzt; der Wert wird im Windows Credential Manager abgelegt (Schlüssel via `CredentialTargetHelper.Build`).
+- Fehlender oder leerer Wert: Das jeweilige Feld bleibt auf `null` bzw. `None`; kein Credential-Eintrag wird angelegt.
+
+**Umsetzung:** `SwaggerImportService.ReadExtensionString(extensions, key)` — liest einen Erweiterungswert als `string?`; gibt `null` zurück, wenn der Schlüssel fehlt oder der Wert kein String ist.
+
+---
+
+## Swagger-Import: Re-Import überschreibt manuell gesetzte Skripte und AuthenticationType
+
+**Beschreibung:** Beim erneuten Import werden `PreRequestScript`, `PostRequestScript` und `AuthenticationType` stets durch die Werte aus der aktuellen Swagger-Definition ersetzt. Fehlen die Erweiterungsfelder im Re-Import, werden die Felder auf ihre Standardwerte (`null` bzw. `None`) zurückgesetzt — auch wenn sie zuvor manuell in der UI gesetzt wurden.
+
+**Bedingungen:**
+- Ein Endpunkt existiert bereits im Bestand.
+- Der Re-Import liefert andere Werte für `PreRequestScript`, `PostRequestScript` oder `AuthenticationType`.
+
+**Verhalten:**
+- Geänderte Endpunkte landen in `ImportDiff.ChangedEndpoints` und werden via `IEndpointRepository.UpdateEndpointAsync` persistiert.
+- Fehlende Erweiterungsfelder im Import setzen die Felder explizit auf `null` / `None` — das entspricht dem bestehenden Verhalten für `Name` und `Body`.
+
+**Umsetzung:** `ImportDiffCalculator.HasChanged` und `ImportDiffCalculator.MergeExistingIdentity` — explizites Überschreib-Verhalten verhindert Silent-Divergenz zwischen Swagger-Definition und gespeichertem Endpunkt.
+
+---
+
+## Swagger-Import: Credential-Fehler brechen den Import nicht ab
+
+**Beschreibung:** Wenn der Windows Credential Manager beim Import nicht beschrieben werden kann, werden die betroffenen Bearer-Tokens nicht gespeichert — der Rest des Imports (Anlegen/Aktualisieren der Endpunkte) bleibt davon unberührt.
+
+**Bedingungen:**
+- `ICredentialService.SavePassword` wirft eine Exception (z. B. kein Zugriff auf den Credential Manager).
+
+**Verhalten:**
+- Der Fehler wird per `_logger.LogWarning` protokolliert.
+- Die Ausführung von `ApplyDiffAsync` wird fortgesetzt; alle weiteren Endpunkte werden normal verarbeitet.
+
+**Umsetzung:** `SwaggerImportService.SaveBearerTokenIfPresent` — try/catch um `ICredentialService.SavePassword`; der Import-Vorgang ist damit robust gegenüber Credential-Manager-Fehlern.

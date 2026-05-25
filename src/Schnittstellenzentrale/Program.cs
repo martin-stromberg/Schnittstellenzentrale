@@ -46,6 +46,7 @@ builder.Services.AddSwaggerGen(c =>
     });
     c.OperationFilter<SecurityOperationFilter>();
     c.OperationFilter<ContextHeadersOperationFilter>();
+    c.OperationFilter<SzExtensionsOperationFilter>();
     var xmlPath = Path.Combine(AppContext.BaseDirectory, "Schnittstellenzentrale.xml");
     if (File.Exists(xmlPath))
         c.IncludeXmlComments(xmlPath);
@@ -70,6 +71,7 @@ builder.Services.AddScoped<IActiveEnvironmentService, ActiveEnvironmentService>(
 builder.Services.AddScoped<IStorageModeService, StorageModeService>();
 builder.Services.AddScoped<IThemeService, ThemeService>();
 builder.Services.AddSingleton<IHealthCheckService, HealthCheckService>();
+builder.Services.AddScoped<IEndpointScriptRunner, EndpointScriptRunner>();
 builder.Services.AddScoped<IEndpointExecutionService, EndpointExecutionService>();
 builder.Services.AddScoped<ISwaggerImportService, SwaggerImportService>();
 builder.Services.AddScoped<IODataImportService, ODataImportService>();
