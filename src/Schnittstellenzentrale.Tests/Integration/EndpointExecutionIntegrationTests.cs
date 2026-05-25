@@ -97,7 +97,9 @@ public class EndpointExecutionIntegrationTests : IAsyncLifetime
             credentialServiceMock.Object,
             activeEnvMock.Object,
             scriptRunnerMock.Object,
-            endpointRepoMock.Object);
+            endpointRepoMock.Object,
+            new Mock<ISystemEnvironmentRepository>().Object,
+            new Mock<ISignalRNotificationService>().Object);
 
         // Act
         var result = await executionService.ExecuteAsync(endpoint);

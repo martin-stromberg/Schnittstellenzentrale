@@ -17,6 +17,7 @@ namespace Schnittstellenzentrale.Infrastructure.Services;
 public class EndpointExecutionService : IEndpointExecutionService
 {
     private const string DefaultContentType = "application/json";
+    private const int MaxCallDepth = 2;
     private static readonly Regex DoubleBracePlaceholderRegex = new(@"\{\{([^}]+)\}\}", RegexOptions.Compiled);
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly IHealthCheckService _healthCheckService;
@@ -24,6 +25,8 @@ public class EndpointExecutionService : IEndpointExecutionService
     private readonly IActiveEnvironmentService _activeEnvironmentService;
     private readonly IEndpointScriptRunner _scriptRunner;
     private readonly IEndpointRepository _endpointRepository;
+    private readonly ISystemEnvironmentRepository _environmentRepository;
+    private readonly ISignalRNotificationService _signalRNotificationService;
 
     /// <summary>Initialisiert eine neue Instanz des <see cref="EndpointExecutionService"/>.</summary>
     public EndpointExecutionService(
@@ -32,7 +35,9 @@ public class EndpointExecutionService : IEndpointExecutionService
         ICredentialService credentialService,
         IActiveEnvironmentService activeEnvironmentService,
         IEndpointScriptRunner scriptRunner,
-        IEndpointRepository endpointRepository)
+        IEndpointRepository endpointRepository,
+        ISystemEnvironmentRepository environmentRepository,
+        ISignalRNotificationService signalRNotificationService)
     {
         _httpClientFactory = httpClientFactory;
         _healthCheckService = healthCheckService;
@@ -40,6 +45,8 @@ public class EndpointExecutionService : IEndpointExecutionService
         _activeEnvironmentService = activeEnvironmentService;
         _scriptRunner = scriptRunner;
         _endpointRepository = endpointRepository;
+        _environmentRepository = environmentRepository;
+        _signalRNotificationService = signalRNotificationService;
     }
 
     /// <inheritdoc/>
@@ -58,7 +65,7 @@ public class EndpointExecutionService : IEndpointExecutionService
             };
 
         callDepth.TryGetValue(endpoint.Id, out var currentDepth);
-        if (currentDepth >= 2)
+        if (currentDepth >= MaxCallDepth)
             return new EndpointExecutionResult
             {
                 Success = false,
@@ -147,7 +154,9 @@ public class EndpointExecutionService : IEndpointExecutionService
             Request = requestData,
             Response = response,
             CallDepth = callDepth,
-            ExecuteEndpoint = name => ExecuteEndpointByNameAsync(endpoint.ApplicationId, name, callDepth)
+            ExecuteEndpoint = name => ExecuteEndpointByNameAsync(endpoint.ApplicationId, name, callDepth),
+            EnvironmentRepository = _environmentRepository,
+            SignalRNotificationService = _signalRNotificationService
         };
     }
 

@@ -1,13 +1,13 @@
-using System.Text.Json.Nodes;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi;
 using Schnittstellenzentrale.Core.Enums;
+using Schnittstellenzentrale.Core.Helpers;
 using Schnittstellenzentrale.Core.Interfaces;
 using Schnittstellenzentrale.Core.Models;
+using Schnittstellenzentrale.Infrastructure.Helpers;
 using Swashbuckle.AspNetCore.Swagger;
-using CoreHttpMethod = Schnittstellenzentrale.Core.Enums.HttpMethod;
 using Endpoint = Schnittstellenzentrale.Core.Models.Endpoint;
 
 namespace Schnittstellenzentrale;
@@ -52,51 +52,8 @@ public class SystemEndpointSyncService : BackgroundService
             try
             {
                 var swaggerProvider = scope.ServiceProvider.GetRequiredService<ISwaggerProvider>();
-                var document = swaggerProvider.GetSwagger("v1");
-
-                var importedEndpoints = new List<Endpoint>();
-                var bearerTokens = new Dictionary<string, string>();
-                foreach (var path in document.Paths)
-                    foreach (var operation in path.Value.Operations)
-                    {
-                        var method = MapHttpMethod(operation.Key.ToString());
-                        var bearerTokenValue = ReadExtensionString(operation.Value?.Extensions, "x-sz-bearer-token");
-                        var authType = string.IsNullOrEmpty(bearerTokenValue)
-                            ? DetectAuthenticationType(operation.Value)
-                            : AuthenticationType.BearerToken;
-                        if (!string.IsNullOrEmpty(bearerTokenValue))
-                            bearerTokens[$"{method}:{path.Key}"] = bearerTokenValue;
-                        importedEndpoints.Add(new Endpoint
-                        {
-                            Name = operation.Value?.OperationId ?? $"{operation.Key} {path.Key}",
-                            Method = method,
-                            RelativePath = path.Key,
-                            ApplicationId = systemApp.Id,
-                            AuthenticationType = authType,
-                            PreRequestScript = ReadExtensionString(operation.Value?.Extensions, "x-sz-pre-request-script"),
-                            PostRequestScript = ReadExtensionString(operation.Value?.Extensions, "x-sz-post-request-script"),
-                            Headers = BuildDefaultHeaders(operation.Value)
-                        });
-                    }
-
                 var endpointRepository = scope.ServiceProvider.GetRequiredService<IEndpointRepository>();
-                var existingEndpoints = await endpointRepository.GetEndpointsAsync(systemApp.Id);
-                var existingGroups = await endpointRepository.GetEndpointGroupsAsync(systemApp.Id);
-                var groupLookup = existingGroups.ToDictionary(g => (g.Name, g.ParentGroupId));
-
-                var existingKeys = existingEndpoints.Select(BuildKey).ToHashSet();
-                var importedKeys = importedEndpoints.Select(BuildKey).ToHashSet();
-
-                foreach (var endpoint in importedEndpoints.Where(e => !existingKeys.Contains(BuildKey(e))))
-                {
-                    endpoint.EndpointGroupId = await ResolveGroupIdAsync(
-                        endpoint.RelativePath, systemApp.Id, endpointRepository, groupLookup);
-                    await endpointRepository.AddEndpointAsync(endpoint);
-                    SaveBearerTokenIfPresent(endpoint, bearerTokens, systemApp.Id);
-                }
-
-                foreach (var endpoint in existingEndpoints.Where(e => !importedKeys.Contains(BuildKey(e))))
-                    await endpointRepository.DeleteEndpointAsync(endpoint.Id);
+                await SyncEndpointsAsync(swaggerProvider, endpointRepository, systemApp);
             }
             catch (Exception ex)
             {
@@ -107,6 +64,73 @@ public class SystemEndpointSyncService : BackgroundService
         {
             _logger.LogError(ex, "Unerwarteter Fehler beim Endpunktabgleich.");
         }
+    }
+
+    private async Task SyncEndpointsAsync(ISwaggerProvider swaggerProvider, IEndpointRepository endpointRepository, Application systemApp)
+    {
+        var document = swaggerProvider.GetSwagger("v1");
+        var (importedEndpoints, bearerTokens) = BuildImportedEndpoints(document, systemApp.Id);
+
+        var existingEndpoints = await endpointRepository.GetEndpointsAsync(systemApp.Id);
+        var existingGroups = await endpointRepository.GetEndpointGroupsAsync(systemApp.Id);
+        var groupLookup = existingGroups.ToDictionary(g => (g.Name, g.ParentGroupId));
+
+        await ApplyDiffAsync(importedEndpoints, existingEndpoints, bearerTokens, systemApp.Id, endpointRepository, groupLookup);
+    }
+
+    private (List<Endpoint> Endpoints, Dictionary<string, string> BearerTokens) BuildImportedEndpoints(OpenApiDocument document, int applicationId)
+    {
+        var importedEndpoints = new List<Endpoint>();
+        var bearerTokens = new Dictionary<string, string>();
+
+        foreach (var path in document.Paths)
+            foreach (var operation in path.Value.Operations)
+            {
+                var method = SwaggerOperationHelper.MapHttpMethod(operation.Key.ToString());
+                var bearerTokenValue = SwaggerOperationHelper.ReadExtensionString(operation.Value?.Extensions, "x-sz-bearer-token");
+                var authType = string.IsNullOrEmpty(bearerTokenValue)
+                    ? DetectAuthenticationType(operation.Value)
+                    : AuthenticationType.BearerToken;
+                var importedEndpoint = new Endpoint
+                {
+                    Name = operation.Value?.OperationId ?? $"{operation.Key} {path.Key}",
+                    Method = method,
+                    RelativePath = path.Key,
+                    ApplicationId = applicationId,
+                    AuthenticationType = authType,
+                    PreRequestScript = SwaggerOperationHelper.ReadExtensionString(operation.Value?.Extensions, "x-sz-pre-request-script"),
+                    PostRequestScript = SwaggerOperationHelper.ReadExtensionString(operation.Value?.Extensions, "x-sz-post-request-script"),
+                    Headers = BuildDefaultHeaders(operation.Value)
+                };
+                if (!string.IsNullOrEmpty(bearerTokenValue))
+                    bearerTokens[EndpointKeyHelper.BuildKey(importedEndpoint)] = bearerTokenValue;
+                importedEndpoints.Add(importedEndpoint);
+            }
+
+        return (importedEndpoints, bearerTokens);
+    }
+
+    private async Task ApplyDiffAsync(
+        List<Endpoint> importedEndpoints,
+        IList<Endpoint> existingEndpoints,
+        Dictionary<string, string> bearerTokens,
+        int applicationId,
+        IEndpointRepository endpointRepository,
+        Dictionary<(string Name, int? ParentGroupId), EndpointGroup> groupLookup)
+    {
+        var existingKeys = existingEndpoints.Select(EndpointKeyHelper.BuildKey).ToHashSet();
+        var importedKeys = importedEndpoints.Select(EndpointKeyHelper.BuildKey).ToHashSet();
+
+        foreach (var endpoint in importedEndpoints.Where(e => !existingKeys.Contains(EndpointKeyHelper.BuildKey(e))))
+        {
+            endpoint.EndpointGroupId = await ResolveGroupIdAsync(
+                endpoint.RelativePath, applicationId, endpointRepository, groupLookup);
+            await endpointRepository.AddEndpointAsync(endpoint);
+            SaveBearerTokenIfPresent(endpoint, bearerTokens, applicationId);
+        }
+
+        foreach (var endpoint in existingEndpoints.Where(e => !importedKeys.Contains(EndpointKeyHelper.BuildKey(e))))
+            await endpointRepository.DeleteEndpointAsync(endpoint.Id);
     }
 
     private static async Task<int?> ResolveGroupIdAsync(
@@ -146,12 +170,10 @@ public class SystemEndpointSyncService : BackgroundService
         }
     }
 
-    private static string BuildKey(Endpoint endpoint) => $"{endpoint.Method}:{endpoint.RelativePath}";
-
     private static AuthenticationType DetectAuthenticationType(OpenApiOperation? operation)
     {
         if (operation?.Security is not { Count: > 0 })
-            return AuthenticationType.BearerToken;
+            return AuthenticationType.None;
 
         foreach (var requirement in operation.Security)
             foreach (var schemeKey in requirement.Keys)
@@ -159,7 +181,7 @@ public class SystemEndpointSyncService : BackgroundService
                     string.Equals(schemeRef.Reference?.Id, "Negotiate", StringComparison.OrdinalIgnoreCase))
                     return AuthenticationType.Negotiate;
 
-        return AuthenticationType.BearerToken;
+        return AuthenticationType.None;
     }
 
     private static List<EndpointHeader> BuildDefaultHeaders(OpenApiOperation? operation)
@@ -185,22 +207,9 @@ public class SystemEndpointSyncService : BackgroundService
         return jsonVal.TryGetValue<string>(out var str) ? str : string.Empty;
     }
 
-    private static CoreHttpMethod MapHttpMethod(string method) =>
-        method.ToUpperInvariant() switch
-        {
-            "GET" => CoreHttpMethod.GET,
-            "POST" => CoreHttpMethod.POST,
-            "PUT" => CoreHttpMethod.PUT,
-            "DELETE" => CoreHttpMethod.DELETE,
-            "PATCH" => CoreHttpMethod.PATCH,
-            "HEAD" => CoreHttpMethod.HEAD,
-            "OPTIONS" => CoreHttpMethod.OPTIONS,
-            _ => throw new ArgumentOutOfRangeException(nameof(method), method, "Unbekannte HTTP-Methode.")
-        };
-
     private void SaveBearerTokenIfPresent(Endpoint endpoint, Dictionary<string, string> bearerTokens, int applicationId)
     {
-        var key = BuildKey(endpoint);
+        var key = EndpointKeyHelper.BuildKey(endpoint);
         if (!bearerTokens.TryGetValue(key, out var tokenValue))
             return;
 
@@ -215,14 +224,4 @@ public class SystemEndpointSyncService : BackgroundService
         }
     }
 
-    private static string? ReadExtensionString(IDictionary<string, IOpenApiExtension>? extensions, string key)
-    {
-        if (extensions == null || !extensions.TryGetValue(key, out var extension))
-            return null;
-
-        if (extension is JsonNodeExtension jne && jne.Node is JsonValue jv && jv.TryGetValue<string>(out var value))
-            return value;
-
-        return null;
-    }
 }

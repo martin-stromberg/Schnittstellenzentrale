@@ -11,6 +11,13 @@ public class EndpointScriptRunnerTests
     private static ScriptContext CreateContext(
         IActiveEnvironmentService? envService = null,
         ScriptResponseData? response = null)
+        => CreateContextWithRepository(envService, null, null, response);
+
+    private static ScriptContext CreateContextWithRepository(
+        IActiveEnvironmentService? envService = null,
+        ISystemEnvironmentRepository? environmentRepository = null,
+        ISignalRNotificationService? signalRNotificationService = null,
+        ScriptResponseData? response = null)
     {
         var envMock = envService ?? CreateEmptyEnvironmentService();
         return new ScriptContext
@@ -25,8 +32,40 @@ public class EndpointScriptRunnerTests
             },
             Response = response,
             CallDepth = new Dictionary<int, int>(),
-            ExecuteEndpoint = _ => Task.FromResult(new EndpointExecutionResult { Success = true })
+            ExecuteEndpoint = _ => Task.FromResult(new EndpointExecutionResult { Success = true }),
+            EnvironmentRepository = environmentRepository,
+            SignalRNotificationService = signalRNotificationService
         };
+    }
+
+    private static ISystemEnvironmentRepository CreateEnvironmentRepositoryMock()
+    {
+        var mock = new Mock<ISystemEnvironmentRepository>();
+        mock.Setup(r => r.UpdateVariableAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>()))
+            .Returns(Task.CompletedTask);
+        return mock.Object;
+    }
+
+    private static Mock<ISystemEnvironmentRepository> CreateEnvironmentRepositoryMockCapturing()
+    {
+        var mock = new Mock<ISystemEnvironmentRepository>();
+        mock.Setup(r => r.UpdateVariableAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>()))
+            .Returns(Task.CompletedTask);
+        return mock;
+    }
+
+    private static ISignalRNotificationService CreateSignalRNotificationServiceMock()
+    {
+        var mock = new Mock<ISignalRNotificationService>();
+        mock.Setup(s => s.NotifyEnvironmentChangedAsync()).Returns(Task.CompletedTask);
+        return mock.Object;
+    }
+
+    private static Mock<ISignalRNotificationService> CreateSignalRNotificationServiceMockCapturing()
+    {
+        var mock = new Mock<ISignalRNotificationService>();
+        mock.Setup(s => s.NotifyEnvironmentChangedAsync()).Returns(Task.CompletedTask);
+        return mock;
     }
 
     private static IActiveEnvironmentService CreateEmptyEnvironmentService()
@@ -192,5 +231,144 @@ public class EndpointScriptRunnerTests
             context);
 
         Assert.True(result.Success);
+    }
+
+    /// <summary>SzEnvironmentSet_MitAktiverSystemumgebung_PersistiertVariable</summary>
+    [Fact]
+    public async Task SzEnvironmentSet_MitAktiverSystemumgebung_PersistiertVariable()
+    {
+        var runner = new EndpointScriptRunner();
+        var envService = CreateEnvironmentServiceWithVariables(new Dictionary<string, string> { ["host"] = "old" });
+        var repoMock = CreateEnvironmentRepositoryMockCapturing();
+        var context = CreateContextWithRepository(envService, repoMock.Object, CreateSignalRNotificationServiceMock());
+
+        var result = await runner.ExecuteAsync("sz.environment.set('host', 'new');", context);
+
+        Assert.True(result.Success);
+        repoMock.Verify(r => r.UpdateVariableAsync(1, "host", "new"), Times.Once);
+    }
+
+    /// <summary>SzEnvironmentSet_OhneAktiveSystemumgebung_PersistiertNicht</summary>
+    [Fact]
+    public async Task SzEnvironmentSet_OhneAktiveSystemumgebung_PersistiertNicht()
+    {
+        var runner = new EndpointScriptRunner();
+        var envService = CreateEmptyEnvironmentService();
+        var repoMock = CreateEnvironmentRepositoryMockCapturing();
+        var context = CreateContextWithRepository(envService, repoMock.Object, CreateSignalRNotificationServiceMock());
+
+        var result = await runner.ExecuteAsync("sz.environment.set('newVar', 'value');", context);
+
+        Assert.True(result.Success);
+        repoMock.Verify(r => r.UpdateVariableAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+    }
+
+    /// <summary>SzEnvironmentSet_MitAktiverSystemumgebung_BenachrichtigtSignalR</summary>
+    [Fact]
+    public async Task SzEnvironmentSet_MitAktiverSystemumgebung_BenachrichtigtSignalR()
+    {
+        var runner = new EndpointScriptRunner();
+        var envService = CreateEnvironmentServiceWithVariables(new Dictionary<string, string> { ["key"] = "val" });
+        var signalRMock = CreateSignalRNotificationServiceMockCapturing();
+        var context = CreateContextWithRepository(envService, CreateEnvironmentRepositoryMock(), signalRMock.Object);
+
+        var result = await runner.ExecuteAsync("sz.environment.set('key', 'newval');", context);
+
+        Assert.True(result.Success);
+        signalRMock.Verify(s => s.NotifyEnvironmentChangedAsync(), Times.Once);
+    }
+
+    /// <summary>SzEnvironmentSet_UebernehmtIsValueMasked_AusBestehendenVariablen</summary>
+    [Fact]
+    public async Task SzEnvironmentSet_UebernehmtIsValueMasked_AusBestehendenVariablen()
+    {
+        var runner = new EndpointScriptRunner();
+        SystemEnvironment? capturedEnv = null;
+        var mock = new Mock<IActiveEnvironmentService>();
+        var env = new SystemEnvironment
+        {
+            Id = 5,
+            Name = "Test",
+            Variables = [new EnvironmentVariable { Id = 10, Name = "secret", Value = "old", IsValueMasked = true }]
+        };
+        mock.Setup(s => s.ActiveEnvironment).Returns(env);
+        mock.Setup(s => s.ActiveVariables).Returns(new Dictionary<string, string> { ["secret"] = "old" });
+        mock.Setup(s => s.SetActiveEnvironment(It.IsAny<SystemEnvironment?>()))
+            .Callback<SystemEnvironment?>(e => capturedEnv = e);
+
+        var context = CreateContextWithRepository(mock.Object, CreateEnvironmentRepositoryMock(), CreateSignalRNotificationServiceMock());
+
+        var result = await runner.ExecuteAsync("sz.environment.set('secret', 'new');", context);
+
+        Assert.True(result.Success);
+        Assert.NotNull(capturedEnv);
+        var variable = capturedEnv!.Variables.FirstOrDefault(v => v.Name == "secret");
+        Assert.NotNull(variable);
+        Assert.True(variable!.IsValueMasked);
+    }
+
+    /// <summary>SzEnvironmentSet_UebernehmtId_AusBestehendenVariablen</summary>
+    [Fact]
+    public async Task SzEnvironmentSet_UebernehmtId_AusBestehendenVariablen()
+    {
+        var runner = new EndpointScriptRunner();
+        SystemEnvironment? capturedEnv = null;
+        var mock = new Mock<IActiveEnvironmentService>();
+        var env = new SystemEnvironment
+        {
+            Id = 5,
+            Name = "Test",
+            Variables = [new EnvironmentVariable { Id = 42, Name = "myvar", Value = "old", IsValueMasked = false }]
+        };
+        mock.Setup(s => s.ActiveEnvironment).Returns(env);
+        mock.Setup(s => s.ActiveVariables).Returns(new Dictionary<string, string> { ["myvar"] = "old" });
+        mock.Setup(s => s.SetActiveEnvironment(It.IsAny<SystemEnvironment?>()))
+            .Callback<SystemEnvironment?>(e => capturedEnv = e);
+
+        var context = CreateContextWithRepository(mock.Object, CreateEnvironmentRepositoryMock(), CreateSignalRNotificationServiceMock());
+
+        var result = await runner.ExecuteAsync("sz.environment.set('myvar', 'new');", context);
+
+        Assert.True(result.Success);
+        Assert.NotNull(capturedEnv);
+        var variable = capturedEnv!.Variables.FirstOrDefault(v => v.Name == "myvar");
+        Assert.NotNull(variable);
+        Assert.Equal(42, variable!.Id);
+    }
+
+    /// <summary>SzEnvironmentSet_DatenbankFehler_GibtScriptExecutionResultMitFehler</summary>
+    [Fact]
+    public async Task SzEnvironmentSet_DatenbankFehler_GibtScriptExecutionResultMitFehler()
+    {
+        var runner = new EndpointScriptRunner();
+        var envService = CreateEnvironmentServiceWithVariables(new Dictionary<string, string> { ["x"] = "1" });
+        var repoMock = new Mock<ISystemEnvironmentRepository>();
+        repoMock.Setup(r => r.UpdateVariableAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>()))
+            .ThrowsAsync(new InvalidOperationException("DB-Fehler"));
+        var context = CreateContextWithRepository(envService, repoMock.Object, CreateSignalRNotificationServiceMock());
+
+        var result = await runner.ExecuteAsync("sz.environment.set('x', '2');", context);
+
+        Assert.False(result.Success);
+        Assert.NotNull(result.ErrorMessage);
+        Assert.Contains("DB-Fehler", result.ErrorMessage!);
+    }
+
+    /// <summary>SzEnvironmentSet_SignalRFehler_GibtScriptExecutionResultMitFehler</summary>
+    [Fact]
+    public async Task SzEnvironmentSet_SignalRFehler_GibtScriptExecutionResultMitFehler()
+    {
+        var runner = new EndpointScriptRunner();
+        var envService = CreateEnvironmentServiceWithVariables(new Dictionary<string, string> { ["x"] = "1" });
+        var signalRMock = new Mock<ISignalRNotificationService>();
+        signalRMock.Setup(s => s.NotifyEnvironmentChangedAsync())
+            .ThrowsAsync(new InvalidOperationException("SignalR-Fehler"));
+        var context = CreateContextWithRepository(envService, CreateEnvironmentRepositoryMock(), signalRMock.Object);
+
+        var result = await runner.ExecuteAsync("sz.environment.set('x', '2');", context);
+
+        Assert.False(result.Success);
+        Assert.NotNull(result.ErrorMessage);
+        Assert.Contains("SignalR-Fehler", result.ErrorMessage!);
     }
 }

@@ -71,7 +71,7 @@ Jeder Endpunkt kann optional zwei JavaScript-Skripte enthalten:
 Innerhalb der Skripte steht ein `sz`-API-Objekt bereit:
 
 - `sz.environment.get(name)` — liest eine Umgebungsvariable aus der aktiven Systemumgebung.
-- `sz.environment.set(name, value)` — setzt eine Umgebungsvariable im Arbeitsspeicher (nicht persistiert); nachfolgende `{{...}}`-Auflösungen sehen den neuen Wert sofort.
+- `sz.environment.set(name, value)` — setzt eine Umgebungsvariable in der aktiven Systemumgebung. Ist eine Systemumgebung aktiv, wird die Änderung sofort in der Datenbank persistiert und alle verbundenen Clients werden über SignalR benachrichtigt. Ist keine Systemumgebung aktiv, gilt die Änderung nur für die Laufzeit des aktuellen Requests (In-Memory). Nachfolgende `{{...}}`-Auflösungen sehen den neuen Wert in beiden Fällen sofort.
 - `sz.request.url` / `sz.request.method` / `sz.request.headers` — Zugriff auf die Request-Daten.
 - `sz.request.body.raw` / `sz.request.body.asJson()` / `sz.request.body.asXml()` — Zugriff auf den Request-Body.
 - `sz.response.body.raw` / `sz.response.body.asJson()` / `sz.response.body.asXml()` / `sz.response.headers` — im Post-Skript: Zugriff auf die HTTP-Antwort.
@@ -118,5 +118,5 @@ Alle Endpunkte werden einheitlich nach diesem Muster behandelt — es gibt keine
 - Einträge mit leerem Key werden beim Aufbau des Query-Strings und bei der Platzhalter-Ersetzung übersprungen.
 - Ein im extrahierten Query-String vorhandener Key, der bereits manuell angelegt wurde, überschreibt den vorhandenen Wert nicht — der bestehende Eintrag bleibt erhalten.
 - Skripte haben ein Ausführungs-Timeout von 5 Sekunden; Endlosschleifen werden nach dieser Zeit abgebrochen.
-- `sz.environment.set()` ändert nur den In-Memory-Zustand der aktiven Umgebung — die Datenbank wird nicht aktualisiert. Die Änderung ist nicht über Session-Grenzen hinaus persistent.
+- `sz.environment.set()` persistiert die Änderung in der Datenbank, wenn eine Systemumgebung aktiv ist. Schlägt die Datenbankoperation oder die SignalR-Benachrichtigung fehl, wird das Post-Request-Skript als fehlgeschlagen gewertet. Ist keine Systemumgebung aktiv, ist die Änderung nur für die Laufzeit des Requests im Arbeitsspeicher vorhanden.
 - `sz.execute()` schlägt fehl, wenn der angegebene Name innerhalb der Anwendung nicht eindeutig ist (mehrere Treffer). Ein Rekursionsschutz verhindert, dass derselbe Endpunkt mehr als zweimal im gleichen Aufrufbaum aufgerufen wird.

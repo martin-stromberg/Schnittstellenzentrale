@@ -1,3 +1,4 @@
+using Schnittstellenzentrale.Core.Helpers;
 using Schnittstellenzentrale.Core.Models;
 
 namespace Schnittstellenzentrale.Infrastructure.Services;
@@ -55,7 +56,7 @@ internal static class ImportDiffCalculator
         return true;
     }
 
-    private static string BuildKey(Core.Models.Endpoint endpoint) => $"{endpoint.Method}:{endpoint.RelativePath}";
+    private static string BuildKey(Core.Models.Endpoint endpoint) => EndpointKeyHelper.BuildKey(endpoint);
 
     private static bool HasChanged(Core.Models.Endpoint existing, Core.Models.Endpoint imported)
     {

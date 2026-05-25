@@ -103,6 +103,28 @@ public class SystemEnvironmentRepository : ISystemEnvironmentRepository
         }
     }
 
+    /// <inheritdoc/>
+    public async Task UpdateVariableAsync(int environmentId, string name, string value)
+    {
+        await using var context = await _factory.CreateDbContextAsync();
+        var existing = await context.SystemEnvironments
+            .Include(e => e.Variables)
+            .FirstOrDefaultAsync(e => e.Id == environmentId)
+            ?? throw new InvalidOperationException($"Systemumgebung {environmentId} nicht gefunden.");
+
+        var variable = existing.Variables.FirstOrDefault(v => v.Name == name);
+        if (variable != null)
+        {
+            variable.Value = value;
+        }
+        else
+        {
+            existing.Variables.Add(new EnvironmentVariable { Name = name, Value = value });
+        }
+
+        await context.SaveChangesAsync();
+    }
+
     private static IQueryable<SystemEnvironment> ApplyOwnerFilter(
         IQueryable<SystemEnvironment> query,
         StorageMode mode,

@@ -148,6 +148,36 @@ Beteiligte Komponenten:
 
 ---
 
+## Ablauf: `sz.environment.set()` im Skript
+
+### Mit aktiver Systemumgebung (Persistierungsfall)
+
+1. Das Skript ruft `sz.environment.set(name, value)` auf.
+2. `EndpointScriptRunner.BuildEnvironmentObject` liest `context.EnvironmentService.ActiveEnvironment` — Ergebnis ist nicht `null`.
+3. Aus `context.EnvironmentService.ActiveVariables` wird ein aktualisiertes Dictionary aufgebaut (`updatedVariables[name] = value`).
+4. Beim Neuaufbau der `EnvironmentVariable`-Objekte werden `Id` und `IsValueMasked` aus `ActiveEnvironment.Variables` für Variablen mit übereinstimmendem Namen übernommen. Die Maskierungsflagge geht damit nicht verloren.
+5. `context.EnvironmentService.SetActiveEnvironment(updatedEnv)` aktualisiert den In-Memory-Zustand.
+6. Da `activeEnv != null` und `context.EnvironmentRepository != null`, wird `PersistVariable` aufgerufen:
+   - `context.EnvironmentRepository.UpdateVariableAsync(activeEnv.Id, name, value)` wird via `Task.Run(...).GetAwaiter().GetResult()` blockierend ausgeführt.
+   - Anschließend wird `context.SignalRNotificationService.NotifyEnvironmentChangedAsync()` aufgerufen (falls gesetzt), damit verbundene Clients die Änderung sofort erhalten.
+7. Wirft einer der Aufrufe eine Exception, wird diese propagiert; `ExecuteAsync` gibt ein `ScriptExecutionResult { Success = false }` zurück.
+
+Beteiligte Komponenten:
+- `EndpointScriptRunner.BuildEnvironmentObject` — Lambda-Implementierung mit Persistierungslogik
+- `EndpointScriptRunner.PersistVariable` — blockierender Aufruf von Repository und SignalR
+- `ScriptContext.EnvironmentRepository` (`ISystemEnvironmentRepository`) — Zugriff auf `UpdateVariableAsync`
+- `ScriptContext.SignalRNotificationService` (`ISignalRNotificationService`) — Benachrichtigung verbundener Clients
+- `IActiveEnvironmentService.SetActiveEnvironment` — In-Memory-Aktualisierung
+
+### Ohne aktive Systemumgebung (unverändertes Verhalten)
+
+1. Das Skript ruft `sz.environment.set(name, value)` auf.
+2. `context.EnvironmentService.ActiveEnvironment` ist `null`.
+3. Der In-Memory-Zustand wird via `SetActiveEnvironment` aktualisiert.
+4. Da `activeEnv == null`, werden weder `UpdateVariableAsync` noch `NotifyEnvironmentChangedAsync` aufgerufen.
+
+---
+
 ## Ablauf: `sz.execute()` im Skript
 
 1. Das Skript ruft `sz.execute(name)` auf.
@@ -248,6 +278,14 @@ flowchart TD
     S --> T{Eindeutiger Treffer?}
     T -- Nein --> U[Fehler]
     T -- Ja --> B
+
+    G3[sz.environment.set in Skript] --> V{ActiveEnvironment != null?}
+    V -- Nein --> W[Nur In-Memory aktualisieren]
+    V -- Ja --> X[SetActiveEnvironment - In-Memory]
+    X --> Y[UpdateVariableAsync - Datenbank]
+    Y --> Z[NotifyEnvironmentChangedAsync - SignalR]
+    Y -- Exception --> AA[ScriptExecutionResult - Success=false]
+    Z -- Exception --> AA
 ```
 
 ---
@@ -291,6 +329,7 @@ flowchart TD
 - Pre-Skript-Fehler (Syntaxfehler, Runtime-Exception, Timeout) verhindern den HTTP-Request; `ErrorMessage` enthält die Fehlerbeschreibung.
 - Post-Skript-Fehler hängen die Fehlermeldung an ein ansonsten vollständiges `EndpointExecutionResult` an.
 - `EndpointScriptRunner` begrenzt die Skriptlaufzeit auf `ScriptTimeoutMs = 5000 ms` und den Arbeitsspeicher auf 4 MB.
+- `sz.environment.set()` propagiert Exceptions aus `UpdateVariableAsync` oder `NotifyEnvironmentChangedAsync` ohne Behandlung; das Skript schlägt damit fehl und das `EndpointExecutionResult` enthält die Fehlermeldung.
 - Einträge mit leerem `Key` werden in `BuildRequest()` und in `ResolveDisplayUrl()` übersprungen.
 - Import-Fehler beim Laden oder Parsen des Swagger-JSONs erzeugen ein `ImportDiff { ErrorMessage = ... }` und verhindern jede weitere Verarbeitung.
 - Fehler beim Schreiben in den Windows Credential Manager werden per `_logger.LogWarning` protokolliert; die restlichen Endpunkte des Imports werden trotzdem persistiert.

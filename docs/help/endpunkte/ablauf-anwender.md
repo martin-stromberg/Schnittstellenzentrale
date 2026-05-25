@@ -48,8 +48,8 @@ Tragen Sie in der Spalte **Wert** die gewünschten Werte ein. Verlassen Sie das 
 
 Wenn Sie vor oder nach dem HTTP-Request JavaScript-Code ausführen möchten, wechseln Sie zu einem der Skript-Tabs:
 
-- **Pre-Request-Skript**: Wird vor dem Senden ausgeführt. Über `sz.environment.set(name, value)` können Sie Umgebungsvariablen setzen, die dann in der `{{...}}`-Platzhalterauflösung des Requests verwendet werden.
-- **Post-Request-Skript**: Wird nach dem Empfangen der Antwort ausgeführt. Über `sz.response.body.asJson()` können Sie die Antwort auswerten und z. B. ein Token in eine Umgebungsvariable schreiben.
+- **Pre-Request-Skript**: Wird vor dem Senden ausgeführt. Über `sz.environment.set(name, value)` können Sie Umgebungsvariablen setzen, die dann in der `{{...}}`-Platzhalterauflösung des Requests verwendet werden. Ist eine Systemumgebung aktiv, wird die Änderung dauerhaft in der Datenbank gespeichert.
+- **Post-Request-Skript**: Wird nach dem Empfangen der Antwort ausgeführt. Über `sz.response.body.asJson()` können Sie die Antwort auswerten und z. B. ein Token in eine Umgebungsvariable schreiben. `sz.environment.set()` speichert den Wert ebenfalls dauerhaft, wenn eine Systemumgebung aktiv ist.
 
 Geben Sie den JavaScript-Code in das mehrzeilige Eingabefeld ein. Sie können den Code direkt eintippen — ein Syntaxcheck findet erst zur Laufzeit statt.
 

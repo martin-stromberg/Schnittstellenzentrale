@@ -147,19 +147,52 @@
 
 ---
 
-## `sz.environment.set()` ändert nur den In-Memory-Zustand
+## `sz.environment.set()` persistiert bei aktiver Systemumgebung
 
-**Beschreibung:** `sz.environment.set(name, value)` ersetzt die aktive Umgebung im `IActiveEnvironmentService`-Scoped-Service, speichert aber nicht in der Datenbank.
+**Beschreibung:** `sz.environment.set(name, value)` aktualisiert die aktive Umgebung zunächst im Arbeitsspeicher und persistiert die Änderung anschließend gezielt in der Datenbank, sofern eine Systemumgebung aktiv ist. Ist keine Systemumgebung aktiv, erfolgt ausschließlich die In-Memory-Aktualisierung.
 
 **Bedingungen:**
 - Das Skript ruft `sz.environment.set(name, value)` auf.
 
 **Verhalten:**
-- `IActiveEnvironmentService.SetActiveEnvironment` wird mit einer aktualisierten Kopie der `SystemEnvironment` aufgerufen.
-- Alle Blazor-Komponenten, die auf `OnActiveEnvironmentChanged` reagieren, werden neu gerendert.
-- Die Änderung ist nicht über Session-Grenzen hinaus persistent.
+- In beiden Fällen: `IActiveEnvironmentService.SetActiveEnvironment` wird mit einer aktualisierten Kopie der `SystemEnvironment` aufgerufen; alle Blazor-Komponenten, die auf `OnActiveEnvironmentChanged` reagieren, werden neu gerendert.
+- Wenn `ActiveEnvironment != null` und `context.EnvironmentRepository != null`: `ISystemEnvironmentRepository.UpdateVariableAsync(environmentId, name, value)` wird blockierend aufgerufen (nur die eine geänderte Variable wird aktualisiert).
+- Nach erfolgreicher Persistierung: `ISignalRNotificationService.NotifyEnvironmentChangedAsync()` wird aufgerufen, damit verbundene Clients die Änderung sofort erhalten.
+- Wenn `ActiveEnvironment == null`: keine Datenbankoperation, die Änderung gilt nur für die Laufzeit des Requests.
 
-**Umsetzung:** `EndpointScriptRunner.BuildEnvironmentObject()` — der In-Memory-Ansatz ermöglicht temporäre Werte (z. B. OAuth-Tokens) ohne Datenbankschreibzugriff.
+**Umsetzung:** `EndpointScriptRunner.BuildEnvironmentObject()` und `EndpointScriptRunner.PersistVariable()` — der gezielte Einzelvariablen-Update über `UpdateVariableAsync` verhindert, dass gleichzeitig laufende Änderungen anderer Clients durch ein vollständiges Überschreiben verloren gehen.
+
+---
+
+## `sz.environment.set()` überträgt IsValueMasked und Id aus bestehenden Variablen
+
+**Beschreibung:** Beim Neuaufbau der Variablenliste innerhalb von `sz.environment.set()` werden `Id` und `IsValueMasked` aus der bestehenden aktiven Umgebung für Variablen mit übereinstimmendem Namen übernommen.
+
+**Bedingungen:**
+- Das Skript ruft `sz.environment.set(name, value)` auf.
+- Die aktive Umgebung enthält bereits eine Variable mit demselben Namen.
+
+**Verhalten:**
+- Wenn eine Variable mit diesem Namen in `ActiveEnvironment.Variables` existiert: das neue `EnvironmentVariable`-Objekt erhält `Id = existing.Id` und `IsValueMasked = existing.IsValueMasked`.
+- Wenn keine Variable mit diesem Namen existiert (neue Variable): `Id = 0`, `IsValueMasked = false`.
+
+**Umsetzung:** `EndpointScriptRunner.BuildEnvironmentObject()` — `existing?.Id ?? 0` und `existing?.IsValueMasked ?? false` im LINQ-Select beim Aufbau von `variableList`.
+
+---
+
+## Fehler in `sz.environment.set()` lassen das Skript fehlschlagen
+
+**Beschreibung:** Wirft `UpdateVariableAsync` oder `NotifyEnvironmentChangedAsync` eine Exception, wird diese nicht still protokolliert, sondern propagiert — das Skript gilt als fehlgeschlagen.
+
+**Bedingungen:**
+- `UpdateVariableAsync` oder `NotifyEnvironmentChangedAsync` wirft eine Exception (z. B. Datenbankfehler, SignalR-Verbindungsfehler).
+
+**Verhalten:**
+- Die Exception wird aus `PersistVariable` heraus propagiert.
+- `EndpointScriptRunner.ExecuteAsync` fängt die Exception im äußeren `catch (Exception ex)` und gibt `ScriptExecutionResult { Success = false, ErrorMessage = "Skriptausführung fehlgeschlagen: ..." }` zurück.
+- Das `EndpointExecutionResult` enthält eine Fehlermeldung; bereits erfolgte In-Memory-Änderungen an der aktiven Umgebung bleiben erhalten.
+
+**Umsetzung:** `EndpointScriptRunner.PersistVariable()` — explizites Durchreichen der Exception verhindert inkonsistente Zustände (Datenbank nicht aktualisiert, aber Skript als erfolgreich gewertet).
 
 ---
 

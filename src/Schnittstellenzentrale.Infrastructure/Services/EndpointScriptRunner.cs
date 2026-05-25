@@ -69,6 +69,8 @@ public class EndpointScriptRunner : IEndpointScriptRunner
             EndpointExecutionResult result;
             try
             {
+                // Jint callbacks sind synchron — await ist nicht möglich. Task.Run + GetAwaiter().GetResult()
+                // ist das etablierte Muster, um async-Methoden aus synchronen Jint-Lambdas heraus zu blockieren.
                 result = Task.Run(() => context.ExecuteEndpoint(name)).GetAwaiter().GetResult();
             }
             catch (AggregateException aggEx)
@@ -115,7 +117,17 @@ public class EndpointScriptRunner : IEndpointScriptRunner
             updatedVariables[name] = value;
 
             var variableList = updatedVariables
-                .Select(kv => new EnvironmentVariable { Name = kv.Key, Value = kv.Value })
+                .Select(kv =>
+                {
+                    var existing = activeEnv?.Variables.FirstOrDefault(v => v.Name == kv.Key);
+                    return new EnvironmentVariable
+                    {
+                        Id = existing?.Id ?? 0,
+                        Name = kv.Key,
+                        Value = kv.Value,
+                        IsValueMasked = existing?.IsValueMasked ?? false
+                    };
+                })
                 .ToList();
             var updatedEnv = activeEnv != null
                 ? new SystemEnvironment
@@ -133,10 +145,23 @@ public class EndpointScriptRunner : IEndpointScriptRunner
                 };
 
             context.EnvironmentService.SetActiveEnvironment(updatedEnv);
+
+            if (activeEnv != null && context.EnvironmentRepository != null)
+                PersistVariable(context, activeEnv.Id, name, value);
+
             return JsValue.Undefined;
         }));
 
         return env;
+    }
+
+    // Jint callbacks sind synchron — await ist nicht möglich. Task.Run + GetAwaiter().GetResult()
+    // ist das etablierte Muster, um async-Methoden aus synchronen Jint-Lambdas heraus zu blockieren.
+    private static void PersistVariable(ScriptContext context, int environmentId, string name, string value)
+    {
+        Task.Run(() => context.EnvironmentRepository!.UpdateVariableAsync(environmentId, name, value)).GetAwaiter().GetResult();
+        if (context.SignalRNotificationService != null)
+            Task.Run(() => context.SignalRNotificationService.NotifyEnvironmentChangedAsync()).GetAwaiter().GetResult();
     }
 
     private static JsObject BuildRequestObject(Engine engine, ScriptRequestData request)

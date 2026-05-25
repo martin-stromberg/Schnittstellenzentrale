@@ -1,11 +1,10 @@
-using System.Text.Json.Nodes;
 using Microsoft.Extensions.Logging;
-using Microsoft.OpenApi;
 using Microsoft.OpenApi.Reader;
 using Schnittstellenzentrale.Core.Enums;
 using Schnittstellenzentrale.Core.Helpers;
 using Schnittstellenzentrale.Core.Interfaces;
 using Schnittstellenzentrale.Core.Models;
+using Schnittstellenzentrale.Infrastructure.Helpers;
 
 namespace Schnittstellenzentrale.Infrastructure.Services;
 
@@ -88,22 +87,22 @@ public class SwaggerImportService : ISwaggerImportService
         {
             foreach (var operation in path.Value.Operations ?? [])
             {
-                var method = MapHttpMethod(operation.Key.ToString());
+                var method = SwaggerOperationHelper.MapHttpMethod(operation.Key.ToString());
                 var endpoint = new Core.Models.Endpoint
                 {
                     Name = operation.Value.OperationId ?? $"{operation.Key} {path.Key}",
                     Method = method,
                     RelativePath = path.Key,
                     ApplicationId = applicationId,
-                    PreRequestScript = ReadExtensionString(operation.Value.Extensions, "x-sz-pre-request-script"),
-                    PostRequestScript = ReadExtensionString(operation.Value.Extensions, "x-sz-post-request-script")
+                    PreRequestScript = SwaggerOperationHelper.ReadExtensionString(operation.Value.Extensions, "x-sz-pre-request-script"),
+                    PostRequestScript = SwaggerOperationHelper.ReadExtensionString(operation.Value.Extensions, "x-sz-post-request-script")
                 };
 
-                var bearerToken = ReadExtensionString(operation.Value.Extensions, "x-sz-bearer-token");
+                var bearerToken = SwaggerOperationHelper.ReadExtensionString(operation.Value.Extensions, "x-sz-bearer-token");
                 if (!string.IsNullOrEmpty(bearerToken))
                 {
                     endpoint.AuthenticationType = AuthenticationType.BearerToken;
-                    bearerTokens[$"{method}:{path.Key}"] = bearerToken;
+                    bearerTokens[EndpointKeyHelper.BuildKey(endpoint)] = bearerToken;
                 }
 
                 endpoints.Add(endpoint);
@@ -137,7 +136,7 @@ public class SwaggerImportService : ISwaggerImportService
         if (endpoint.AuthenticationType != AuthenticationType.BearerToken)
             return;
 
-        var key = $"{endpoint.Method}:{endpoint.RelativePath}";
+        var key = EndpointKeyHelper.BuildKey(endpoint);
         if (!diff.BearerTokens.TryGetValue(key, out var tokenValue))
             return;
 
@@ -152,29 +151,4 @@ public class SwaggerImportService : ISwaggerImportService
         }
     }
 
-    private static string? ReadExtensionString(IDictionary<string, IOpenApiExtension>? extensions, string key)
-    {
-        if (extensions == null || !extensions.TryGetValue(key, out var extension))
-            return null;
-
-        if (extension is JsonNodeExtension jne && jne.Node is JsonValue jv && jv.TryGetValue<string>(out var value))
-            return value;
-
-        return null;
-    }
-
-    private static Core.Enums.HttpMethod MapHttpMethod(string method)
-    {
-        return method.ToUpperInvariant() switch
-        {
-            "GET" => Core.Enums.HttpMethod.GET,
-            "POST" => Core.Enums.HttpMethod.POST,
-            "PUT" => Core.Enums.HttpMethod.PUT,
-            "DELETE" => Core.Enums.HttpMethod.DELETE,
-            "PATCH" => Core.Enums.HttpMethod.PATCH,
-            "HEAD" => Core.Enums.HttpMethod.HEAD,
-            "OPTIONS" => Core.Enums.HttpMethod.OPTIONS,
-            _ => throw new ArgumentOutOfRangeException(nameof(method), method, "Unbekannte HTTP-Methode in Swagger-Definition.")
-        };
-    }
 }
