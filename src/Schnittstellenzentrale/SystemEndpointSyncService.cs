@@ -1,3 +1,4 @@
+using System.Text.Json.Nodes;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -16,12 +17,14 @@ public class SystemEndpointSyncService : BackgroundService
 {
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<SystemEndpointSyncService> _logger;
+    private readonly ICredentialService _credentialService;
 
     /// <summary>Initialisiert eine neue Instanz des <see cref="SystemEndpointSyncService"/>.</summary>
-    public SystemEndpointSyncService(IServiceScopeFactory scopeFactory, ILogger<SystemEndpointSyncService> logger)
+    public SystemEndpointSyncService(IServiceScopeFactory scopeFactory, ILogger<SystemEndpointSyncService> logger, ICredentialService credentialService)
     {
         _scopeFactory = scopeFactory;
         _logger = logger;
+        _credentialService = credentialService;
     }
 
     /// <inheritdoc/>
@@ -52,17 +55,29 @@ public class SystemEndpointSyncService : BackgroundService
                 var document = swaggerProvider.GetSwagger("v1");
 
                 var importedEndpoints = new List<Endpoint>();
+                var bearerTokens = new Dictionary<string, string>();
                 foreach (var path in document.Paths)
                     foreach (var operation in path.Value.Operations)
+                    {
+                        var method = MapHttpMethod(operation.Key.ToString());
+                        var bearerTokenValue = ReadExtensionString(operation.Value?.Extensions, "x-sz-bearer-token");
+                        var authType = string.IsNullOrEmpty(bearerTokenValue)
+                            ? DetectAuthenticationType(operation.Value)
+                            : AuthenticationType.BearerToken;
+                        if (!string.IsNullOrEmpty(bearerTokenValue))
+                            bearerTokens[$"{method}:{path.Key}"] = bearerTokenValue;
                         importedEndpoints.Add(new Endpoint
                         {
                             Name = operation.Value?.OperationId ?? $"{operation.Key} {path.Key}",
-                            Method = MapHttpMethod(operation.Key.ToString()),
+                            Method = method,
                             RelativePath = path.Key,
                             ApplicationId = systemApp.Id,
-                            AuthenticationType = DetectAuthenticationType(operation.Value),
+                            AuthenticationType = authType,
+                            PreRequestScript = ReadExtensionString(operation.Value?.Extensions, "x-sz-pre-request-script"),
+                            PostRequestScript = ReadExtensionString(operation.Value?.Extensions, "x-sz-post-request-script"),
                             Headers = BuildDefaultHeaders(operation.Value)
                         });
+                    }
 
                 var endpointRepository = scope.ServiceProvider.GetRequiredService<IEndpointRepository>();
                 var existingEndpoints = await endpointRepository.GetEndpointsAsync(systemApp.Id);
@@ -77,6 +92,7 @@ public class SystemEndpointSyncService : BackgroundService
                     endpoint.EndpointGroupId = await ResolveGroupIdAsync(
                         endpoint.RelativePath, systemApp.Id, endpointRepository, groupLookup);
                     await endpointRepository.AddEndpointAsync(endpoint);
+                    SaveBearerTokenIfPresent(endpoint, bearerTokens, systemApp.Id);
                 }
 
                 foreach (var endpoint in existingEndpoints.Where(e => !importedKeys.Contains(BuildKey(e))))
@@ -181,4 +197,32 @@ public class SystemEndpointSyncService : BackgroundService
             "OPTIONS" => CoreHttpMethod.OPTIONS,
             _ => throw new ArgumentOutOfRangeException(nameof(method), method, "Unbekannte HTTP-Methode.")
         };
+
+    private void SaveBearerTokenIfPresent(Endpoint endpoint, Dictionary<string, string> bearerTokens, int applicationId)
+    {
+        var key = BuildKey(endpoint);
+        if (!bearerTokens.TryGetValue(key, out var tokenValue))
+            return;
+
+        try
+        {
+            var credentialTarget = Core.Helpers.CredentialTargetHelper.Build(applicationId, AuthenticationType.BearerToken);
+            _credentialService.SavePassword(credentialTarget, string.Empty, tokenValue);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Credential Manager konnte für Endpunkt {Key} nicht beschrieben werden.", key);
+        }
+    }
+
+    private static string? ReadExtensionString(IDictionary<string, IOpenApiExtension>? extensions, string key)
+    {
+        if (extensions == null || !extensions.TryGetValue(key, out var extension))
+            return null;
+
+        if (extension is JsonNodeExtension jne && jne.Node is JsonValue jv && jv.TryGetValue<string>(out var value))
+            return value;
+
+        return null;
+    }
 }
