@@ -61,7 +61,9 @@ internal static class ImportDiffCalculator
     {
         return existing.Name != imported.Name
             || existing.Body != imported.Body
-            || existing.AuthenticationType != imported.AuthenticationType;
+            || existing.AuthenticationType != imported.AuthenticationType
+            || existing.PreRequestScript != imported.PreRequestScript
+            || existing.PostRequestScript != imported.PostRequestScript;
     }
 
     private static Core.Models.Endpoint MergeExistingIdentity(Core.Models.Endpoint existing, Core.Models.Endpoint imported)
@@ -78,7 +80,9 @@ internal static class ImportDiffCalculator
             EndpointGroupId = existing.EndpointGroupId,
             RowVersion = existing.RowVersion,
             Headers = existing.Headers,
-            QueryParameters = existing.QueryParameters
+            QueryParameters = existing.QueryParameters,
+            PreRequestScript = imported.PreRequestScript,
+            PostRequestScript = imported.PostRequestScript
         };
     }
 }

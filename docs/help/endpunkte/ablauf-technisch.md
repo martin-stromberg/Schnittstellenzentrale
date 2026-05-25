@@ -163,6 +163,62 @@ Beteiligte Komponenten:
 
 ---
 
+## Ablauf: Swagger-Import mit Erweiterungsfeldern
+
+### 1. Auslöser
+
+Die UI ruft `ISwaggerImportService.ImportAsync(application)` auf.
+
+### 2. Swagger-Definition laden und parsen
+
+`SwaggerImportService.ImportAsync` lädt das Swagger-JSON per HTTP über `IHttpClientFactory` und parst es mit `OpenApiJsonReader`. Treten Parsing-Fehler auf, wird ein `ImportDiff { ErrorMessage = ... }` zurückgegeben.
+
+Beteiligte Komponenten:
+- `SwaggerImportService.ImportAsync` — HTTP-Abruf und Parsing
+- `OpenApiJsonReader` — Parsing der OpenAPI-Definition
+
+### 3. Endpunkte mit Erweiterungsfeldern erzeugen
+
+Für jede `OpenApiOperation` in `document.Paths` wird ein `Endpoint` erzeugt. Zusätzlich zu `Name`, `Method`, `RelativePath` und `ApplicationId` werden folgende Felder gesetzt:
+
+- `x-sz-pre-request-script` → `Endpoint.PreRequestScript`
+- `x-sz-post-request-script` → `Endpoint.PostRequestScript`
+- `x-sz-bearer-token` → `Endpoint.AuthenticationType = BearerToken`; Token-Wert wird unter dem Schlüssel `"{Method}:{RelativePath}"` in einem lokalen Dictionary gesammelt.
+
+Fehlende Erweiterungsfelder belassen die Felder auf `null` bzw. `None`.
+
+Beteiligte Komponenten:
+- `SwaggerImportService.ReadExtensionString(extensions, key)` — liest einen OpenAPI-Erweiterungswert als `string?`; gibt `null` zurück, wenn der Schlüssel fehlt oder der Wert kein String ist
+- `ImportDiff.BearerTokens` (`IDictionary<string, string>`) — transportiert die Token-Werte zwischen `ImportAsync` und `ApplyDiffAsync`
+
+### 4. Diff berechnen
+
+`ImportDiffCalculator.Calculate(existing, imported)` vergleicht bestehende und importierte Endpunkte. `ImportDiffCalculator.HasChanged` berücksichtigt jetzt auch `PreRequestScript` und `PostRequestScript`. `ImportDiffCalculator.MergeExistingIdentity` überträgt diese Felder vom importierten Endpunkt auf den zusammengeführten Eintrag (einschließlich `null`-Werte).
+
+Beteiligte Komponenten:
+- `ImportDiffCalculator.Calculate` — Diff-Berechnung
+- `ImportDiffCalculator.HasChanged` — Änderungserkennung inkl. Skriptfelder
+- `ImportDiffCalculator.MergeExistingIdentity` — Zusammenführung mit bestehender Identität
+
+Das lokale Bearer-Token-Dictionary wird als `ImportDiff.BearerTokens` in das zurückgegebene `ImportDiff` übernommen.
+
+### 5. Diff anwenden
+
+Die UI ruft `ISwaggerImportService.ApplyDiffAsync(diff)` auf. Für neue und geänderte Endpunkte werden zunächst die Datenbankoperationen ausgeführt (`IEndpointRepository.AddEndpointAsync` / `UpdateEndpointAsync`). Anschließend wird `SaveBearerTokenIfPresent` aufgerufen:
+
+- `endpoint.AuthenticationType == BearerToken` → Schlüssel `"{Method}:{RelativePath}"` in `ImportDiff.BearerTokens` nachschlagen → `ICredentialService.SavePassword(credentialTarget, "", tokenValue)` aufrufen.
+- Fehler beim Credential-Zugriff werden per `_logger.LogWarning` geloggt und unterbrechen den Import nicht.
+- Der `credentialTarget` wird durch `CredentialTargetHelper.Build(applicationId, AuthenticationType.BearerToken)` erzeugt.
+
+Beteiligte Komponenten:
+- `SwaggerImportService.ApplyDiffAsync` — Persistierung und Credential-Ablage
+- `SwaggerImportService.SaveBearerTokenIfPresent` — private Hilfsmethode für Credential-Speicherung
+- `IEndpointRepository.AddEndpointAsync` / `UpdateEndpointAsync` — Datenbankoperationen
+- `ICredentialService.SavePassword` — Ablage im Windows Credential Manager
+- `CredentialTargetHelper.Build` — Schlüsselbildung für den Credential Manager
+
+---
+
 ## Diagramm
 
 ```mermaid
@@ -196,6 +252,38 @@ flowchart TD
 
 ---
 
+## Diagramm: Swagger-Import
+
+```mermaid
+flowchart TD
+    A[ImportAsync] --> B{HTTP-Fehler?}
+    B -- Ja --> C[ImportDiff mit ErrorMessage]
+    B -- Nein --> D[OpenApiJsonReader.ReadAsync]
+    D --> E{Parsing-Fehler?}
+    E -- Ja --> C
+    E -- Nein --> F[Für jede OpenApiOperation]
+    F --> G[Endpoint erzeugen]
+    G --> H[ReadExtensionString x-sz-pre-request-script]
+    H --> I[ReadExtensionString x-sz-post-request-script]
+    I --> J{x-sz-bearer-token vorhanden?}
+    J -- Ja --> K[AuthenticationType = BearerToken; bearerTokens-Dict füllen]
+    J -- Nein --> L[ImportDiffCalculator.Calculate]
+    K --> L
+    L --> M[ImportDiff mit BearerTokens zurückgeben]
+    M --> N[ApplyDiffAsync]
+    N --> O[AddEndpointAsync / UpdateEndpointAsync]
+    O --> P{AuthenticationType = BearerToken?}
+    P -- Ja --> Q[SaveBearerTokenIfPresent]
+    Q --> R{Credential-Fehler?}
+    R -- Ja --> S[LogWarning - Import fortsetzen]
+    R -- Nein --> T[ICredentialService.SavePassword]
+    P -- Nein --> U[Nächster Endpunkt]
+    T --> U
+    S --> U
+```
+
+---
+
 ## Fehlerbehandlung
 
 - `SaveAsync()` fängt `DbUpdateConcurrencyException` und zeigt den `ConcurrencyWarningDialog`.
@@ -204,3 +292,5 @@ flowchart TD
 - Post-Skript-Fehler hängen die Fehlermeldung an ein ansonsten vollständiges `EndpointExecutionResult` an.
 - `EndpointScriptRunner` begrenzt die Skriptlaufzeit auf `ScriptTimeoutMs = 5000 ms` und den Arbeitsspeicher auf 4 MB.
 - Einträge mit leerem `Key` werden in `BuildRequest()` und in `ResolveDisplayUrl()` übersprungen.
+- Import-Fehler beim Laden oder Parsen des Swagger-JSONs erzeugen ein `ImportDiff { ErrorMessage = ... }` und verhindern jede weitere Verarbeitung.
+- Fehler beim Schreiben in den Windows Credential Manager werden per `_logger.LogWarning` protokolliert; die restlichen Endpunkte des Imports werden trotzdem persistiert.

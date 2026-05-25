@@ -1,24 +1,32 @@
-#pragma warning disable CS1591
+using System.Text.Json.Nodes;
 using Microsoft.Extensions.Logging;
+using Microsoft.OpenApi;
 using Microsoft.OpenApi.Reader;
+using Schnittstellenzentrale.Core.Enums;
+using Schnittstellenzentrale.Core.Helpers;
 using Schnittstellenzentrale.Core.Interfaces;
 using Schnittstellenzentrale.Core.Models;
 
 namespace Schnittstellenzentrale.Infrastructure.Services;
 
+/// <summary>Importiert Endpunkte aus einer Swagger/OpenAPI-Definition und berechnet den Diff zum bestehenden Bestand.</summary>
 public class SwaggerImportService : ISwaggerImportService
 {
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly IEndpointRepository _endpointRepository;
+    private readonly ICredentialService _credentialService;
     private readonly ILogger<SwaggerImportService> _logger;
 
-    public SwaggerImportService(IHttpClientFactory httpClientFactory, IEndpointRepository endpointRepository, ILogger<SwaggerImportService> logger)
+    /// <summary>Initialisiert eine neue Instanz von <see cref="SwaggerImportService"/>.</summary>
+    public SwaggerImportService(IHttpClientFactory httpClientFactory, IEndpointRepository endpointRepository, ICredentialService credentialService, ILogger<SwaggerImportService> logger)
     {
         _httpClientFactory = httpClientFactory;
         _endpointRepository = endpointRepository;
+        _credentialService = credentialService;
         _logger = logger;
     }
 
+    /// <inheritdoc/>
     public async Task<ImportDiff> ImportAsync(Core.Models.Application application)
     {
         if (string.IsNullOrEmpty(application.InterfaceUrl))
@@ -50,6 +58,7 @@ public class SwaggerImportService : ISwaggerImportService
         }
 
         var importedEndpoints = new List<Core.Models.Endpoint>();
+        var bearerTokens = new Dictionary<string, string>();
 
         foreach (var path in document.Paths)
         {
@@ -61,29 +70,86 @@ public class SwaggerImportService : ISwaggerImportService
                     Name = operation.Value.OperationId ?? $"{operation.Key} {path.Key}",
                     Method = method,
                     RelativePath = path.Key,
-                    ApplicationId = application.Id
+                    ApplicationId = application.Id,
+                    PreRequestScript = ReadExtensionString(operation.Value.Extensions, "x-sz-pre-request-script"),
+                    PostRequestScript = ReadExtensionString(operation.Value.Extensions, "x-sz-post-request-script")
                 };
+
+                var bearerToken = ReadExtensionString(operation.Value.Extensions, "x-sz-bearer-token");
+                if (!string.IsNullOrEmpty(bearerToken))
+                {
+                    endpoint.AuthenticationType = AuthenticationType.BearerToken;
+                    var key = $"{method}:{path.Key}";
+                    bearerTokens[key] = bearerToken;
+                }
+
                 importedEndpoints.Add(endpoint);
             }
         }
 
         var existingEndpoints = await _endpointRepository.GetEndpointsAsync(application.Id);
-        return ImportDiffCalculator.Calculate(existingEndpoints, importedEndpoints);
+        var calculated = ImportDiffCalculator.Calculate(existingEndpoints, importedEndpoints);
+        return new ImportDiff
+        {
+            NewEndpoints = calculated.NewEndpoints,
+            ChangedEndpoints = calculated.ChangedEndpoints,
+            RemovedEndpoints = calculated.RemovedEndpoints,
+            ErrorMessage = calculated.ErrorMessage,
+            BearerTokens = bearerTokens
+        };
     }
 
+    /// <inheritdoc/>
     public async Task ApplyDiffAsync(ImportDiff diff)
     {
         foreach (var endpoint in diff.NewEndpoints)
+        {
             await _endpointRepository.AddEndpointAsync(endpoint);
+            SaveBearerTokenIfPresent(endpoint, diff);
+        }
 
         foreach (var endpoint in diff.ChangedEndpoints)
+        {
             await _endpointRepository.UpdateEndpointAsync(endpoint);
+            SaveBearerTokenIfPresent(endpoint, diff);
+        }
 
         foreach (var endpoint in diff.RemovedEndpoints)
             await _endpointRepository.DeleteEndpointAsync(endpoint.Id);
     }
 
-    private Core.Enums.HttpMethod MapHttpMethod(string method)
+    private void SaveBearerTokenIfPresent(Core.Models.Endpoint endpoint, ImportDiff diff)
+    {
+        if (endpoint.AuthenticationType != AuthenticationType.BearerToken)
+            return;
+
+        var key = $"{endpoint.Method}:{endpoint.RelativePath}";
+        if (!diff.BearerTokens.TryGetValue(key, out var tokenValue))
+            return;
+
+        try
+        {
+            var credentialTarget = CredentialTargetHelper.Build(endpoint.ApplicationId, AuthenticationType.BearerToken);
+            _credentialService.SavePassword(credentialTarget, string.Empty, tokenValue);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Credential Manager konnte für Endpunkt {Key} nicht beschrieben werden.", key);
+        }
+    }
+
+    private static string? ReadExtensionString(IDictionary<string, IOpenApiExtension>? extensions, string key)
+    {
+        if (extensions == null || !extensions.TryGetValue(key, out var extension))
+            return null;
+
+        if (extension is JsonNodeExtension jne && jne.Node is JsonValue jv && jv.TryGetValue<string>(out var value))
+            return value;
+
+        return null;
+    }
+
+    private static Core.Enums.HttpMethod MapHttpMethod(string method)
     {
         return method.ToUpperInvariant() switch
         {

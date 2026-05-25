@@ -160,3 +160,51 @@
 - Die Änderung ist nicht über Session-Grenzen hinaus persistent.
 
 **Umsetzung:** `EndpointScriptRunner.BuildEnvironmentObject()` — der In-Memory-Ansatz ermöglicht temporäre Werte (z. B. OAuth-Tokens) ohne Datenbankschreibzugriff.
+
+---
+
+## Swagger-Import: Erweiterungsfelder steuern Skripte und Authentifizierung
+
+**Beschreibung:** Beim Import einer Swagger/OpenAPI-Definition werden Skripte und `AuthenticationType` ausschließlich über die OpenAPI-Erweiterungsfelder der einzelnen Operationen gesteuert — es gibt keine hartcodierten Sonderfälle nach Pfad, Endpunktname oder Position in der Swagger-Definition.
+
+**Bedingungen:**
+- `operation.Value.Extensions` enthält einen Eintrag mit dem Schlüssel `x-sz-pre-request-script`, `x-sz-post-request-script` oder `x-sz-bearer-token`.
+
+**Verhalten:**
+- `x-sz-pre-request-script`: Wert wird auf `Endpoint.PreRequestScript` gesetzt.
+- `x-sz-post-request-script`: Wert wird auf `Endpoint.PostRequestScript` gesetzt.
+- `x-sz-bearer-token`: `Endpoint.AuthenticationType` wird auf `BearerToken` gesetzt; der Wert wird im Windows Credential Manager abgelegt (Schlüssel via `CredentialTargetHelper.Build`).
+- Fehlender oder leerer Wert: Das jeweilige Feld bleibt auf `null` bzw. `None`; kein Credential-Eintrag wird angelegt.
+
+**Umsetzung:** `SwaggerImportService.ReadExtensionString(extensions, key)` — liest einen Erweiterungswert als `string?`; gibt `null` zurück, wenn der Schlüssel fehlt oder der Wert kein String ist.
+
+---
+
+## Swagger-Import: Re-Import überschreibt manuell gesetzte Skripte und AuthenticationType
+
+**Beschreibung:** Beim erneuten Import werden `PreRequestScript`, `PostRequestScript` und `AuthenticationType` stets durch die Werte aus der aktuellen Swagger-Definition ersetzt. Fehlen die Erweiterungsfelder im Re-Import, werden die Felder auf ihre Standardwerte (`null` bzw. `None`) zurückgesetzt — auch wenn sie zuvor manuell in der UI gesetzt wurden.
+
+**Bedingungen:**
+- Ein Endpunkt existiert bereits im Bestand.
+- Der Re-Import liefert andere Werte für `PreRequestScript`, `PostRequestScript` oder `AuthenticationType`.
+
+**Verhalten:**
+- Geänderte Endpunkte landen in `ImportDiff.ChangedEndpoints` und werden via `IEndpointRepository.UpdateEndpointAsync` persistiert.
+- Fehlende Erweiterungsfelder im Import setzen die Felder explizit auf `null` / `None` — das entspricht dem bestehenden Verhalten für `Name` und `Body`.
+
+**Umsetzung:** `ImportDiffCalculator.HasChanged` und `ImportDiffCalculator.MergeExistingIdentity` — explizites Überschreib-Verhalten verhindert Silent-Divergenz zwischen Swagger-Definition und gespeichertem Endpunkt.
+
+---
+
+## Swagger-Import: Credential-Fehler brechen den Import nicht ab
+
+**Beschreibung:** Wenn der Windows Credential Manager beim Import nicht beschrieben werden kann, werden die betroffenen Bearer-Tokens nicht gespeichert — der Rest des Imports (Anlegen/Aktualisieren der Endpunkte) bleibt davon unberührt.
+
+**Bedingungen:**
+- `ICredentialService.SavePassword` wirft eine Exception (z. B. kein Zugriff auf den Credential Manager).
+
+**Verhalten:**
+- Der Fehler wird per `_logger.LogWarning` protokolliert.
+- Die Ausführung von `ApplyDiffAsync` wird fortgesetzt; alle weiteren Endpunkte werden normal verarbeitet.
+
+**Umsetzung:** `SwaggerImportService.SaveBearerTokenIfPresent` — try/catch um `ICredentialService.SavePassword`; der Import-Vorgang ist damit robust gegenüber Credential-Manager-Fehlern.
