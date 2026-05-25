@@ -112,9 +112,12 @@ public class EndpointExecutionService : IEndpointExecutionService
                 var postContext = BuildScriptContext(endpoint, callDepth, response: responseData);
                 var postResult = await _scriptRunner.ExecuteAsync(endpoint.PostRequestScript, postContext);
                 if (!postResult.Success)
+                {
+                    result.Success = false;
                     result.ErrorMessage = string.IsNullOrEmpty(result.ErrorMessage)
                         ? postResult.ErrorMessage
                         : $"{result.ErrorMessage}\n{postResult.ErrorMessage}";
+                }
             }
 
             return result;
@@ -144,23 +147,7 @@ public class EndpointExecutionService : IEndpointExecutionService
             Request = requestData,
             Response = response,
             CallDepth = callDepth,
-            ExecuteEndpoint = async name =>
-            {
-                var matches = await _endpointRepository.GetEndpointByNameAsync(endpoint.ApplicationId, name);
-                if (matches.Count == 0)
-                    return new EndpointExecutionResult
-                    {
-                        Success = false,
-                        ErrorMessage = $"sz.execute: Kein Endpunkt mit dem Namen \"{name}\" gefunden."
-                    };
-                if (matches.Count > 1)
-                    return new EndpointExecutionResult
-                    {
-                        Success = false,
-                        ErrorMessage = $"sz.execute: Mehrdeutiger Endpunktname \"{name}\" — {matches.Count} Treffer gefunden."
-                    };
-                return await ExecuteAsync(matches[0], callDepth);
-            }
+            ExecuteEndpoint = name => ExecuteEndpointByNameAsync(endpoint.ApplicationId, name, callDepth)
         };
     }
 
@@ -277,6 +264,24 @@ public class EndpointExecutionService : IEndpointExecutionService
             var name = match.Groups[1].Value;
             return variables.TryGetValue(name, out var value) ? value : string.Empty;
         });
+    }
+
+    private async Task<EndpointExecutionResult> ExecuteEndpointByNameAsync(int applicationId, string name, Dictionary<int, int> callDepth)
+    {
+        var matches = await _endpointRepository.GetEndpointByNameAsync(applicationId, name);
+        if (matches.Count == 0)
+            return new EndpointExecutionResult
+            {
+                Success = false,
+                ErrorMessage = $"sz.execute: Kein Endpunkt mit dem Namen \"{name}\" gefunden."
+            };
+        if (matches.Count > 1)
+            return new EndpointExecutionResult
+            {
+                Success = false,
+                ErrorMessage = $"sz.execute: Mehrdeutiger Endpunktname \"{name}\" — {matches.Count} Treffer gefunden."
+            };
+        return await ExecuteAsync(matches[0], callDepth);
     }
 
     private void ApplyAuthentication(HttpRequestMessage request, Core.Models.Endpoint endpoint)

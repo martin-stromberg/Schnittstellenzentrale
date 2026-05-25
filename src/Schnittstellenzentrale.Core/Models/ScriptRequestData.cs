@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Xml;
 using System.Xml.Linq;
 
 namespace Schnittstellenzentrale.Core.Models;
@@ -23,8 +24,15 @@ public class ScriptRequestData
     {
         if (string.IsNullOrEmpty(Body))
             return null;
-        var element = JsonSerializer.Deserialize<JsonElement>(Body);
-        return ConvertJsonElement(element);
+        try
+        {
+            var element = JsonSerializer.Deserialize<JsonElement>(Body);
+            return ConvertJsonElement(element);
+        }
+        catch (JsonException ex)
+        {
+            throw new InvalidOperationException($"Ungültiger JSON-Body: {ex.Message}", ex);
+        }
     }
 
     /// <summary>Parst den Body als XML und gibt eine verschachtelte Objektstruktur zurück.</summary>
@@ -32,8 +40,15 @@ public class ScriptRequestData
     {
         if (string.IsNullOrEmpty(Body))
             return null;
-        var doc = XDocument.Parse(Body);
-        return ConvertXmlToObject(doc.Root);
+        try
+        {
+            var doc = XDocument.Parse(Body);
+            return ConvertXmlToObject(doc.Root);
+        }
+        catch (XmlException ex)
+        {
+            throw new InvalidOperationException($"Ungültiger XML-Body: {ex.Message}", ex);
+        }
     }
 
     internal static object? ConvertJsonElement(JsonElement element)

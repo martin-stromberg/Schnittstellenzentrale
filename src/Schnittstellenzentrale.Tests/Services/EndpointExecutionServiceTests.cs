@@ -19,30 +19,30 @@ public class EndpointExecutionServiceTests
         BaseUrl = "http://localhost:5000"
     };
 
-    private static Core.Models.Endpoint CreateEndpoint(AuthenticationType authType) => new()
+    private static Core.Models.Endpoint CreateEndpoint(
+        AuthenticationType authType = AuthenticationType.None,
+        string relPath = "/test",
+        EndpointQueryParameter[]? queryParameters = null,
+        EndpointHeader[]? headers = null,
+        string? body = null,
+        Core.Enums.HttpMethod method = Core.Enums.HttpMethod.GET,
+        string? preRequestScript = null,
+        string? postRequestScript = null,
+        string name = "Test",
+        int id = 1) => new()
     {
-        Id = 1,
-        Name = "Test",
-        Method = Core.Enums.HttpMethod.GET,
-        RelativePath = "/test",
-        AuthenticationType = authType,
-        ApplicationId = 1,
-        Application = CreateApp(),
-        Headers = [],
-        QueryParameters = []
-    };
-
-    private static Core.Models.Endpoint CreateEndpoint(AuthenticationType authType, string relPath, EndpointQueryParameter[]? queryParameters = null) => new()
-    {
-        Id = 1,
-        Name = "Test",
-        Method = Core.Enums.HttpMethod.GET,
+        Id = id,
+        Name = name,
+        Method = body != null ? Core.Enums.HttpMethod.POST : method,
         RelativePath = relPath,
         AuthenticationType = authType,
         ApplicationId = 1,
         Application = CreateApp(),
-        Headers = [],
-        QueryParameters = queryParameters ?? []
+        Headers = headers ?? [],
+        QueryParameters = queryParameters ?? [],
+        Body = body,
+        PreRequestScript = preRequestScript,
+        PostRequestScript = postRequestScript
     };
 
     private static Mock<IActiveEnvironmentService> CreateEmptyActiveEnvironmentMock()
@@ -351,36 +351,6 @@ public class EndpointExecutionServiceTests
         return mock;
     }
 
-    private static Core.Models.Endpoint CreateEndpointWithHeaders(
-        string relPath,
-        EndpointHeader[] headers,
-        EndpointQueryParameter[]? queryParameters = null) => new()
-    {
-        Id = 1,
-        Name = "Test",
-        Method = Core.Enums.HttpMethod.GET,
-        RelativePath = relPath,
-        AuthenticationType = AuthenticationType.None,
-        ApplicationId = 1,
-        Application = CreateApp(),
-        Headers = headers,
-        QueryParameters = queryParameters ?? []
-    };
-
-    private static Core.Models.Endpoint CreateEndpointWithBody(string relPath, string body) => new()
-    {
-        Id = 1,
-        Name = "Test",
-        Method = Core.Enums.HttpMethod.POST,
-        RelativePath = relPath,
-        Body = body,
-        AuthenticationType = AuthenticationType.None,
-        ApplicationId = 1,
-        Application = CreateApp(),
-        Headers = [],
-        QueryParameters = []
-    };
-
     /// <summary>BuildRequest_ResolvesDoubleBracePlaceholders</summary>
     [Fact]
     public async Task BuildRequest_ResolvesDoubleBracePlaceholders()
@@ -506,10 +476,8 @@ public class EndpointExecutionServiceTests
             .Callback<HttpRequestMessage, CancellationToken>((req, _) => capturedRequest = req)
             .ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("{}") });
 
-        var endpoint = CreateEndpointWithHeaders("/api/test",
-        [
-            new EndpointHeader { Key = "{{headerName}}", Value = "{{headerValue}}" }
-        ]);
+        var endpoint = CreateEndpoint(relPath: "/api/test",
+            headers: [new EndpointHeader { Key = "{{headerName}}", Value = "{{headerValue}}" }]);
 
         await service.ExecuteAsync(endpoint);
 
@@ -636,7 +604,7 @@ public class EndpointExecutionServiceTests
             scriptMock.Object,
             repoMock.Object);
 
-        var endpoint = CreateEndpointWithBody("/api/items", "{\"count\": {{value}}}");
+        var endpoint = CreateEndpoint(relPath: "/api/items", body: "{\"count\": {{value}}}");
 
         await service.ExecuteAsync(endpoint);
 
@@ -662,33 +630,35 @@ public class EndpointExecutionServiceTests
                 }
             });
 
-        ScriptContext? capturedContext = null;
         var scriptMock = new Mock<IEndpointScriptRunner>();
         scriptMock.Setup(r => r.ExecuteAsync(It.IsAny<string>(), It.IsAny<ScriptContext>()))
-            .Callback<string, ScriptContext>((_, ctx) => capturedContext = ctx)
+            .Callback<string, ScriptContext>((_, ctx) =>
+                ctx.EnvironmentService.SetActiveEnvironment(new Core.Models.SystemEnvironment
+                {
+                    Id = 1, Name = "Test",
+                    Variables = [new Core.Models.EnvironmentVariable { Name = "host", Value = "changed" }]
+                }))
             .ReturnsAsync(new ScriptExecutionResult { Success = true });
 
         var healthMock = new Mock<IHealthCheckService>();
         var credMock = new Mock<ICredentialService>();
-        var (service, _) = CreateService(healthMock, credMock, activeEnvironmentMock: envMock, scriptRunnerMock: scriptMock);
+        Uri? sentUri = null;
+        var (service, handlerMock) = CreateService(healthMock, credMock, activeEnvironmentMock: envMock, scriptRunnerMock: scriptMock);
+        handlerMock.Protected()
+            .Setup<Task<HttpResponseMessage>>("SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>())
+            .Callback<HttpRequestMessage, CancellationToken>((req, _) => sentUri = req.RequestUri)
+            .ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("{}") });
 
-        var endpoint = new Core.Models.Endpoint
-        {
-            Id = 1,
-            Name = "Test",
-            Method = Core.Enums.HttpMethod.GET,
-            RelativePath = "/test",
-            AuthenticationType = AuthenticationType.None,
-            ApplicationId = 1,
-            Application = CreateApp(),
-            Headers = [],
-            QueryParameters = [],
-            PreRequestScript = "sz.environment.set('host', 'changed');"
-        };
+        var endpoint = CreateEndpoint(relPath: "/{{host}}/test",
+            preRequestScript: "sz.environment.set('host', 'changed');");
 
         await service.ExecuteAsync(endpoint);
 
-        Assert.NotNull(capturedContext);
+        Assert.NotNull(sentUri);
+        Assert.Contains("/changed/test", sentUri!.PathAndQuery);
+        Assert.DoesNotContain("original", sentUri.PathAndQuery);
         scriptMock.Verify(r => r.ExecuteAsync(endpoint.PreRequestScript, It.IsAny<ScriptContext>()), Times.Once);
     }
 
@@ -719,19 +689,7 @@ public class EndpointExecutionServiceTests
         var service = new EndpointExecutionService(
             factoryMock.Object, healthMock.Object, credMock.Object, envMock.Object, scriptMock.Object, repoMock.Object);
 
-        var endpoint = new Core.Models.Endpoint
-        {
-            Id = 1,
-            Name = "Test",
-            Method = Core.Enums.HttpMethod.GET,
-            RelativePath = "/test",
-            AuthenticationType = AuthenticationType.None,
-            ApplicationId = 1,
-            Application = CreateApp(),
-            Headers = [],
-            QueryParameters = [],
-            PreRequestScript = "invalid@@"
-        };
+        var endpoint = CreateEndpoint(preRequestScript: "invalid@@");
 
         var result = await service.ExecuteAsync(endpoint);
 
@@ -753,19 +711,7 @@ public class EndpointExecutionServiceTests
         var credMock = new Mock<ICredentialService>();
         var (service, _) = CreateService(healthMock, credMock, body: """{"token":"abc"}""", scriptRunnerMock: scriptMock);
 
-        var endpoint = new Core.Models.Endpoint
-        {
-            Id = 1,
-            Name = "Test",
-            Method = Core.Enums.HttpMethod.GET,
-            RelativePath = "/test",
-            AuthenticationType = AuthenticationType.None,
-            ApplicationId = 1,
-            Application = CreateApp(),
-            Headers = [],
-            QueryParameters = [],
-            PostRequestScript = "sz.environment.set('token', sz.response.body.asJson().token);"
-        };
+        var endpoint = CreateEndpoint(postRequestScript: "sz.environment.set('token', sz.response.body.asJson().token);");
 
         var result = await service.ExecuteAsync(endpoint);
 
@@ -788,19 +734,7 @@ public class EndpointExecutionServiceTests
         var credMock = new Mock<ICredentialService>();
         var (service, _) = CreateService(healthMock, credMock, body: "{}", scriptRunnerMock: scriptMock);
 
-        var endpoint = new Core.Models.Endpoint
-        {
-            Id = 1,
-            Name = "Test",
-            Method = Core.Enums.HttpMethod.GET,
-            RelativePath = "/test",
-            AuthenticationType = AuthenticationType.None,
-            ApplicationId = 1,
-            Application = CreateApp(),
-            Headers = [],
-            QueryParameters = [],
-            PostRequestScript = "invalid@@"
-        };
+        var endpoint = CreateEndpoint(postRequestScript: "invalid@@");
 
         var result = await service.ExecuteAsync(endpoint);
 
@@ -813,18 +747,7 @@ public class EndpointExecutionServiceTests
     [Fact]
     public async Task SzExecute_LoesteAusfuehrungDesZweitenEndpunktsAus()
     {
-        var secondEndpoint = new Core.Models.Endpoint
-        {
-            Id = 2,
-            Name = "ZweiterEndpunkt",
-            Method = Core.Enums.HttpMethod.GET,
-            RelativePath = "/second",
-            AuthenticationType = AuthenticationType.None,
-            ApplicationId = 1,
-            Application = CreateApp(),
-            Headers = [],
-            QueryParameters = []
-        };
+        var secondEndpoint = CreateEndpoint(relPath: "/second", name: "ZweiterEndpunkt", id: 2);
 
         var repoMock = new Mock<IEndpointRepository>();
         repoMock.Setup(r => r.GetEndpointByNameAsync(1, "ZweiterEndpunkt"))
@@ -843,19 +766,8 @@ public class EndpointExecutionServiceTests
             .Callback<string, ScriptContext>((_, ctx) => capturedContext = ctx)
             .ReturnsAsync(new ScriptExecutionResult { Success = true });
 
-        var endpoint = new Core.Models.Endpoint
-        {
-            Id = 1,
-            Name = "ErsterEndpunkt",
-            Method = Core.Enums.HttpMethod.GET,
-            RelativePath = "/first",
-            AuthenticationType = AuthenticationType.None,
-            ApplicationId = 1,
-            Application = CreateApp(),
-            Headers = [],
-            QueryParameters = [],
-            PreRequestScript = "sz.execute('ZweiterEndpunkt');"
-        };
+        var endpoint = CreateEndpoint(relPath: "/first", name: "ErsterEndpunkt",
+            preRequestScript: "sz.execute('ZweiterEndpunkt');");
 
         var result = await service.ExecuteAsync(endpoint);
 
@@ -868,19 +780,8 @@ public class EndpointExecutionServiceTests
     {
         var repoMock = new Mock<IEndpointRepository>();
 
-        var endpoint = new Core.Models.Endpoint
-        {
-            Id = 1,
-            Name = "Rekursiv",
-            Method = Core.Enums.HttpMethod.GET,
-            RelativePath = "/rekursiv",
-            AuthenticationType = AuthenticationType.None,
-            ApplicationId = 1,
-            Application = CreateApp(),
-            Headers = [],
-            QueryParameters = [],
-            PreRequestScript = "sz.execute('Rekursiv');"
-        };
+        var endpoint = CreateEndpoint(relPath: "/rekursiv", name: "Rekursiv",
+            preRequestScript: "sz.execute('Rekursiv');");
 
         repoMock.Setup(r => r.GetEndpointByNameAsync(1, "Rekursiv"))
             .ReturnsAsync(new List<Core.Models.Endpoint> { endpoint });
@@ -889,11 +790,6 @@ public class EndpointExecutionServiceTests
 
         var healthMock = new Mock<IHealthCheckService>();
         var credMock = new Mock<ICredentialService>();
-        var (service, _) = CreateService(
-            healthMock, credMock,
-            scriptRunnerMock: null,
-            endpointRepositoryMock: repoMock);
-
         var handlerMock = new Mock<HttpMessageHandler>();
         handlerMock.Protected()
             .Setup<Task<HttpResponseMessage>>("SendAsync",
@@ -941,8 +837,8 @@ public class EndpointExecutionServiceTests
     {
         var endpoints = new List<Core.Models.Endpoint>
         {
-            new() { Id = 2, Name = "Doppelt", ApplicationId = 1, Application = CreateApp(), Method = Core.Enums.HttpMethod.GET, RelativePath = "/a", AuthenticationType = AuthenticationType.None, Headers = [], QueryParameters = [] },
-            new() { Id = 3, Name = "Doppelt", ApplicationId = 1, Application = CreateApp(), Method = Core.Enums.HttpMethod.GET, RelativePath = "/b", AuthenticationType = AuthenticationType.None, Headers = [], QueryParameters = [] }
+            CreateEndpoint(relPath: "/a", name: "Doppelt", id: 2),
+            CreateEndpoint(relPath: "/b", name: "Doppelt", id: 3)
         };
 
         var repoMock = new Mock<IEndpointRepository>();
@@ -961,19 +857,7 @@ public class EndpointExecutionServiceTests
         var credMock = new Mock<ICredentialService>();
         var (service, _) = CreateService(healthMock, credMock, scriptRunnerMock: scriptMock, endpointRepositoryMock: repoMock);
 
-        var endpoint = new Core.Models.Endpoint
-        {
-            Id = 1,
-            Name = "Aufrufend",
-            Method = Core.Enums.HttpMethod.GET,
-            RelativePath = "/test",
-            AuthenticationType = AuthenticationType.None,
-            ApplicationId = 1,
-            Application = CreateApp(),
-            Headers = [],
-            QueryParameters = [],
-            PreRequestScript = "sz.execute('Doppelt');"
-        };
+        var endpoint = CreateEndpoint(name: "Aufrufend", preRequestScript: "sz.execute('Doppelt');");
 
         await service.ExecuteAsync(endpoint);
 

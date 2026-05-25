@@ -66,7 +66,20 @@ public class EndpointScriptRunner : IEndpointScriptRunner
 
         sz.FastSetDataProperty("execute", JsValue.FromObject(engine, (string name) =>
         {
-            var result = Task.Run(() => context.ExecuteEndpoint(name)).GetAwaiter().GetResult();
+            EndpointExecutionResult result;
+            try
+            {
+                result = Task.Run(() => context.ExecuteEndpoint(name)).GetAwaiter().GetResult();
+            }
+            catch (AggregateException aggEx)
+            {
+                var inner = aggEx.GetBaseException();
+                result = new EndpointExecutionResult
+                {
+                    Success = false,
+                    ErrorMessage = $"sz.execute fehlgeschlagen: {inner.Message}"
+                };
+            }
             var resultObj = new JsObject(engine);
             resultObj.FastSetDataProperty("success", result.Success ? JsBoolean.True : JsBoolean.False);
             resultObj.FastSetDataProperty("statusCode", result.StatusCode.HasValue
@@ -101,6 +114,9 @@ public class EndpointScriptRunner : IEndpointScriptRunner
                 .ToDictionary(kv => kv.Key, kv => kv.Value);
             updatedVariables[name] = value;
 
+            var variableList = updatedVariables
+                .Select(kv => new EnvironmentVariable { Name = kv.Key, Value = kv.Value })
+                .ToList();
             var updatedEnv = activeEnv != null
                 ? new SystemEnvironment
                 {
@@ -108,16 +124,12 @@ public class EndpointScriptRunner : IEndpointScriptRunner
                     Name = activeEnv.Name,
                     Mode = activeEnv.Mode,
                     Owner = activeEnv.Owner,
-                    Variables = updatedVariables
-                        .Select(kv => new EnvironmentVariable { Name = kv.Key, Value = kv.Value })
-                        .ToList()
+                    Variables = variableList
                 }
                 : new SystemEnvironment
                 {
                     Name = string.Empty,
-                    Variables = updatedVariables
-                        .Select(kv => new EnvironmentVariable { Name = kv.Key, Value = kv.Value })
-                        .ToList()
+                    Variables = variableList
                 };
 
             context.EnvironmentService.SetActiveEnvironment(updatedEnv);
@@ -134,11 +146,7 @@ public class EndpointScriptRunner : IEndpointScriptRunner
         req.FastSetDataProperty("url", JsValue.FromObject(engine, request.Url));
         req.FastSetDataProperty("method", JsValue.FromObject(engine, request.Method));
         req.FastSetDataProperty("body", BuildBodyObject(engine, request));
-
-        var headersObj = new JsObject(engine);
-        foreach (var header in request.Headers)
-            headersObj.FastSetDataProperty(header.Key, JsValue.FromObject(engine, header.Value));
-        req.FastSetDataProperty("headers", headersObj);
+        req.FastSetDataProperty("headers", BuildHeadersObject(engine, request.Headers));
 
         return req;
     }
@@ -148,13 +156,17 @@ public class EndpointScriptRunner : IEndpointScriptRunner
         var resp = new JsObject(engine);
 
         resp.FastSetDataProperty("body", BuildBodyObject(engine, response));
-
-        var headersObj = new JsObject(engine);
-        foreach (var header in response.Headers)
-            headersObj.FastSetDataProperty(header.Key, JsValue.FromObject(engine, header.Value));
-        resp.FastSetDataProperty("headers", headersObj);
+        resp.FastSetDataProperty("headers", BuildHeadersObject(engine, response.Headers));
 
         return resp;
+    }
+
+    private static JsObject BuildHeadersObject(Engine engine, IEnumerable<KeyValuePair<string, string>> headers)
+    {
+        var headersObj = new JsObject(engine);
+        foreach (var header in headers)
+            headersObj.FastSetDataProperty(header.Key, JsValue.FromObject(engine, header.Value));
+        return headersObj;
     }
 
     private static JsObject BuildBodyObject(Engine engine, ScriptRequestData request)

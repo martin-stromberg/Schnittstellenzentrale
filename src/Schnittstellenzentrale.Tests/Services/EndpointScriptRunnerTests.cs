@@ -126,6 +126,36 @@ public class EndpointScriptRunnerTests
         Assert.True(result.Success);
     }
 
+    /// <summary>SzRequestBodyAsJson_ParstJsonKorrekt</summary>
+    [Fact]
+    public async Task SzRequestBodyAsJson_ParstJsonKorrekt()
+    {
+        var runner = new EndpointScriptRunner();
+        var context = CreateContext();
+        context.Request.Body = """{"key":"value","num":7}""";
+
+        var result = await runner.ExecuteAsync(
+            "var obj = sz.request.body.asJson(); if (obj.key !== 'value') throw new Error('key falsch'); if (obj.num !== 7) throw new Error('num falsch');",
+            context);
+
+        Assert.True(result.Success);
+    }
+
+    /// <summary>SzRequestBodyAsXml_ParstXmlKorrekt</summary>
+    [Fact]
+    public async Task SzRequestBodyAsXml_ParstXmlKorrekt()
+    {
+        var runner = new EndpointScriptRunner();
+        var context = CreateContext();
+        context.Request.Body = "<data><item>hello</item></data>";
+
+        var result = await runner.ExecuteAsync(
+            "var obj = sz.request.body.asXml(); if (obj.item !== 'hello') throw new Error('item falsch: ' + obj.item);",
+            context);
+
+        Assert.True(result.Success);
+    }
+
     /// <summary>SzResponseBodyAsJson_ParstJsonKorrekt</summary>
     [Fact]
     public async Task SzResponseBodyAsJson_ParstJsonKorrekt()
