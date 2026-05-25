@@ -46,6 +46,7 @@ builder.Services.AddSwaggerGen(c =>
     });
     c.OperationFilter<SecurityOperationFilter>();
     c.OperationFilter<ContextHeadersOperationFilter>();
+    c.OperationFilter<SzExtensionsOperationFilter>();
     var xmlPath = Path.Combine(AppContext.BaseDirectory, "Schnittstellenzentrale.xml");
     if (File.Exists(xmlPath))
         c.IncludeXmlComments(xmlPath);
