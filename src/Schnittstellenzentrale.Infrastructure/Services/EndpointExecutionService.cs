@@ -218,13 +218,14 @@ public class EndpointExecutionService : IEndpointExecutionService
         Core.Models.Endpoint endpoint,
         HttpRequestMessage request)
     {
+        var resolvedUrl = request.RequestUri?.ToString() ?? string.Empty;
         var stopwatch = Stopwatch.StartNew();
         using var response = await client.SendAsync(request);
         stopwatch.Stop();
-        return await BuildResult(endpoint, response, stopwatch.ElapsedMilliseconds);
+        return await BuildResult(endpoint, response, stopwatch.ElapsedMilliseconds, resolvedUrl);
     }
 
-    private static async Task<EndpointExecutionResult> BuildResult(Core.Models.Endpoint endpoint, HttpResponseMessage response, long durationMs)
+    private static async Task<EndpointExecutionResult> BuildResult(Core.Models.Endpoint endpoint, HttpResponseMessage response, long durationMs, string resolvedUrl)
     {
         var body = await response.Content.ReadAsStringAsync();
         var responseHeaders = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -237,7 +238,7 @@ public class EndpointExecutionService : IEndpointExecutionService
         {
             Success = response.IsSuccessStatusCode,
             StatusCode = (int)response.StatusCode,
-            RequestDetails = $"{endpoint.Method} {endpoint.Application?.BaseUrl ?? string.Empty}{endpoint.RelativePath}",
+            RequestDetails = $"{endpoint.Method} {resolvedUrl}",
             ResponseBody = body,
             ResponseHeaders = responseHeaders,
             DurationMs = durationMs,

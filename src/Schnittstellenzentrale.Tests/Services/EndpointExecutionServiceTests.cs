@@ -6,6 +6,7 @@ using Schnittstellenzentrale.Core.Enums;
 using Schnittstellenzentrale.Core.Interfaces;
 using Schnittstellenzentrale.Core.Models;
 using Schnittstellenzentrale.Infrastructure.Services;
+using Schnittstellenzentrale.Tests.Helpers;
 using ActivityLogCategory = Schnittstellenzentrale.Core.Enums.ActivityLogCategory;
 
 namespace Schnittstellenzentrale.Tests.Services;
@@ -88,11 +89,6 @@ public class EndpointExecutionServiceTests
         return mock;
     }
 
-    private static Mock<IActivityLogService> CreateActivityLogServiceMock()
-    {
-        return new Mock<IActivityLogService>();
-    }
-
     private static (EndpointExecutionService, Mock<HttpMessageHandler>) CreateService(
         Mock<ICredentialService> credentialMock,
         HttpStatusCode responseCode = HttpStatusCode.OK,
@@ -121,7 +117,7 @@ public class EndpointExecutionServiceTests
         var repoMock = endpointRepositoryMock ?? CreateEmptyEndpointRepositoryMock();
         var envRepoMock = environmentRepositoryMock ?? CreateEmptyEnvironmentRepositoryMock();
         var signalRMock = signalRNotificationServiceMock ?? CreateEmptySignalRNotificationServiceMock();
-        var logMock = activityLogServiceMock ?? CreateActivityLogServiceMock();
+        var logMock = activityLogServiceMock ?? TestMockFactory.CreateActivityLogServiceMock();
 
         var service = new EndpointExecutionService(
             factoryMock.Object,
@@ -206,7 +202,9 @@ public class EndpointExecutionServiceTests
         var (service, _) = CreateService(_credMock);
         var endpoint = CreateEndpoint(AuthenticationType.NegotiateWithImpersonation);
 
-        await service.ExecuteAsync(endpoint);
+        var result = await service.ExecuteAsync(endpoint);
+
+        Assert.True(result.Success);
     }
 
     /// <summary>Execute_WithAuthTypeBearerToken_SendsBearerHeader</summary>
@@ -725,7 +723,7 @@ public class EndpointExecutionServiceTests
         var scriptRunner = new EndpointScriptRunner(
             CreateEmptyEnvironmentRepositoryMock().Object,
             CreateEmptySignalRNotificationServiceMock().Object,
-            CreateActivityLogServiceMock().Object);
+            TestMockFactory.CreateActivityLogServiceMock().Object);
 
         var handlerMock = new Mock<HttpMessageHandler>();
         handlerMock.Protected()
@@ -745,7 +743,7 @@ public class EndpointExecutionServiceTests
             repoMock.Object,
             CreateEmptyEnvironmentRepositoryMock().Object,
             CreateEmptySignalRNotificationServiceMock().Object,
-            CreateActivityLogServiceMock().Object);
+            TestMockFactory.CreateActivityLogServiceMock().Object);
 
         var result = await realService.ExecuteAsync(endpoint);
 
@@ -772,7 +770,7 @@ public class EndpointExecutionServiceTests
     [Fact]
     public async Task Execute_ErfolgreichRequest_ProtokolliertEndpointExecuted()
     {
-        var logMock = CreateActivityLogServiceMock();
+        var logMock = TestMockFactory.CreateActivityLogServiceMock();
         var (service, _) = CreateService(_credMock, activityLogServiceMock: logMock);
         var endpoint = CreateEndpoint(AuthenticationType.None);
 
@@ -785,7 +783,7 @@ public class EndpointExecutionServiceTests
     [Fact]
     public async Task Execute_HttpFehler_ProtokolliertHttpError()
     {
-        var logMock = CreateActivityLogServiceMock();
+        var logMock = TestMockFactory.CreateActivityLogServiceMock();
         var (service, _) = CreateService(_credMock, responseCode: System.Net.HttpStatusCode.BadRequest, activityLogServiceMock: logMock);
         var endpoint = CreateEndpoint(AuthenticationType.None);
 
@@ -798,7 +796,7 @@ public class EndpointExecutionServiceTests
     [Fact]
     public async Task Execute_Exception_ProtokolliertInternalError()
     {
-        var logMock = CreateActivityLogServiceMock();
+        var logMock = TestMockFactory.CreateActivityLogServiceMock();
         var (service, handlerMock) = CreateService(_credMock, activityLogServiceMock: logMock);
         handlerMock.Protected()
             .Setup<Task<HttpResponseMessage>>("SendAsync",
@@ -816,7 +814,7 @@ public class EndpointExecutionServiceTests
     [Fact]
     public async Task Execute_MaskiertVariablen_ImDetailString()
     {
-        var logMock = CreateActivityLogServiceMock();
+        var logMock = TestMockFactory.CreateActivityLogServiceMock();
 
         var secretValue = "supersecret";
         var envMock = new Mock<IActiveEnvironmentService>();

@@ -78,21 +78,6 @@
             await RestoreEnvironmentFromLocalStorageAsync(StorageModeService.CurrentMode);
             await ConnectHubAsync();
 
-            try
-            {
-                var storedMode = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", LocalStorageKeys.ActivityLogDisplayMode);
-                if (!string.IsNullOrEmpty(storedMode))
-                    _activityLogDisplayMode = storedMode;
-
-                var storedHeight = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", LocalStorageKeys.ActivityLogPanelHeight);
-                if (!string.IsNullOrEmpty(storedHeight) && int.TryParse(storedHeight, out var height))
-                    _activityLogPanelHeight = height;
-            }
-            catch
-            {
-                // JSException bei Server-Prerendering ignorieren
-            }
-
             await InvokeAsync(StateHasChanged);
         }
     }

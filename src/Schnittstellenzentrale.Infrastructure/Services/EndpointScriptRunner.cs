@@ -50,6 +50,10 @@ public class EndpointScriptRunner : IEndpointScriptRunner
         }
         catch (TimeoutException ex)
         {
+            _activityLogService.Log(
+                ActivityLogCategory.InternalError,
+                $"Skript-Timeout in Skript: {scriptName}",
+                ex.ToString());
             return Task.FromResult(new ScriptExecutionResult
             {
                 Success = false,
@@ -86,7 +90,7 @@ public class EndpointScriptRunner : IEndpointScriptRunner
     {
         var sz = new JsObject(engine);
 
-        sz.FastSetDataProperty("environment", BuildEnvironmentObject(engine, context, _environmentRepository, _signalRNotificationService));
+        sz.FastSetDataProperty("environment", BuildEnvironmentObject(engine, context));
         sz.FastSetDataProperty("request", BuildRequestObject(engine, context.Request));
 
         if (context.Response != null)
@@ -135,11 +139,7 @@ public class EndpointScriptRunner : IEndpointScriptRunner
         engine.SetValue("sz", sz);
     }
 
-    private static JsObject BuildEnvironmentObject(
-        Engine engine,
-        ScriptContext context,
-        ISystemEnvironmentRepository environmentRepository,
-        ISignalRNotificationService signalRNotificationService)
+    private JsObject BuildEnvironmentObject(Engine engine, ScriptContext context)
     {
         var env = new JsObject(engine);
 
@@ -153,7 +153,7 @@ public class EndpointScriptRunner : IEndpointScriptRunner
         {
             try
             {
-                ApplyEnvironmentSet(context, name, value, environmentRepository, signalRNotificationService);
+                ApplyEnvironmentSet(context, name, value);
             }
             catch (Exception ex)
             {
@@ -165,31 +165,23 @@ public class EndpointScriptRunner : IEndpointScriptRunner
         return env;
     }
 
-    private static void ApplyEnvironmentSet(
-        ScriptContext context,
-        string name,
-        string value,
-        ISystemEnvironmentRepository environmentRepository,
-        ISignalRNotificationService signalRNotificationService)
+    private void ApplyEnvironmentSet(ScriptContext context, string name, string value)
     {
         var activeEnv = context.EnvironmentService.ActiveEnvironment;
-        var updatedVariables = context.EnvironmentService.ActiveVariables
-            .ToDictionary(kv => kv.Key, kv => kv.Value);
-        updatedVariables[name] = value;
-
-        var variableList = updatedVariables
-            .Select(kv =>
+        var baseVariables = activeEnv?.Variables ?? [];
+        var updatedVariables = baseVariables
+            .Select(v => new EnvironmentVariable
             {
-                var existing = activeEnv?.Variables.FirstOrDefault(v => v.Name == kv.Key);
-                return new EnvironmentVariable
-                {
-                    Id = existing?.Id ?? 0,
-                    Name = kv.Key,
-                    Value = kv.Value,
-                    IsValueMasked = existing?.IsValueMasked ?? false
-                };
+                Id = v.Id,
+                Name = v.Name,
+                Value = v.Name == name ? value : v.Value,
+                IsValueMasked = v.IsValueMasked
             })
             .ToList();
+
+        if (!baseVariables.Any(v => v.Name == name))
+            updatedVariables.Add(new EnvironmentVariable { Id = 0, Name = name, Value = value, IsValueMasked = false });
+
         var updatedEnv = activeEnv != null
             ? new SystemEnvironment
             {
@@ -197,41 +189,28 @@ public class EndpointScriptRunner : IEndpointScriptRunner
                 Name = activeEnv.Name,
                 Mode = activeEnv.Mode,
                 Owner = activeEnv.Owner,
-                Variables = variableList
+                Variables = updatedVariables
             }
             : new SystemEnvironment
             {
                 Name = string.Empty,
-                Variables = variableList
+                Variables = updatedVariables
             };
 
         context.EnvironmentService.SetActiveEnvironment(updatedEnv);
 
         if (activeEnv != null)
-            PersistVariable(activeEnv.Id, name, value, environmentRepository, signalRNotificationService);
+        {
+            // Jint callbacks sind synchron — await ist nicht möglich. Task.Run + GetAwaiter().GetResult()
+            // ist das etablierte Muster, um async-Methoden aus synchronen Jint-Lambdas heraus zu blockieren.
+            Task.Run(() => PersistVariableAsync(activeEnv.Id, name, value)).GetAwaiter().GetResult();
+        }
     }
 
-    // Jint callbacks sind synchron — await ist nicht möglich. Task.Run + GetAwaiter().GetResult()
-    // ist das etablierte Muster, um async-Methoden aus synchronen Jint-Lambdas heraus zu blockieren.
-    private static void PersistVariable(
-        int environmentId,
-        string name,
-        string value,
-        ISystemEnvironmentRepository environmentRepository,
-        ISignalRNotificationService signalRNotificationService)
+    private async Task PersistVariableAsync(int environmentId, string name, string value)
     {
-        Task.Run(() => PersistVariableAsync(environmentId, name, value, environmentRepository, signalRNotificationService)).GetAwaiter().GetResult();
-    }
-
-    private static async Task PersistVariableAsync(
-        int environmentId,
-        string name,
-        string value,
-        ISystemEnvironmentRepository environmentRepository,
-        ISignalRNotificationService signalRNotificationService)
-    {
-        await environmentRepository.UpdateVariableAsync(environmentId, name, value);
-        await signalRNotificationService.NotifyEnvironmentChangedAsync();
+        await _environmentRepository.UpdateVariableAsync(environmentId, name, value);
+        await _signalRNotificationService.NotifyEnvironmentChangedAsync();
     }
 
     private static JsObject BuildRequestObject(Engine engine, ScriptRequestData request)

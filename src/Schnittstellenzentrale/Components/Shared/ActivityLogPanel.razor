@@ -38,13 +38,23 @@ else
         {
             _jsModule = await JSRuntime.InvokeAsync<IJSObjectReference>("import", "./activity-log-panel.js");
 
-            var storedMode = await _jsModule.InvokeAsync<string?>("loadDisplayMode");
-            if (!string.IsNullOrEmpty(storedMode))
-                _displayMode = storedMode;
+            try
+            {
+                var storedMode = await _jsModule.InvokeAsync<string?>("loadDisplayMode");
+                if (!string.IsNullOrEmpty(storedMode))
+                    _displayMode = storedMode;
 
-            var storedHeight = await _jsModule.InvokeAsync<string?>("loadPanelHeight");
-            if (!string.IsNullOrEmpty(storedHeight) && int.TryParse(storedHeight, out var height))
-                _panelHeight = height;
+                var storedHeight = await _jsModule.InvokeAsync<string?>("loadPanelHeight");
+                if (!string.IsNullOrEmpty(storedHeight) && int.TryParse(storedHeight, out var height))
+                    _panelHeight = height;
+            }
+            catch
+            {
+                // JSException bei Server-Prerendering ignorieren
+            }
+
+            await OnDisplayModeChanged.InvokeAsync(_displayMode);
+            await OnPanelHeightChanged.InvokeAsync(_panelHeight);
 
             await InvokeAsync(StateHasChanged);
 

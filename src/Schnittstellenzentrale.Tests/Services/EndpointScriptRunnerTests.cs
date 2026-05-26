@@ -3,17 +3,13 @@ using Schnittstellenzentrale.Core.Enums;
 using Schnittstellenzentrale.Core.Interfaces;
 using Schnittstellenzentrale.Core.Models;
 using Schnittstellenzentrale.Infrastructure.Services;
+using Schnittstellenzentrale.Tests.Helpers;
 
 namespace Schnittstellenzentrale.Tests.Services;
 
 /// <summary>Unit-Tests für <see cref="EndpointScriptRunner"/>.</summary>
 public class EndpointScriptRunnerTests
 {
-    private static Mock<IActivityLogService> CreateActivityLogServiceMock()
-    {
-        return new Mock<IActivityLogService>();
-    }
-
     private static EndpointScriptRunner CreateRunner(
         ISystemEnvironmentRepository? environmentRepository = null,
         ISignalRNotificationService? signalRNotificationService = null,
@@ -21,7 +17,7 @@ public class EndpointScriptRunnerTests
         => new(
             environmentRepository ?? CreateEnvironmentRepositoryMock().Object,
             signalRNotificationService ?? CreateSignalRNotificationServiceMock().Object,
-            activityLogService ?? CreateActivityLogServiceMock().Object);
+            activityLogService ?? TestMockFactory.CreateActivityLogServiceMock().Object);
 
     private static ScriptContext CreateContext(
         IActiveEnvironmentService? envService = null,
@@ -367,7 +363,7 @@ public class EndpointScriptRunnerTests
     [Fact]
     public async Task ExecuteAsync_ProtokolliertScriptExecuted()
     {
-        var logMock = CreateActivityLogServiceMock();
+        var logMock = TestMockFactory.CreateActivityLogServiceMock();
         var runner = CreateRunner(activityLogService: logMock.Object);
         var context = CreateContext();
         context.EndpointName = "TestEndpunkt";
@@ -381,7 +377,7 @@ public class EndpointScriptRunnerTests
     [Fact]
     public async Task SzConsoleWrite_ProtokolliertScriptConsoleOutput()
     {
-        var logMock = CreateActivityLogServiceMock();
+        var logMock = TestMockFactory.CreateActivityLogServiceMock();
         var runner = CreateRunner(activityLogService: logMock.Object);
         var context = CreateContext();
 
@@ -394,7 +390,7 @@ public class EndpointScriptRunnerTests
     [Fact]
     public async Task ExecuteAsync_JavaScriptException_ProtokolliertInternalError()
     {
-        var logMock = CreateActivityLogServiceMock();
+        var logMock = TestMockFactory.CreateActivityLogServiceMock();
         var runner = CreateRunner(activityLogService: logMock.Object);
         var context = CreateContext();
 

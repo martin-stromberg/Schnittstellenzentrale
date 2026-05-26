@@ -278,6 +278,7 @@
             }
             catch (JSDisconnectedException)
             {
+                // JSDisconnectedException beim Dispose ignorieren (Circuit bereits geschlossen)
             }
         }
     }

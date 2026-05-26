@@ -18,26 +18,13 @@ public class ActivityLogService : IActivityLogService
     /// <inheritdoc/>
     public void Log(ActivityLogCategory category, string message, string? details = null)
     {
-        ActivityLogEntry entry;
-        try
+        var entry = new ActivityLogEntry
         {
-            entry = new ActivityLogEntry
-            {
-                Timestamp = DateTime.Now,
-                Category = category,
-                Message = message,
-                Details = details
-            };
-        }
-        catch
-        {
-            entry = new ActivityLogEntry
-            {
-                Timestamp = DateTime.Now,
-                Category = ActivityLogCategory.InternalError,
-                Message = "Fehler beim Erstellen des Protokolleintrags."
-            };
-        }
+            Timestamp = DateTime.Now,
+            Category = category,
+            Message = message,
+            Details = details
+        };
 
         _entries.Add(entry);
 
