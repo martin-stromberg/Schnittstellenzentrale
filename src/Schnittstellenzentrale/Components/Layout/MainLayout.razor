@@ -6,6 +6,7 @@
 @inject IJSRuntime JSRuntime
 @inject NavigationManager NavigationManager
 @inject ILogger<MainLayout> Logger
+@inject IActivityLogService ActivityLogService
 @using Microsoft.AspNetCore.SignalR.Client
 @implements IAsyncDisposable
 
@@ -21,17 +22,27 @@
                 <option value="@StorageMode.Team">Team</option>
                 <option value="@StorageMode.User">Benutzer</option>
             </select>
-            <EnvironmentSelector @ref="_environmentSelector" />
+            <EnvironmentSelector @ref="_environmentSelector" OnEnvironmentSelectedByUser="OnEnvironmentSelectedByUser" />
             <button type="button" class="btn btn-outline-secondary" title="Umgebungen verwalten"
                     @onclick="OpenEnvironmentManagementAsync">
                 &#9881;
             </button>
             <ThemeToggle />
+            <button type="button" class="btn btn-outline-secondary" title="Protokoll"
+                    @onclick="ToggleActivityLog">
+                <i class="bi bi-list-ul"></i>
+            </button>
         </div>
 
-        <article>
+        <article style="@(_activityLogOpen && _activityLogDisplayMode == "dock" ? $"padding-bottom: {_activityLogPanelHeight}px" : "")">
             @Body
         </article>
+
+        @if (_activityLogOpen)
+        {
+            <ActivityLogPanel OnDisplayModeChanged="OnActivityLogDisplayModeChanged"
+                              OnPanelHeightChanged="OnActivityLogPanelHeightChanged" />
+        }
     </main>
 </div>
 
@@ -48,6 +59,9 @@
     private EnvironmentSelector? _environmentSelector;
     private EnvironmentManagementOverlay? _environmentManagementOverlay;
     private HubConnection? _hubConnection;
+    private bool _activityLogOpen;
+    private string _activityLogDisplayMode = "dock";
+    private int _activityLogPanelHeight = 200;
 
     protected override void OnInitialized()
     {
@@ -63,6 +77,7 @@
             await ThemeService.InitializeAsync();
             await RestoreEnvironmentFromLocalStorageAsync(StorageModeService.CurrentMode);
             await ConnectHubAsync();
+
             await InvokeAsync(StateHasChanged);
         }
     }
@@ -97,10 +112,37 @@
         if (Enum.TryParse<StorageMode>(e.Value?.ToString(), out var mode))
         {
             StorageModeService.SetMode(mode);
+            ActivityLogService.Log(ActivityLogCategory.ContextSwitched, $"Modus gewechselt: {mode}");
             await RestoreEnvironmentFromLocalStorageAsync(mode);
             if (_environmentSelector != null)
                 await _environmentSelector.RefreshAsync();
         }
+    }
+
+    private void OnEnvironmentSelectedByUser(SystemEnvironment? environment)
+    {
+        if (environment != null)
+            ActivityLogService.Log(ActivityLogCategory.ContextSwitched, $"Umgebung gewechselt: {environment.Name}");
+        else
+            ActivityLogService.Log(ActivityLogCategory.ContextSwitched, "Umgebung abgewählt.");
+    }
+
+    private void ToggleActivityLog()
+    {
+        _activityLogOpen = !_activityLogOpen;
+        StateHasChanged();
+    }
+
+    private void OnActivityLogDisplayModeChanged(string mode)
+    {
+        _activityLogDisplayMode = mode;
+        StateHasChanged();
+    }
+
+    private void OnActivityLogPanelHeightChanged(int height)
+    {
+        _activityLogPanelHeight = height;
+        StateHasChanged();
     }
 
     private async Task RestoreEnvironmentFromLocalStorageAsync(StorageMode mode)

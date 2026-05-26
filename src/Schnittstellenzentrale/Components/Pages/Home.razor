@@ -4,6 +4,7 @@
 @inject IStorageModeService StorageModeService
 @inject ISignalRNotificationService SignalRNotificationService
 @inject IJSRuntime JSRuntime
+@inject IActivityLogService ActivityLogService
 
 <PageTitle>Schnittstellenzentrale</PageTitle>
 
@@ -172,6 +173,7 @@
     private async Task OnGroupSaved()
     {
         _showGroupEditor = false;
+        ActivityLogService.Log(ActivityLogCategory.EntityCreated, "Gruppe angelegt.");
         if (_tree != null)
             await _tree.RefreshAsync();
     }
@@ -179,6 +181,7 @@
     private async Task OnApplicationSaved()
     {
         _showApplicationEditor = false;
+        ActivityLogService.Log(ActivityLogCategory.EntityCreated, "Anwendung angelegt.");
         if (_tree != null)
             await _tree.RefreshAsync();
     }
@@ -193,6 +196,7 @@
     private async Task OnGroupRenamed(ApplicationGroup group)
     {
         await ApplicationApiClient.UpdateGroupAsync(group);
+        ActivityLogService.Log(ActivityLogCategory.EntityModified, $"Gruppe umbenannt: {group.Name}");
         _renameTargetGroup = null;
         if (_tree != null)
             await _tree.RefreshAsync();
@@ -272,6 +276,7 @@
         {
             var group = new EndpointGroup { Name = name, ApplicationId = application.Id };
             var saved = await EndpointRepository.AddEndpointGroupAsync(group);
+            ActivityLogService.Log(ActivityLogCategory.EntityCreated, $"Ordner angelegt: {saved.Name}");
             if (StorageModeService.CurrentMode == StorageMode.Team)
                 await SignalRNotificationService.NotifyEndpointGroupChangedAsync(saved.Id, application.Id);
             if (_tree != null)
@@ -300,6 +305,7 @@
                 EndpointGroupId = args.Group?.Id
             };
             var saved = await EndpointRepository.AddEndpointAsync(endpoint);
+            ActivityLogService.Log(ActivityLogCategory.EntityCreated, $"Endpunkt angelegt: {saved.Name}");
             if (StorageModeService.CurrentMode == StorageMode.Team)
                 await SignalRNotificationService.NotifyEndpointChangedAsync(saved.Id, args.Application.Id);
             if (_tree != null)
@@ -329,6 +335,7 @@
         try
         {
             await EndpointRepository.UpdateEndpointGroupAsync(group);
+            ActivityLogService.Log(ActivityLogCategory.EntityModified, $"Ordner umbenannt: {group.Name}");
             if (StorageModeService.CurrentMode == StorageMode.Team)
                 await SignalRNotificationService.NotifyEndpointGroupChangedAsync(group.Id, group.ApplicationId);
             _renameTargetEndpointGroup = null;

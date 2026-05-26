@@ -68,6 +68,7 @@ builder.Services.AddScoped<ISystemEnvironmentRepository, SystemEnvironmentReposi
 builder.Services.AddScoped<IActiveEnvironmentService, ActiveEnvironmentService>();
 // Scoped ist in Blazor Server korrekt: ein Scope entspricht genau einem Circuit (Verbindung),
 // sodass jede Benutzersitzung eine eigene Instanz erhält.
+builder.Services.AddScoped<IActivityLogService, ActivityLogService>();
 builder.Services.AddScoped<IStorageModeService, StorageModeService>();
 builder.Services.AddScoped<IThemeService, ThemeService>();
 builder.Services.AddSingleton<IHealthCheckService, HealthCheckService>();

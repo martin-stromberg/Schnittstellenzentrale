@@ -19,4 +19,7 @@ public class ScriptContext
 
     /// <summary>Rekursionsschutz: Aufrufzähler pro Endpunkt-ID.</summary>
     public Dictionary<int, int> CallDepth { get; set; } = [];
+
+    /// <summary>Optionaler Endpunktname für die Protokollierung in <c>EndpointScriptRunner</c>.</summary>
+    public string? EndpointName { get; set; }
 }

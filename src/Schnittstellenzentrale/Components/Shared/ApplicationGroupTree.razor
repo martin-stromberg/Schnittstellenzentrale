@@ -5,6 +5,7 @@
 @inject NavigationManager NavigationManager
 @inject IJSRuntime JSRuntime
 @inject ILogger<ApplicationGroupTree> Logger
+@inject IActivityLogService ActivityLogService
 @using Microsoft.AspNetCore.SignalR.Client
 @implements IAsyncDisposable
 
@@ -266,6 +267,7 @@
             }
             catch
             {
+                // Fehler beim Dispose der Hub-Verbindung ignorieren (z. B. Verbindung bereits getrennt)
             }
         }
         if (_jsModule != null)
@@ -276,6 +278,7 @@
             }
             catch (JSDisconnectedException)
             {
+                // JSDisconnectedException beim Dispose ignorieren (Circuit bereits geschlossen)
             }
         }
     }
@@ -370,10 +373,15 @@
         if (_draggedApplication == null)
             return;
         var previousGroupId = _draggedApplication.ApplicationGroupId;
+        var appName = _draggedApplication.Name;
         _draggedApplication.ApplicationGroupId = targetGroupId;
         try
         {
             await ApplicationApiClient.UpdateApplicationAsync(_draggedApplication);
+            var targetGroup = targetGroupId.HasValue
+                ? _groups?.FirstOrDefault(g => g.Id == targetGroupId.Value)?.Name ?? targetGroupId.Value.ToString()
+                : "Ohne Gruppe";
+            ActivityLogService.Log(ActivityLogCategory.EntityMoved, $"Anwendung verschoben: {appName} → {targetGroup}");
             ResetDragState();
             await LoadDataAsync();
         }

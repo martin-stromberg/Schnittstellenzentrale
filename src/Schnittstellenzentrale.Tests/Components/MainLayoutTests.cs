@@ -20,6 +20,7 @@ public class MainLayoutTests : BunitContext
     private readonly Mock<ISystemEnvironmentRepository> _envRepoMock = new();
     private readonly Mock<ICurrentUserService> _currentUserMock = new();
     private readonly Mock<ISignalRNotificationService> _signalRMock = new();
+    private readonly Mock<IActivityLogService> _activityLogMock = new();
 
     /// <summary>Initialisiert die Test-Services und JS-Interop-Mocks.</summary>
     public MainLayoutTests()
@@ -31,6 +32,7 @@ public class MainLayoutTests : BunitContext
             .Setup(r => r.GetEnvironmentsAsync(It.IsAny<StorageMode>(), It.IsAny<string?>()))
             .ReturnsAsync([]);
         _currentUserMock.Setup(s => s.GetCurrentUserName()).Returns("DOMAIN\\testuser");
+        _activityLogMock.Setup(s => s.Entries).Returns([]);
 
         Services.AddSingleton(_storageMock.Object);
         Services.AddSingleton(_themeMock.Object);
@@ -38,6 +40,7 @@ public class MainLayoutTests : BunitContext
         Services.AddSingleton(_envRepoMock.Object);
         Services.AddSingleton(_currentUserMock.Object);
         Services.AddSingleton(_signalRMock.Object);
+        Services.AddSingleton(_activityLogMock.Object);
         Services.AddSingleton<ILogger<MainLayout>>(NullLogger<MainLayout>.Instance);
 
         JSInterop.Setup<string?>("localStorage.getItem", _ => true).SetResult(null);

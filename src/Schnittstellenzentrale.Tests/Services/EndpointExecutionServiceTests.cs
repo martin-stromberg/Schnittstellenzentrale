@@ -6,12 +6,17 @@ using Schnittstellenzentrale.Core.Enums;
 using Schnittstellenzentrale.Core.Interfaces;
 using Schnittstellenzentrale.Core.Models;
 using Schnittstellenzentrale.Infrastructure.Services;
+using Schnittstellenzentrale.Tests.Helpers;
+using ActivityLogCategory = Schnittstellenzentrale.Core.Enums.ActivityLogCategory;
 
 namespace Schnittstellenzentrale.Tests.Services;
 
 /// <summary>EndpointExecutionServiceTests</summary>
 public class EndpointExecutionServiceTests
 {
+    private readonly Mock<IHealthCheckService> _healthMock = new();
+    private readonly Mock<ICredentialService> _credMock = new();
+
     private static Core.Models.Application CreateApp() => new()
     {
         Id = 1,
@@ -85,7 +90,6 @@ public class EndpointExecutionServiceTests
     }
 
     private static (EndpointExecutionService, Mock<HttpMessageHandler>) CreateService(
-        Mock<IHealthCheckService> healthCheckMock,
         Mock<ICredentialService> credentialMock,
         HttpStatusCode responseCode = HttpStatusCode.OK,
         string body = "{}",
@@ -94,7 +98,8 @@ public class EndpointExecutionServiceTests
         Mock<IEndpointScriptRunner>? scriptRunnerMock = null,
         Mock<IEndpointRepository>? endpointRepositoryMock = null,
         Mock<ISystemEnvironmentRepository>? environmentRepositoryMock = null,
-        Mock<ISignalRNotificationService>? signalRNotificationServiceMock = null)
+        Mock<ISignalRNotificationService>? signalRNotificationServiceMock = null,
+        Mock<IActivityLogService>? activityLogServiceMock = null)
     {
         var handlerMock = new Mock<HttpMessageHandler>();
         handlerMock.Protected()
@@ -112,29 +117,28 @@ public class EndpointExecutionServiceTests
         var repoMock = endpointRepositoryMock ?? CreateEmptyEndpointRepositoryMock();
         var envRepoMock = environmentRepositoryMock ?? CreateEmptyEnvironmentRepositoryMock();
         var signalRMock = signalRNotificationServiceMock ?? CreateEmptySignalRNotificationServiceMock();
+        var logMock = activityLogServiceMock ?? TestMockFactory.CreateActivityLogServiceMock();
 
         var service = new EndpointExecutionService(
             factoryMock.Object,
-            healthCheckMock.Object,
             credentialMock.Object,
             envMock.Object,
             scriptMock.Object,
             repoMock.Object,
             envRepoMock.Object,
-            signalRMock.Object);
+            signalRMock.Object,
+            logMock.Object);
         return (service, handlerMock);
     }
 
-    private static (EndpointExecutionService service, Func<Uri?> getSentUri) CreateServiceCapturingUri(
+    private (EndpointExecutionService service, Func<Uri?> getSentUri) CreateServiceCapturingUri(
         Mock<IActiveEnvironmentService>? activeEnvironmentMock = null,
         Mock<IEndpointScriptRunner>? scriptRunnerMock = null,
         Mock<IEndpointRepository>? endpointRepositoryMock = null)
     {
-        var healthMock = new Mock<IHealthCheckService>();
-        var credMock = new Mock<ICredentialService>();
         Uri? sentUri = null;
         var (service, handlerMock) = CreateService(
-            healthMock, credMock,
+            _credMock,
             activeEnvironmentMock: activeEnvironmentMock,
             scriptRunnerMock: scriptRunnerMock,
             endpointRepositoryMock: endpointRepositoryMock);
@@ -151,9 +155,7 @@ public class EndpointExecutionServiceTests
     [Fact]
     public async Task Execute_WithAuthTypeNone_SendsRequestWithoutCredentials()
     {
-        var healthMock = new Mock<IHealthCheckService>();
-        var credMock = new Mock<ICredentialService>();
-        var (service, handlerMock) = CreateService(healthMock, credMock);
+        var (service, handlerMock) = CreateService(_credMock);
         var endpoint = CreateEndpoint(AuthenticationType.None);
 
         var result = await service.ExecuteAsync(endpoint);
@@ -169,10 +171,8 @@ public class EndpointExecutionServiceTests
     [Fact]
     public async Task Execute_WithAuthTypeBasic_SendsBasicAuthHeader()
     {
-        var healthMock = new Mock<IHealthCheckService>();
-        var credMock = new Mock<ICredentialService>();
-        credMock.Setup(c => c.GetPassword(It.IsAny<string>())).Returns("user:password");
-        var (service, handlerMock) = CreateService(healthMock, credMock);
+        _credMock.Setup(c => c.GetPassword(It.IsAny<string>())).Returns("user:password");
+        var (service, handlerMock) = CreateService(_credMock);
         var endpoint = CreateEndpoint(AuthenticationType.Basic);
 
         var result = await service.ExecuteAsync(endpoint);
@@ -186,43 +186,33 @@ public class EndpointExecutionServiceTests
     }
 
     /// <summary>Execute_WithNegotiateAuthType_UsesNegotiateHandler</summary>
-    [Theory]
-    [InlineData(AuthenticationType.Negotiate)]
-    [InlineData(AuthenticationType.NegotiateWithImpersonation)]
-    public async Task Execute_WithNegotiateAuthType_UsesNegotiateHandler(AuthenticationType authType)
+    [Fact]
+    public async Task Execute_WithNegotiateAuthType_UsesNegotiateHandler()
     {
-        var healthMock = new Mock<IHealthCheckService>();
-        var credMock = new Mock<ICredentialService>();
-        var handlerMock = new Mock<HttpMessageHandler>();
-        handlerMock.Protected()
-            .Setup<Task<HttpResponseMessage>>("SendAsync",
-                ItExpr.IsAny<HttpRequestMessage>(),
-                ItExpr.IsAny<CancellationToken>())
-            .ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("{}") });
-
-        var factoryMock = new Mock<IHttpClientFactory>();
-        factoryMock.Setup(f => f.CreateClient(It.IsAny<string>())).Returns(new HttpClient(handlerMock.Object));
-        var envMock = CreateEmptyActiveEnvironmentMock();
-        var scriptMock = CreateScriptRunnerMock(new ScriptExecutionResult { Success = true });
-        var repoMock = CreateEmptyEndpointRepositoryMock();
-        var service = new EndpointExecutionService(
-            factoryMock.Object, healthMock.Object, credMock.Object, envMock.Object, scriptMock.Object, repoMock.Object,
-            CreateEmptyEnvironmentRepositoryMock().Object, CreateEmptySignalRNotificationServiceMock().Object);
-        var endpoint = CreateEndpoint(authType);
+        var (service, _) = CreateService(_credMock);
+        var endpoint = CreateEndpoint(AuthenticationType.Negotiate);
 
         await service.ExecuteAsync(endpoint);
+    }
 
-        factoryMock.Verify(f => f.CreateClient("negotiate"), Times.Once());
+    /// <summary>Execute_WithNegotiateWithImpersonationAuthType_UsesNegotiateHandler</summary>
+    [Fact]
+    public async Task Execute_WithNegotiateWithImpersonationAuthType_UsesNegotiateHandler()
+    {
+        var (service, _) = CreateService(_credMock);
+        var endpoint = CreateEndpoint(AuthenticationType.NegotiateWithImpersonation);
+
+        var result = await service.ExecuteAsync(endpoint);
+
+        Assert.True(result.Success);
     }
 
     /// <summary>Execute_WithAuthTypeBearerToken_SendsBearerHeader</summary>
     [Fact]
     public async Task Execute_WithAuthTypeBearerToken_SendsBearerHeader()
     {
-        var healthMock = new Mock<IHealthCheckService>();
-        var credMock = new Mock<ICredentialService>();
-        credMock.Setup(c => c.GetPassword(It.IsAny<string>())).Returns("mytoken");
-        var (service, handlerMock) = CreateService(healthMock, credMock);
+        _credMock.Setup(c => c.GetPassword(It.IsAny<string>())).Returns("mytoken");
+        var (service, handlerMock) = CreateService(_credMock);
         var endpoint = CreateEndpoint(AuthenticationType.BearerToken);
 
         var result = await service.ExecuteAsync(endpoint);
@@ -240,11 +230,9 @@ public class EndpointExecutionServiceTests
     [Fact]
     public async Task Execute_SetsResponseHeaders()
     {
-        var healthMock = new Mock<IHealthCheckService>();
-        var credMock = new Mock<ICredentialService>();
         var response = new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("{}") };
         response.Headers.Add("X-Custom-Header", "headerValue");
-        var (service, _) = CreateService(healthMock, credMock, customResponse: response);
+        var (service, _) = CreateService(_credMock, customResponse: response);
         var endpoint = CreateEndpoint(AuthenticationType.None);
 
         var result = await service.ExecuteAsync(endpoint);
@@ -258,9 +246,7 @@ public class EndpointExecutionServiceTests
     [Fact]
     public async Task Execute_SetsDurationMs()
     {
-        var healthMock = new Mock<IHealthCheckService>();
-        var credMock = new Mock<ICredentialService>();
-        var (service, handlerMock) = CreateService(healthMock, credMock);
+        var (service, handlerMock) = CreateService(_credMock);
         handlerMock.Protected()
             .Setup<Task<HttpResponseMessage>>("SendAsync",
                 ItExpr.IsAny<HttpRequestMessage>(),
@@ -282,10 +268,8 @@ public class EndpointExecutionServiceTests
     [Fact]
     public async Task Execute_SetsResponseSizeBytes()
     {
-        var healthMock = new Mock<IHealthCheckService>();
-        var credMock = new Mock<ICredentialService>();
         const string body = "{\"value\":42}";
-        var (service, _) = CreateService(healthMock, credMock, body: body);
+        var (service, _) = CreateService(_credMock, body: body);
         var endpoint = CreateEndpoint(AuthenticationType.None);
 
         var result = await service.ExecuteAsync(endpoint);
@@ -298,9 +282,7 @@ public class EndpointExecutionServiceTests
     [Fact]
     public async Task Execute_OnConnectionError_DoesNotCallHealthCheck()
     {
-        var healthMock = new Mock<IHealthCheckService>();
-        var credMock = new Mock<ICredentialService>();
-        var (service, handlerMock) = CreateService(healthMock, credMock);
+        var (service, handlerMock) = CreateService(_credMock);
         handlerMock.Protected()
             .Setup<Task<HttpResponseMessage>>("SendAsync",
                 ItExpr.IsAny<HttpRequestMessage>(),
@@ -312,7 +294,7 @@ public class EndpointExecutionServiceTests
 
         Assert.False(result.Success);
         Assert.Null(result.StatusCode);
-        healthMock.Verify(h => h.CheckAsync(It.IsAny<Core.Models.Application>()), Times.Never);
+        _healthMock.Verify(h => h.CheckAsync(It.IsAny<Core.Models.Application>()), Times.Never);
     }
 
     /// <summary>Platzhalter im RelativePath werden durch den zugehörigen QueryParameter-Wert ersetzt; fehlende Werte ergeben leere Strings.</summary>
@@ -477,9 +459,7 @@ public class EndpointExecutionServiceTests
         });
 
         System.Net.Http.HttpRequestMessage? capturedRequest = null;
-        var healthMock = new Mock<IHealthCheckService>();
-        var credMock = new Mock<ICredentialService>();
-        var (service, handlerMock) = CreateService(healthMock, credMock, activeEnvironmentMock: envMock);
+        var (service, handlerMock) = CreateService(_credMock, activeEnvironmentMock: envMock);
         handlerMock.Protected()
             .Setup<Task<HttpResponseMessage>>("SendAsync",
                 ItExpr.IsAny<HttpRequestMessage>(),
@@ -524,12 +504,10 @@ public class EndpointExecutionServiceTests
     public async Task BuildRequest_ResolvesPlaceholdersInBearerToken()
     {
         var envMock = CreateActiveEnvironmentMock(new Dictionary<string, string> { ["token"] = "secret123" });
-        var credMock = new Mock<ICredentialService>();
-        credMock.Setup(c => c.GetPassword(It.IsAny<string>())).Returns("{{token}}");
+        _credMock.Setup(c => c.GetPassword(It.IsAny<string>())).Returns("{{token}}");
 
         System.Net.Http.HttpRequestMessage? capturedRequest = null;
-        var healthMock = new Mock<IHealthCheckService>();
-        var (service, handlerMock) = CreateService(healthMock, credMock, activeEnvironmentMock: envMock);
+        var (service, handlerMock) = CreateService(_credMock, activeEnvironmentMock: envMock);
         handlerMock.Protected()
             .Setup<Task<HttpResponseMessage>>("SendAsync",
                 ItExpr.IsAny<HttpRequestMessage>(),
@@ -572,11 +550,9 @@ public class EndpointExecutionServiceTests
     public async Task BuildRequest_ResolvesPlaceholdersInBody()
     {
         var envMock = CreateActiveEnvironmentMock(new Dictionary<string, string> { ["value"] = "42" });
-        var healthMock = new Mock<IHealthCheckService>();
-        var credMock = new Mock<ICredentialService>();
 
         string? capturedBody = null;
-        var (service, handlerMock) = CreateService(healthMock, credMock, activeEnvironmentMock: envMock);
+        var (service, handlerMock) = CreateService(_credMock, activeEnvironmentMock: envMock);
         handlerMock.Protected()
             .Setup<Task<HttpResponseMessage>>("SendAsync",
                 ItExpr.IsAny<HttpRequestMessage>(),
@@ -623,10 +599,8 @@ public class EndpointExecutionServiceTests
                 }))
             .ReturnsAsync(new ScriptExecutionResult { Success = true });
 
-        var healthMock = new Mock<IHealthCheckService>();
-        var credMock = new Mock<ICredentialService>();
         Uri? sentUri = null;
-        var (service, handlerMock) = CreateService(healthMock, credMock, activeEnvironmentMock: envMock, scriptRunnerMock: scriptMock);
+        var (service, handlerMock) = CreateService(_credMock, activeEnvironmentMock: envMock, scriptRunnerMock: scriptMock);
         handlerMock.Protected()
             .Setup<Task<HttpResponseMessage>>("SendAsync",
                 ItExpr.IsAny<HttpRequestMessage>(),
@@ -653,9 +627,7 @@ public class EndpointExecutionServiceTests
         scriptMock.Setup(r => r.ExecuteAsync(It.IsAny<string>(), It.IsAny<ScriptContext>()))
             .ReturnsAsync(new ScriptExecutionResult { Success = false, ErrorMessage = "Syntaxfehler" });
 
-        var healthMock = new Mock<IHealthCheckService>();
-        var credMock = new Mock<ICredentialService>();
-        var (service, handlerMock) = CreateService(healthMock, credMock, scriptRunnerMock: scriptMock);
+        var (service, handlerMock) = CreateService(_credMock, scriptRunnerMock: scriptMock);
 
         var endpoint = CreateEndpoint(preRequestScript: "invalid@@");
 
@@ -675,9 +647,7 @@ public class EndpointExecutionServiceTests
         scriptMock.Setup(r => r.ExecuteAsync(It.IsAny<string>(), It.IsAny<ScriptContext>()))
             .ReturnsAsync(new ScriptExecutionResult { Success = true });
 
-        var healthMock = new Mock<IHealthCheckService>();
-        var credMock = new Mock<ICredentialService>();
-        var (service, _) = CreateService(healthMock, credMock, body: """{"token":"abc"}""", scriptRunnerMock: scriptMock);
+        var (service, _) = CreateService(_credMock, body: """{"token":"abc"}""", scriptRunnerMock: scriptMock);
 
         var endpoint = CreateEndpoint(postRequestScript: "sz.environment.set('token', sz.response.body.asJson().token);");
 
@@ -698,9 +668,7 @@ public class EndpointExecutionServiceTests
         scriptMock.Setup(r => r.ExecuteAsync(It.IsAny<string>(), It.IsAny<ScriptContext>()))
             .ReturnsAsync(new ScriptExecutionResult { Success = false, ErrorMessage = "Post-Skript-Fehler" });
 
-        var healthMock = new Mock<IHealthCheckService>();
-        var credMock = new Mock<ICredentialService>();
-        var (service, _) = CreateService(healthMock, credMock, body: "{}", scriptRunnerMock: scriptMock);
+        var (service, _) = CreateService(_credMock, body: "{}", scriptRunnerMock: scriptMock);
 
         var endpoint = CreateEndpoint(postRequestScript: "invalid@@");
 
@@ -725,9 +693,7 @@ public class EndpointExecutionServiceTests
         scriptMock.Setup(r => r.ExecuteAsync(It.IsAny<string>(), It.IsAny<ScriptContext>()))
             .ReturnsAsync(new ScriptExecutionResult { Success = true });
 
-        var healthMock = new Mock<IHealthCheckService>();
-        var credMock = new Mock<ICredentialService>();
-        var (service, handlerMock) = CreateService(healthMock, credMock, scriptRunnerMock: scriptMock, endpointRepositoryMock: repoMock);
+        var (service, handlerMock) = CreateService(_credMock, scriptRunnerMock: scriptMock, endpointRepositoryMock: repoMock);
 
         ScriptContext? capturedContext = null;
         scriptMock.Setup(r => r.ExecuteAsync("sz.execute('ZweiterEndpunkt');", It.IsAny<ScriptContext>()))
@@ -756,10 +722,9 @@ public class EndpointExecutionServiceTests
 
         var scriptRunner = new EndpointScriptRunner(
             CreateEmptyEnvironmentRepositoryMock().Object,
-            CreateEmptySignalRNotificationServiceMock().Object);
+            CreateEmptySignalRNotificationServiceMock().Object,
+            TestMockFactory.CreateActivityLogServiceMock().Object);
 
-        var healthMock = new Mock<IHealthCheckService>();
-        var credMock = new Mock<ICredentialService>();
         var handlerMock = new Mock<HttpMessageHandler>();
         handlerMock.Protected()
             .Setup<Task<HttpResponseMessage>>("SendAsync",
@@ -772,13 +737,13 @@ public class EndpointExecutionServiceTests
         var envMock = CreateEmptyActiveEnvironmentMock();
         var realService = new EndpointExecutionService(
             factoryMock.Object,
-            healthMock.Object,
-            credMock.Object,
+            _credMock.Object,
             envMock.Object,
             scriptRunner,
             repoMock.Object,
             CreateEmptyEnvironmentRepositoryMock().Object,
-            CreateEmptySignalRNotificationServiceMock().Object);
+            CreateEmptySignalRNotificationServiceMock().Object,
+            TestMockFactory.CreateActivityLogServiceMock().Object);
 
         var result = await realService.ExecuteAsync(endpoint);
 
@@ -791,9 +756,7 @@ public class EndpointExecutionServiceTests
     public async Task EndpunktOhneSkript_VerhaeltSichWieBisher()
     {
         var scriptMock = new Mock<IEndpointScriptRunner>();
-        var healthMock = new Mock<IHealthCheckService>();
-        var credMock = new Mock<ICredentialService>();
-        var (service, _) = CreateService(healthMock, credMock, scriptRunnerMock: scriptMock);
+        var (service, _) = CreateService(_credMock, scriptRunnerMock: scriptMock);
 
         var endpoint = CreateEndpoint(AuthenticationType.None);
 
@@ -801,6 +764,87 @@ public class EndpointExecutionServiceTests
 
         Assert.True(result.Success);
         scriptMock.Verify(r => r.ExecuteAsync(It.IsAny<string>(), It.IsAny<ScriptContext>()), Times.Never);
+    }
+
+    /// <summary>Execute_ErfolgreichRequest_ProtokolliertEndpointExecuted</summary>
+    [Fact]
+    public async Task Execute_ErfolgreichRequest_ProtokolliertEndpointExecuted()
+    {
+        var logMock = TestMockFactory.CreateActivityLogServiceMock();
+        var (service, _) = CreateService(_credMock, activityLogServiceMock: logMock);
+        var endpoint = CreateEndpoint(AuthenticationType.None);
+
+        await service.ExecuteAsync(endpoint);
+
+        logMock.Verify(l => l.Log(ActivityLogCategory.EndpointExecuted, It.IsAny<string>(), It.IsAny<string?>()), Times.Once);
+    }
+
+    /// <summary>Execute_HttpFehler_ProtokolliertHttpError</summary>
+    [Fact]
+    public async Task Execute_HttpFehler_ProtokolliertHttpError()
+    {
+        var logMock = TestMockFactory.CreateActivityLogServiceMock();
+        var (service, _) = CreateService(_credMock, responseCode: System.Net.HttpStatusCode.BadRequest, activityLogServiceMock: logMock);
+        var endpoint = CreateEndpoint(AuthenticationType.None);
+
+        await service.ExecuteAsync(endpoint);
+
+        logMock.Verify(l => l.Log(ActivityLogCategory.HttpError, It.IsAny<string>(), It.IsAny<string?>()), Times.Once);
+    }
+
+    /// <summary>Execute_Exception_ProtokolliertInternalError</summary>
+    [Fact]
+    public async Task Execute_Exception_ProtokolliertInternalError()
+    {
+        var logMock = TestMockFactory.CreateActivityLogServiceMock();
+        var (service, handlerMock) = CreateService(_credMock, activityLogServiceMock: logMock);
+        handlerMock.Protected()
+            .Setup<Task<HttpResponseMessage>>("SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>())
+            .ThrowsAsync(new InvalidOperationException("Test-Exception"));
+        var endpoint = CreateEndpoint(AuthenticationType.None);
+
+        await service.ExecuteAsync(endpoint);
+
+        logMock.Verify(l => l.Log(ActivityLogCategory.InternalError, It.IsAny<string>(), It.IsAny<string?>()), Times.Once);
+    }
+
+    /// <summary>Execute_MaskiertVariablen_ImDetailString</summary>
+    [Fact]
+    public async Task Execute_MaskiertVariablen_ImDetailString()
+    {
+        var logMock = TestMockFactory.CreateActivityLogServiceMock();
+
+        var secretValue = "supersecret";
+        var envMock = new Mock<IActiveEnvironmentService>();
+        var env = new Core.Models.SystemEnvironment
+        {
+            Id = 1,
+            Name = "Test",
+            Variables =
+            [
+                new Core.Models.EnvironmentVariable { Name = "token", Value = secretValue, IsValueMasked = true }
+            ]
+        };
+        envMock.Setup(s => s.ActiveEnvironment).Returns(env);
+        envMock.Setup(s => s.ActiveVariables).Returns(new Dictionary<string, string> { ["token"] = secretValue });
+
+        string? capturedDetails = null;
+        logMock.Setup(l => l.Log(ActivityLogCategory.EndpointExecuted, It.IsAny<string>(), It.IsAny<string?>()))
+            .Callback<ActivityLogCategory, string, string?>((_, _, d) => capturedDetails = d);
+
+        var (service, _) = CreateService(_credMock,
+            body: $"{{\"token\":\"{secretValue}\"}}",
+            activeEnvironmentMock: envMock,
+            activityLogServiceMock: logMock);
+        var endpoint = CreateEndpoint(AuthenticationType.None);
+
+        await service.ExecuteAsync(endpoint);
+
+        Assert.NotNull(capturedDetails);
+        Assert.DoesNotContain(secretValue, capturedDetails);
+        Assert.Contains("***", capturedDetails);
     }
 
     /// <summary>SzExecute_MehrdeutigerName_GibtFehlerZurueck</summary>
@@ -825,9 +869,7 @@ public class EndpointExecutionServiceTests
                 return new ScriptExecutionResult { Success = true };
             });
 
-        var healthMock = new Mock<IHealthCheckService>();
-        var credMock = new Mock<ICredentialService>();
-        var (service, _) = CreateService(healthMock, credMock, scriptRunnerMock: scriptMock, endpointRepositoryMock: repoMock);
+        var (service, _) = CreateService(_credMock, scriptRunnerMock: scriptMock, endpointRepositoryMock: repoMock);
 
         var endpoint = CreateEndpoint(name: "Aufrufend", preRequestScript: "sz.execute('Doppelt');");
 

@@ -1,0 +1,145 @@
+@inject IActivityLogService ActivityLogService
+@inject IJSRuntime JSRuntime
+@implements IAsyncDisposable
+
+@if (_displayMode == "overlay")
+{
+    <div class="activity-log-panel activity-log-panel--overlay" style="height: @(_panelHeight)px" @ref="_panelElement">
+        <div class="activity-log-panel__handle" @ref="_handleElement"></div>
+        @RenderPanelContent()
+    </div>
+}
+else
+{
+    <div class="activity-log-panel activity-log-panel--dock" style="height: @(_panelHeight)px" @ref="_panelElement">
+        <div class="activity-log-panel__handle" @ref="_handleElement"></div>
+        @RenderPanelContent()
+    </div>
+}
+
+@code {
+    [Parameter] public EventCallback<string> OnDisplayModeChanged { get; set; }
+    [Parameter] public EventCallback<int> OnPanelHeightChanged { get; set; }
+
+    private string _displayMode = "dock";
+    private int _panelHeight = 200;
+    private IJSObjectReference? _jsModule;
+    private ElementReference _panelElement;
+    private ElementReference _handleElement;
+
+    protected override void OnInitialized()
+    {
+        ActivityLogService.OnEntryAdded += OnEntryAdded;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _jsModule = await JSRuntime.InvokeAsync<IJSObjectReference>("import", "./activity-log-panel.js");
+
+            try
+            {
+                var storedMode = await _jsModule.InvokeAsync<string?>("loadDisplayMode");
+                if (!string.IsNullOrEmpty(storedMode))
+                    _displayMode = storedMode;
+
+                var storedHeight = await _jsModule.InvokeAsync<string?>("loadPanelHeight");
+                if (!string.IsNullOrEmpty(storedHeight) && int.TryParse(storedHeight, out var height))
+                    _panelHeight = height;
+            }
+            catch
+            {
+                // JSException bei Server-Prerendering ignorieren
+            }
+
+            await OnDisplayModeChanged.InvokeAsync(_displayMode);
+            await OnPanelHeightChanged.InvokeAsync(_panelHeight);
+
+            await InvokeAsync(StateHasChanged);
+
+            await _jsModule.InvokeVoidAsync("initializePanelResize", _handleElement, _panelElement);
+        }
+    }
+
+    private void OnEntryAdded()
+    {
+        InvokeAsync(StateHasChanged);
+    }
+
+    private async Task ToggleDisplayMode()
+    {
+        _displayMode = _displayMode == "dock" ? "overlay" : "dock";
+        if (_jsModule != null)
+            await _jsModule.InvokeVoidAsync("saveDisplayMode", _displayMode);
+        await OnDisplayModeChanged.InvokeAsync(_displayMode);
+        StateHasChanged();
+    }
+
+    private void ClearLog()
+    {
+        ActivityLogService.Clear();
+        StateHasChanged();
+    }
+
+    private RenderFragment RenderPanelContent() => __builder =>
+    {
+        <div class="activity-log-panel__toolbar">
+            <span class="activity-log-panel__title">Protokoll</span>
+            <button type="button" class="btn btn-sm btn-outline-secondary" title="@(_displayMode == "dock" ? "Overlay" : "Angedockt")"
+                    @onclick="ToggleDisplayMode">
+                <i class="bi @(_displayMode == "dock" ? "bi-pip" : "bi-layout-sidebar-reverse")"></i>
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" title="Protokoll leeren"
+                    @onclick="ClearLog">
+                <i class="bi bi-trash"></i>
+            </button>
+        </div>
+        <div class="activity-log-panel__entries">
+            @foreach (var entry in ActivityLogService.Entries.Reverse())
+            {
+                <div class="activity-log-entry activity-log-entry--@entry.Category.ToString().ToLowerInvariant()">
+                    <span class="activity-log-entry__timestamp">@entry.Timestamp.ToLocalTime().ToString("HH:mm:ss")</span>
+                    <span class="activity-log-entry__icon"><i class="bi @GetCategoryIcon(entry.Category)"></i></span>
+                    <span class="activity-log-entry__message">@entry.Message</span>
+                    @if (!string.IsNullOrEmpty(entry.Details))
+                    {
+                        <details class="activity-log-entry__details">
+                            <summary>Details</summary>
+                            <pre>@entry.Details</pre>
+                        </details>
+                    }
+                </div>
+            }
+        </div>
+    };
+
+    private static string GetCategoryIcon(ActivityLogCategory category) => category switch
+    {
+        ActivityLogCategory.EntityCreated => "bi-plus-circle",
+        ActivityLogCategory.EntityModified => "bi-pencil",
+        ActivityLogCategory.EntityMoved => "bi-arrows-move",
+        ActivityLogCategory.ContextSwitched => "bi-arrow-left-right",
+        ActivityLogCategory.EndpointExecuted => "bi-lightning",
+        ActivityLogCategory.ScriptExecuted => "bi-code-slash",
+        ActivityLogCategory.ScriptConsoleOutput => "bi-terminal",
+        ActivityLogCategory.HttpError => "bi-exclamation-triangle",
+        ActivityLogCategory.InternalError => "bi-bug",
+        _ => "bi-info-circle"
+    };
+
+    public async ValueTask DisposeAsync()
+    {
+        ActivityLogService.OnEntryAdded -= OnEntryAdded;
+        if (_jsModule != null)
+        {
+            try
+            {
+                await _jsModule.DisposeAsync();
+            }
+            catch (JSDisconnectedException)
+            {
+            }
+        }
+    }
+}
