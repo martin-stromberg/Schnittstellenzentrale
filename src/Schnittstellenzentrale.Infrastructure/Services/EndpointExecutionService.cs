@@ -20,33 +20,33 @@ public class EndpointExecutionService : IEndpointExecutionService
     private const int MaxCallDepth = 2;
     private static readonly Regex DoubleBracePlaceholderRegex = new(@"\{\{([^}]+)\}\}", RegexOptions.Compiled);
     private readonly IHttpClientFactory _httpClientFactory;
-    private readonly IHealthCheckService _healthCheckService;
     private readonly ICredentialService _credentialService;
     private readonly IActiveEnvironmentService _activeEnvironmentService;
     private readonly IEndpointScriptRunner _scriptRunner;
     private readonly IEndpointRepository _endpointRepository;
     private readonly ISystemEnvironmentRepository _environmentRepository;
     private readonly ISignalRNotificationService _signalRNotificationService;
+    private readonly IActivityLogService _activityLogService;
 
     /// <summary>Initialisiert eine neue Instanz des <see cref="EndpointExecutionService"/>.</summary>
     public EndpointExecutionService(
         IHttpClientFactory httpClientFactory,
-        IHealthCheckService healthCheckService,
         ICredentialService credentialService,
         IActiveEnvironmentService activeEnvironmentService,
         IEndpointScriptRunner scriptRunner,
         IEndpointRepository endpointRepository,
         ISystemEnvironmentRepository environmentRepository,
-        ISignalRNotificationService signalRNotificationService)
+        ISignalRNotificationService signalRNotificationService,
+        IActivityLogService activityLogService)
     {
         _httpClientFactory = httpClientFactory;
-        _healthCheckService = healthCheckService;
         _credentialService = credentialService;
         _activeEnvironmentService = activeEnvironmentService;
         _scriptRunner = scriptRunner;
         _endpointRepository = endpointRepository;
         _environmentRepository = environmentRepository;
         _signalRNotificationService = signalRNotificationService;
+        _activityLogService = activityLogService;
     }
 
     /// <inheritdoc/>
@@ -102,11 +102,38 @@ public class EndpointExecutionService : IEndpointExecutionService
             }
             catch (Exception ex)
             {
+                _activityLogService.Log(
+                    ActivityLogCategory.InternalError,
+                    $"[Endpoint {endpoint.Id} {endpoint.RelativePath}] {ex.Message}",
+                    ex.ToString());
                 return new EndpointExecutionResult
                 {
                     Success = false,
                     ErrorMessage = $"[Endpoint {endpoint.Id} {endpoint.RelativePath}] {ex.Message}"
                 };
+            }
+
+            if (result.Success)
+            {
+                var maskedVariables = _activeEnvironmentService.ActiveEnvironment?.Variables
+                    ?? Enumerable.Empty<EnvironmentVariable>();
+                var requestDetails = result.RequestDetails ?? string.Empty;
+                var responseDetails = result.ResponseBody ?? string.Empty;
+                if (requestDetails.Length > 10240) requestDetails = requestDetails[..10240];
+                if (responseDetails.Length > 10240) responseDetails = responseDetails[..10240];
+                var details = BuildMaskedDetails(
+                    $"Request: {requestDetails}\nResponse: {responseDetails}",
+                    maskedVariables);
+                _activityLogService.Log(
+                    ActivityLogCategory.EndpointExecuted,
+                    $"{endpoint.Method} {result.RequestDetails} — {result.StatusCode}",
+                    details);
+            }
+            else if (result.StatusCode.HasValue)
+            {
+                _activityLogService.Log(
+                    ActivityLogCategory.HttpError,
+                    $"{endpoint.Method} {result.RequestDetails} — {result.StatusCode}");
             }
 
             if (!string.IsNullOrEmpty(endpoint.PostRequestScript))
@@ -146,7 +173,7 @@ public class EndpointExecutionService : IEndpointExecutionService
 
         var requestData = new ScriptRequestData
         {
-            Url = baseUrl.TrimEnd('/') + "/" + relativePath.TrimStart('/'),
+            Url = CombineUrl(baseUrl, relativePath),
             Method = endpoint.Method.ToString(),
             Headers = endpoint.Headers.ToDictionary(h => h.Key, h => h.Value),
             Body = endpoint.Body
@@ -158,7 +185,8 @@ public class EndpointExecutionService : IEndpointExecutionService
             Request = requestData,
             Response = response,
             CallDepth = callDepth,
-            ExecuteEndpoint = name => ExecuteEndpointByNameAsync(endpoint.ApplicationId, name, callDepth)
+            ExecuteEndpoint = name => ExecuteEndpointByNameAsync(endpoint.ApplicationId, name, callDepth),
+            EndpointName = endpoint.Name
         };
     }
 
@@ -229,7 +257,7 @@ public class EndpointExecutionService : IEndpointExecutionService
 
         var resolvedPath = EndpointUrlBuilder.Resolve(relativePath, resolvedQueryParameters);
 
-        var url = baseUrl.TrimEnd('/') + "/" + resolvedPath.TrimStart('/');
+        var url = CombineUrl(baseUrl, resolvedPath);
 
         var method = endpoint.Method switch
         {
@@ -294,6 +322,16 @@ public class EndpointExecutionService : IEndpointExecutionService
             };
         return await ExecuteAsync(matches[0], callDepth);
     }
+
+    private static string BuildMaskedDetails(string details, IEnumerable<EnvironmentVariable> variables)
+    {
+        foreach (var variable in variables.Where(v => v.IsValueMasked && !string.IsNullOrEmpty(v.Value)))
+            details = details.Replace(variable.Value, "***");
+        return details;
+    }
+
+    private static string CombineUrl(string baseUrl, string relativePath)
+        => baseUrl.TrimEnd('/') + "/" + relativePath.TrimStart('/');
 
     private void ApplyAuthentication(HttpRequestMessage request, Core.Models.Endpoint endpoint)
     {

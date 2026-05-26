@@ -1,0 +1,59 @@
+using Schnittstellenzentrale.Core.Enums;
+using Schnittstellenzentrale.Core.Interfaces;
+using Schnittstellenzentrale.Core.Models;
+
+namespace Schnittstellenzentrale.Infrastructure.Services;
+
+/// <summary>Scoped In-Memory-Implementierung von <see cref="IActivityLogService"/>.</summary>
+public class ActivityLogService : IActivityLogService
+{
+    private readonly List<ActivityLogEntry> _entries = [];
+
+    /// <inheritdoc/>
+    public IReadOnlyList<ActivityLogEntry> Entries => _entries;
+
+    /// <inheritdoc/>
+    public event Action? OnEntryAdded;
+
+    /// <inheritdoc/>
+    public void Log(ActivityLogCategory category, string message, string? details = null)
+    {
+        ActivityLogEntry entry;
+        try
+        {
+            entry = new ActivityLogEntry
+            {
+                Timestamp = DateTime.Now,
+                Category = category,
+                Message = message,
+                Details = details
+            };
+        }
+        catch
+        {
+            entry = new ActivityLogEntry
+            {
+                Timestamp = DateTime.Now,
+                Category = ActivityLogCategory.InternalError,
+                Message = "Fehler beim Erstellen des Protokolleintrags."
+            };
+        }
+
+        _entries.Add(entry);
+
+        try
+        {
+            OnEntryAdded?.Invoke();
+        }
+        catch
+        {
+            // Fehler im Event-Handler werden ignoriert
+        }
+    }
+
+    /// <inheritdoc/>
+    public void Clear()
+    {
+        _entries.Clear();
+    }
+}

@@ -1,4 +1,5 @@
 using Moq;
+using Schnittstellenzentrale.Core.Enums;
 using Schnittstellenzentrale.Core.Interfaces;
 using Schnittstellenzentrale.Core.Models;
 using Schnittstellenzentrale.Infrastructure.Services;
@@ -8,12 +9,19 @@ namespace Schnittstellenzentrale.Tests.Services;
 /// <summary>Unit-Tests für <see cref="EndpointScriptRunner"/>.</summary>
 public class EndpointScriptRunnerTests
 {
+    private static Mock<IActivityLogService> CreateActivityLogServiceMock()
+    {
+        return new Mock<IActivityLogService>();
+    }
+
     private static EndpointScriptRunner CreateRunner(
         ISystemEnvironmentRepository? environmentRepository = null,
-        ISignalRNotificationService? signalRNotificationService = null)
+        ISignalRNotificationService? signalRNotificationService = null,
+        IActivityLogService? activityLogService = null)
         => new(
             environmentRepository ?? CreateEnvironmentRepositoryMock().Object,
-            signalRNotificationService ?? CreateSignalRNotificationServiceMock().Object);
+            signalRNotificationService ?? CreateSignalRNotificationServiceMock().Object,
+            activityLogService ?? CreateActivityLogServiceMock().Object);
 
     private static ScriptContext CreateContext(
         IActiveEnvironmentService? envService = null,
@@ -353,5 +361,45 @@ public class EndpointScriptRunnerTests
         Assert.False(result.Success);
         Assert.NotNull(result.ErrorMessage);
         Assert.Contains("SignalR-Fehler", result.ErrorMessage!);
+    }
+
+    /// <summary>ExecuteAsync_ProtokolliertScriptExecuted</summary>
+    [Fact]
+    public async Task ExecuteAsync_ProtokolliertScriptExecuted()
+    {
+        var logMock = CreateActivityLogServiceMock();
+        var runner = CreateRunner(activityLogService: logMock.Object);
+        var context = CreateContext();
+        context.EndpointName = "TestEndpunkt";
+
+        await runner.ExecuteAsync("var x = 1;", context);
+
+        logMock.Verify(l => l.Log(ActivityLogCategory.ScriptExecuted, It.Is<string>(m => m.Contains("TestEndpunkt")), It.IsAny<string?>()), Times.Once);
+    }
+
+    /// <summary>SzConsoleWrite_ProtokolliertScriptConsoleOutput</summary>
+    [Fact]
+    public async Task SzConsoleWrite_ProtokolliertScriptConsoleOutput()
+    {
+        var logMock = CreateActivityLogServiceMock();
+        var runner = CreateRunner(activityLogService: logMock.Object);
+        var context = CreateContext();
+
+        await runner.ExecuteAsync("sz.console.write('Hallo Protokoll');", context);
+
+        logMock.Verify(l => l.Log(ActivityLogCategory.ScriptConsoleOutput, "Hallo Protokoll", It.IsAny<string?>()), Times.Once);
+    }
+
+    /// <summary>ExecuteAsync_JavaScriptException_ProtokolliertInternalError</summary>
+    [Fact]
+    public async Task ExecuteAsync_JavaScriptException_ProtokolliertInternalError()
+    {
+        var logMock = CreateActivityLogServiceMock();
+        var runner = CreateRunner(activityLogService: logMock.Object);
+        var context = CreateContext();
+
+        await runner.ExecuteAsync("throw new Error('Skriptfehler');", context);
+
+        logMock.Verify(l => l.Log(ActivityLogCategory.InternalError, It.IsAny<string>(), It.IsAny<string?>()), Times.Once);
     }
 }

@@ -93,13 +93,13 @@ public class EndpointExecutionIntegrationTests : IAsyncLifetime
 
         var executionService = new EndpointExecutionService(
             httpClientFactoryMock.Object,
-            new Mock<IHealthCheckService>().Object,
             credentialServiceMock.Object,
             activeEnvMock.Object,
             scriptRunnerMock.Object,
             endpointRepoMock.Object,
             new Mock<ISystemEnvironmentRepository>().Object,
-            new Mock<ISignalRNotificationService>().Object);
+            new Mock<ISignalRNotificationService>().Object,
+            new Mock<IActivityLogService>().Object);
 
         // Act
         var result = await executionService.ExecuteAsync(endpoint);
