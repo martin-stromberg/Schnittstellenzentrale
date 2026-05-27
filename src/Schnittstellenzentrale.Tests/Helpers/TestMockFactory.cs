@@ -1,5 +1,7 @@
 using Moq;
+using Schnittstellenzentrale.Core.Enums;
 using Schnittstellenzentrale.Core.Interfaces;
+using Schnittstellenzentrale.Core.Models;
 
 namespace Schnittstellenzentrale.Tests.Helpers;
 
@@ -11,4 +13,13 @@ public static class TestMockFactory
     {
         return new Mock<IActivityLogService>();
     }
+
+    /// <summary>Erstellt eine <see cref="SystemEnvironment"/>-Testinstanz mit den angegebenen Werten.</summary>
+    public static SystemEnvironment CreateEnv(int id, string name) => new()
+    {
+        Id = id,
+        Name = name,
+        Mode = StorageMode.Team,
+        Variables = []
+    };
 }
