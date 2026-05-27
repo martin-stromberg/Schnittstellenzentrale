@@ -55,19 +55,24 @@
             var environment = _environments.FirstOrDefault(e => e.Id == id);
             if (environment != null)
             {
-                try
-                {
-                    await JSRuntime.InvokeVoidAsync("localStorage.setItem", key, _selectedId);
-                }
-                catch (JSException) { } // JSException bei Server-Prerendering ignorieren
-                ActiveEnvironmentService.SetActiveEnvironment(environment);
-                await OnEnvironmentSelectedByUser.InvokeAsync(environment);
+                await ApplySelectionAsync(key, environment);
             }
             else
             {
                 await ClearSelectionAsync(key);
             }
         }
+    }
+
+    private async Task ApplySelectionAsync(string key, SystemEnvironment environment)
+    {
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("localStorage.setItem", key, _selectedId);
+        }
+        catch (JSException) { } // JSException bei Server-Prerendering ignorieren
+        ActiveEnvironmentService.SetActiveEnvironment(environment);
+        await OnEnvironmentSelectedByUser.InvokeAsync(environment);
     }
 
     private async Task ClearSelectionAsync(string key)

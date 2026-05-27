@@ -6,6 +6,7 @@ using Schnittstellenzentrale.Core.Enums;
 using Schnittstellenzentrale.Core.Helpers;
 using Schnittstellenzentrale.Core.Interfaces;
 using Schnittstellenzentrale.Core.Models;
+using Schnittstellenzentrale.Tests.Helpers;
 
 namespace Schnittstellenzentrale.Tests.Components;
 
@@ -16,14 +17,6 @@ public class EnvironmentSelectorTests : BunitContext
     private readonly Mock<IActiveEnvironmentService> _activeEnvMock = new();
     private readonly Mock<IStorageModeService> _storageMock = new();
     private readonly Mock<ICurrentUserService> _currentUserMock = new();
-
-    private static SystemEnvironment CreateEnv(int id, string name) => new()
-    {
-        Id = id,
-        Name = name,
-        Mode = StorageMode.Team,
-        Variables = []
-    };
 
     /// <summary>Initialisiert die Test-Services.</summary>
     public EnvironmentSelectorTests()
@@ -47,7 +40,7 @@ public class EnvironmentSelectorTests : BunitContext
     [Fact]
     public void RendertUmgebungenAusRepository()
     {
-        var envs = new List<SystemEnvironment> { CreateEnv(1, "Dev"), CreateEnv(2, "Prod") };
+        var envs = new List<SystemEnvironment> { TestMockFactory.CreateEnv(1, "Dev"), TestMockFactory.CreateEnv(2, "Prod") };
         _envRepoMock
             .Setup(r => r.GetEnvironmentsAsync(It.IsAny<StorageMode>(), It.IsAny<string?>()))
             .ReturnsAsync(envs);
@@ -63,7 +56,7 @@ public class EnvironmentSelectorTests : BunitContext
     [Fact]
     public void AktiveUmgebungWirdVorausgewählt()
     {
-        var env = CreateEnv(3, "Staging");
+        var env = TestMockFactory.CreateEnv(3, "Staging");
         _envRepoMock
             .Setup(r => r.GetEnvironmentsAsync(It.IsAny<StorageMode>(), It.IsAny<string?>()))
             .ReturnsAsync([env]);
@@ -94,7 +87,7 @@ public class EnvironmentSelectorTests : BunitContext
         var cut = Render<EnvironmentSelector>();
         Assert.Single(cut.FindAll("option")); // nur "— Keine Umgebung —"
 
-        var env = CreateEnv(5, "Neu");
+        var env = TestMockFactory.CreateEnv(5, "Neu");
         _envRepoMock
             .Setup(r => r.GetEnvironmentsAsync(It.IsAny<StorageMode>(), It.IsAny<string?>()))
             .ReturnsAsync([env]);
@@ -108,7 +101,7 @@ public class EnvironmentSelectorTests : BunitContext
     [Fact]
     public async Task AuswählenEinerUmgebung_SchreibtLocalStorage()
     {
-        var env = CreateEnv(7, "Prod");
+        var env = TestMockFactory.CreateEnv(7, "Prod");
         _envRepoMock
             .Setup(r => r.GetEnvironmentsAsync(It.IsAny<StorageMode>(), It.IsAny<string?>()))
             .ReturnsAsync([env]);
@@ -130,7 +123,7 @@ public class EnvironmentSelectorTests : BunitContext
     [Fact]
     public async Task AbwählenEinerUmgebung_EntferntLocalStorage()
     {
-        var env = CreateEnv(7, "Prod");
+        var env = TestMockFactory.CreateEnv(7, "Prod");
         _envRepoMock
             .Setup(r => r.GetEnvironmentsAsync(It.IsAny<StorageMode>(), It.IsAny<string?>()))
             .ReturnsAsync([env]);

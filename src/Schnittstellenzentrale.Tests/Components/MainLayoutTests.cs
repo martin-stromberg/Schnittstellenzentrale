@@ -10,6 +10,7 @@ using Schnittstellenzentrale.Core.Enums;
 using Schnittstellenzentrale.Core.Helpers;
 using Schnittstellenzentrale.Core.Interfaces;
 using Schnittstellenzentrale.Core.Models;
+using Schnittstellenzentrale.Tests.Helpers;
 
 namespace Schnittstellenzentrale.Tests.Components;
 
@@ -82,27 +83,29 @@ public class MainLayoutTests : BunitContext
 
     /// <summary>SetActiveEnvironment wird mit der aus der DB geladenen Umgebung aufgerufen, wenn eine ID im localStorage liegt.</summary>
     [Fact]
-    public void Wiederherstellen_GespeicherteIdVorhanden_SetzAktiveUmgebung()
+    public async Task Wiederherstellen_GespeicherteIdVorhanden_SetzAktiveUmgebung()
     {
-        var env = new SystemEnvironment { Id = 42, Name = "Dev", Mode = StorageMode.Team, Variables = [] };
+        var env = TestMockFactory.CreateEnv(42, "Dev");
         var key = LocalStorageKeys.SelectedEnvironmentId(StorageMode.Team);
         JSInterop.Setup<string?>("localStorage.getItem", inv => inv.Arguments.ElementAt(0) is string s && s == key).SetResult("42");
         _envRepoMock.Setup(r => r.GetByIdAsync(42)).ReturnsAsync(env);
 
-        Render<MainLayout>(p => p.Add(x => x.Body, (RenderFragment)(_ => { })));
+        var cut = Render<MainLayout>(p => p.Add(x => x.Body, (RenderFragment)(_ => { })));
+        await cut.InvokeAsync(() => { });
 
         _activeEnvMock.Verify(s => s.SetActiveEnvironment(env), Times.Once);
     }
 
     /// <summary>SetActiveEnvironment(null) und localStorage.removeItem werden aufgerufen, wenn die gespeicherte ID nicht mehr in der DB existiert.</summary>
     [Fact]
-    public void Wiederherstellen_UmgebungNichtMehrInDb_BereinigLocalStorage()
+    public async Task Wiederherstellen_UmgebungNichtMehrInDb_BereinigTLocalStorage()
     {
         var key = LocalStorageKeys.SelectedEnvironmentId(StorageMode.Team);
         JSInterop.Setup<string?>("localStorage.getItem", inv => inv.Arguments.ElementAt(0) is string s && s == key).SetResult("99");
         _envRepoMock.Setup(r => r.GetByIdAsync(99)).ReturnsAsync((SystemEnvironment?)null);
 
-        Render<MainLayout>(p => p.Add(x => x.Body, (RenderFragment)(_ => { })));
+        var cut = Render<MainLayout>(p => p.Add(x => x.Body, (RenderFragment)(_ => { })));
+        await cut.InvokeAsync(() => { });
 
         _activeEnvMock.Verify(s => s.SetActiveEnvironment(null), Times.AtLeastOnce);
         var removeItemCalls = JSInterop.Invocations
@@ -114,11 +117,12 @@ public class MainLayoutTests : BunitContext
 
     /// <summary>SetActiveEnvironment wird nicht mit einem Wert aufgerufen, wenn localStorage.getItem null zurückgibt.</summary>
     [Fact]
-    public void Wiederherstellen_KeinEintragImLocalStorage_SetzNichts()
+    public async Task Wiederherstellen_KeinEintragImLocalStorage_SetzNichts()
     {
         JSInterop.Setup<string?>("localStorage.getItem", _ => true).SetResult(null);
 
-        Render<MainLayout>(p => p.Add(x => x.Body, (RenderFragment)(_ => { })));
+        var cut = Render<MainLayout>(p => p.Add(x => x.Body, (RenderFragment)(_ => { })));
+        await cut.InvokeAsync(() => { });
 
         _activeEnvMock.Verify(s => s.SetActiveEnvironment(It.Is<SystemEnvironment?>(e => e != null)), Times.Never);
     }
@@ -147,7 +151,7 @@ public class MainLayoutTests : BunitContext
     [Fact]
     public async Task OnEnvironmentChanged_AktiveUmgebungNochVorhanden_AktualisiertUmgebung()
     {
-        var env = new SystemEnvironment { Id = 5, Name = "Dev", Mode = StorageMode.Team, Variables = [] };
+        var env = TestMockFactory.CreateEnv(5, "Dev");
         _activeEnvMock.Setup(s => s.ActiveEnvironment).Returns(env);
         _envRepoMock.Setup(r => r.GetByIdAsync(5)).ReturnsAsync(env);
 
@@ -163,7 +167,7 @@ public class MainLayoutTests : BunitContext
     [Fact]
     public async Task OnEnvironmentChanged_AktiveUmgebungGelöscht_BereinigLocalStorageUndSetztNull()
     {
-        var env = new SystemEnvironment { Id = 7, Name = "Prod", Mode = StorageMode.Team, Variables = [] };
+        var env = TestMockFactory.CreateEnv(7, "Prod");
         _activeEnvMock.Setup(s => s.ActiveEnvironment).Returns(env);
         _envRepoMock.Setup(r => r.GetByIdAsync(7)).ReturnsAsync((SystemEnvironment?)null);
 
