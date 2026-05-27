@@ -11,7 +11,7 @@
         {
             <i class="@IconClass sz-tree-icon"></i>
         }
-        <span class="sz-tree-node-text">@Title</span>
+        <span class="sz-tree-node-text" @onclick="Toggle">@Title</span>
         @if (TitleActions != null)
         {
             @TitleActions

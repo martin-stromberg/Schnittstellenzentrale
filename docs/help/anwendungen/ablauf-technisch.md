@@ -449,3 +449,60 @@ Beteiligte Klassen/Komponenten: `EndpointContextMenu`, `Home`, `IEndpointReposit
 3. Nach `pointerup` wird der aktuelle Wert in `localStorage` gespeichert.
 
 Beteiligte Klassen/Komponenten: `ApplicationGroupTree`, `IJSRuntime`, `endpoint-page.js`, Browser `localStorage`
+
+---
+
+## Ablauf: Titelklick klappt `ApplicationGroup`-Knoten auf/zu
+
+1. Der Anwender klickt auf `<span class="sz-tree-node-text">` innerhalb von `CollapsibleSection`.
+2. Der `@onclick="Toggle"`-Handler auf dem `<span>` wird ausgelöst.
+3. `CollapsibleSection.Toggle` invertiert `_expanded`.
+4. Blazor rendert die Komponente neu — `ChildContent` wird bei `_expanded == true` angezeigt, bei `false` ausgeblendet.
+
+Der `<span class="sz-tree-node-text">` und der `<button class="sz-tree-chevron-btn">` rufen beide denselben `Toggle`-Handler auf. Da `TitleActions` (z. B. das Zahnrad-Menü) als Geschwisterelement neben dem `<span>` liegt (nicht darin), ist keine Stop-Propagation nötig.
+
+Beteiligte Klassen/Komponenten: `CollapsibleSection`
+
+---
+
+## Ablauf: Titelklick klappt `Application`-Knoten auf/zu und wählt die Anwendung aus
+
+1. Der Anwender klickt auf `<button class="sz-tree-item-btn">` in `RenderApplication`.
+2. Der Handler `SelectAndToggleApplication(app.Id)` wird aufgerufen.
+3. `SelectAndToggleApplication` ruft `ToggleApplicationExpanded(app.Id)` auf:
+   - Ist `app.Id` in `_expandedApplicationIds` enthalten: Entfernen + `HubConnection.InvokeAsync("UnsubscribeFromApplication", app.Id)`.
+   - Ist `app.Id` nicht enthalten: Hinzufügen + `HubConnection.InvokeAsync("SubscribeToApplication", app.Id)`.
+4. Anschließend ruft `SelectAndToggleApplication` `SelectApplication(app.Id)` auf — dieser löst `OnApplicationSelected.InvokeAsync(applicationId)` aus.
+5. Blazor rendert den Baum neu.
+
+Beteiligte Klassen/Komponenten: `ApplicationGroupTree` (`SelectAndToggleApplication`, `ToggleApplicationExpanded`, `SelectApplication`), `HubConnection`
+
+```mermaid
+flowchart TD
+    A[Klick auf Anwendungsname-Button] --> B[SelectAndToggleApplication]
+    B --> C[ToggleApplicationExpanded]
+    C --> D{ID in _expandedApplicationIds?}
+    D -- Ja --> E[Entfernen + UnsubscribeFromApplication]
+    D -- Nein --> F[Hinzufügen + SubscribeToApplication]
+    E --> G[SelectApplication]
+    F --> G
+    G --> H[OnApplicationSelected.InvokeAsync]
+    H --> I[Blazor neu rendern]
+```
+
+---
+
+## Ablauf: Titelklick klappt `EndpointGroup`-Knoten auf/zu
+
+1. Der Anwender klickt auf den `<button class="sz-tree-chevron-btn">` oder auf `<span class="sz-tree-item-label">` in `RenderEndpointGroup`.
+2. Der `@onclick`-Handler ruft `ToggleEndpointGroupExpanded(group.Id)` auf.
+3. `ToggleEndpointGroupExpanded` prüft `_expandedEndpointGroupIds`:
+   - Enthält: `_expandedEndpointGroupIds.Remove(group.Id)` — Knoten wird zugeklappt.
+   - Enthält nicht: `_expandedEndpointGroupIds.Add(group.Id)` — Knoten wird aufgeklappt.
+4. Der Chevron-Button zeigt `bi-chevron-down` (aufgeklappt) oder `bi-chevron-right` (zugeklappt).
+5. `<div class="sz-tree-children">` wird nur gerendert, wenn `_expandedEndpointGroupIds.Contains(group.Id) == true`.
+6. Blazor rendert den betroffenen Bereich neu.
+
+Beim Laden der Seite ist `_expandedEndpointGroupIds` leer (`new HashSet<int>()`), weshalb alle Ordner initial zugeklappt erscheinen. `_expandedEndpointGroupIds` wird nicht explizit zurückgesetzt — weder bei `OnModeChanged` noch bei `LoadDataAsync`. Das bedeutet: aufgeklappte Ordner bleiben auch nach SignalR-Reloads aufgeklappt. Nur beim ersten Seitenaufruf und nach einem Browser-Reload sind alle Ordner zugeklappt.
+
+Beteiligte Klassen/Komponenten: `ApplicationGroupTree` (`ToggleEndpointGroupExpanded`, `RenderEndpointGroup`, `_expandedEndpointGroupIds`)

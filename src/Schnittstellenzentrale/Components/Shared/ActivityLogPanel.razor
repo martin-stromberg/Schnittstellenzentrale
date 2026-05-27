@@ -48,7 +48,7 @@ else
                 if (!string.IsNullOrEmpty(storedHeight) && int.TryParse(storedHeight, out var height))
                     _panelHeight = height;
             }
-            catch
+            catch (JSException)
             {
                 // JSException bei Server-Prerendering ignorieren
             }

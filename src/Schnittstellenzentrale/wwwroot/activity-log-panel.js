@@ -31,7 +31,7 @@ export function initializePanelResize(handleElement, panelElement) {
         event.preventDefault();
     });
 
-    document.addEventListener('pointermove', (event) => {
+    document.addEventListener('mousemove', (event) => {
         if (!isResizing) return;
         const delta = startY - event.clientY;
         const newHeight = startHeight + delta;

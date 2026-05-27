@@ -32,7 +32,7 @@ public class ActivityLogService : IActivityLogService
         {
             OnEntryAdded?.Invoke();
         }
-        catch
+        catch (Exception)
         {
             // Fehler im Event-Handler werden ignoriert
         }
