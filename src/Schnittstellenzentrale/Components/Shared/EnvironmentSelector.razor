@@ -48,25 +48,36 @@
 
         if (string.IsNullOrEmpty(_selectedId))
         {
-            await JSRuntime.InvokeVoidAsync("localStorage.removeItem", key);
-            ActiveEnvironmentService.SetActiveEnvironment(null);
-            await OnEnvironmentSelectedByUser.InvokeAsync(null);
+            await ClearSelectionAsync(key);
         }
         else if (int.TryParse(_selectedId, out var id))
         {
             var environment = _environments.FirstOrDefault(e => e.Id == id);
             if (environment != null)
             {
-                await JSRuntime.InvokeVoidAsync("localStorage.setItem", key, _selectedId);
+                try
+                {
+                    await JSRuntime.InvokeVoidAsync("localStorage.setItem", key, _selectedId);
+                }
+                catch (JSException) { } // JSException bei Server-Prerendering ignorieren
                 ActiveEnvironmentService.SetActiveEnvironment(environment);
                 await OnEnvironmentSelectedByUser.InvokeAsync(environment);
             }
             else
             {
-                await JSRuntime.InvokeVoidAsync("localStorage.removeItem", key);
-                ActiveEnvironmentService.SetActiveEnvironment(null);
-                await OnEnvironmentSelectedByUser.InvokeAsync(null);
+                await ClearSelectionAsync(key);
             }
         }
+    }
+
+    private async Task ClearSelectionAsync(string key)
+    {
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("localStorage.removeItem", key);
+        }
+        catch (JSException) { } // JSException bei Server-Prerendering ignorieren
+        ActiveEnvironmentService.SetActiveEnvironment(null);
+        await OnEnvironmentSelectedByUser.InvokeAsync(null);
     }
 }

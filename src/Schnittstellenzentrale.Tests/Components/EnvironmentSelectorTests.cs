@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using Schnittstellenzentrale.Components.Shared;
 using Schnittstellenzentrale.Core.Enums;
+using Schnittstellenzentrale.Core.Helpers;
 using Schnittstellenzentrale.Core.Interfaces;
 using Schnittstellenzentrale.Core.Models;
 
@@ -38,8 +39,8 @@ public class EnvironmentSelectorTests : BunitContext
         Services.AddSingleton(_storageMock.Object);
         Services.AddSingleton(_currentUserMock.Object);
 
-        JSInterop.SetupVoid("localStorage.removeItem", _ => true);
-        JSInterop.SetupVoid("localStorage.setItem", _ => true);
+        JSInterop.SetupVoid("localStorage.removeItem", _ => true).SetVoidResult();
+        JSInterop.SetupVoid("localStorage.setItem", _ => true).SetVoidResult();
     }
 
     /// <summary>Umgebungen aus dem Repository erscheinen als Optionen im Dropdown.</summary>
@@ -101,5 +102,69 @@ public class EnvironmentSelectorTests : BunitContext
         await cut.InvokeAsync(() => cut.Instance.RefreshAsync());
 
         Assert.Contains(cut.FindAll("option"), o => o.TextContent == "Neu");
+    }
+
+    /// <summary>Bei Auswahl einer Umgebung wird localStorage.setItem mit korrektem Schlüssel und ID aufgerufen.</summary>
+    [Fact]
+    public async Task AuswählenEinerUmgebung_SchreibtLocalStorage()
+    {
+        var env = CreateEnv(7, "Prod");
+        _envRepoMock
+            .Setup(r => r.GetEnvironmentsAsync(It.IsAny<StorageMode>(), It.IsAny<string?>()))
+            .ReturnsAsync([env]);
+
+        var cut = Render<EnvironmentSelector>();
+        var expectedKey = LocalStorageKeys.SelectedEnvironmentId(StorageMode.Team);
+
+        await cut.InvokeAsync(() => cut.Find("select").Change("7"));
+
+        var setItemCalls = JSInterop.Invocations
+            .Where(i => i.Identifier == "localStorage.setItem")
+            .ToList();
+        Assert.Single(setItemCalls);
+        Assert.Equal(expectedKey, setItemCalls[0].Arguments.ElementAt(0));
+        Assert.Equal("7", setItemCalls[0].Arguments.ElementAt(1));
+    }
+
+    /// <summary>Bei Abwahl (leere Auswahl) wird localStorage.removeItem mit korrektem Schlüssel aufgerufen.</summary>
+    [Fact]
+    public async Task AbwählenEinerUmgebung_EntferntLocalStorage()
+    {
+        var env = CreateEnv(7, "Prod");
+        _envRepoMock
+            .Setup(r => r.GetEnvironmentsAsync(It.IsAny<StorageMode>(), It.IsAny<string?>()))
+            .ReturnsAsync([env]);
+
+        var cut = Render<EnvironmentSelector>();
+        var expectedKey = LocalStorageKeys.SelectedEnvironmentId(StorageMode.Team);
+
+        await cut.InvokeAsync(() => cut.Find("select").Change(string.Empty));
+
+        var removeItemCalls = JSInterop.Invocations
+            .Where(i => i.Identifier == "localStorage.removeItem")
+            .ToList();
+        Assert.Single(removeItemCalls);
+        Assert.Equal(expectedKey, removeItemCalls[0].Arguments.ElementAt(0));
+    }
+
+    /// <summary>Bei Auswahl einer ID, die nicht in _environments vorhanden ist, wird localStorage.removeItem aufgerufen und SetActiveEnvironment(null) gesetzt.</summary>
+    [Fact]
+    public async Task AuswählenNichtExistierenderId_EntferntLocalStorageUndSetztNull()
+    {
+        _envRepoMock
+            .Setup(r => r.GetEnvironmentsAsync(It.IsAny<StorageMode>(), It.IsAny<string?>()))
+            .ReturnsAsync([]);
+
+        var cut = Render<EnvironmentSelector>();
+        var expectedKey = LocalStorageKeys.SelectedEnvironmentId(StorageMode.Team);
+
+        await cut.InvokeAsync(() => cut.Find("select").Change("99"));
+
+        var removeItemCalls = JSInterop.Invocations
+            .Where(i => i.Identifier == "localStorage.removeItem")
+            .ToList();
+        Assert.Single(removeItemCalls);
+        Assert.Equal(expectedKey, removeItemCalls[0].Arguments.ElementAt(0));
+        _activeEnvMock.Verify(s => s.SetActiveEnvironment(null), Times.Once);
     }
 }

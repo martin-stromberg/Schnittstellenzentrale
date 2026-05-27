@@ -153,7 +153,7 @@
         {
             storedId = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", key);
         }
-        catch
+        catch (JSException)
         {
             // JSException bei Server-Prerendering ignorieren
             return;
@@ -172,12 +172,7 @@
         }
         else
         {
-            ActiveEnvironmentService.SetActiveEnvironment(null);
-            try
-            {
-                await JSRuntime.InvokeVoidAsync("localStorage.removeItem", key);
-            }
-            catch { } // JSException bei Server-Prerendering ignorieren
+            await ClearEnvironmentAndRemoveStorageKeyAsync(key);
         }
     }
 
@@ -191,9 +186,8 @@
             var updated = await SystemEnvironmentRepository.GetByIdAsync(activeId.Value);
             if (updated == null)
             {
-                ActiveEnvironmentService.SetActiveEnvironment(null);
                 var key = LocalStorageKeys.SelectedEnvironmentId(mode);
-                try { await JSRuntime.InvokeVoidAsync("localStorage.removeItem", key); } catch { } // JSException bei Server-Prerendering ignorieren
+                await ClearEnvironmentAndRemoveStorageKeyAsync(key);
             }
             else
             {
@@ -203,6 +197,16 @@
 
         if (_environmentSelector != null)
             await _environmentSelector.RefreshAsync();
+    }
+
+    private async Task ClearEnvironmentAndRemoveStorageKeyAsync(string key)
+    {
+        ActiveEnvironmentService.SetActiveEnvironment(null);
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("localStorage.removeItem", key);
+        }
+        catch (JSException) { } // JSException bei Server-Prerendering ignorieren
     }
 
     private async Task OpenEnvironmentManagementAsync()
@@ -230,9 +234,9 @@
                     await _hubConnection.InvokeAsync("UnsubscribeFromEnvironments");
                 await _hubConnection.DisposeAsync();
             }
-            catch
+            catch (JSException)
             {
-                // Fehler beim Dispose der Hub-Verbindung ignorieren (z. B. Verbindung bereits getrennt)
+                // JSException beim Dispose der Hub-Verbindung ignorieren (z. B. Verbindung bereits getrennt)
             }
         }
     }

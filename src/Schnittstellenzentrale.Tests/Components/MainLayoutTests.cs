@@ -5,7 +5,9 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Schnittstellenzentrale.Components.Layout;
+using Schnittstellenzentrale.Components.Shared;
 using Schnittstellenzentrale.Core.Enums;
+using Schnittstellenzentrale.Core.Helpers;
 using Schnittstellenzentrale.Core.Interfaces;
 using Schnittstellenzentrale.Core.Models;
 
@@ -44,8 +46,8 @@ public class MainLayoutTests : BunitContext
         Services.AddSingleton<ILogger<MainLayout>>(NullLogger<MainLayout>.Instance);
 
         JSInterop.Setup<string?>("localStorage.getItem", _ => true).SetResult(null);
-        JSInterop.SetupVoid("localStorage.removeItem", _ => true);
-        JSInterop.SetupVoid("localStorage.setItem", _ => true);
+        JSInterop.SetupVoid("localStorage.removeItem", _ => true).SetVoidResult();
+        JSInterop.SetupVoid("localStorage.setItem", _ => true).SetVoidResult();
     }
 
     /// <summary>Das Layout rendert den Modus-Selektor im Header.</summary>
@@ -76,5 +78,105 @@ public class MainLayoutTests : BunitContext
         var exception = await Record.ExceptionAsync(() => cut.Instance.DisposeAsync().AsTask());
 
         Assert.Null(exception);
+    }
+
+    /// <summary>SetActiveEnvironment wird mit der aus der DB geladenen Umgebung aufgerufen, wenn eine ID im localStorage liegt.</summary>
+    [Fact]
+    public void Wiederherstellen_GespeicherteIdVorhanden_SetzAktiveUmgebung()
+    {
+        var env = new SystemEnvironment { Id = 42, Name = "Dev", Mode = StorageMode.Team, Variables = [] };
+        var key = LocalStorageKeys.SelectedEnvironmentId(StorageMode.Team);
+        JSInterop.Setup<string?>("localStorage.getItem", inv => inv.Arguments.ElementAt(0) is string s && s == key).SetResult("42");
+        _envRepoMock.Setup(r => r.GetByIdAsync(42)).ReturnsAsync(env);
+
+        Render<MainLayout>(p => p.Add(x => x.Body, (RenderFragment)(_ => { })));
+
+        _activeEnvMock.Verify(s => s.SetActiveEnvironment(env), Times.Once);
+    }
+
+    /// <summary>SetActiveEnvironment(null) und localStorage.removeItem werden aufgerufen, wenn die gespeicherte ID nicht mehr in der DB existiert.</summary>
+    [Fact]
+    public void Wiederherstellen_UmgebungNichtMehrInDb_BereinigLocalStorage()
+    {
+        var key = LocalStorageKeys.SelectedEnvironmentId(StorageMode.Team);
+        JSInterop.Setup<string?>("localStorage.getItem", inv => inv.Arguments.ElementAt(0) is string s && s == key).SetResult("99");
+        _envRepoMock.Setup(r => r.GetByIdAsync(99)).ReturnsAsync((SystemEnvironment?)null);
+
+        Render<MainLayout>(p => p.Add(x => x.Body, (RenderFragment)(_ => { })));
+
+        _activeEnvMock.Verify(s => s.SetActiveEnvironment(null), Times.AtLeastOnce);
+        var removeItemCalls = JSInterop.Invocations
+            .Where(i => i.Identifier == "localStorage.removeItem")
+            .ToList();
+        Assert.Single(removeItemCalls);
+        Assert.Equal(key, removeItemCalls[0].Arguments.ElementAt(0));
+    }
+
+    /// <summary>SetActiveEnvironment wird nicht mit einem Wert aufgerufen, wenn localStorage.getItem null zurückgibt.</summary>
+    [Fact]
+    public void Wiederherstellen_KeinEintragImLocalStorage_SetzNichts()
+    {
+        JSInterop.Setup<string?>("localStorage.getItem", _ => true).SetResult(null);
+
+        Render<MainLayout>(p => p.Add(x => x.Body, (RenderFragment)(_ => { })));
+
+        _activeEnvMock.Verify(s => s.SetActiveEnvironment(It.Is<SystemEnvironment?>(e => e != null)), Times.Never);
+    }
+
+    /// <summary>Nach Moduswechsel wird der Schlüssel des neuen Modus für localStorage.getItem verwendet.</summary>
+    [Fact]
+    public async Task Wiederherstellen_BeiModuswechsel_VerwendetNeuenSchlüssel()
+    {
+        var userKey = LocalStorageKeys.SelectedEnvironmentId(StorageMode.User);
+        JSInterop.Setup<string?>("localStorage.getItem", _ => true).SetResult(null);
+        _storageMock.Setup(s => s.CurrentMode).Returns(StorageMode.Team);
+
+        var cut = Render<MainLayout>(p => p.Add(x => x.Body, (RenderFragment)(_ => { })));
+
+        JSInterop.Setup<string?>("localStorage.getItem", inv => inv.Arguments.ElementAt(0) is string s && s == userKey).SetResult(null);
+
+        await cut.InvokeAsync(() => cut.Find("select.form-select").Change(StorageMode.User.ToString()));
+
+        var getItemInvocations = JSInterop.Invocations
+            .Where(i => i.Identifier == "localStorage.getItem")
+            .ToList();
+        Assert.Contains(getItemInvocations, i => i.Arguments.ElementAt(0) is string s && s == userKey);
+    }
+
+    /// <summary>OnEnvironmentChanged: Aktive Umgebung existiert noch in der DB → SetActiveEnvironment mit aktualisierten Daten aufgerufen.</summary>
+    [Fact]
+    public async Task OnEnvironmentChanged_AktiveUmgebungNochVorhanden_AktualisiertUmgebung()
+    {
+        var env = new SystemEnvironment { Id = 5, Name = "Dev", Mode = StorageMode.Team, Variables = [] };
+        _activeEnvMock.Setup(s => s.ActiveEnvironment).Returns(env);
+        _envRepoMock.Setup(r => r.GetByIdAsync(5)).ReturnsAsync(env);
+
+        var cut = Render<MainLayout>(p => p.Add(x => x.Body, (RenderFragment)(_ => { })));
+        var overlay = cut.FindComponent<EnvironmentManagementOverlay>();
+
+        await cut.InvokeAsync(() => overlay.Instance.OnEnvironmentsChanged.InvokeAsync());
+
+        _activeEnvMock.Verify(s => s.SetActiveEnvironment(env), Times.AtLeastOnce);
+    }
+
+    /// <summary>OnEnvironmentChanged: Aktive Umgebung wurde gelöscht → SetActiveEnvironment(null) und localStorage.removeItem aufgerufen.</summary>
+    [Fact]
+    public async Task OnEnvironmentChanged_AktiveUmgebungGelöscht_BereinigLocalStorageUndSetztNull()
+    {
+        var env = new SystemEnvironment { Id = 7, Name = "Prod", Mode = StorageMode.Team, Variables = [] };
+        _activeEnvMock.Setup(s => s.ActiveEnvironment).Returns(env);
+        _envRepoMock.Setup(r => r.GetByIdAsync(7)).ReturnsAsync((SystemEnvironment?)null);
+
+        var cut = Render<MainLayout>(p => p.Add(x => x.Body, (RenderFragment)(_ => { })));
+        var overlay = cut.FindComponent<EnvironmentManagementOverlay>();
+
+        await cut.InvokeAsync(() => overlay.Instance.OnEnvironmentsChanged.InvokeAsync());
+
+        var expectedKey = LocalStorageKeys.SelectedEnvironmentId(StorageMode.Team);
+        _activeEnvMock.Verify(s => s.SetActiveEnvironment(null), Times.AtLeastOnce);
+        var removeItemCalls = JSInterop.Invocations
+            .Where(i => i.Identifier == "localStorage.removeItem")
+            .ToList();
+        Assert.Contains(removeItemCalls, i => i.Arguments.ElementAt(0) is string key && key == expectedKey);
     }
 }
