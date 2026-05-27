@@ -147,6 +147,31 @@ public class MainLayoutTests : BunitContext
         Assert.Contains(getItemInvocations, i => i.Arguments.ElementAt(0) is string s && s == userKey);
     }
 
+    /// <summary>Nach Wiederherstellung aus localStorage zeigt der EnvironmentSelector die gespeicherte Umgebung als ausgewählt.</summary>
+    [Fact]
+    public async Task Wiederherstellen_GespeicherteIdVorhanden_SelectorZeigtAuswahl()
+    {
+        var env = TestMockFactory.CreateEnv(42, "Dev");
+        var key = LocalStorageKeys.SelectedEnvironmentId(StorageMode.Team);
+
+        SystemEnvironment? activeEnv = null;
+        _activeEnvMock.Setup(s => s.ActiveEnvironment).Returns(() => activeEnv);
+        _activeEnvMock.Setup(s => s.SetActiveEnvironment(It.IsAny<SystemEnvironment?>()))
+            .Callback<SystemEnvironment?>(e => activeEnv = e);
+
+        JSInterop.Setup<string?>("localStorage.getItem", inv => inv.Arguments.ElementAt(0) is string s && s == key).SetResult("42");
+        _envRepoMock.Setup(r => r.GetByIdAsync(42)).ReturnsAsync(env);
+        _envRepoMock.Setup(r => r.GetEnvironmentsAsync(It.IsAny<StorageMode>(), It.IsAny<string?>()))
+            .ReturnsAsync([env]);
+
+        var cut = Render<MainLayout>(p => p.Add(x => x.Body, (RenderFragment)(_ => { })));
+        await cut.InvokeAsync(() => { });
+
+        var selector = cut.FindComponent<EnvironmentSelector>();
+        var select = selector.Find("select");
+        Assert.Equal("42", select.GetAttribute("value"));
+    }
+
     /// <summary>OnEnvironmentChanged: Aktive Umgebung existiert noch in der DB → SetActiveEnvironment mit aktualisierten Daten aufgerufen.</summary>
     [Fact]
     public async Task OnEnvironmentChanged_AktiveUmgebungNochVorhanden_AktualisiertUmgebung()
