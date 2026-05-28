@@ -236,9 +236,9 @@
                     await _hubConnection.InvokeAsync("UnsubscribeFromEnvironments");
                 await _hubConnection.DisposeAsync();
             }
-            catch (JSException)
+            catch (Exception)
             {
-                // JSException beim Dispose der Hub-Verbindung ignorieren (z. B. Verbindung bereits getrennt)
+                // Exceptions beim Dispose der Hub-Verbindung ignorieren (z. B. Verbindung bereits getrennt)
             }
         }
     }

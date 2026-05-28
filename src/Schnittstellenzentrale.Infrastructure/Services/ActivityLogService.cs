@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using Schnittstellenzentrale.Core.Enums;
 using Schnittstellenzentrale.Core.Interfaces;
 using Schnittstellenzentrale.Core.Models;
@@ -8,9 +9,17 @@ namespace Schnittstellenzentrale.Infrastructure.Services;
 public class ActivityLogService : IActivityLogService
 {
     private readonly List<ActivityLogEntry> _entries = [];
+    private readonly Lock _entriesLock = new();
+    private readonly ILogger<ActivityLogService> _logger;
+
+    /// <summary>Initialisiert eine neue Instanz des <see cref="ActivityLogService"/>.</summary>
+    public ActivityLogService(ILogger<ActivityLogService> logger)
+    {
+        _logger = logger;
+    }
 
     /// <inheritdoc/>
-    public IReadOnlyList<ActivityLogEntry> Entries => _entries;
+    public IReadOnlyList<ActivityLogEntry> Entries { get { lock (_entriesLock) { return _entries.ToList(); } } }
 
     /// <inheritdoc/>
     public event Action? OnEntryAdded;
@@ -26,21 +35,27 @@ public class ActivityLogService : IActivityLogService
             Details = details
         };
 
-        _entries.Add(entry);
+        lock (_entriesLock)
+        {
+            _entries.Add(entry);
+        }
 
         try
         {
             OnEntryAdded?.Invoke();
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            // Fehler im Event-Handler werden ignoriert
+            _logger.LogDebug(ex, "Fehler im OnEntryAdded-Event-Handler.");
         }
     }
 
     /// <inheritdoc/>
     public void Clear()
     {
-        _entries.Clear();
+        lock (_entriesLock)
+        {
+            _entries.Clear();
+        }
     }
 }

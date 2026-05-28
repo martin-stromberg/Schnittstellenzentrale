@@ -31,16 +31,16 @@ export function initializePanelResize(handleElement, panelElement) {
         event.preventDefault();
     });
 
-    document.addEventListener('mousemove', (event) => {
+    const onMouseMove = (event) => {
         if (!isResizing) return;
         const delta = startY - event.clientY;
         const newHeight = startHeight + delta;
         if (newHeight >= 80 && newHeight <= 800) {
             panelElement.style.height = newHeight + 'px';
         }
-    });
+    };
 
-    document.addEventListener('mouseup', () => {
+    const onMouseUp = () => {
         if (!isResizing) return;
         isResizing = false;
         document.body.style.userSelect = '';
@@ -48,5 +48,10 @@ export function initializePanelResize(handleElement, panelElement) {
         if (!isNaN(height)) {
             savePanelHeight(height);
         }
-    });
+        document.removeEventListener('mousemove', onMouseMove);
+        document.removeEventListener('mouseup', onMouseUp);
+    };
+
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
 }

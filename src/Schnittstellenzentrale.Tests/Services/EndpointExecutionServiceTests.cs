@@ -99,7 +99,8 @@ public class EndpointExecutionServiceTests
         Mock<IEndpointRepository>? endpointRepositoryMock = null,
         Mock<ISystemEnvironmentRepository>? environmentRepositoryMock = null,
         Mock<ISignalRNotificationService>? signalRNotificationServiceMock = null,
-        Mock<IActivityLogService>? activityLogServiceMock = null)
+        Mock<IActivityLogService>? activityLogServiceMock = null,
+        IEndpointScriptRunner? realScriptRunner = null)
     {
         var handlerMock = new Mock<HttpMessageHandler>();
         handlerMock.Protected()
@@ -113,7 +114,8 @@ public class EndpointExecutionServiceTests
         factoryMock.Setup(f => f.CreateClient(It.IsAny<string>())).Returns(httpClient);
 
         var envMock = activeEnvironmentMock ?? CreateEmptyActiveEnvironmentMock();
-        var scriptMock = scriptRunnerMock ?? CreateScriptRunnerMock(new ScriptExecutionResult { Success = true });
+        IEndpointScriptRunner scriptRunner = realScriptRunner
+            ?? (scriptRunnerMock ?? CreateScriptRunnerMock(new ScriptExecutionResult { Success = true })).Object;
         var repoMock = endpointRepositoryMock ?? CreateEmptyEndpointRepositoryMock();
         var envRepoMock = environmentRepositoryMock ?? CreateEmptyEnvironmentRepositoryMock();
         var signalRMock = signalRNotificationServiceMock ?? CreateEmptySignalRNotificationServiceMock();
@@ -123,7 +125,7 @@ public class EndpointExecutionServiceTests
             factoryMock.Object,
             credentialMock.Object,
             envMock.Object,
-            scriptMock.Object,
+            scriptRunner,
             repoMock.Object,
             envRepoMock.Object,
             signalRMock.Object,
@@ -189,10 +191,16 @@ public class EndpointExecutionServiceTests
     [Fact]
     public async Task Execute_WithNegotiateAuthType_UsesNegotiateHandler()
     {
-        var (service, _) = CreateService(_credMock);
+        var (service, handlerMock) = CreateService(_credMock);
         var endpoint = CreateEndpoint(AuthenticationType.Negotiate);
 
-        await service.ExecuteAsync(endpoint);
+        var result = await service.ExecuteAsync(endpoint);
+
+        Assert.True(result.Success);
+        handlerMock.Protected().Verify("SendAsync",
+            Times.Once(),
+            ItExpr.IsAny<HttpRequestMessage>(),
+            ItExpr.IsAny<CancellationToken>());
     }
 
     /// <summary>Execute_WithNegotiateWithImpersonationAuthType_UsesNegotiateHandler</summary>
@@ -725,25 +733,10 @@ public class EndpointExecutionServiceTests
             CreateEmptySignalRNotificationServiceMock().Object,
             TestMockFactory.CreateActivityLogServiceMock().Object);
 
-        var handlerMock = new Mock<HttpMessageHandler>();
-        handlerMock.Protected()
-            .Setup<Task<HttpResponseMessage>>("SendAsync",
-                ItExpr.IsAny<HttpRequestMessage>(),
-                ItExpr.IsAny<CancellationToken>())
-            .ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("{}") });
-        var httpClient = new HttpClient(handlerMock.Object);
-        var factoryMock = new Mock<IHttpClientFactory>();
-        factoryMock.Setup(f => f.CreateClient(It.IsAny<string>())).Returns(httpClient);
-        var envMock = CreateEmptyActiveEnvironmentMock();
-        var realService = new EndpointExecutionService(
-            factoryMock.Object,
-            _credMock.Object,
-            envMock.Object,
-            scriptRunner,
-            repoMock.Object,
-            CreateEmptyEnvironmentRepositoryMock().Object,
-            CreateEmptySignalRNotificationServiceMock().Object,
-            TestMockFactory.CreateActivityLogServiceMock().Object);
+        var (realService, _) = CreateService(
+            _credMock,
+            endpointRepositoryMock: repoMock,
+            realScriptRunner: scriptRunner);
 
         var result = await realService.ExecuteAsync(endpoint);
 
