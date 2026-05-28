@@ -225,6 +225,7 @@
                 _dragEnterCountUngrouped = 0;
                 _errorMessage = null;
                 _expandedApplicationIds.Clear();
+                _expandedEndpointGroupIds.Clear();
 
                 await LoadDataAsync();
                 await OnSelectionCleared.InvokeAsync();
@@ -256,8 +257,10 @@
 
     private async Task SelectAndToggleApplication(int appId)
     {
+        var isExpanding = !_expandedApplicationIds.Contains(appId);
         await ToggleApplicationExpanded(appId);
-        await SelectApplication(appId);
+        if (isExpanding)
+            await SelectApplication(appId);
     }
 
     private void ToggleEndpointGroupExpanded(int endpointGroupId)

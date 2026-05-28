@@ -34,6 +34,9 @@
             </button>
         </div>
 
+        @* Bekannte Einschränkung: _activityLogPanelHeight wird nach einem JS-gesteuerten Drag-Resize nicht
+           aktualisiert, da JS nur localStorage schreibt, aber kein .NET-Callback auslöst. Das padding-bottom
+           auf <article> kann nach einem Drag-Resize von der tatsächlichen Panel-Höhe abweichen. *@
         <article style="@(_activityLogOpen && _activityLogDisplayMode == "dock" ? $"padding-bottom: {_activityLogPanelHeight}px" : "")">
             @Body
         </article>

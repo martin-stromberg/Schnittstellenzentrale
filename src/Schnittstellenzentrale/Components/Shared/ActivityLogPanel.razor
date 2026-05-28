@@ -87,7 +87,18 @@ else
     {
         _displayMode = _displayMode == "dock" ? "overlay" : "dock";
         if (_jsModule != null)
-            await _jsModule.InvokeVoidAsync("saveDisplayMode", _displayMode);
+        {
+            try
+            {
+                await _jsModule.InvokeVoidAsync("destroy");
+                await _jsModule.InvokeVoidAsync("saveDisplayMode", _displayMode);
+            }
+            catch (JSException)
+            {
+                // JSException bei Server-Prerendering ignorieren
+            }
+        }
+        _needsResizeInit = true;
         await OnDisplayModeChanged.InvokeAsync(_displayMode);
         StateHasChanged();
     }
@@ -151,6 +162,7 @@ else
         {
             try
             {
+                await _jsModule.InvokeVoidAsync("destroy");
                 await _jsModule.DisposeAsync();
             }
             catch (JSDisconnectedException)
