@@ -55,6 +55,18 @@ Systemeinträge können nicht über die Benutzeroberfläche oder die REST-API ve
 
 Normale Anwendungen dürfen per Drag & Drop in die Systemgruppe hinein- und wieder herausbewegt werden.
 
+## Klickbare Titelzeilen im Navigationsbaum
+
+Alle Knoten im Navigationsbaum können durch einen Klick auf den Beschriftungstext auf- oder zugeklappt werden — nicht nur durch einen Klick auf den Chevron-Pfeil links.
+
+| Knotentyp | Klick auf den Pfeil | Klick auf den Namen |
+|---|---|---|
+| `ApplicationGroup` (Gruppe) | klappt auf/zu | klappt auf/zu |
+| `Application` (Anwendung) | klappt auf/zu | klappt auf/zu **und** wählt die Anwendung aus |
+| `EndpointGroup` (Ordner) | klappt auf/zu | klappt auf/zu |
+
+> **Hinweis:** Endpunktordner sind beim Laden des Navigationsbaums initial zugeklappt. Nach einem Moduswechsel oder Datenneu-Laden werden alle aufgeklappten Zustände zurückgesetzt.
+
 ## Endpunktgruppen und Endpunkte
 
 Jede Anwendung kann Endpunktgruppen (`EndpointGroup`) und einzelne Endpunkte (`Endpoint`) enthalten. Diese erscheinen nach dem Aufklappen des Anwendungsknotens im Navigationsbaum. Endpunkte ohne Gruppe werden direkt unterhalb der Anwendung aufgelistet; Endpunkte in einer Gruppe erscheinen unterhalb des Ordner-Knotens.

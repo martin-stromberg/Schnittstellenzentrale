@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging.Abstractions;
 using Schnittstellenzentrale.Core.Enums;
 using Schnittstellenzentrale.Infrastructure.Services;
 
@@ -6,11 +7,13 @@ namespace Schnittstellenzentrale.Tests.Services;
 /// <summary>Unit-Tests für <see cref="ActivityLogService"/>.</summary>
 public class ActivityLogServiceTests
 {
+    private static ActivityLogService CreateService() => new(NullLogger<ActivityLogService>.Instance);
+
     /// <summary>Log_ErstelltEintragMitKorrektenFeldern</summary>
     [Fact]
     public void Log_ErstelltEintragMitKorrektenFeldern()
     {
-        var service = new ActivityLogService();
+        var service = CreateService();
         var before = DateTime.Now;
 
         service.Log(ActivityLogCategory.EndpointExecuted, "Test-Nachricht", "Test-Details");
@@ -28,7 +31,7 @@ public class ActivityLogServiceTests
     [Fact]
     public void Log_FeuertOnEntryAdded()
     {
-        var service = new ActivityLogService();
+        var service = CreateService();
         var fired = false;
         service.OnEntryAdded += () => fired = true;
 
@@ -41,7 +44,7 @@ public class ActivityLogServiceTests
     [Fact]
     public void Log_EventFehler_WirdIgnoriert()
     {
-        var service = new ActivityLogService();
+        var service = CreateService();
         service.OnEntryAdded += () => throw new InvalidOperationException("Event-Fehler");
 
         var exception = Record.Exception(() => service.Log(ActivityLogCategory.InternalError, "Fehler"));
@@ -54,7 +57,7 @@ public class ActivityLogServiceTests
     [Fact]
     public void Clear_LeertEintraege()
     {
-        var service = new ActivityLogService();
+        var service = CreateService();
         service.Log(ActivityLogCategory.EntityCreated, "Eintrag 1");
         service.Log(ActivityLogCategory.EntityModified, "Eintrag 2");
 

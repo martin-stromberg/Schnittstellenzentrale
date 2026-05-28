@@ -85,6 +85,7 @@
     private Dictionary<int, IList<EndpointGroup>> _endpointGroups = new();
     private Dictionary<int, IList<Core.Models.Endpoint>> _endpoints = new();
     private HashSet<int> _expandedApplicationIds = new();
+    private HashSet<int> _expandedEndpointGroupIds = new();
     private string _owner = string.Empty;
 
     private Application? _draggedApplication;
@@ -224,6 +225,7 @@
                 _dragEnterCountUngrouped = 0;
                 _errorMessage = null;
                 _expandedApplicationIds.Clear();
+                _expandedEndpointGroupIds.Clear();
 
                 await LoadDataAsync();
                 await OnSelectionCleared.InvokeAsync();
@@ -253,6 +255,22 @@
         }
     }
 
+    private async Task SelectAndToggleApplication(int appId)
+    {
+        var isExpanding = !_expandedApplicationIds.Contains(appId);
+        await ToggleApplicationExpanded(appId);
+        if (isExpanding)
+            await SelectApplication(appId);
+    }
+
+    private void ToggleEndpointGroupExpanded(int endpointGroupId)
+    {
+        if (_expandedEndpointGroupIds.Contains(endpointGroupId))
+            _expandedEndpointGroupIds.Remove(endpointGroupId);
+        else
+            _expandedEndpointGroupIds.Add(endpointGroupId);
+    }
+
     public async ValueTask DisposeAsync()
     {
         StorageModeService.OnModeChanged -= OnModeChanged;
@@ -265,7 +283,7 @@
                         await _hubConnection.InvokeAsync("UnsubscribeFromApplication", id);
                 await _hubConnection.DisposeAsync();
             }
-            catch
+            catch (Exception)
             {
                 // Fehler beim Dispose der Hub-Verbindung ignorieren (z. B. Verbindung bereits getrennt)
             }
@@ -411,32 +429,37 @@
     {
         <div @key="@($"eg-{group.Id}")">
             <div class="sz-tree-row">
-                <span class="sz-tree-indent"></span>
+                <button class="sz-tree-chevron-btn" @onclick="() => ToggleEndpointGroupExpanded(group.Id)">
+                    <i class="bi @(_expandedEndpointGroupIds.Contains(group.Id) ? "bi-chevron-down" : "bi-chevron-right")"></i>
+                </button>
                 <i class="bi bi-folder sz-tree-icon"></i>
-                <span class="sz-tree-item-label">@group.Name</span>
+                <span class="sz-tree-item-label" @onclick="() => ToggleEndpointGroupExpanded(group.Id)">@group.Name</span>
                 <EndpointGroupContextMenu Group="group"
                                          OnCreateEndpointRequested="@(g => RequestCreateEndpointForGroup(app, g))"
                                          OnRenameEndpointGroupRequested="RequestRenameEndpointGroup"
                                          OnDeleteEndpointGroupRequested="RequestDeleteEndpointGroup" />
             </div>
-            <div class="sz-tree-children">
-                @foreach (var endpoint in endpoints.Where(e => e.EndpointGroupId == group.Id))
-                {
-                    <div class="sz-tree-row" @key="@($"ep-{endpoint.Id}")">
-                        <span class="sz-tree-indent"></span>
-                        <i class="bi bi-lightning sz-tree-icon"></i>
-                        <button class="sz-tree-item-btn" @onclick="() => RequestSelectEndpoint(endpoint)">@endpoint.Name</button>
-                        <EndpointContextMenu Endpoint="endpoint" OnDeleteRequested="RequestDeleteEndpoint" />
-                    </div>
-                }
-                @if (childrenByParent.TryGetValue(group.Id, out var children))
-                {
-                    @foreach (var child in children)
+            @if (_expandedEndpointGroupIds.Contains(group.Id))
+            {
+                <div class="sz-tree-children">
+                    @foreach (var endpoint in endpoints.Where(e => e.EndpointGroupId == group.Id))
                     {
-                        @RenderEndpointGroup(child, childrenByParent, endpoints, app)
+                        <div class="sz-tree-row" @key="@($"ep-{endpoint.Id}")">
+                            <span class="sz-tree-indent"></span>
+                            <i class="bi bi-lightning sz-tree-icon"></i>
+                            <button class="sz-tree-item-btn" @onclick="() => RequestSelectEndpoint(endpoint)">@endpoint.Name</button>
+                            <EndpointContextMenu Endpoint="endpoint" OnDeleteRequested="RequestDeleteEndpoint" />
+                        </div>
                     }
-                }
-            </div>
+                    @if (childrenByParent.TryGetValue(group.Id, out var children))
+                    {
+                        @foreach (var child in children)
+                        {
+                            @RenderEndpointGroup(child, childrenByParent, endpoints, app)
+                        }
+                    }
+                </div>
+            }
         </div>
     };
 
@@ -448,7 +471,7 @@
                     <i class="bi @(_expandedApplicationIds.Contains(app.Id) ? "bi-chevron-down" : "bi-chevron-right")"></i>
                 </button>
                 <i class="bi bi-window sz-tree-icon"></i>
-                <button class="sz-tree-item-btn" @onclick="() => SelectApplication(app.Id)">@app.Name</button>
+                <button class="sz-tree-item-btn" @onclick="() => SelectAndToggleApplication(app.Id)">@app.Name</button>
                 <ApplicationContextMenu Application="app"
                                         OnEditRequested="RequestEditApplication"
                                         OnRemoveFromGroupRequested="OnRemoveFromGroupRequested"

@@ -26,6 +26,7 @@ else
     private IJSObjectReference? _jsModule;
     private ElementReference _panelElement;
     private ElementReference _handleElement;
+    private bool _needsResizeInit;
 
     protected override void OnInitialized()
     {
@@ -47,18 +48,33 @@ else
                 var storedHeight = await _jsModule.InvokeAsync<string?>("loadPanelHeight");
                 if (!string.IsNullOrEmpty(storedHeight) && int.TryParse(storedHeight, out var height))
                     _panelHeight = height;
+
+                await OnDisplayModeChanged.InvokeAsync(_displayMode);
+                await OnPanelHeightChanged.InvokeAsync(_panelHeight);
+
+                _needsResizeInit = true;
+                await InvokeAsync(StateHasChanged);
             }
-            catch
+            catch (JSException)
             {
                 // JSException bei Server-Prerendering ignorieren
             }
-
-            await OnDisplayModeChanged.InvokeAsync(_displayMode);
-            await OnPanelHeightChanged.InvokeAsync(_panelHeight);
-
-            await InvokeAsync(StateHasChanged);
-
-            await _jsModule.InvokeVoidAsync("initializePanelResize", _handleElement, _panelElement);
+        }
+        else if (_needsResizeInit && _jsModule != null)
+        {
+            _needsResizeInit = false;
+            try
+            {
+                // Bekannte Einschränkung: Nach einem JS-gesteuerten Resize wird OnPanelHeightChanged
+                // nicht erneut ausgelöst, da der JS-Code die neue Höhe nur in localStorage speichert,
+                // aber kein .NET-Callback aufruft. MainLayout._activityLogPanelHeight bleibt bis zum
+                // nächsten Seitenaufruf veraltet.
+                await _jsModule.InvokeVoidAsync("initializePanelResize", _handleElement, _panelElement);
+            }
+            catch (JSException)
+            {
+                // JSException bei Server-Prerendering ignorieren
+            }
         }
     }
 
@@ -71,7 +87,18 @@ else
     {
         _displayMode = _displayMode == "dock" ? "overlay" : "dock";
         if (_jsModule != null)
-            await _jsModule.InvokeVoidAsync("saveDisplayMode", _displayMode);
+        {
+            try
+            {
+                await _jsModule.InvokeVoidAsync("destroy");
+                await _jsModule.InvokeVoidAsync("saveDisplayMode", _displayMode);
+            }
+            catch (JSException)
+            {
+                // JSException bei Server-Prerendering ignorieren
+            }
+        }
+        _needsResizeInit = true;
         await OnDisplayModeChanged.InvokeAsync(_displayMode);
         StateHasChanged();
     }
@@ -135,6 +162,7 @@ else
         {
             try
             {
+                await _jsModule.InvokeVoidAsync("destroy");
                 await _jsModule.DisposeAsync();
             }
             catch (JSDisconnectedException)

@@ -159,7 +159,15 @@ Lassen Sie die Maustaste über dem Zielbereich los.
 
 ### Anwendung aufklappen
 
-Klicken Sie auf den Pfeil (▶) links neben dem Anwendungsnamen. Die zugehörigen Ordner und Endpunkte erscheinen eingerückt darunter.
+Klicken Sie auf den Pfeil (▶) links neben dem Anwendungsnamen **oder** direkt auf den Anwendungsnamen. Die zugehörigen Ordner und Endpunkte erscheinen eingerückt darunter. Ein zweiter Klick auf den Namen klappt die Anwendung wieder zu.
+
+> **Hinweis:** Ein Klick auf den Anwendungsnamen wählt die Anwendung gleichzeitig aus und klappt sie auf bzw. zu.
+
+### Ordner auf- und zuklappen
+
+Endpunktordner sind beim Laden der Seite initial zugeklappt. Klicken Sie auf den Pfeil (▶) links neben dem Ordnernamen **oder** direkt auf den Ordnernamen, um ihn aufzuklappen. Ein zweiter Klick klappt ihn wieder zu.
+
+> **Hinweis:** Nach einem Wechsel des Modus (Team/Benutzer) oder einem Datenneu-Laden sind alle Ordner wieder zugeklappt.
 
 ### Ordner anlegen
 

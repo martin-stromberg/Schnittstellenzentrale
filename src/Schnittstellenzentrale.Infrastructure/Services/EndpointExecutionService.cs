@@ -126,14 +126,14 @@ public class EndpointExecutionService : IEndpointExecutionService
                     maskedVariables);
                 _activityLogService.Log(
                     ActivityLogCategory.EndpointExecuted,
-                    $"{endpoint.Method} {result.RequestDetails} — {result.StatusCode}",
+                    $"{result.RequestDetails} — {result.StatusCode}",
                     details);
             }
             else if (result.StatusCode.HasValue)
             {
                 _activityLogService.Log(
                     ActivityLogCategory.HttpError,
-                    $"{endpoint.Method} {result.RequestDetails} — {result.StatusCode}");
+                    $"{result.RequestDetails} — {result.StatusCode}");
             }
 
             if (!string.IsNullOrEmpty(endpoint.PostRequestScript))
