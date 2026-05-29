@@ -1,5 +1,6 @@
 using Schnittstellenzentrale.Core.Interfaces;
 using Schnittstellenzentrale.Core.Models;
+using Schnittstellenzentrale.Core.Enums;
 using Schnittstellenzentrale.Infrastructure.Services;
 using Schnittstellenzentrale.Tests.Helpers;
 
@@ -42,8 +43,9 @@ public class HistoryServiceTests
         {
             await using (var ctx = factory.CreateDbContext())
             {
-                var app = new Application { Id = 1, Name = "App", BaseUrl = "http://example.com", Description = string.Empty };
-                ctx.Applications.Add(app);
+                var app1 = new Application { Id = 1, Name = "App", BaseUrl = "http://example.com", Description = string.Empty };
+                var app2 = new Application { Id = 2, Name = "Other", BaseUrl = "http://other.com", Description = string.Empty };
+                ctx.Applications.AddRange(app1, app2);
                 var base_ = DateTime.UtcNow.AddHours(-3);
                 ctx.EndpointCallHistory.AddRange(
                     new EndpointCallHistoryEntry { ApplicationId = 1, ExecutedAt = base_.AddHours(2), HttpMethod = "GET", RelativePath = "/a" },
@@ -75,6 +77,10 @@ public class HistoryServiceTests
             {
                 var app = new Application { Id = 1, Name = "App", BaseUrl = "http://example.com", Description = string.Empty };
                 ctx.Applications.Add(app);
+                await ctx.SaveChangesAsync();
+                ctx.Endpoints.Add(new Endpoint { Id = 10, ApplicationId = 1, Name = "Top", RelativePath = "/top" });
+                ctx.Endpoints.Add(new Endpoint { Id = 20, ApplicationId = 1, Name = "Second", RelativePath = "/second" });
+                await ctx.SaveChangesAsync();
                 var now = DateTime.UtcNow;
                 for (var i = 0; i < 3; i++)
                     ctx.EndpointCallHistory.Add(new EndpointCallHistoryEntry { ApplicationId = 1, EndpointId = 10, RelativePath = "/top", HttpMethod = "GET", ExecutedAt = now });

@@ -25,14 +25,18 @@ public class ApplicationGroupServiceTests
             var settings = Options.Create(new UploadSettings { MaxIconSizeBytes = 524288 });
             var service = new ApplicationGroupService(factory, settings);
 
+            int groupId;
             await using (var ctx = factory.CreateDbContext())
             {
-                var group = ctx.ApplicationGroups.First();
-                var iconData = new byte[] { 0x89, 0x50, 0x4E, 0x47 };
+                groupId = ctx.ApplicationGroups.First().Id;
+            }
 
-                await service.UpdateIconAsync(group.Id, iconData);
+            var iconData = new byte[] { 0x89, 0x50, 0x4E, 0x47 };
+            await service.UpdateIconAsync(groupId, iconData);
 
-                var updated = ctx.ApplicationGroups.Find(group.Id);
+            await using (var ctx = factory.CreateDbContext())
+            {
+                var updated = ctx.ApplicationGroups.Find(groupId);
                 Assert.NotNull(updated);
                 Assert.Equal(iconData, updated!.IconData);
             }

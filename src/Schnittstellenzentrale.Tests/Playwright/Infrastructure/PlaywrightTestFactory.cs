@@ -1,7 +1,5 @@
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Hosting.Server;
-using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
@@ -19,6 +17,9 @@ namespace Schnittstellenzentrale.Tests.Playwright.Infrastructure;
 /// <summary>Startet einen echten Kestrel-Testserver für Playwright-Tests mit Auth-Bypass, Datei-SQLite und Service-Overrides.</summary>
 public class PlaywrightTestFactory : WebApplicationFactory<Program>
 {
+    private const string TestDbName = "schnittstellenzentrale-tests.db";
+    private const string TestBaseUrl = "http://127.0.0.1:5099";
+
     /// <summary>Basis-URL des gestarteten Kestrel-Servers.</summary>
     public string BaseAddress { get; private set; } = string.Empty;
 
@@ -26,13 +27,13 @@ public class PlaywrightTestFactory : WebApplicationFactory<Program>
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Testing");
-        builder.UseUrls("http://127.0.0.1:0");
+        builder.UseUrls(TestBaseUrl);
 
         builder.ConfigureAppConfiguration((_, config) =>
         {
             config.AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["ConnectionStrings:Default"] = "Data Source=schnittstellenzentrale-tests.db",
+                ["ConnectionStrings:Default"] = $"Data Source={TestDbName}",
                 ["DatabaseProvider"] = "SQLite"
             });
         });
@@ -54,7 +55,7 @@ public class PlaywrightTestFactory : WebApplicationFactory<Program>
         services.RemoveAll<IDbContextFactory<AppDbContext>>();
 
         services.AddDbContextFactory<AppDbContext>(options =>
-            options.UseSqlite("Data Source=schnittstellenzentrale-tests.db"));
+            options.UseSqlite($"Data Source={TestDbName}"));
 
         services.RemoveAll<IHostedService>();
 
@@ -71,12 +72,13 @@ public class PlaywrightTestFactory : WebApplicationFactory<Program>
     /// <inheritdoc/>
     protected override IHost CreateHost(IHostBuilder builder)
     {
+        // Delete stale test DB so MigrateAsync starts clean
+        foreach (var f in new[] { TestDbName, TestDbName + "-wal", TestDbName + "-shm" })
+            if (File.Exists(f)) File.Delete(f);
+
         var host = base.CreateHost(builder);
 
-        var server = host.Services.GetRequiredService<IServer>();
-        var addresses = server.Features.Get<IServerAddressesFeature>();
-        var address = addresses?.Addresses.FirstOrDefault() ?? string.Empty;
-        BaseAddress = address;
+        BaseAddress = TestBaseUrl;
 
         var configuration = host.Services.GetRequiredService<IConfiguration>();
         configuration["Api:BaseUrl"] = BaseAddress;

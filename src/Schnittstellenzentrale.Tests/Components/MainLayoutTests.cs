@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
 using Schnittstellenzentrale.Components.Layout;
+using Schnittstellenzentrale.Components.Shared;
 using Schnittstellenzentrale.Core.Enums;
 using Schnittstellenzentrale.Core.Helpers;
 using Schnittstellenzentrale.Core.Interfaces;
@@ -57,6 +58,10 @@ public class MainLayoutTests : BunitContext
         JSInterop.Setup<string?>("localStorage.getItem", _ => true).SetResult(null);
         JSInterop.SetupVoid("localStorage.removeItem", _ => true).SetVoidResult();
         JSInterop.SetupVoid("localStorage.setItem", _ => true).SetVoidResult();
+
+        ComponentFactories.AddStub<WorkspacesLayout>();
+        ComponentFactories.AddStub<EnvironmentsLayout>();
+        ComponentFactories.AddStub<HistoryLayout>();
     }
 
     /// <summary>AppShell rendert den Bereichs-Tab Workspaces in TopBar.</summary>

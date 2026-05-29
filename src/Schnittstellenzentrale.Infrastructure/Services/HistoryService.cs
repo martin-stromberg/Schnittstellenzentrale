@@ -58,8 +58,11 @@ public class HistoryService : IHistoryService
     public async Task<IList<TopEndpointResult>> GetTopEndpointsAsync(int applicationId, int count)
     {
         await using var context = await _factory.CreateDbContextAsync();
-        var results = await context.EndpointCallHistory
+        var raw = await context.EndpointCallHistory
             .Where(e => e.ApplicationId == applicationId && e.EndpointId != null)
+            .ToListAsync();
+
+        return raw
             .GroupBy(e => new { e.EndpointId, e.RelativePath, e.HttpMethod })
             .Select(g => new TopEndpointResult(
                 g.Key.EndpointId!.Value,
@@ -68,8 +71,6 @@ public class HistoryService : IHistoryService
                 g.Count()))
             .OrderByDescending(r => r.CallCount)
             .Take(count)
-            .ToListAsync();
-
-        return results;
+            .ToList();
     }
 }
