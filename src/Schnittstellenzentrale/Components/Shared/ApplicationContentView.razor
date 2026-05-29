@@ -1,0 +1,104 @@
+@inject IApplicationService ApplicationService
+@inject IHistoryService HistoryService
+
+<div class="sz-content-view">
+    <ContentHeader Name="@Application.Name"
+                   Subtitle="@Application.Subtitle"
+                   IconData="@Application.IconData"
+                   OnNameChanged="OnNameChanged"
+                   OnSubtitleChanged="OnSubtitleChanged"
+                   OnIconChanged="OnIconChanged" />
+
+    <div class="sz-content-blocks">
+        <div class="sz-content-block">
+            <h3>Beschreibung</h3>
+            <p>@(string.IsNullOrEmpty(Application.Description) ? "Keine Beschreibung vorhanden." : Application.Description)</p>
+        </div>
+
+        <div class="sz-content-block">
+            <h3>URLs</h3>
+            <dl>
+                <dt>Basis-URL</dt>
+                <dd>@Application.BaseUrl</dd>
+                @if (!string.IsNullOrEmpty(Application.InterfaceUrl))
+                {
+                    <dt>Swagger / OData</dt>
+                    <dd>@Application.InterfaceUrl</dd>
+                }
+            </dl>
+        </div>
+
+        <div class="sz-content-block">
+            <h3>Letzte Aufrufe</h3>
+            @if (_recentEntries == null)
+            {
+                <p>Wird geladen…</p>
+            }
+            else if (_recentEntries.Count == 0)
+            {
+                <p>Noch keine Aufrufe vorhanden.</p>
+            }
+            else
+            {
+                <table class="sz-status-table">
+                    <thead>
+                        <tr>
+                            <th>Zeitpunkt</th>
+                            <th>Endpunkt</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var entry in _recentEntries)
+                        {
+                            <tr>
+                                <td>@(entry.ExecutedAt?.ToLocalTime().ToString("dd.MM.yyyy HH:mm:ss") ?? "–")</td>
+                                <td>@(entry.HttpMethod) @(entry.RelativePath)</td>
+                                <td>@(entry.StatusCode?.ToString() ?? "–")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+        </div>
+
+        <div class="sz-content-block">
+            <LinksManager ApplicationId="@Application.Id" />
+        </div>
+
+        <div class="sz-content-block">
+            <ApplicationTopEndpointsTable ApplicationId="@Application.Id" />
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public Application Application { get; set; } = null!;
+
+    private IList<EndpointCallHistoryEntry>? _recentEntries;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var filter = new HistoryFilter(ApplicationId: Application.Id, EndpointId: null, From: null, To: null);
+        var (items, _) = await HistoryService.GetPagedAsync(filter, page: 1, pageSize: 5);
+        _recentEntries = items;
+    }
+
+    private async Task OnNameChanged(string name)
+    {
+        await ApplicationService.UpdateNameAsync(Application.Id, name);
+        Application.Name = name;
+    }
+
+    private async Task OnSubtitleChanged(string? subtitle)
+    {
+        await ApplicationService.UpdateSubtitleAsync(Application.Id, subtitle);
+        Application.Subtitle = subtitle;
+    }
+
+    private async Task OnIconChanged(byte[] iconData)
+    {
+        await ApplicationService.UpdateIconAsync(Application.Id, iconData);
+        Application.IconData = iconData;
+    }
+}

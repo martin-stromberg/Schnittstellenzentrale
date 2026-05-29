@@ -1,0 +1,59 @@
+@inject IApplicationGroupService ApplicationGroupService
+@inject IApplicationRepository ApplicationRepository
+
+<div class="sz-content-view">
+    <ContentHeader Name="@Group.Name"
+                   Subtitle="@Group.Subtitle"
+                   IconData="@Group.IconData"
+                   OnNameChanged="OnNameChanged"
+                   OnSubtitleChanged="OnSubtitleChanged"
+                   OnIconChanged="OnIconChanged" />
+
+    <div class="sz-content-blocks">
+        <div class="sz-content-block">
+            <h3>Beschreibung</h3>
+            <p>@(string.IsNullOrEmpty(Group.Description) ? "Keine Beschreibung vorhanden." : Group.Description)</p>
+        </div>
+
+        <div class="sz-content-block">
+            <h3>Status</h3>
+            <dl>
+                <dt>Anwendungen</dt>
+                <dd>@_applicationCount</dd>
+                <dt>Endpunkte</dt>
+                <dd>@_endpointCount</dd>
+            </dl>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public ApplicationGroup Group { get; set; } = null!;
+
+    private int _applicationCount;
+    private int _endpointCount;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _applicationCount = await ApplicationRepository.GetApplicationCountByGroupAsync(Group.Id);
+        _endpointCount = await ApplicationRepository.GetEndpointCountByGroupAsync(Group.Id);
+    }
+
+    private async Task OnNameChanged(string name)
+    {
+        await ApplicationGroupService.UpdateNameAsync(Group.Id, name);
+        Group.Name = name;
+    }
+
+    private async Task OnSubtitleChanged(string? subtitle)
+    {
+        await ApplicationGroupService.UpdateSubtitleAsync(Group.Id, subtitle);
+        Group.Subtitle = subtitle;
+    }
+
+    private async Task OnIconChanged(byte[] iconData)
+    {
+        await ApplicationGroupService.UpdateIconAsync(Group.Id, iconData);
+        Group.IconData = iconData;
+    }
+}

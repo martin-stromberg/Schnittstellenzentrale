@@ -1,0 +1,128 @@
+@inject ISystemEnvironmentRepository SystemEnvironmentRepository
+
+<div class="sz-content-view">
+    @if (_environment == null)
+    {
+        <p>Umgebung wird geladen…</p>
+    }
+    else
+    {
+        <div class="sz-content-header-simple">
+            @if (_editingName)
+            {
+                <input class="sz-inplace-input" @bind="_nameInput" @onkeydown="OnNameKeyDown" @onblur="SaveNameAsync" autofocus />
+                @if (!string.IsNullOrEmpty(_nameError))
+                {
+                    <span class="sz-inplace-error">@_nameError</span>
+                }
+            }
+            else
+            {
+                <h2 class="sz-editable" @onclick="StartEditName">
+                    @_environment.Name <span class="sz-edit-icon">&#9998;</span>
+                </h2>
+            }
+
+            @if (_editingDescription)
+            {
+                <textarea class="sz-inplace-input" @bind="_descriptionInput" @onblur="SaveDescriptionAsync"></textarea>
+                <button type="button" class="sz-btn-secondary" @onclick="CancelDescriptionEdit">Abbrechen</button>
+            }
+            else
+            {
+                <p class="sz-editable" @onclick="StartEditDescription">
+                    @(string.IsNullOrEmpty(_environment.Description) ? "Beschreibung hinzufügen…" : _environment.Description)
+                    <span class="sz-edit-icon">&#9998;</span>
+                </p>
+            }
+        </div>
+
+        <div class="sz-content-blocks">
+            <div class="sz-content-block">
+                <EnvironmentEditor ExistingEnvironment="_environment"
+                                   OnSaved="OnEnvironmentSaved"
+                                   OnCancel="OnEditorCancel" />
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public int EnvironmentId { get; set; }
+
+    private SystemEnvironment? _environment;
+    private bool _editingName;
+    private bool _editingDescription;
+    private string _nameInput = string.Empty;
+    private string _descriptionInput = string.Empty;
+    private string? _nameError;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _environment = await SystemEnvironmentRepository.GetByIdAsync(EnvironmentId);
+    }
+
+    private void StartEditName()
+    {
+        _nameInput = _environment?.Name ?? string.Empty;
+        _nameError = null;
+        _editingName = true;
+    }
+
+    private async Task OnNameKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") await SaveNameAsync();
+        else if (e.Key == "Escape") CancelNameEdit();
+    }
+
+    private async Task SaveNameAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_nameInput))
+        {
+            _nameError = "Name darf nicht leer sein.";
+            return;
+        }
+        if (_nameInput.Length > 200)
+        {
+            _nameError = "Name darf maximal 200 Zeichen lang sein.";
+            return;
+        }
+        if (_environment == null) return;
+        _editingName = false;
+        _nameError = null;
+        _environment.Name = _nameInput;
+        await SystemEnvironmentRepository.UpdateAsync(_environment);
+    }
+
+    private void CancelNameEdit()
+    {
+        _editingName = false;
+        _nameError = null;
+    }
+
+    private void StartEditDescription()
+    {
+        _descriptionInput = _environment?.Description ?? string.Empty;
+        _editingDescription = true;
+    }
+
+    private async Task SaveDescriptionAsync()
+    {
+        if (_environment == null) return;
+        _editingDescription = false;
+        _environment.Description = string.IsNullOrEmpty(_descriptionInput) ? null : _descriptionInput;
+        await SystemEnvironmentRepository.UpdateAsync(_environment);
+    }
+
+    private void CancelDescriptionEdit()
+    {
+        _editingDescription = false;
+    }
+
+    private async Task OnEnvironmentSaved(SystemEnvironment saved)
+    {
+        _environment = await SystemEnvironmentRepository.GetByIdAsync(saved.Id);
+    }
+
+    private Task OnEditorCancel() => Task.CompletedTask;
+}

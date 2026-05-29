@@ -1,0 +1,60 @@
+@inject INavigationStateService NavigationStateService
+@implements IDisposable
+
+@if (NavigationStateService.CurrentSelectionPath.Count > 0)
+{
+    <nav class="sz-breadcrumb">
+        @for (int i = 0; i < NavigationStateService.CurrentSelectionPath.Count; i++)
+        {
+            var item = NavigationStateService.CurrentSelectionPath[i];
+            var isLast = i == NavigationStateService.CurrentSelectionPath.Count - 1;
+            var capturedItem = item;
+            var label = GetLabel(item);
+
+            if (isLast)
+            {
+                <span class="sz-breadcrumb-item sz-breadcrumb-current">@label</span>
+            }
+            else
+            {
+                <button type="button" class="sz-breadcrumb-item sz-breadcrumb-link"
+                        @onclick="() => NavigateToAsync(capturedItem)">@label</button>
+                <span class="sz-breadcrumb-separator">/</span>
+            }
+        }
+    </nav>
+}
+
+@code {
+    protected override void OnInitialized()
+    {
+        NavigationStateService.OnSelectionChanged += OnStateChanged;
+    }
+
+    private async Task NavigateToAsync(object item)
+    {
+        var currentPath = NavigationStateService.CurrentSelectionPath;
+        var idx = currentPath.ToList().IndexOf(item);
+        if (idx < 0) return;
+        var newPath = currentPath.Take(idx + 1).ToList();
+        await NavigationStateService.SetWorkspaceSelectionAsync(
+            new WorkspaceSelection(item, newPath));
+    }
+
+    private static string GetLabel(object item) => item switch
+    {
+        ApplicationGroup g => g.Name,
+        Application a => a.Name,
+        EndpointGroup eg => eg.Name,
+        Core.Models.Endpoint e => e.Name,
+        _ => item.ToString() ?? string.Empty
+    };
+
+    private void OnStateChanged() => InvokeAsync(StateHasChanged);
+
+    /// <summary>Meldet Event-Abonnements ab.</summary>
+    public void Dispose()
+    {
+        NavigationStateService.OnSelectionChanged -= OnStateChanged;
+    }
+}

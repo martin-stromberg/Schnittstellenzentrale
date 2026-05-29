@@ -100,6 +100,7 @@ public class EndpointExecutionServiceTests
         Mock<ISystemEnvironmentRepository>? environmentRepositoryMock = null,
         Mock<ISignalRNotificationService>? signalRNotificationServiceMock = null,
         Mock<IActivityLogService>? activityLogServiceMock = null,
+        Mock<IHistoryService>? historyServiceMock = null,
         IEndpointScriptRunner? realScriptRunner = null)
     {
         var handlerMock = new Mock<HttpMessageHandler>();
@@ -120,6 +121,7 @@ public class EndpointExecutionServiceTests
         var envRepoMock = environmentRepositoryMock ?? CreateEmptyEnvironmentRepositoryMock();
         var signalRMock = signalRNotificationServiceMock ?? CreateEmptySignalRNotificationServiceMock();
         var logMock = activityLogServiceMock ?? TestMockFactory.CreateActivityLogServiceMock();
+        var historyMock = historyServiceMock ?? CreateEmptyHistoryServiceMock();
 
         var service = new EndpointExecutionService(
             factoryMock.Object,
@@ -129,8 +131,17 @@ public class EndpointExecutionServiceTests
             repoMock.Object,
             envRepoMock.Object,
             signalRMock.Object,
-            logMock.Object);
+            logMock.Object,
+            historyMock.Object);
         return (service, handlerMock, factoryMock);
+    }
+
+    private static Mock<IHistoryService> CreateEmptyHistoryServiceMock()
+    {
+        var mock = new Mock<IHistoryService>();
+        mock.Setup(h => h.AddEntryAsync(It.IsAny<Core.Models.EndpointCallHistoryEntry>()))
+            .Returns(Task.CompletedTask);
+        return mock;
     }
 
     private (EndpointExecutionService service, Func<Uri?> getSentUri) CreateServiceCapturingUri(
@@ -208,12 +219,13 @@ public class EndpointExecutionServiceTests
     [Fact]
     public async Task Execute_WithNegotiateWithImpersonationAuthType_UsesNegotiateHandler()
     {
-        var (service, _, _) = CreateService(_credMock);
+        var (service, _, factoryMock) = CreateService(_credMock);
         var endpoint = CreateEndpoint(AuthenticationType.NegotiateWithImpersonation);
 
         var result = await service.ExecuteAsync(endpoint);
 
         Assert.True(result.Success);
+        factoryMock.Verify(f => f.CreateClient("negotiate"), Times.Once());
     }
 
     /// <summary>Execute_WithAuthTypeBearerToken_SendsBearerHeader</summary>

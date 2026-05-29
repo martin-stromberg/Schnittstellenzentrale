@@ -27,6 +27,7 @@ public class EndpointExecutionService : IEndpointExecutionService
     private readonly ISystemEnvironmentRepository _environmentRepository;
     private readonly ISignalRNotificationService _signalRNotificationService;
     private readonly IActivityLogService _activityLogService;
+    private readonly IHistoryService _historyService;
 
     /// <summary>Initialisiert eine neue Instanz des <see cref="EndpointExecutionService"/>.</summary>
     public EndpointExecutionService(
@@ -37,7 +38,8 @@ public class EndpointExecutionService : IEndpointExecutionService
         IEndpointRepository endpointRepository,
         ISystemEnvironmentRepository environmentRepository,
         ISignalRNotificationService signalRNotificationService,
-        IActivityLogService activityLogService)
+        IActivityLogService activityLogService,
+        IHistoryService historyService)
     {
         _httpClientFactory = httpClientFactory;
         _credentialService = credentialService;
@@ -47,6 +49,7 @@ public class EndpointExecutionService : IEndpointExecutionService
         _environmentRepository = environmentRepository;
         _signalRNotificationService = signalRNotificationService;
         _activityLogService = activityLogService;
+        _historyService = historyService;
     }
 
     /// <inheritdoc/>
@@ -154,11 +157,35 @@ public class EndpointExecutionService : IEndpointExecutionService
                 }
             }
 
+            await PersistHistoryEntryAsync(endpoint, result);
+
             return result;
         }
         finally
         {
             callDepth[endpoint.Id] = callDepth[endpoint.Id] - 1;
+        }
+    }
+
+    private async Task PersistHistoryEntryAsync(Core.Models.Endpoint endpoint, EndpointExecutionResult result)
+    {
+        try
+        {
+            var entry = new Core.Models.EndpointCallHistoryEntry
+            {
+                ApplicationId = endpoint.ApplicationId,
+                EndpointId = endpoint.Id,
+                ExecutedAt = DateTime.UtcNow,
+                HttpMethod = endpoint.Method.ToString(),
+                RelativePath = endpoint.RelativePath,
+                StatusCode = result.StatusCode,
+                DurationMs = result.DurationMs.HasValue ? (int)Math.Min(result.DurationMs.Value, int.MaxValue) : null
+            };
+            await _historyService.AddEntryAsync(entry);
+        }
+        catch
+        {
+            // History-Persistenz darf Ausführungsergebnis nicht beeinflussen
         }
     }
 
@@ -327,7 +354,7 @@ public class EndpointExecutionService : IEndpointExecutionService
     private static string BuildMaskedDetails(string details, IEnumerable<EnvironmentVariable> variables)
     {
         foreach (var variable in variables.Where(v => v.IsValueMasked && !string.IsNullOrEmpty(v.Value)))
-            details = details.Replace(variable.Value, "***");
+            details = details.Replace(variable.Value, "***", StringComparison.OrdinalIgnoreCase);
         return details;
     }
 

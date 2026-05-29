@@ -15,6 +15,7 @@ public class ApplicationCrudTests : PlaywrightTestBase
     public async Task CreateApplication_AppearsInTree()
     {
         await Page.GotoAsync(BaseUrl);
+        await Page.Locator(".sz-topbar-tab", new() { HasText = "Workspaces" }).ClickAsync();
 
         await Page.GetByRole(Microsoft.Playwright.AriaRole.Button, new() { Name = "Neue Anwendung" }).ClickAsync();
 
@@ -31,6 +32,7 @@ public class ApplicationCrudTests : PlaywrightTestBase
     public async Task EditApplication_UpdatesNameInTree()
     {
         await Page.GotoAsync(BaseUrl);
+        await Page.Locator(".sz-topbar-tab", new() { HasText = "Workspaces" }).ClickAsync();
 
         await Page.GetByRole(Microsoft.Playwright.AriaRole.Button, new() { Name = "Neue Anwendung" }).ClickAsync();
         await Page.GetByLabel("Name").FillAsync("Umbenennung-Test");
@@ -58,6 +60,7 @@ public class ApplicationCrudTests : PlaywrightTestBase
     public async Task DeleteApplication_DisappearsFromTree()
     {
         await Page.GotoAsync(BaseUrl);
+        await Page.Locator(".sz-topbar-tab", new() { HasText = "Workspaces" }).ClickAsync();
 
         await Page.GetByRole(Microsoft.Playwright.AriaRole.Button, new() { Name = "Neue Anwendung" }).ClickAsync();
         await Page.GetByLabel("Name").FillAsync("Zu-loeschende-Anwendung");

@@ -12,12 +12,12 @@
 <div @ref="_sidebarElement" class="application-group-tree">
     @if (!string.IsNullOrEmpty(_errorMessage))
     {
-        <div class="alert alert-danger m-2 p-2 small">@_errorMessage</div>
+        <div class="sz-alert sz-alert-danger">@_errorMessage</div>
     }
 
     <div class="sz-tree-topbar">
-        <button type="button" class="btn btn-outline-primary btn-sm" @onclick="RequestCreateGroup">Neue Gruppe</button>
-        <button type="button" class="btn btn-outline-primary btn-sm" @onclick="RequestCreateApplication">Neue Anwendung</button>
+        <button type="button" class="sz-btn sz-btn-outline sz-btn-sm" @onclick="RequestCreateGroup">Neue Sammlung</button>
+        <button type="button" class="sz-btn sz-btn-outline sz-btn-sm" @onclick="RequestCreateApplication">Neue Anwendung</button>
     </div>
 
     <div class="sz-tree-body">
@@ -29,7 +29,7 @@
                      class="@(_dropTargetGroupId == group.Id ? "drag-over" : "")"
                      @ondragenter="() => OnDragEnter(group.Id)"
                      @ondragleave="OnDragLeave">
-                    <CollapsibleSection Title="@group.Name" IconClass="bi bi-collection" IsDropTarget="true" OnDrop="() => OnDrop(group.Id)">
+                    <CollapsibleSection Title="@group.Name" IconClass="sz-icon sz-icon-collection" IsDropTarget="true" OnDrop="() => OnDrop(group.Id)" OnTitleClicked="() => RequestSelectGroup(group)">
                         <TitleActions>
                             <ApplicationGroupContextMenu Group="group" OnRenameRequested="RequestRenameGroup" OnDeleteRequested="RequestDeleteGroup" />
                         </TitleActions>
@@ -48,7 +48,7 @@
             <div class="@(_dropTargetIsUngrouped ? "drag-over" : "")"
                  @ondragenter="OnDragEnterUngrouped"
                  @ondragleave="OnDragLeaveUngrouped">
-                <CollapsibleSection Title="Ohne Gruppe" IconClass="bi bi-layers" IsDropTarget="true" OnDrop="() => OnDrop(null)">
+                <CollapsibleSection Title="Ohne Sammlung" IconClass="sz-icon sz-icon-layers" IsDropTarget="true" OnDrop="() => OnDrop(null)">
                     <ChildContent>
                         @foreach (var app in _ungroupedApplications)
                         {
@@ -65,7 +65,9 @@
 </div>
 
 @code {
+    [Parameter] public EventCallback<ApplicationGroup> OnApplicationGroupSelected { get; set; }
     [Parameter] public EventCallback<int> OnApplicationSelected { get; set; }
+    [Parameter] public EventCallback<EndpointGroup> OnEndpointGroupSelected { get; set; }
     [Parameter] public EventCallback OnSelectionCleared { get; set; }
     [Parameter] public EventCallback OnCreateGroupRequested { get; set; }
     [Parameter] public EventCallback OnCreateApplicationRequested { get; set; }
@@ -301,6 +303,13 @@
         }
     }
 
+    private async Task RequestSelectGroup(ApplicationGroup group) => await OnApplicationGroupSelected.InvokeAsync(group);
+    private async Task RequestSelectEndpointGroup(EndpointGroup group)
+    {
+        ToggleEndpointGroupExpanded(group.Id);
+        await OnEndpointGroupSelected.InvokeAsync(group);
+    }
+
     private async Task RequestCreateGroup() => await OnCreateGroupRequested.InvokeAsync();
     private async Task RequestCreateApplication() => await OnCreateApplicationRequested.InvokeAsync();
     private async Task RequestEditApplication(Application app) => await OnEditApplicationRequested.InvokeAsync(app);
@@ -335,7 +344,7 @@
         }
         catch (Exception ex)
         {
-            _errorMessage = $"Fehler beim Entfernen aus der Gruppe: {ex.Message}";
+            _errorMessage = $"Fehler beim Entfernen aus der Sammlung: {ex.Message}";
             StateHasChanged();
         }
     }
@@ -398,7 +407,7 @@
             await ApplicationApiClient.UpdateApplicationAsync(_draggedApplication);
             var targetGroup = targetGroupId.HasValue
                 ? _groups?.FirstOrDefault(g => g.Id == targetGroupId.Value)?.Name ?? targetGroupId.Value.ToString()
-                : "Ohne Gruppe";
+                : "Ohne Sammlung";
             ActivityLogService.Log(ActivityLogCategory.EntityMoved, $"Anwendung verschoben: {appName} → {targetGroup}");
             ResetDragState();
             await LoadDataAsync();
@@ -430,10 +439,10 @@
         <div @key="@($"eg-{group.Id}")">
             <div class="sz-tree-row">
                 <button class="sz-tree-chevron-btn" @onclick="() => ToggleEndpointGroupExpanded(group.Id)">
-                    <i class="bi @(_expandedEndpointGroupIds.Contains(group.Id) ? "bi-chevron-down" : "bi-chevron-right")"></i>
+                    <i class="sz-icon @(_expandedEndpointGroupIds.Contains(group.Id) ? "sz-icon-chevron-down" : "sz-icon-chevron-right")"></i>
                 </button>
-                <i class="bi bi-folder sz-tree-icon"></i>
-                <span class="sz-tree-item-label" @onclick="() => ToggleEndpointGroupExpanded(group.Id)">@group.Name</span>
+                <i class="sz-icon sz-icon-folder sz-tree-icon"></i>
+                <span class="sz-tree-item-label" @onclick="() => RequestSelectEndpointGroup(group)">@group.Name</span>
                 <EndpointGroupContextMenu Group="group"
                                          OnCreateEndpointRequested="@(g => RequestCreateEndpointForGroup(app, g))"
                                          OnRenameEndpointGroupRequested="RequestRenameEndpointGroup"
@@ -446,7 +455,7 @@
                     {
                         <div class="sz-tree-row" @key="@($"ep-{endpoint.Id}")">
                             <span class="sz-tree-indent"></span>
-                            <i class="bi bi-lightning sz-tree-icon"></i>
+                            <i class="sz-icon sz-icon-lightning sz-tree-icon"></i>
                             <button class="sz-tree-item-btn" @onclick="() => RequestSelectEndpoint(endpoint)">@endpoint.Name</button>
                             <EndpointContextMenu Endpoint="endpoint" OnDeleteRequested="RequestDeleteEndpoint" />
                         </div>
@@ -468,9 +477,9 @@
         <div @key="app.Id">
             <div class="sz-tree-row" draggable="@(app.IsSystem ? "false" : "true")" @ondragstart="() => OnDragStart(app)" @ondragover:preventDefault="true">
                 <button class="sz-tree-chevron-btn" @onclick="() => ToggleApplicationExpanded(app.Id)">
-                    <i class="bi @(_expandedApplicationIds.Contains(app.Id) ? "bi-chevron-down" : "bi-chevron-right")"></i>
+                    <i class="sz-icon @(_expandedApplicationIds.Contains(app.Id) ? "sz-icon-chevron-down" : "sz-icon-chevron-right")"></i>
                 </button>
-                <i class="bi bi-window sz-tree-icon"></i>
+                <i class="sz-icon sz-icon-window sz-tree-icon"></i>
                 <button class="sz-tree-item-btn" @onclick="() => SelectAndToggleApplication(app.Id)">@app.Name</button>
                 <ApplicationContextMenu Application="app"
                                         OnEditRequested="RequestEditApplication"
@@ -497,7 +506,7 @@
                     {
                         <div class="sz-tree-row" @key="@($"ep-{endpoint.Id}")">
                             <span class="sz-tree-indent"></span>
-                            <i class="bi bi-lightning sz-tree-icon"></i>
+                            <i class="sz-icon sz-icon-lightning sz-tree-icon"></i>
                             <button class="sz-tree-item-btn" @onclick="() => RequestSelectEndpoint(endpoint)">@endpoint.Name</button>
                             <EndpointContextMenu Endpoint="endpoint" OnDeleteRequested="RequestDeleteEndpoint" />
                         </div>

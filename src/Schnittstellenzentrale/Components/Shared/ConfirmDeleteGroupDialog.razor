@@ -2,15 +2,15 @@
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Gruppe löschen</h5>
+                <h5 class="modal-title">Sammlung löschen</h5>
             </div>
             <div class="modal-body">
-                <p>Gruppe '@Group.Name' wirklich löschen?</p>
-                <p>Die Gruppe enthält <strong>@Group.Applications.Count</strong> Anwendung(en).</p>
+                <p>Sammlung '@Group.Name' wirklich löschen?</p>
+                <p>Die Sammlung enthält <strong>@Group.Applications.Count</strong> Anwendung(en).</p>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-danger" @onclick="DeleteAllConfirmed">Mitlöschen</button>
-                <button type="button" class="btn btn-warning" @onclick="DeleteGroupOnlyConfirmed">Nur Gruppe löschen</button>
+                <button type="button" class="btn btn-warning" @onclick="DeleteGroupOnlyConfirmed">Nur Sammlung löschen</button>
                 <button type="button" class="btn btn-secondary" @onclick="Cancelled">Abbrechen</button>
             </div>
         </div>

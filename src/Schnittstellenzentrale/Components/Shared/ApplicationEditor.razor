@@ -47,9 +47,9 @@
         </div>
 
         <div class="mb-3">
-            <label class="form-label">Gruppe</label>
+            <label class="form-label">Sammlung</label>
             <InputSelect class="form-select" @bind-Value="_model.ApplicationGroupId">
-                <option value="">Ohne Gruppe</option>
+                <option value="">Ohne Sammlung</option>
                 @foreach (var group in _groups)
                 {
                     <option value="@group.Id">@group.Name</option>

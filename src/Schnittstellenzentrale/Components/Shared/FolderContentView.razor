@@ -1,0 +1,49 @@
+@inject IEndpointRepository EndpointRepository
+
+<div class="sz-content-view">
+    <ContentHeader Name="@EndpointGroup.Name" ReadOnly="true" />
+
+    <div class="sz-content-blocks">
+        <div class="sz-content-block">
+            <h3>Endpunkte</h3>
+            @if (_endpoints.Count == 0)
+            {
+                <p>Keine Endpunkte in diesem Ordner.</p>
+            }
+            else
+            {
+                <table class="sz-table">
+                    <thead>
+                        <tr>
+                            <th>Methode</th>
+                            <th>Name</th>
+                            <th>Pfad</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var endpoint in _endpoints)
+                        {
+                            <tr>
+                                <td>@endpoint.Method</td>
+                                <td>@endpoint.Name</td>
+                                <td>@endpoint.RelativePath</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public EndpointGroup EndpointGroup { get; set; } = null!;
+
+    private IList<Core.Models.Endpoint> _endpoints = [];
+
+    protected override async Task OnParametersSetAsync()
+    {
+        var all = await EndpointRepository.GetEndpointsAsync(EndpointGroup.ApplicationId);
+        _endpoints = all.Where(e => e.EndpointGroupId == EndpointGroup.Id).ToList();
+    }
+}

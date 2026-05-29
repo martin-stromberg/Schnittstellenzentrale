@@ -10,6 +10,7 @@ using Schnittstellenzentrale.Infrastructure.Repositories;
 using Schnittstellenzentrale.Infrastructure.Services;
 using Schnittstellenzentrale.Services;
 using Microsoft.EntityFrameworkCore;
+using ShadcnBlazor;
 
 Log.Logger = new LoggerConfiguration()
     .ReadFrom.Configuration(new ConfigurationBuilder()
@@ -83,6 +84,18 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddSingleton<ITokenStore, TokenStore>();
 builder.Services.AddHttpClient<IApplicationApiClient, ApplicationApiClient>();
 builder.Services.AddHostedService<SystemEndpointSyncService>();
+
+builder.Services.AddScoped<INavigationStateService, NavigationStateService>();
+builder.Services.AddScoped<IApplicationGroupService, ApplicationGroupService>();
+builder.Services.AddScoped<IApplicationService, ApplicationService>();
+builder.Services.AddScoped<IApplicationLinkService, ApplicationLinkService>();
+builder.Services.AddScoped<IApplicationLinkRepository, ApplicationLinkRepository>();
+builder.Services.AddScoped<IHistoryService, HistoryService>();
+
+builder.Services.Configure<UploadSettings>(builder.Configuration.GetSection("Upload"));
+builder.Services.Configure<HistorySettings>(builder.Configuration.GetSection("History"));
+
+builder.Services.AddShadcnBlazor();
 
 var app = builder.Build();
 

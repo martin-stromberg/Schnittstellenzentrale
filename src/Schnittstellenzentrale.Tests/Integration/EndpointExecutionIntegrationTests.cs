@@ -91,6 +91,10 @@ public class EndpointExecutionIntegrationTests : IAsyncLifetime
         endpointRepoMock.Setup(r => r.GetEndpointByNameAsync(It.IsAny<int>(), It.IsAny<string>()))
             .ReturnsAsync(new List<Core.Models.Endpoint>());
 
+        var historyServiceMock = new Mock<IHistoryService>();
+        historyServiceMock.Setup(h => h.AddEntryAsync(It.IsAny<Core.Models.EndpointCallHistoryEntry>()))
+            .Returns(Task.CompletedTask);
+
         var executionService = new EndpointExecutionService(
             httpClientFactoryMock.Object,
             credentialServiceMock.Object,
@@ -99,7 +103,8 @@ public class EndpointExecutionIntegrationTests : IAsyncLifetime
             endpointRepoMock.Object,
             new Mock<ISystemEnvironmentRepository>().Object,
             new Mock<ISignalRNotificationService>().Object,
-            new Mock<IActivityLogService>().Object);
+            new Mock<IActivityLogService>().Object,
+            historyServiceMock.Object);
 
         // Act
         var result = await executionService.ExecuteAsync(endpoint);

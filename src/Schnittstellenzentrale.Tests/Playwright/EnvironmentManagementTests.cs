@@ -19,13 +19,18 @@ public class EnvironmentManagementTests : PlaywrightTestBase
     {
         await Page.GotoAsync(BaseUrl);
 
-        // Zahnrad-Icon klicken, um Umgebungsverwaltung zu öffnen
-        await Page.GetByTitle("Umgebungen verwalten").ClickAsync();
+        // Environments-Tab klicken, um Umgebungsverwaltung zu öffnen
+        await Page.Locator(".sz-topbar-tab", new() { HasText = "Environments" }).ClickAsync();
 
-        // Neue Umgebung mit maskiertem Wert anlegen
-        await Page.GetByRole(AriaRole.Button, new() { Name = "Neu" }).ClickAsync();
-        await Page.Locator(".environment-editor input[type='text']").First.FillAsync("MaskierungsTest");
+        // Neue Umgebung anlegen
+        await Page.GetByRole(AriaRole.Button, new() { Name = "+ Neue Umgebung" }).ClickAsync();
+        await Page.Locator(".sz-env-create-form .sz-input").FillAsync("MaskierungsTest");
+        await Page.GetByRole(AriaRole.Button, new() { Name = "Anlegen" }).ClickAsync();
 
+        // Neu angelegte Umgebung selektieren
+        await Page.GetByRole(AriaRole.Button, new() { Name = "MaskierungsTest" }).ClickAsync();
+
+        // Variable hinzufügen
         await Page.GetByRole(AriaRole.Button, new() { Name = "+ Variable hinzufügen" }).ClickAsync();
         var variableRows = Page.Locator(".environment-editor table tbody tr");
         await variableRows.First.Locator("input").First.FillAsync("geheimnis");

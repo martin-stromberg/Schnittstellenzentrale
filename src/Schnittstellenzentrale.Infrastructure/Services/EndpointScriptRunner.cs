@@ -201,8 +201,11 @@ public class EndpointScriptRunner : IEndpointScriptRunner
 
         if (activeEnv != null)
         {
-            // Jint callbacks sind synchron — await ist nicht möglich. Task.Run + GetAwaiter().GetResult()
-            // ist das etablierte Muster, um async-Methoden aus synchronen Jint-Lambdas heraus zu blockieren.
+            // Bekannte Einschränkung: Jint-Callbacks sind synchron; await ist in diesem Kontext nicht möglich.
+            // Task.Run + GetAwaiter().GetResult() blockiert einen Thread-Pool-Thread für die Dauer des
+            // Datenbankzugriffs. Bei vielen gleichzeitigen Skriptausführungen mit langsamer Datenbank kann
+            // dies zu Thread-Pool-Erschöpfung führen. Eine echte async-Lösung würde eine Jint-API erfordern,
+            // die asynchrone Callbacks unterstützt (aktuell nicht verfügbar).
             Task.Run(() => PersistVariableAsync(activeEnv.Id, name, value)).GetAwaiter().GetResult();
         }
     }

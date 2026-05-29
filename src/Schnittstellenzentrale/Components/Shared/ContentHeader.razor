@@ -1,0 +1,177 @@
+@inject IJSRuntime JSRuntime
+@inject IOptions<UploadSettings> UploadOptions
+@using Microsoft.Extensions.Options
+@using Schnittstellenzentrale.Infrastructure.Services
+
+<div class="sz-content-header">
+    <div class="sz-content-header-icon">
+        @if (_iconDataUrl != null)
+        {
+            <img src="@_iconDataUrl" alt="Icon" class="sz-icon-image" />
+        }
+        else
+        {
+            <span class="sz-icon-placeholder">&#128247;</span>
+        }
+        @if (!ReadOnly)
+        {
+            <button type="button" class="sz-icon-upload-btn" title="Icon hochladen" @onclick="TriggerFileInput">&#8679;</button>
+            <InputFile @ref="_inputFile" id="@_fileInputId" OnChange="OnFileSelected" accept="image/png,image/jpeg" class="sz-hidden-file-input" style="display:none" />
+        }
+    </div>
+
+    <div class="sz-content-header-text">
+        @if (_editingName)
+        {
+            <input class="sz-inplace-input" @bind="_nameInput" @onkeydown="OnNameKeyDown" @onblur="SaveNameAsync" autofocus />
+            @if (!string.IsNullOrWhiteSpace(_nameError))
+            {
+                <span class="sz-inplace-error">@_nameError</span>
+            }
+        }
+        else
+        {
+            <span class="sz-content-title @(!ReadOnly ? "sz-editable" : "")" @onclick="StartEditName">
+                @Name
+                @if (!ReadOnly) { <span class="sz-edit-icon">&#9998;</span> }
+            </span>
+        }
+
+        @if (_editingSubtitle)
+        {
+            <input class="sz-inplace-input sz-inplace-subtitle" @bind="_subtitleInput" @onkeydown="OnSubtitleKeyDown" @onblur="SaveSubtitleAsync" />
+        }
+        else
+        {
+            <span class="sz-content-subtitle @(!ReadOnly ? "sz-editable" : "")" @onclick="StartEditSubtitle">
+                @(string.IsNullOrEmpty(Subtitle) ? (ReadOnly ? "" : "Untertitel hinzufügen") : Subtitle)
+                @if (!ReadOnly) { <span class="sz-edit-icon">&#9998;</span> }
+            </span>
+        }
+    </div>
+
+    @if (!string.IsNullOrEmpty(_uploadError))
+    {
+        <span class="sz-upload-error">@_uploadError</span>
+    }
+</div>
+
+@code {
+    [Parameter] public string Name { get; set; } = string.Empty;
+    [Parameter] public string? Subtitle { get; set; }
+    [Parameter] public byte[]? IconData { get; set; }
+    [Parameter] public bool ReadOnly { get; set; }
+    [Parameter] public EventCallback<string> OnNameChanged { get; set; }
+    [Parameter] public EventCallback<string?> OnSubtitleChanged { get; set; }
+    [Parameter] public EventCallback<byte[]> OnIconChanged { get; set; }
+
+    private bool _editingName;
+    private bool _editingSubtitle;
+    private string _nameInput = string.Empty;
+    private string _subtitleInput = string.Empty;
+    private string? _nameError;
+    private string? _uploadError;
+    private string? _iconDataUrl;
+    private InputFile? _inputFile;
+    private readonly string _fileInputId = $"sz-file-input-{Guid.NewGuid():N}";
+
+    protected override void OnParametersSet()
+    {
+        if (IconData != null)
+            _iconDataUrl = $"data:{DetectMimeType(IconData)};base64,{Convert.ToBase64String(IconData)}";
+        else
+            _iconDataUrl = null;
+    }
+
+    private static string DetectMimeType(byte[] data)
+    {
+        if (data.Length >= 3 && data[0] == 0xFF && data[1] == 0xD8 && data[2] == 0xFF)
+            return "image/jpeg";
+        return "image/png";
+    }
+
+    private void StartEditName()
+    {
+        if (ReadOnly) return;
+        _nameInput = Name;
+        _nameError = null;
+        _editingName = true;
+    }
+
+    private void StartEditSubtitle()
+    {
+        if (ReadOnly) return;
+        _subtitleInput = Subtitle ?? string.Empty;
+        _editingSubtitle = true;
+    }
+
+    private async Task OnNameKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") await SaveNameAsync();
+        else if (e.Key == "Escape") CancelNameEdit();
+    }
+
+    private async Task OnSubtitleKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") await SaveSubtitleAsync();
+        else if (e.Key == "Escape") CancelSubtitleEdit();
+    }
+
+    private async Task SaveNameAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_nameInput))
+        {
+            _nameError = "Name darf nicht leer sein.";
+            return;
+        }
+        _editingName = false;
+        _nameError = null;
+        await OnNameChanged.InvokeAsync(_nameInput);
+    }
+
+    private async Task SaveSubtitleAsync()
+    {
+        _editingSubtitle = false;
+        await OnSubtitleChanged.InvokeAsync(string.IsNullOrEmpty(_subtitleInput) ? null : _subtitleInput);
+    }
+
+    private void CancelNameEdit()
+    {
+        _editingName = false;
+        _nameError = null;
+    }
+
+    private void CancelSubtitleEdit()
+    {
+        _editingSubtitle = false;
+    }
+
+    private async Task TriggerFileInput()
+    {
+        await JSRuntime.InvokeVoidAsync("eval", $"document.getElementById('{_fileInputId}')?.click()");
+    }
+
+    private async Task OnFileSelected(InputFileChangeEventArgs e)
+    {
+        _uploadError = null;
+        var file = e.File;
+        var maxSize = UploadOptions.Value.MaxIconSizeBytes;
+
+        if (file.ContentType != "image/png" && file.ContentType != "image/jpeg")
+        {
+            _uploadError = "Nur PNG- und JPEG-Dateien sind erlaubt.";
+            return;
+        }
+        if (file.Size > maxSize)
+        {
+            _uploadError = $"Datei ist zu groß (max. {maxSize / 1024} KB).";
+            return;
+        }
+
+        using var ms = new MemoryStream();
+        await file.OpenReadStream(maxSize).CopyToAsync(ms);
+        var bytes = ms.ToArray();
+        _iconDataUrl = $"data:{file.ContentType};base64,{Convert.ToBase64String(bytes)}";
+        await OnIconChanged.InvokeAsync(bytes);
+    }
+}

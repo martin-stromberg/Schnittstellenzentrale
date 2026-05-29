@@ -32,6 +32,15 @@ public static class TestHelpers
     }
 
     /// <summary>
+    /// Erstellt eine <see cref="IDbContextFactory{AppDbContext}"/> mit SQLite In-Memory-Provider,
+    /// die den <c>EndpointCallHistory</c>-DbSet enthält. Für History-Integrationstests.
+    /// Der Aufrufer muss die <see cref="SqliteConnection"/> disposen, nachdem alle Factory-erstellten
+    /// Contexts disposed wurden.
+    /// </summary>
+    public static (IDbContextFactory<AppDbContext> Factory, SqliteConnection Connection) CreateInMemoryDbContextWithHistory()
+        => CreateInMemoryDbContext();
+
+    /// <summary>
     /// Führt einen Test mit zwei unabhängigen <see cref="ApplicationRepository"/>-Instanzen über
     /// dieselbe SQLite-Connection aus. Ermöglicht Concurrency-Tests, bei denen zwei Kontexte
     /// denselben Datenbankzustand sehen müssen.

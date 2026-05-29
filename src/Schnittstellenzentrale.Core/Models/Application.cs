@@ -14,8 +14,11 @@ public class Application
     public string? Owner { get; set; }
     public int? ApplicationGroupId { get; set; }
     public ApplicationGroup? ApplicationGroup { get; set; }
+    public string? Subtitle { get; set; }
+    public byte[]? IconData { get; set; }
     public byte[] RowVersion { get; set; } = [];
     public ICollection<Endpoint> Endpoints { get; set; } = [];
+    public ICollection<ApplicationLink> Links { get; set; } = [];
     public ICollection<EndpointGroup> EndpointGroups { get; set; } = [];
 
     public static InterfaceType DetectInterfaceType(string? url)

@@ -37,7 +37,14 @@ else
     {
         if (firstRender)
         {
-            _jsModule = await JSRuntime.InvokeAsync<IJSObjectReference>("import", "./activity-log-panel.js");
+            try
+            {
+                _jsModule = await JSRuntime.InvokeAsync<IJSObjectReference>("import", "./activity-log-panel.js");
+            }
+            catch (JSException)
+            {
+                return;
+            }
 
             try
             {

@@ -9,7 +9,7 @@ export function setStoredTheme(scheme) {
 }
 
 export function applyTheme(scheme) {
-    document.documentElement.setAttribute('data-bs-theme', scheme.toLowerCase());
+    document.documentElement.setAttribute('data-theme', scheme.toLowerCase());
 }
 
 export function getAndApplyStoredTheme() {

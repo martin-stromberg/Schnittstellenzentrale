@@ -214,5 +214,9 @@ public class SystemEntryInitializerTests
         public Task<Schnittstellenzentrale.Core.Models.Application> UpdateApplicationAsync(Schnittstellenzentrale.Core.Models.Application application) => throw new NotImplementedException();
         /// <summary>DeleteApplicationAsync</summary>
         public Task DeleteApplicationAsync(int id) => throw new NotImplementedException();
+        /// <summary>GetApplicationCountByGroupAsync</summary>
+        public Task<int> GetApplicationCountByGroupAsync(int groupId) => throw new NotImplementedException();
+        /// <summary>GetEndpointCountByGroupAsync</summary>
+        public Task<int> GetEndpointCountByGroupAsync(int groupId) => throw new NotImplementedException();
     }
 }

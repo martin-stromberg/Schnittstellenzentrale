@@ -30,6 +30,8 @@ Alle Einstellungen in `appsettings.json`:
 | `DatabaseProvider` | `string` | `"SQLite"` | Datenbankprovider: `SQLite` oder `SqlServer` |
 | `ConnectionStrings:Default` | `string` | `"Data Source=schnittstellenzentrale.db"` | Verbindungszeichenfolge für den gewählten Provider |
 | `HealthCheck:CooldownSeconds` | `int` | `60` | Mindestabstand in Sekunden zwischen zwei Health-Checks derselben Anwendung |
+| `Upload:MaxIconSizeBytes` | `int` | `524288` | Maximale Icon-Dateigröße in Bytes (Standard: 512 KB); wird beim Icon-Upload clientseitig geprüft |
+| `History:DefaultPageSize` | `int` | `50` | Anzahl Einträge pro Seite in der Aufrufhistorie (`HistoryContentView`) |
 | `Serilog:MinimumLevel` | `string` | `"Information"` | Log-Level: `Verbose`, `Debug`, `Information`, `Warning`, `Error` |
 | `Serilog:WriteTo[EventLog]:Args:source` | `string` | `"Schnittstellenzentrale"` | Quelle im Windows-Ereignisprotokoll |
 | `Serilog:WriteTo[File]:Args:path` | `string` | `"logs/log-.txt"` | Pfad und Namensmuster der Log-Datei |
@@ -45,6 +47,12 @@ Alle Einstellungen in `appsettings.json`:
   },
   "HealthCheck": {
     "CooldownSeconds": 60
+  },
+  "Upload": {
+    "MaxIconSizeBytes": 524288
+  },
+  "History": {
+    "DefaultPageSize": 50
   },
   "Serilog": {
     "MinimumLevel": "Information",

@@ -1,0 +1,158 @@
+@inject IApplicationLinkService ApplicationLinkService
+
+<div class="sz-links-manager">
+    <h3>Links</h3>
+
+    @foreach (var link in _links)
+    {
+        @if (_editingLinkId == link.Id)
+        {
+            <div class="sz-link-edit-row">
+                <input class="sz-input" @bind="_editUrl" placeholder="URL (https://...)" />
+                <input class="sz-input" @bind="_editLabel" placeholder="Beschriftung (optional)" />
+                @if (!string.IsNullOrEmpty(_linkError))
+                {
+                    <span class="sz-inplace-error">@_linkError</span>
+                }
+                <button type="button" class="sz-btn-primary" @onclick="SaveEditAsync">Speichern</button>
+                <button type="button" class="sz-btn-secondary" @onclick="CancelEdit">Abbrechen</button>
+            </div>
+        }
+        else
+        {
+            <div class="sz-link-row">
+                <a href="@link.Url" target="_blank" rel="noopener">@(string.IsNullOrEmpty(link.Label) ? link.Url : link.Label)</a>
+                <button type="button" class="sz-btn-icon" @onclick="() => StartEdit(link)">&#9998;</button>
+                <button type="button" class="sz-btn-icon" @onclick="() => DeleteLinkAsync(link.Id)">&#128465;</button>
+            </div>
+        }
+    }
+
+    @if (_addingNew)
+    {
+        <div class="sz-link-edit-row">
+            <input class="sz-input" @bind="_newUrl" placeholder="URL (https://...)" />
+            <input class="sz-input" @bind="_newLabel" placeholder="Beschriftung (optional, max. 200 Zeichen)" />
+            @if (!string.IsNullOrEmpty(_linkError))
+            {
+                <span class="sz-inplace-error">@_linkError</span>
+            }
+            <button type="button" class="sz-btn-primary" @onclick="SaveNewAsync">Speichern</button>
+            <button type="button" class="sz-btn-secondary" @onclick="CancelNew">Abbrechen</button>
+        </div>
+    }
+    else
+    {
+        <button type="button" class="sz-btn-secondary" @onclick="StartAdd">+ Link hinzufügen</button>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public int ApplicationId { get; set; }
+
+    private IList<ApplicationLink> _links = [];
+    private bool _addingNew;
+    private string _newUrl = string.Empty;
+    private string _newLabel = string.Empty;
+    private int? _editingLinkId;
+    private string _editUrl = string.Empty;
+    private string _editLabel = string.Empty;
+    private string? _linkError;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _links = await ApplicationLinkService.GetLinksAsync(ApplicationId);
+    }
+
+    private void StartAdd()
+    {
+        _newUrl = string.Empty;
+        _newLabel = string.Empty;
+        _linkError = null;
+        _addingNew = true;
+    }
+
+    private void CancelNew()
+    {
+        _addingNew = false;
+        _linkError = null;
+    }
+
+    private async Task SaveNewAsync()
+    {
+        if (!ValidateUrl(_newUrl, out var error))
+        {
+            _linkError = error;
+            return;
+        }
+        if (_newLabel.Length > 200)
+        {
+            _linkError = "Beschriftung darf maximal 200 Zeichen lang sein.";
+            return;
+        }
+        var link = new ApplicationLink { ApplicationId = ApplicationId, Url = _newUrl, Label = string.IsNullOrEmpty(_newLabel) ? null : _newLabel };
+        await ApplicationLinkService.AddLinkAsync(link);
+        _addingNew = false;
+        _linkError = null;
+        _links = await ApplicationLinkService.GetLinksAsync(ApplicationId);
+    }
+
+    private void StartEdit(ApplicationLink link)
+    {
+        _editingLinkId = link.Id;
+        _editUrl = link.Url ?? string.Empty;
+        _editLabel = link.Label ?? string.Empty;
+        _linkError = null;
+    }
+
+    private void CancelEdit()
+    {
+        _editingLinkId = null;
+        _linkError = null;
+    }
+
+    private async Task SaveEditAsync()
+    {
+        if (!ValidateUrl(_editUrl, out var error))
+        {
+            _linkError = error;
+            return;
+        }
+        if (_editLabel.Length > 200)
+        {
+            _linkError = "Beschriftung darf maximal 200 Zeichen lang sein.";
+            return;
+        }
+        var existing = _links.FirstOrDefault(l => l.Id == _editingLinkId);
+        if (existing == null) return;
+        existing.Url = _editUrl;
+        existing.Label = string.IsNullOrEmpty(_editLabel) ? null : _editLabel;
+        await ApplicationLinkService.UpdateLinkAsync(existing);
+        _editingLinkId = null;
+        _linkError = null;
+        _links = await ApplicationLinkService.GetLinksAsync(ApplicationId);
+    }
+
+    private async Task DeleteLinkAsync(int linkId)
+    {
+        await ApplicationLinkService.DeleteLinkAsync(linkId);
+        _links = await ApplicationLinkService.GetLinksAsync(ApplicationId);
+    }
+
+    private static bool ValidateUrl(string url, out string error)
+    {
+        if (string.IsNullOrWhiteSpace(url))
+        {
+            error = "URL ist ein Pflichtfeld.";
+            return false;
+        }
+        if (!url.StartsWith("http://", StringComparison.OrdinalIgnoreCase) &&
+            !url.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+        {
+            error = "URL muss mit http:// oder https:// beginnen.";
+            return false;
+        }
+        error = string.Empty;
+        return true;
+    }
+}

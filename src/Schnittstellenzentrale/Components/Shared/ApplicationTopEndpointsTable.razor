@@ -1,0 +1,42 @@
+@inject IHistoryService HistoryService
+
+<div class="sz-top-endpoints">
+    <h3>Top-5-Endpunkte</h3>
+    @if (_topEndpoints.Count == 0)
+    {
+        <p>Noch keine Aufrufhistorie vorhanden.</p>
+    }
+    else
+    {
+        <table class="sz-table">
+            <thead>
+                <tr>
+                    <th>Methode</th>
+                    <th>Pfad</th>
+                    <th>Aufrufe</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var entry in _topEndpoints)
+                {
+                    <tr>
+                        <td>@entry.HttpMethod</td>
+                        <td>@entry.RelativePath</td>
+                        <td>@entry.CallCount</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public int ApplicationId { get; set; }
+
+    private IList<TopEndpointResult> _topEndpoints = [];
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _topEndpoints = await HistoryService.GetTopEndpointsAsync(ApplicationId, 5);
+    }
+}

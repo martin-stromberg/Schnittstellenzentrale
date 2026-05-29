@@ -1,0 +1,94 @@
+@inject IHistoryService HistoryService
+@inject IOptions<HistorySettings> HistoryOptions
+@using Microsoft.Extensions.Options
+@using Schnittstellenzentrale.Infrastructure.Services
+
+<div class="sz-history-content">
+    <h2>Aufrufhistorie</h2>
+
+    <div class="sz-history-filter">
+        <input type="datetime-local" class="sz-input" @bind="_filterFrom" @bind:event="onchange" />
+        <input type="datetime-local" class="sz-input" @bind="_filterTo" @bind:event="onchange" />
+        <button type="button" class="sz-btn-primary" @onclick="LoadAsync">Filtern</button>
+        <button type="button" class="sz-btn-secondary" @onclick="ResetFilterAsync">Zurücksetzen</button>
+    </div>
+
+    @if (_entries.Count == 0)
+    {
+        <p>Keine Einträge vorhanden.</p>
+    }
+    else
+    {
+        <table class="sz-table">
+            <thead>
+                <tr>
+                    <th>Zeitpunkt</th>
+                    <th>Methode</th>
+                    <th>Pfad</th>
+                    <th>Status</th>
+                    <th>Dauer (ms)</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var entry in _entries)
+                {
+                    <tr>
+                        <td>@entry.ExecutedAt?.ToString("dd.MM.yyyy HH:mm:ss")</td>
+                        <td>@entry.HttpMethod</td>
+                        <td>@entry.RelativePath</td>
+                        <td>@entry.StatusCode</td>
+                        <td>@entry.DurationMs</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+
+        <div class="sz-pagination">
+            <button type="button" class="sz-btn-secondary" @onclick="PrevPageAsync" disabled="@(_page <= 1)">&#8592;</button>
+            <span>Seite @_page von @_totalPages</span>
+            <button type="button" class="sz-btn-secondary" @onclick="NextPageAsync" disabled="@(_page >= _totalPages)">&#8594;</button>
+        </div>
+    }
+</div>
+
+@code {
+    private IList<EndpointCallHistoryEntry> _entries = [];
+    private int _page = 1;
+    private int _totalCount;
+    private int _totalPages = 1;
+    private DateTime? _filterFrom;
+    private DateTime? _filterTo;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        var pageSize = HistoryOptions.Value.DefaultPageSize;
+        var filter = new HistoryFilter(null, null, _filterFrom, _filterTo);
+        var (items, total) = await HistoryService.GetPagedAsync(filter, _page, pageSize);
+        _entries = items;
+        _totalCount = total;
+        _totalPages = Math.Max(1, (int)Math.Ceiling((double)total / pageSize));
+    }
+
+    private async Task ResetFilterAsync()
+    {
+        _filterFrom = null;
+        _filterTo = null;
+        _page = 1;
+        await LoadAsync();
+    }
+
+    private async Task PrevPageAsync()
+    {
+        if (_page > 1) { _page--; await LoadAsync(); }
+    }
+
+    private async Task NextPageAsync()
+    {
+        if (_page < _totalPages) { _page++; await LoadAsync(); }
+    }
+}

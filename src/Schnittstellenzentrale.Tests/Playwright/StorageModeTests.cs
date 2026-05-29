@@ -16,7 +16,7 @@ public class StorageModeTests : PlaywrightTestBase
     {
         await Page.GotoAsync(BaseUrl);
 
-        await Page.Locator(".top-row select").SelectOptionAsync("Team");
+        await Page.Locator(".sz-topbar-select").SelectOptionAsync("Team");
 
         var treeBody = Page.Locator(".sz-tree-body");
         await Assertions.Expect(treeBody).ToBeVisibleAsync();
@@ -28,8 +28,8 @@ public class StorageModeTests : PlaywrightTestBase
     {
         await Page.GotoAsync(BaseUrl);
 
-        await Page.Locator(".top-row select").SelectOptionAsync("Team");
-        await Page.Locator(".top-row select").SelectOptionAsync("User");
+        await Page.Locator(".sz-topbar-select").SelectOptionAsync("Team");
+        await Page.Locator(".sz-topbar-select").SelectOptionAsync("User");
 
         var treeBody = Page.Locator(".sz-tree-body");
         await Assertions.Expect(treeBody).ToBeVisibleAsync();
