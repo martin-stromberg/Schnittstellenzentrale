@@ -436,5 +436,6 @@ FodyWeavers.xsd
 !.claude/settings.json
 !.claude/hooks/
 !.claude/hooks/*.py
+!.claude/*.md
 *.db-shm
 *.db-wal
