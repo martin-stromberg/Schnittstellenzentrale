@@ -431,7 +431,10 @@ FodyWeavers.xsd
 # SQLite files
 *.db
 
-# Claude AI files
+# Claude AI files – projektweite Konfiguration versionieren, persönliche Overrides nicht
 .claude/*
+!.claude/settings.json
+!.claude/hooks/
+!.claude/hooks/*.py
 *.db-shm
 *.db-wal
