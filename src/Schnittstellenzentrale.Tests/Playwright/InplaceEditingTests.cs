@@ -8,7 +8,7 @@ namespace Schnittstellenzentrale.Tests.Playwright;
 public class InplaceEditingTests : PlaywrightTestBase
 {
     /// <summary>Initialisiert den Test mit der gemeinsamen Playwright-Factory.</summary>
-    public InplaceEditingTests(PlaywrightTestFactory factory) : base(factory) { }
+    public InplaceEditingTests(PlaywrightServer server) : base(server) { }
 
     private async Task NavigateToCollectionContentAsync()
     {

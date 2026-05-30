@@ -8,7 +8,7 @@ namespace Schnittstellenzentrale.Tests.Playwright;
 public class StorageModeTests : PlaywrightTestBase
 {
     /// <summary>Initialisiert den Test mit der gemeinsamen Playwright-Factory.</summary>
-    public StorageModeTests(PlaywrightTestFactory factory) : base(factory) { }
+    public StorageModeTests(PlaywrightServer server) : base(server) { }
 
     /// <summary>Nach dem Wechsel auf Team-Modus zeigt der ApplicationGroupTree die Team-Daten.</summary>
     [Fact]

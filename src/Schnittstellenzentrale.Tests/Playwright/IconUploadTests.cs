@@ -8,7 +8,7 @@ namespace Schnittstellenzentrale.Tests.Playwright;
 public class IconUploadTests : PlaywrightTestBase
 {
     /// <summary>Initialisiert den Test mit der gemeinsamen Playwright-Factory.</summary>
-    public IconUploadTests(PlaywrightTestFactory factory) : base(factory) { }
+    public IconUploadTests(PlaywrightServer server) : base(server) { }
 
     private async Task NavigateToCollectionContentAsync()
     {
@@ -96,22 +96,15 @@ public class IconUploadTests : PlaywrightTestBase
         tooBigBytes[0] = 0x89;
         tooBigBytes[1] = 0x50;
 
-        try
+        var fileInput = Page.Locator("input[type='file'][accept*='image/png']").First;
+        await fileInput.SetInputFilesAsync(new FilePayload
         {
-            var fileInput = Page.Locator("input[type='file'][accept*='image/png']").First;
-            await fileInput.SetInputFilesAsync(new FilePayload
-            {
-                Name = "too-big.png",
-                MimeType = "image/png",
-                Buffer = tooBigBytes
-            });
+            Name = "too-big.png",
+            MimeType = "image/png",
+            Buffer = tooBigBytes
+        });
 
-            var errorSpan = Page.Locator(".sz-upload-error");
-            await Assertions.Expect(errorSpan).ToBeVisibleAsync();
-        }
-        catch (Exception)
-        {
-            // Datei zu groß für SetInputFilesAsync — Test gilt als bestanden wenn keine Exception propagiert
-        }
+        var errorSpan = Page.Locator(".sz-upload-error");
+        await Assertions.Expect(errorSpan).ToBeVisibleAsync();
     }
 }

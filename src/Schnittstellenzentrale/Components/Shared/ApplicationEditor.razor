@@ -8,25 +8,25 @@
         <DataAnnotationsValidator />
 
         <div class="mb-3">
-            <label class="form-label">Name</label>
-            <InputText class="form-control" @bind-Value="_model.Name" />
+            <label for="app-name" class="form-label">Name</label>
+            <InputText id="app-name" class="form-control" @bind-Value="_model.Name" />
             <ValidationMessage For="() => _model.Name" />
         </div>
 
         <div class="mb-3">
-            <label class="form-label">Basis-URL</label>
-            <InputText class="form-control" @bind-Value="_model.BaseUrl" />
+            <label for="app-base-url" class="form-label">Basis-URL</label>
+            <InputText id="app-base-url" class="form-control" @bind-Value="_model.BaseUrl" />
             <ValidationMessage For="() => _model.BaseUrl" />
         </div>
 
         <div class="mb-3">
-            <label class="form-label">Beschreibung</label>
-            <InputText class="form-control" @bind-Value="_model.Description" />
+            <label for="app-description" class="form-label">Beschreibung</label>
+            <InputText id="app-description" class="form-control" @bind-Value="_model.Description" />
         </div>
 
         <div class="mb-3">
-            <label class="form-label">Schnittstellen-URL</label>
-            <input type="text" class="form-control" value="@_model.InterfaceUrl" @oninput="OnInterfaceUrlChanged" />
+            <label for="app-interface-url" class="form-label">Schnittstellen-URL</label>
+            <input id="app-interface-url" type="text" class="form-control" value="@_model.InterfaceUrl" @oninput="OnInterfaceUrlChanged" />
             @if (!string.IsNullOrEmpty(_model.InterfaceUrl))
             {
                 <div class="mt-1">

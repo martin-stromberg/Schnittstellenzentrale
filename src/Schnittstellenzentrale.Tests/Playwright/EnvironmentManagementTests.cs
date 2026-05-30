@@ -8,7 +8,7 @@ namespace Schnittstellenzentrale.Tests.Playwright;
 public class EnvironmentManagementTests : PlaywrightTestBase
 {
     /// <summary>Initialisiert den Test mit der gemeinsamen Playwright-Factory.</summary>
-    public EnvironmentManagementTests(PlaywrightTestFactory factory) : base(factory) { }
+    public EnvironmentManagementTests(PlaywrightServer server) : base(server) { }
 
     /// <summary>
     /// E2E: Maskierter Variablenwert erscheint nicht im Klartext im DOM;

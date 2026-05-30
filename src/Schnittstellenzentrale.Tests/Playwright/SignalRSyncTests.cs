@@ -11,12 +11,12 @@ public class SignalRSyncTests : PlaywrightTestBase
     private IPage _pageB = null!;
 
     /// <summary>Initialisiert den Test mit der SignalR-Factory.</summary>
-    public SignalRSyncTests(PlaywrightSignalRFactory factory) : base(factory) { }
+    public SignalRSyncTests(PlaywrightSignalRServer server) : base(server) { }
 
     /// <inheritdoc/>
     protected override async Task OnInitializedAsync()
     {
-        _contextB = await CreateAdditionalContextAsync("B");
+        _contextB = await CreateAdditionalContextAsync();
         _pageB = await _contextB.NewPageAsync();
     }
 
@@ -38,8 +38,8 @@ public class SignalRSyncTests : PlaywrightTestBase
         await Page.GotoAsync(BaseUrl);
         await _pageB.GotoAsync(BaseUrl);
 
-        await Page.Locator(".top-row select").SelectOptionAsync("Team");
-        await _pageB.Locator(".top-row select").SelectOptionAsync("Team");
+        await Page.Locator(".sz-topbar-select").SelectOptionAsync("Team");
+        await _pageB.Locator(".sz-topbar-select").SelectOptionAsync("Team");
 
         await Page.GetByRole(AriaRole.Button, new() { Name = "Neue Anwendung" }).ClickAsync();
         await Page.GetByLabel("Name").FillAsync("SignalR-Sync-Test");

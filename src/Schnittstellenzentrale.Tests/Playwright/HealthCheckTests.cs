@@ -8,13 +8,16 @@ namespace Schnittstellenzentrale.Tests.Playwright;
 public class HealthCheckTests : PlaywrightTestBase
 {
     /// <summary>Initialisiert den Test mit der gemeinsamen Playwright-Factory.</summary>
-    public HealthCheckTests(PlaywrightTestFactory factory) : base(factory) { }
+    public HealthCheckTests(PlaywrightServer server) : base(server) { }
 
     /// <summary>Der Health-Check-Dialog zeigt den „erreichbar"-Status nach Ausführung für die Systemanwendung.</summary>
     [Fact]
     public async Task HealthCheck_ShowsReachableStatus()
     {
         await Page.GotoAsync(BaseUrl);
+
+        var groupChevron = Page.Locator(".collapsible-section .sz-tree-chevron-btn").First;
+        await groupChevron.ClickAsync();
 
         await Page.GetByRole(Microsoft.Playwright.AriaRole.Button, new() { Name = "Schnittstellenzentrale" }).First.ClickAsync();
 

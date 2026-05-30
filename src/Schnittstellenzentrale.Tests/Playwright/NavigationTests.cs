@@ -8,7 +8,7 @@ namespace Schnittstellenzentrale.Tests.Playwright;
 public class NavigationTests : PlaywrightTestBase
 {
     /// <summary>Initialisiert den Test mit der gemeinsamen Playwright-Factory.</summary>
-    public NavigationTests(PlaywrightTestFactory factory) : base(factory) { }
+    public NavigationTests(PlaywrightServer server) : base(server) { }
 
     /// <summary>Klick auf Workspaces-Tab zeigt WorkspacesSidebar.</summary>
     [Fact]

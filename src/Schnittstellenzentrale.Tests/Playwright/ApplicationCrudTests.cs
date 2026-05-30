@@ -8,7 +8,7 @@ namespace Schnittstellenzentrale.Tests.Playwright;
 public class ApplicationCrudTests : PlaywrightTestBase
 {
     /// <summary>Initialisiert den Test mit der gemeinsamen Playwright-Factory.</summary>
-    public ApplicationCrudTests(PlaywrightTestFactory factory) : base(factory) { }
+    public ApplicationCrudTests(PlaywrightServer server) : base(server) { }
 
     /// <summary>Eine neu angelegte Anwendung erscheint im Baum.</summary>
     [Fact]

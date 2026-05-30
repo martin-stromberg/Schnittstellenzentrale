@@ -1,5 +1,8 @@
 @inject IApplicationService ApplicationService
-@inject IHistoryService HistoryService
+@inject IEndpointRepository EndpointRepository
+@inject ISwaggerImportService SwaggerImportService
+@inject IHealthCheckService HealthCheckService
+@inject IApplicationApiClient ApplicationApiClient
 
 <div class="sz-content-view">
     <ContentHeader Name="@Application.Name"
@@ -8,6 +11,23 @@
                    OnNameChanged="OnNameChanged"
                    OnSubtitleChanged="OnSubtitleChanged"
                    OnIconChanged="OnIconChanged" />
+
+    <div class="sz-content-actions">
+        @if (Application.InterfaceType == Core.Enums.InterfaceType.Rest && !string.IsNullOrEmpty(Application.InterfaceUrl))
+        {
+            <button type="button" class="sz-btn sz-btn-outline sz-btn-sm" @onclick="OpenSwaggerImportAsync">Swagger-Import</button>
+        }
+        <button type="button" class="sz-btn sz-btn-outline sz-btn-sm" @onclick="RunHealthCheckAsync">Health-Check</button>
+    </div>
+
+    @if (_showSwaggerImport && _swaggerDiff != null)
+    {
+        <SwaggerImportDialog Diff="_swaggerDiff" Application="Application" OnClose="CloseSwaggerImport" />
+    }
+    @if (_showHealthCheck)
+    {
+        <HealthCheckDialog Application="Application" IsReachable="_healthCheckResult" OnClose="CloseHealthCheck" OnRemove="OnHealthCheckRemove" />
+    }
 
     <div class="sz-content-blocks">
         <div class="sz-content-block">
@@ -29,37 +49,11 @@
         </div>
 
         <div class="sz-content-block">
-            <h3>Letzte Aufrufe</h3>
-            @if (_recentEntries == null)
-            {
-                <p>Wird geladen…</p>
-            }
-            else if (_recentEntries.Count == 0)
-            {
-                <p>Noch keine Aufrufe vorhanden.</p>
-            }
-            else
-            {
-                <table class="sz-status-table">
-                    <thead>
-                        <tr>
-                            <th>Zeitpunkt</th>
-                            <th>Endpunkt</th>
-                            <th>Status</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var entry in _recentEntries)
-                        {
-                            <tr>
-                                <td>@(entry.ExecutedAt?.ToLocalTime().ToString("dd.MM.yyyy HH:mm:ss") ?? "–")</td>
-                                <td>@(entry.HttpMethod) @(entry.RelativePath)</td>
-                                <td>@(entry.StatusCode?.ToString() ?? "–")</td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            }
+            <h3>Status</h3>
+            <dl>
+                <dt>Endpunkte</dt>
+                <dd>@_endpointCount</dd>
+            </dl>
         </div>
 
         <div class="sz-content-block">
@@ -75,13 +69,16 @@
 @code {
     [Parameter, EditorRequired] public Application Application { get; set; } = null!;
 
-    private IList<EndpointCallHistoryEntry>? _recentEntries;
+    private int _endpointCount;
+    private bool _showSwaggerImport;
+    private bool _showHealthCheck;
+    private ImportDiff? _swaggerDiff;
+    private bool? _healthCheckResult;
 
-    protected override async Task OnInitializedAsync()
+    protected override async Task OnParametersSetAsync()
     {
-        var filter = new HistoryFilter(ApplicationId: Application.Id, EndpointId: null, From: null, To: null);
-        var (items, _) = await HistoryService.GetPagedAsync(filter, page: 1, pageSize: 5);
-        _recentEntries = items;
+        var endpoints = await EndpointRepository.GetEndpointsAsync(Application.Id);
+        _endpointCount = endpoints.Count;
     }
 
     private async Task OnNameChanged(string name)
@@ -100,5 +97,26 @@
     {
         await ApplicationService.UpdateIconAsync(Application.Id, iconData);
         Application.IconData = iconData;
+    }
+
+    private async Task OpenSwaggerImportAsync()
+    {
+        _swaggerDiff = await SwaggerImportService.ImportAsync(Application);
+        _showSwaggerImport = true;
+    }
+
+    private async Task RunHealthCheckAsync()
+    {
+        _healthCheckResult = await HealthCheckService.CheckAsync(Application);
+        _showHealthCheck = true;
+    }
+
+    private void CloseSwaggerImport() => _showSwaggerImport = false;
+    private void CloseHealthCheck() => _showHealthCheck = false;
+
+    private async Task OnHealthCheckRemove()
+    {
+        _showHealthCheck = false;
+        await ApplicationApiClient.DeleteApplicationAsync(Application.Id);
     }
 }
