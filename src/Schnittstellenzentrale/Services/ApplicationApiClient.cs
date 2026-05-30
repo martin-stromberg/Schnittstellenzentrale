@@ -314,6 +314,7 @@ public class ApplicationApiClient : IApplicationApiClient
         Description = response.Description,
         Subtitle = response.Subtitle,
         IconData = response.IconData,
+        IsSystem = response.IsSystem,
         RowVersion = response.RowVersion,
         Applications = response.Applications.Select(MapToApplication).ToList()
     };
@@ -330,6 +331,7 @@ public class ApplicationApiClient : IApplicationApiClient
         Owner = response.Owner,
         Subtitle = response.Subtitle,
         IconData = response.IconData,
+        IsSystem = response.IsSystem,
         RowVersion = response.RowVersion
     };
 }

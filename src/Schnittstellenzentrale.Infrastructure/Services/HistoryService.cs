@@ -64,12 +64,15 @@ public class HistoryService : IHistoryService
             .Select(g => new { EndpointId = g.Key, CallCount = g.Count() })
             .OrderByDescending(r => r.CallCount)
             .Take(count)
-            .Join(context.Endpoints,
+            .GroupJoin(context.Endpoints,
                 r => r.EndpointId,
                 e => e.Id,
-                (r, e) => new TopEndpointResult(r.EndpointId!.Value, e.RelativePath, e.Method.ToString(), r.CallCount))
+                (r, endpoints) => new { r.EndpointId, r.CallCount, Endpoints = endpoints })
+            .SelectMany(
+                r => r.Endpoints.DefaultIfEmpty(),
+                (r, e) => new TopEndpointResult(r.EndpointId!.Value, e != null ? e.RelativePath : "(gelöscht)", e != null ? e.Method.ToString() : string.Empty, r.CallCount))
             .ToListAsync();
 
-        return rows;
+        return rows.OrderByDescending(r => r.CallCount).ToList();
     }
 }

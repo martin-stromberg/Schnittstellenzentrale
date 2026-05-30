@@ -1,3 +1,4 @@
+@using Microsoft.EntityFrameworkCore
 @inject IApplicationLinkService ApplicationLinkService
 
 <div class="sz-links-section">
@@ -147,7 +148,15 @@
         if (existing == null) return;
         existing.Url = _editUrl;
         existing.Label = string.IsNullOrEmpty(_editLabel) ? null : _editLabel;
-        await ApplicationLinkService.UpdateLinkAsync(existing);
+        try
+        {
+            await ApplicationLinkService.UpdateLinkAsync(existing);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            _linkError = "Der Link wurde zwischenzeitlich von jemand anderem geändert. Bitte lade die Seite neu.";
+            return;
+        }
         _editingLinkId = null;
         _linkError = null;
         _links = await ApplicationLinkService.GetLinksAsync(ApplicationId);

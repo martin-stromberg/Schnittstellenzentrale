@@ -207,7 +207,7 @@
         using var ms = new MemoryStream();
         await file.OpenReadStream(maxSize).CopyToAsync(ms);
         var bytes = ms.ToArray();
-        _iconDataUrl = $"data:{file.ContentType};base64,{Convert.ToBase64String(bytes)}";
+        _iconDataUrl = $"data:{DetectMimeType(bytes)};base64,{Convert.ToBase64String(bytes)}";
         await OnIconChanged.InvokeAsync(bytes);
     }
 }

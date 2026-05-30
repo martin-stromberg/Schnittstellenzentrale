@@ -123,6 +123,7 @@
     private EndpointGroup? _deleteTargetEndpointGroup;
     private int _deleteTargetEndpointCount;
     private IList<Core.Models.Endpoint>? _deleteTargetEndpoints;
+    private IList<EndpointGroup>? _deleteTargetAllGroups;
     private Application? _createEndpointGroupApplication;
     private string? _errorMessage;
 
@@ -143,6 +144,7 @@
         _deleteTargetEndpointGroup = null;
         _deleteTargetEndpointCount = 0;
         _deleteTargetEndpoints = null;
+        _deleteTargetAllGroups = null;
         _createEndpointGroupApplication = null;
         _errorMessage = null;
     }
@@ -306,8 +308,8 @@
         try
         {
             _deleteTargetEndpoints = await EndpointRepository.GetEndpointsAsync(group.ApplicationId);
-            var allGroups = await EndpointRepository.GetEndpointGroupsAsync(group.ApplicationId);
-            _deleteTargetEndpointCount = CountEndpointsRecursive(group.Id, _deleteTargetEndpoints, allGroups);
+            _deleteTargetAllGroups = await EndpointRepository.GetEndpointGroupsAsync(group.ApplicationId);
+            _deleteTargetEndpointCount = CountEndpointsRecursive(group.Id, _deleteTargetEndpoints, _deleteTargetAllGroups);
             _deleteTargetEndpointGroup = group;
         }
         catch (Exception ex) { _errorMessage = $"Fehler beim Vorbereiten der Löschung: {ex.Message}"; }
@@ -321,6 +323,14 @@
         return count;
     }
 
+    private static HashSet<int> CollectGroupIdsRecursive(int groupId, IList<EndpointGroup> allGroups)
+    {
+        var ids = new HashSet<int> { groupId };
+        foreach (var child in allGroups.Where(g => g.ParentGroupId == groupId))
+            ids.UnionWith(CollectGroupIdsRecursive(child.Id, allGroups));
+        return ids;
+    }
+
     private async Task OnEndpointGroupDeleteConfirmed(EndpointGroup group)
     {
         var applicationId = group.ApplicationId;
@@ -329,10 +339,14 @@
         try
         {
             var currentEndpoint = NavigationStateService.CurrentSelection?.SelectedItem as Core.Models.Endpoint;
-            if (currentEndpoint != null && _deleteTargetEndpoints != null &&
-                _deleteTargetEndpoints.Any(e => e.Id == currentEndpoint.Id && e.EndpointGroupId == group.Id))
-                await NavigationStateService.SetWorkspaceSelectionAsync(null);
+            if (currentEndpoint != null && _deleteTargetEndpoints != null && _deleteTargetAllGroups != null)
+            {
+                var affectedGroupIds = CollectGroupIdsRecursive(group.Id, _deleteTargetAllGroups);
+                if (_deleteTargetEndpoints.Any(e => e.Id == currentEndpoint.Id && e.EndpointGroupId.HasValue && affectedGroupIds.Contains(e.EndpointGroupId.Value)))
+                    await NavigationStateService.SetWorkspaceSelectionAsync(null);
+            }
             _deleteTargetEndpoints = null;
+            _deleteTargetAllGroups = null;
             await EndpointRepository.DeleteEndpointGroupAsync(group.Id);
             if (StorageModeService.CurrentMode == StorageMode.Team)
                 await SignalRNotificationService.NotifyEndpointGroupChangedAsync(group.Id, applicationId);
