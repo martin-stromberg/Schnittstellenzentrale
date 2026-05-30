@@ -32,7 +32,6 @@ public class EndpointScriptRunner : IEndpointScriptRunner
         var scriptName = !string.IsNullOrEmpty(context.EndpointName)
             ? context.EndpointName
             : "Skript";
-        _activityLogService.Log(ActivityLogCategory.ScriptExecuted, $"Skript ausgeführt: {scriptName}");
 
         try
         {
@@ -46,6 +45,7 @@ public class EndpointScriptRunner : IEndpointScriptRunner
 
             engine.Execute(script);
 
+            _activityLogService.Log(ActivityLogCategory.ScriptExecuted, $"Skript ausgeführt: {scriptName}");
             return Task.FromResult(new ScriptExecutionResult { Success = true });
         }
         catch (TimeoutException ex)

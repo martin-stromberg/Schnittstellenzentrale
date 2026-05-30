@@ -2,6 +2,7 @@
 @inject IOptions<UploadSettings> UploadOptions
 @using Microsoft.Extensions.Options
 @using Schnittstellenzentrale.Infrastructure.Services
+@implements IAsyncDisposable
 
 <div class="sz-content-header">
     <div class="sz-content-header-icon">
@@ -67,6 +68,8 @@
 
     private bool _editingName;
     private bool _editingSubtitle;
+    private bool _savingName;
+    private bool _savingSubtitle;
     private string _nameInput = string.Empty;
     private string _subtitleInput = string.Empty;
     private string? _nameError;
@@ -74,6 +77,7 @@
     private string? _iconDataUrl;
     private InputFile? _inputFile;
     private readonly string _fileInputId = $"sz-file-input-{Guid.NewGuid():N}";
+    private IJSObjectReference? _jsModule;
 
     protected override void OnParametersSet()
     {
@@ -119,20 +123,38 @@
 
     private async Task SaveNameAsync()
     {
+        if (_savingName) return;
         if (string.IsNullOrWhiteSpace(_nameInput))
         {
             _nameError = "Name darf nicht leer sein.";
             return;
         }
+        _savingName = true;
         _editingName = false;
         _nameError = null;
-        await OnNameChanged.InvokeAsync(_nameInput);
+        try
+        {
+            await OnNameChanged.InvokeAsync(_nameInput);
+        }
+        finally
+        {
+            _savingName = false;
+        }
     }
 
     private async Task SaveSubtitleAsync()
     {
+        if (_savingSubtitle) return;
+        _savingSubtitle = true;
         _editingSubtitle = false;
-        await OnSubtitleChanged.InvokeAsync(string.IsNullOrEmpty(_subtitleInput) ? null : _subtitleInput);
+        try
+        {
+            await OnSubtitleChanged.InvokeAsync(string.IsNullOrEmpty(_subtitleInput) ? null : _subtitleInput);
+        }
+        finally
+        {
+            _savingSubtitle = false;
+        }
     }
 
     private void CancelNameEdit()
@@ -148,7 +170,17 @@
 
     private async Task TriggerFileInput()
     {
-        await JSRuntime.InvokeVoidAsync("eval", $"document.getElementById('{_fileInputId}')?.click()");
+        _jsModule ??= await JSRuntime.InvokeAsync<IJSObjectReference>("import", "./endpoint-page.js");
+        await _jsModule.InvokeVoidAsync("clickElement", _fileInputId);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_jsModule != null)
+        {
+            try { await _jsModule.DisposeAsync(); }
+            catch (JSDisconnectedException) { }
+        }
     }
 
     private async Task OnFileSelected(InputFileChangeEventArgs e)

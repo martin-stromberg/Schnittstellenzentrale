@@ -32,39 +32,57 @@
 
         @if (_showGroupEditor)
         {
-            <ApplicationGroupEditor OnSaved="OnGroupSaved" OnCancel="CloseAllPanels" />
+            <div class="sz-content-panel-scroll">
+                <ApplicationGroupEditor OnSaved="OnGroupSaved" OnCancel="CloseAllPanels" />
+            </div>
         }
         else if (_showApplicationEditor)
         {
-            <ApplicationEditor OnSaved="OnApplicationSaved" OnCancel="CloseAllPanels" />
+            <div class="sz-content-panel-scroll">
+                <ApplicationEditor OnSaved="OnApplicationSaved" OnCancel="CloseAllPanels" />
+            </div>
         }
         else if (_editTargetApplication != null)
         {
-            <ApplicationEditor ExistingApplication="_editTargetApplication" OnSaved="OnApplicationEdited" OnCancel="CloseAllPanels" />
+            <div class="sz-content-panel-scroll">
+                <ApplicationEditor ExistingApplication="_editTargetApplication" OnSaved="OnApplicationEdited" OnCancel="CloseAllPanels" />
+            </div>
         }
         else if (_renameTargetGroup != null)
         {
-            <RenameGroupDialog Group="_renameTargetGroup" OnSaved="OnGroupRenamed" OnCancel="CloseAllPanels" />
+            <div class="sz-content-panel-scroll">
+                <RenameGroupDialog Group="_renameTargetGroup" OnSaved="OnGroupRenamed" OnCancel="CloseAllPanels" />
+            </div>
         }
         else if (_deleteTargetGroup != null)
         {
-            <ConfirmDeleteGroupDialog Group="_deleteTargetGroup" OnDeleteAll="OnDeleteGroupConfirmedAll" OnDeleteGroupOnly="OnDeleteGroupConfirmedGroupOnly" OnCancel="CloseAllPanels" />
+            <div class="sz-content-panel-scroll">
+                <ConfirmDeleteGroupDialog Group="_deleteTargetGroup" OnDeleteAll="OnDeleteGroupConfirmedAll" OnDeleteGroupOnly="OnDeleteGroupConfirmedGroupOnly" OnCancel="CloseAllPanels" />
+            </div>
         }
         else if (_deleteTargetApplication != null)
         {
-            <ConfirmDeleteApplicationDialog Application="_deleteTargetApplication" OnConfirmed="OnDeleteApplicationConfirmed" OnCancel="CloseAllPanels" />
+            <div class="sz-content-panel-scroll">
+                <ConfirmDeleteApplicationDialog Application="_deleteTargetApplication" OnConfirmed="OnDeleteApplicationConfirmed" OnCancel="CloseAllPanels" />
+            </div>
         }
         else if (_createEndpointGroupApplication != null)
         {
-            <CreateEndpointGroupDialog Application="_createEndpointGroupApplication" OnSaved="OnCreateEndpointGroupConfirmed" OnCancel="CloseAllPanels" />
+            <div class="sz-content-panel-scroll">
+                <CreateEndpointGroupDialog Application="_createEndpointGroupApplication" OnSaved="OnCreateEndpointGroupConfirmed" OnCancel="CloseAllPanels" />
+            </div>
         }
         else if (_renameTargetEndpointGroup != null)
         {
-            <RenameEndpointGroupDialog Group="_renameTargetEndpointGroup" OnSaved="OnEndpointGroupRenamed" OnCancel="CloseAllPanels" />
+            <div class="sz-content-panel-scroll">
+                <RenameEndpointGroupDialog Group="_renameTargetEndpointGroup" OnSaved="OnEndpointGroupRenamed" OnCancel="CloseAllPanels" />
+            </div>
         }
         else if (_deleteTargetEndpointGroup != null)
         {
-            <ConfirmDeleteEndpointGroupDialog Group="_deleteTargetEndpointGroup" EndpointCount="_deleteTargetEndpointCount" OnConfirmed="OnEndpointGroupDeleteConfirmed" OnCancel="CloseAllPanels" />
+            <div class="sz-content-panel-scroll">
+                <ConfirmDeleteEndpointGroupDialog Group="_deleteTargetEndpointGroup" EndpointCount="_deleteTargetEndpointCount" OnConfirmed="OnEndpointGroupDeleteConfirmed" OnCancel="CloseAllPanels" />
+            </div>
         }
         else if (NavigationStateService.CurrentSelection == null)
         {
@@ -248,7 +266,16 @@
             if (loaded != null)
             {
                 CloseAllPanels();
-                var path = new List<object> { (object?)loaded.Application ?? loaded, loaded };
+                var path = new List<object>();
+                if (loaded.Application != null)
+                {
+                    if (loaded.Application.ApplicationGroup != null)
+                        path.Add(loaded.Application.ApplicationGroup);
+                    path.Add(loaded.Application);
+                }
+                if (loaded.EndpointGroup != null)
+                    path.Add(loaded.EndpointGroup);
+                path.Add(loaded);
                 await NavigationStateService.SetWorkspaceSelectionAsync(new WorkspaceSelection(loaded, path));
             }
         }

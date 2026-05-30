@@ -25,6 +25,9 @@ public class ActivityLogService : IActivityLogService
     public event Action? OnEntryAdded;
 
     /// <inheritdoc/>
+    public event Action? OnCleared;
+
+    /// <inheritdoc/>
     public void Log(ActivityLogCategory category, string message, string? details = null)
     {
         var entry = new ActivityLogEntry
@@ -56,6 +59,15 @@ public class ActivityLogService : IActivityLogService
         lock (_entriesLock)
         {
             _entries.Clear();
+        }
+
+        try
+        {
+            OnCleared?.Invoke();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "Fehler im OnCleared-Event-Handler.");
         }
     }
 }

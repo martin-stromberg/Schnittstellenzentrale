@@ -1,37 +1,44 @@
 @inject IEndpointRepository EndpointRepository
 
 <div class="sz-content-view">
-    <ContentHeader Name="@EndpointGroup.Name" ReadOnly="true" />
-
-    <div class="sz-content-blocks">
-        <div class="sz-content-block">
-            <h3>Endpunkte</h3>
-            @if (_endpoints.Count == 0)
-            {
-                <p>Keine Endpunkte in diesem Ordner.</p>
-            }
-            else
-            {
+    <div class="sz-dashboard">
+        <div class="sz-endpoints-section">
+            <div class="sz-endpoints-header">
+                <span class="sz-section-label">Endpunkte in »@EndpointGroup.Name«</span>
+            </div>
+            <div class="sz-table-wrapper">
                 <table class="sz-table">
                     <thead>
                         <tr>
                             <th>Methode</th>
-                            <th>Name</th>
-                            <th>Pfad</th>
+                            <th>Endpunkt</th>
+                            <th>Beschreibung</th>
+                            <th>Aktion</th>
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach (var endpoint in _endpoints)
+                        @foreach (var ep in _endpoints)
                         {
                             <tr>
-                                <td>@endpoint.Method</td>
-                                <td>@endpoint.Name</td>
-                                <td>@endpoint.RelativePath</td>
+                                <td>
+                                    <span class="@GetMethodBadgeClass(ep.Method.ToString())">@ep.Method</span>
+                                </td>
+                                <td><span class="sz-endpoint-path">@ep.RelativePath</span></td>
+                                <td><span class="sz-endpoint-desc">@ep.Name</span></td>
+                                <td>
+                                    <button type="button" class="sz-table-action-btn" title="Ausführen">&#9654;</button>
+                                </td>
+                            </tr>
+                        }
+                        @if (_endpoints.Count == 0)
+                        {
+                            <tr>
+                                <td colspan="4" class="sz-endpoint-desc">Keine Endpunkte in diesem Ordner.</td>
                             </tr>
                         }
                     </tbody>
                 </table>
-            }
+            </div>
         </div>
     </div>
 </div>
@@ -46,4 +53,14 @@
         var all = await EndpointRepository.GetEndpointsAsync(EndpointGroup.ApplicationId);
         _endpoints = all.Where(e => e.EndpointGroupId == EndpointGroup.Id).ToList();
     }
+
+    private static string GetMethodBadgeClass(string method) => method.ToUpperInvariant() switch
+    {
+        "GET" => "sz-method-badge sz-method-badge--get",
+        "POST" => "sz-method-badge sz-method-badge--post",
+        "PUT" => "sz-method-badge sz-method-badge--put",
+        "PATCH" => "sz-method-badge sz-method-badge--patch",
+        "DELETE" => "sz-method-badge sz-method-badge--delete",
+        _ => "sz-method-badge"
+    };
 }

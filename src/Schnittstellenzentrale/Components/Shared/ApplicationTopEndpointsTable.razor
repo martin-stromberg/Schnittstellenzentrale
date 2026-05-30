@@ -1,33 +1,42 @@
 @inject IHistoryService HistoryService
 
-<div class="sz-top-endpoints">
-    <h3>Top-5-Endpunkte</h3>
-    @if (_topEndpoints.Count == 0)
-    {
-        <p>Noch keine Aufrufhistorie vorhanden.</p>
-    }
-    else
-    {
+<div class="sz-endpoints-section">
+    <div class="sz-endpoints-header">
+        <span class="sz-section-label">Core Endpoints</span>
+    </div>
+    <div class="sz-table-wrapper">
         <table class="sz-table">
             <thead>
                 <tr>
                     <th>Methode</th>
-                    <th>Pfad</th>
+                    <th>Endpunkt</th>
                     <th>Aufrufe</th>
+                    <th>Aktion</th>
                 </tr>
             </thead>
             <tbody>
-                @foreach (var entry in _topEndpoints)
+                @foreach (var ep in _topEndpoints)
                 {
                     <tr>
-                        <td>@entry.HttpMethod</td>
-                        <td>@entry.RelativePath</td>
-                        <td>@entry.CallCount</td>
+                        <td>
+                            <span class="@GetMethodBadgeClass(ep.HttpMethod)">@ep.HttpMethod</span>
+                        </td>
+                        <td><span class="sz-endpoint-path">@ep.RelativePath</span></td>
+                        <td><span class="sz-endpoint-desc">@ep.CallCount</span></td>
+                        <td>
+                            <button type="button" class="sz-table-action-btn" title="Ausführen">&#9654;</button>
+                        </td>
+                    </tr>
+                }
+                @if (_topEndpoints.Count == 0)
+                {
+                    <tr>
+                        <td colspan="4" class="sz-endpoint-desc">Keine Endpunkte vorhanden.</td>
                     </tr>
                 }
             </tbody>
         </table>
-    }
+    </div>
 </div>
 
 @code {
@@ -39,4 +48,14 @@
     {
         _topEndpoints = await HistoryService.GetTopEndpointsAsync(ApplicationId, 5);
     }
+
+    private static string GetMethodBadgeClass(string? method) => method?.ToUpperInvariant() switch
+    {
+        "GET" => "sz-method-badge sz-method-badge--get",
+        "POST" => "sz-method-badge sz-method-badge--post",
+        "PUT" => "sz-method-badge sz-method-badge--put",
+        "PATCH" => "sz-method-badge sz-method-badge--patch",
+        "DELETE" => "sz-method-badge sz-method-badge--delete",
+        _ => "sz-method-badge"
+    };
 }

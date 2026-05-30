@@ -5,20 +5,35 @@
 @inject IApplicationApiClient ApplicationApiClient
 
 <div class="sz-content-view">
-    <ContentHeader Name="@Application.Name"
-                   Subtitle="@Application.Subtitle"
-                   IconData="@Application.IconData"
-                   OnNameChanged="OnNameChanged"
-                   OnSubtitleChanged="OnSubtitleChanged"
-                   OnIconChanged="OnIconChanged" />
-
-    <div class="sz-content-actions">
-        @if (Application.InterfaceType == Core.Enums.InterfaceType.Rest && !string.IsNullOrEmpty(Application.InterfaceUrl))
-        {
-            <button type="button" class="sz-btn sz-btn-outline sz-btn-sm" @onclick="OpenSwaggerImportAsync">Swagger-Import</button>
-        }
-        <button type="button" class="sz-btn sz-btn-outline sz-btn-sm" @onclick="RunHealthCheckAsync">Health-Check</button>
-    </div>
+    <section class="sz-hero">
+        <div class="sz-hero-bg">
+            <div class="sz-hero-bg-gradient"></div>
+            <div class="sz-hero-bg-pattern"></div>
+        </div>
+        <div class="sz-hero-content">
+            <div class="sz-hero-left">
+                @if (!string.IsNullOrEmpty(Application.InterfaceUrl))
+                {
+                    <div class="sz-hero-badge-row">
+                        <span class="sz-hero-badge">@Application.InterfaceType</span>
+                    </div>
+                }
+                <ContentHeader Name="@Application.Name"
+                               Subtitle="@Application.Subtitle"
+                               IconData="@Application.IconData"
+                               OnNameChanged="OnNameChanged"
+                               OnSubtitleChanged="OnSubtitleChanged"
+                               OnIconChanged="OnIconChanged" />
+            </div>
+            <div class="sz-hero-right">
+                @if (Application.InterfaceType == Core.Enums.InterfaceType.Rest && !string.IsNullOrEmpty(Application.InterfaceUrl))
+                {
+                    <button type="button" class="sz-btn sz-btn-outline sz-btn-sm" @onclick="OpenSwaggerImportAsync">Swagger-Import</button>
+                }
+                <button type="button" class="sz-btn sz-btn-outline sz-btn-sm" @onclick="RunHealthCheckAsync">Health-Check</button>
+            </div>
+        </div>
+    </section>
 
     @if (_showSwaggerImport && _swaggerDiff != null)
     {
@@ -29,40 +44,45 @@
         <HealthCheckDialog Application="Application" IsReachable="_healthCheckResult" OnClose="CloseHealthCheck" OnRemove="OnHealthCheckRemove" />
     }
 
-    <div class="sz-content-blocks">
-        <div class="sz-content-block">
-            <h3>Beschreibung</h3>
-            <p>@(string.IsNullOrEmpty(Application.Description) ? "Keine Beschreibung vorhanden." : Application.Description)</p>
+    <div class="sz-dashboard">
+        <div class="sz-dashboard-grid">
+            <div class="sz-dashboard-col-main">
+                <div class="sz-info-block">
+                    <span class="sz-section-label">Beschreibung</span>
+                    <p class="sz-info-description">
+                        @(string.IsNullOrEmpty(Application.Description) ? "Keine Beschreibung vorhanden." : Application.Description)
+                    </p>
+                    <div class="sz-info-url-grid">
+                        <div class="sz-info-url-card">
+                            <div class="sz-info-url-label">Basis-URL</div>
+                            <div class="sz-info-url-value">@Application.BaseUrl</div>
+                        </div>
+                        @if (!string.IsNullOrEmpty(Application.InterfaceUrl))
+                        {
+                            <div class="sz-info-url-card">
+                                <div class="sz-info-url-label">Swagger / OData URL</div>
+                                <a class="sz-info-url-value sz-info-url-value--link" href="@Application.InterfaceUrl" target="_blank" rel="noopener">
+                                    @Application.InterfaceUrl
+                                </a>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+            <div class="sz-dashboard-col-aside">
+                <span class="sz-section-label">KPI</span>
+                <div class="sz-kpi-card">
+                    <div class="sz-kpi-row">
+                        <span class="sz-kpi-label">Anzahl Endpunkte</span>
+                        <span class="sz-kpi-value">@_endpointCount</span>
+                    </div>
+                </div>
+            </div>
         </div>
 
-        <div class="sz-content-block">
-            <h3>URLs</h3>
-            <dl>
-                <dt>Basis-URL</dt>
-                <dd>@Application.BaseUrl</dd>
-                @if (!string.IsNullOrEmpty(Application.InterfaceUrl))
-                {
-                    <dt>Swagger / OData</dt>
-                    <dd>@Application.InterfaceUrl</dd>
-                }
-            </dl>
-        </div>
+        <LinksManager ApplicationId="@Application.Id" />
 
-        <div class="sz-content-block">
-            <h3>Status</h3>
-            <dl>
-                <dt>Endpunkte</dt>
-                <dd>@_endpointCount</dd>
-            </dl>
-        </div>
-
-        <div class="sz-content-block">
-            <LinksManager ApplicationId="@Application.Id" />
-        </div>
-
-        <div class="sz-content-block">
-            <ApplicationTopEndpointsTable ApplicationId="@Application.Id" />
-        </div>
+        <ApplicationTopEndpointsTable ApplicationId="@Application.Id" />
     </div>
 </div>
 

@@ -1,28 +1,80 @@
 @inject IApplicationGroupService ApplicationGroupService
 @inject IApplicationRepository ApplicationRepository
+@inject IEndpointRepository EndpointRepository
 
 <div class="sz-content-view">
-    <ContentHeader Name="@Group.Name"
-                   Subtitle="@Group.Subtitle"
-                   IconData="@Group.IconData"
-                   OnNameChanged="OnNameChanged"
-                   OnSubtitleChanged="OnSubtitleChanged"
-                   OnIconChanged="OnIconChanged" />
+    <section class="sz-hero">
+        <div class="sz-hero-bg">
+            <div class="sz-hero-bg-gradient"></div>
+            <div class="sz-hero-bg-pattern"></div>
+        </div>
+        <div class="sz-hero-content">
+            <div class="sz-hero-left">
+                <ContentHeader Name="@Group.Name"
+                               Subtitle="@Group.Subtitle"
+                               IconData="@Group.IconData"
+                               OnNameChanged="OnNameChanged"
+                               OnSubtitleChanged="OnSubtitleChanged"
+                               OnIconChanged="OnIconChanged" />
+            </div>
+        </div>
+    </section>
 
-    <div class="sz-content-blocks">
-        <div class="sz-content-block">
-            <h3>Beschreibung</h3>
-            <p>@(string.IsNullOrEmpty(Group.Description) ? "Keine Beschreibung vorhanden." : Group.Description)</p>
+    <div class="sz-dashboard">
+        <div class="sz-dashboard-grid">
+            <div class="sz-dashboard-col-aside">
+                <span class="sz-section-label">KPI</span>
+                <div class="sz-kpi-card">
+                    <div class="sz-kpi-row">
+                        <span class="sz-kpi-label">Anzahl Anwendungen</span>
+                        <span class="sz-kpi-value">@_applicationCount</span>
+                    </div>
+                    <div class="sz-kpi-divider"></div>
+                    <div class="sz-kpi-row">
+                        <span class="sz-kpi-label">Anzahl Endpunkte</span>
+                        <span class="sz-kpi-value">@_endpointCount</span>
+                    </div>
+                </div>
+            </div>
         </div>
 
-        <div class="sz-content-block">
-            <h3>Status</h3>
-            <dl>
-                <dt>Anwendungen</dt>
-                <dd>@_applicationCount</dd>
-                <dt>Endpunkte</dt>
-                <dd>@_endpointCount</dd>
-            </dl>
+        <div class="sz-endpoints-section">
+            <div class="sz-endpoints-header">
+                <span class="sz-section-label">Core Endpoints</span>
+            </div>
+            <div class="sz-table-wrapper">
+                <table class="sz-table">
+                    <thead>
+                        <tr>
+                            <th>Methode</th>
+                            <th>Endpunkt</th>
+                            <th>Beschreibung</th>
+                            <th>Aktion</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var ep in _endpoints)
+                        {
+                            <tr>
+                                <td>
+                                    <span class="@GetMethodBadgeClass(ep.Method.ToString())">@ep.Method</span>
+                                </td>
+                                <td><span class="sz-endpoint-path">@ep.RelativePath</span></td>
+                                <td><span class="sz-endpoint-desc">@ep.Name</span></td>
+                                <td>
+                                    <button type="button" class="sz-table-action-btn" title="Ausführen">&#9654;</button>
+                                </td>
+                            </tr>
+                        }
+                        @if (_endpoints.Count == 0)
+                        {
+                            <tr>
+                                <td colspan="4" class="sz-endpoint-desc">Keine Endpunkte vorhanden.</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 </div>
@@ -32,12 +84,31 @@
 
     private int _applicationCount;
     private int _endpointCount;
+    private IList<Core.Models.Endpoint> _endpoints = [];
 
     protected override async Task OnParametersSetAsync()
     {
         _applicationCount = await ApplicationRepository.GetApplicationCountByGroupAsync(Group.Id);
         _endpointCount = await ApplicationRepository.GetEndpointCountByGroupAsync(Group.Id);
+
+        var all = new List<Core.Models.Endpoint>();
+        foreach (var app in Group.Applications)
+        {
+            var eps = await EndpointRepository.GetEndpointsAsync(app.Id);
+            all.AddRange(eps);
+        }
+        _endpoints = all.Take(5).ToList();
     }
+
+    private static string GetMethodBadgeClass(string method) => method.ToUpperInvariant() switch
+    {
+        "GET" => "sz-method-badge sz-method-badge--get",
+        "POST" => "sz-method-badge sz-method-badge--post",
+        "PUT" => "sz-method-badge sz-method-badge--put",
+        "PATCH" => "sz-method-badge sz-method-badge--patch",
+        "DELETE" => "sz-method-badge sz-method-badge--delete",
+        _ => "sz-method-badge"
+    };
 
     private async Task OnNameChanged(string name)
     {

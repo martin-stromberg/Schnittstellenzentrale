@@ -1,32 +1,13 @@
 @inject IApplicationLinkService ApplicationLinkService
 
-<div class="sz-links-manager">
-    <h3>Links</h3>
-
-    @foreach (var link in _links)
-    {
-        @if (_editingLinkId == link.Id)
+<div class="sz-links-section">
+    <div class="sz-links-header">
+        <span class="sz-section-label">Verwaltbare Links</span>
+        @if (!_addingNew)
         {
-            <div class="sz-link-edit-row">
-                <input class="sz-input" @bind="_editUrl" placeholder="URL (https://...)" />
-                <input class="sz-input" @bind="_editLabel" placeholder="Beschriftung (optional)" />
-                @if (!string.IsNullOrEmpty(_linkError))
-                {
-                    <span class="sz-inplace-error">@_linkError</span>
-                }
-                <button type="button" class="sz-btn-primary" @onclick="SaveEditAsync">Speichern</button>
-                <button type="button" class="sz-btn-secondary" @onclick="CancelEdit">Abbrechen</button>
-            </div>
+            <button type="button" class="sz-links-add-btn" @onclick="StartAdd">+ Link hinzufügen</button>
         }
-        else
-        {
-            <div class="sz-link-row">
-                <a href="@link.Url" target="_blank" rel="noopener">@(string.IsNullOrEmpty(link.Label) ? link.Url : link.Label)</a>
-                <button type="button" class="sz-btn-icon" @onclick="() => StartEdit(link)">&#9998;</button>
-                <button type="button" class="sz-btn-icon" @onclick="() => DeleteLinkAsync(link.Id)">&#128465;</button>
-            </div>
-        }
-    }
+    </div>
 
     @if (_addingNew)
     {
@@ -37,14 +18,53 @@
             {
                 <span class="sz-inplace-error">@_linkError</span>
             }
-            <button type="button" class="sz-btn-primary" @onclick="SaveNewAsync">Speichern</button>
-            <button type="button" class="sz-btn-secondary" @onclick="CancelNew">Abbrechen</button>
+            <div class="sz-link-edit-actions">
+                <button type="button" class="sz-btn-primary" @onclick="SaveNewAsync">Speichern</button>
+                <button type="button" class="sz-btn-secondary" @onclick="CancelNew">Abbrechen</button>
+            </div>
         </div>
     }
-    else
-    {
-        <button type="button" class="sz-btn-secondary" @onclick="StartAdd">+ Link hinzufügen</button>
-    }
+
+    <div class="sz-links-list">
+        @for (int i = 0; i < _links.Count; i++)
+        {
+            var link = _links[i];
+            var isLast = i == _links.Count - 1;
+
+            @if (_editingLinkId == link.Id)
+            {
+                <div class="sz-link-edit-row">
+                    <input class="sz-input" @bind="_editUrl" placeholder="URL (https://...)" />
+                    <input class="sz-input" @bind="_editLabel" placeholder="Beschriftung (optional)" />
+                    @if (!string.IsNullOrEmpty(_linkError))
+                    {
+                        <span class="sz-inplace-error">@_linkError</span>
+                    }
+                    <div class="sz-link-edit-actions">
+                        <button type="button" class="sz-btn-primary" @onclick="SaveEditAsync">Speichern</button>
+                        <button type="button" class="sz-btn-secondary" @onclick="CancelEdit">Abbrechen</button>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="sz-link-entry">
+                    <div class="sz-link-entry-left">
+                        <span class="sz-link-icon">&#128279;</span>
+                        <a class="sz-link-anchor" href="@link.Url" target="_blank" rel="noopener">
+                            @(string.IsNullOrEmpty(link.Label) ? link.Url : link.Label)
+                        </a>
+                        <button type="button" class="sz-btn-icon" title="Bearbeiten" @onclick="() => StartEdit(link)">&#9998;</button>
+                    </div>
+                    <button type="button" class="sz-link-delete-btn" title="Löschen" @onclick="() => DeleteLinkAsync(link.Id)">&#128465;</button>
+                </div>
+                @if (!isLast)
+                {
+                    <div class="sz-link-divider"></div>
+                }
+            }
+        }
+    </div>
 </div>
 
 @code {
@@ -139,6 +159,8 @@
         _links = await ApplicationLinkService.GetLinksAsync(ApplicationId);
     }
 
+    private const int MaxUrlLength = 2048;
+
     private static bool ValidateUrl(string url, out string error)
     {
         if (string.IsNullOrWhiteSpace(url))
@@ -150,6 +172,11 @@
             !url.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
         {
             error = "URL muss mit http:// oder https:// beginnen.";
+            return false;
+        }
+        if (url.Length > MaxUrlLength)
+        {
+            error = $"URL darf maximal {MaxUrlLength} Zeichen lang sein.";
             return false;
         }
         error = string.Empty;

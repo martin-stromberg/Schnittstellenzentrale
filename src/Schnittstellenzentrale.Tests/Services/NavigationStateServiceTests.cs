@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging.Abstractions;
 using Schnittstellenzentrale.Core.Enums;
 using Schnittstellenzentrale.Core.Models;
 using Schnittstellenzentrale.Infrastructure.Services;
@@ -7,11 +8,14 @@ namespace Schnittstellenzentrale.Tests.Services;
 /// <summary>NavigationStateServiceTests</summary>
 public class NavigationStateServiceTests
 {
+    private static NavigationStateService CreateService() =>
+        new(NullLogger<NavigationStateService>.Instance);
+
     /// <summary>NavigationStateService_SetArea_FeuertOnAreaChanged</summary>
     [Fact]
     public async Task NavigationStateService_SetArea_FeuertOnAreaChanged()
     {
-        var service = new NavigationStateService();
+        var service = CreateService();
         var fired = false;
         service.OnAreaChanged += () => fired = true;
 
@@ -25,7 +29,7 @@ public class NavigationStateServiceTests
     [Fact]
     public async Task NavigationStateService_SetSelection_FeuertOnSelectionChanged()
     {
-        var service = new NavigationStateService();
+        var service = CreateService();
         var fired = false;
         service.OnSelectionChanged += () => fired = true;
 

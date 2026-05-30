@@ -7,6 +7,7 @@ public interface IActivityLogService
 {
     IReadOnlyList<ActivityLogEntry> Entries { get; }
     event Action? OnEntryAdded;
+    event Action? OnCleared;
     void Log(ActivityLogCategory category, string message, string? details = null);
     void Clear();
 }

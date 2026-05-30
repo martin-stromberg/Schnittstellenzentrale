@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using Schnittstellenzentrale.Core.Enums;
 using Schnittstellenzentrale.Core.Interfaces;
 using Schnittstellenzentrale.Core.Models;
@@ -7,6 +8,14 @@ namespace Schnittstellenzentrale.Infrastructure.Services;
 /// <summary>Implementierung von <see cref="INavigationStateService"/>.</summary>
 public class NavigationStateService : INavigationStateService
 {
+    private readonly ILogger<NavigationStateService> _logger;
+
+    /// <summary>Initialisiert eine neue Instanz von <see cref="NavigationStateService"/>.</summary>
+    public NavigationStateService(ILogger<NavigationStateService> logger)
+    {
+        _logger = logger;
+    }
+
     /// <inheritdoc/>
     public NavigationArea CurrentArea { get; private set; } = NavigationArea.Workspaces;
 
@@ -26,7 +35,14 @@ public class NavigationStateService : INavigationStateService
     public Task SetAreaAsync(NavigationArea area)
     {
         CurrentArea = area;
-        OnAreaChanged?.Invoke();
+        try
+        {
+            OnAreaChanged?.Invoke();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "Fehler im OnAreaChanged-Event-Handler.");
+        }
         return Task.CompletedTask;
     }
 
@@ -34,7 +50,14 @@ public class NavigationStateService : INavigationStateService
     public Task SetWorkspaceSelectionAsync(WorkspaceSelection? selection)
     {
         CurrentSelection = selection;
-        OnSelectionChanged?.Invoke();
+        try
+        {
+            OnSelectionChanged?.Invoke();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "Fehler im OnSelectionChanged-Event-Handler.");
+        }
         return Task.CompletedTask;
     }
 }
