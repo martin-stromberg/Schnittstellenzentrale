@@ -90,7 +90,7 @@
         }
         else if (NavigationStateService.CurrentSelection.SelectedItem is ApplicationGroup selectedGroup)
         {
-            <CollectionContentView Group="selectedGroup" />
+            <CollectionContentView Group="selectedGroup" OnCreateApplicationRequested="OnCreateApplicationRequested" />
         }
         else if (NavigationStateService.CurrentSelection.SelectedItem is Application selectedApp)
         {

@@ -309,6 +309,19 @@ html, body {
     margin: 1rem;
 }
 
+.sz-alert {
+    padding: 0.625rem 0.875rem;
+    border-radius: calc(var(--radius) - 2px);
+    font-size: 0.875rem;
+    margin-bottom: 0.5rem;
+}
+
+.sz-alert-danger {
+    background-color: color-mix(in srgb, var(--destructive) 10%, transparent);
+    color: var(--destructive);
+    border: 1px solid color-mix(in srgb, var(--destructive) 30%, transparent);
+}
+
 /* ================================================================
    Hero-Sektion (Anwendungsgruppe + Anwendung)
    ================================================================ */
@@ -805,6 +818,12 @@ html, body {
 
 .sz-btn-secondary:hover {
     opacity: 0.85;
+}
+
+.sz-editor-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 1.5rem;
 }
 
 .sz-btn-icon {
@@ -1325,6 +1344,8 @@ html, body {
 .sz-icon-chevron-down::before  { content: "⌄"; font-size: 1.2em; font-weight: 700; }
 .sz-icon-collection::before    { content: "⊞"; }
 .sz-icon-folder::before        { content: "⊟"; }
+.sz-icon-window::before        { content: "⬜"; }
+.sz-icon-lightning::before     { content: "⚡"; }
 .sz-icon-app::before           { content: "◈"; }
 .sz-icon-endpoint::before      { content: "◇"; }
 .sz-icon-upload::before        { content: "↑"; }

@@ -193,13 +193,14 @@ public class EndpointScriptRunner : IEndpointScriptRunner
             }
             : new SystemEnvironment
             {
+                Id = 0,
                 Name = string.Empty,
                 Variables = updatedVariables
             };
 
         context.EnvironmentService.SetActiveEnvironment(updatedEnv);
 
-        if (activeEnv != null)
+        if (activeEnv != null && activeEnv.Id > 0)
         {
             // Bekannte Einschränkung: Jint-Callbacks sind synchron; await ist in diesem Kontext nicht möglich.
             // Task.Run + GetAwaiter().GetResult() blockiert einen Thread-Pool-Thread für die Dauer des

@@ -17,6 +17,9 @@
                                OnSubtitleChanged="OnSubtitleChanged"
                                OnIconChanged="OnIconChanged" />
             </div>
+            <div class="sz-hero-right">
+                <button type="button" class="sz-btn sz-btn-outline sz-btn-sm" @onclick="RequestCreateApplication">+ Neue Anwendung</button>
+            </div>
         </div>
     </section>
 
@@ -81,6 +84,7 @@
 
 @code {
     [Parameter, EditorRequired] public ApplicationGroup Group { get; set; } = null!;
+    [Parameter] public EventCallback OnCreateApplicationRequested { get; set; }
 
     private int _applicationCount;
     private int _endpointCount;
@@ -113,4 +117,6 @@
         await ApplicationGroupService.UpdateIconAsync(Group.Id, iconData);
         Group.IconData = iconData;
     }
+
+    private async Task RequestCreateApplication() => await OnCreateApplicationRequested.InvokeAsync();
 }

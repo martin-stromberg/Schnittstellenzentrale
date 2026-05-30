@@ -853,6 +853,91 @@ public class EndpointExecutionServiceTests
         Assert.Contains("***", capturedDetails);
     }
 
+    /// <summary>PostScript_Fehler_NachHttp200_ProtokolliertEndpointExecuted_NichtHttpError</summary>
+    [Fact]
+    public async Task PostScript_Fehler_NachHttp200_ProtokolliertEndpointExecuted_NichtHttpError()
+    {
+        var logMock = TestMockFactory.CreateActivityLogServiceMock();
+        var scriptMock = new Mock<IEndpointScriptRunner>();
+        scriptMock.Setup(r => r.ExecuteAsync(It.IsAny<string>(), It.IsAny<ScriptContext>()))
+            .ReturnsAsync(new ScriptExecutionResult { Success = false, ErrorMessage = "Post-Skript-Fehler" });
+
+        var (service, _, _) = CreateService(_credMock,
+            responseCode: System.Net.HttpStatusCode.OK,
+            body: "{}",
+            scriptRunnerMock: scriptMock,
+            activityLogServiceMock: logMock);
+
+        var endpoint = CreateEndpoint(postRequestScript: "invalid@@");
+
+        var result = await service.ExecuteAsync(endpoint);
+
+        Assert.False(result.Success);
+        Assert.True(result.HttpSuccess);
+        Assert.Equal(200, result.StatusCode);
+        logMock.Verify(l => l.Log(ActivityLogCategory.EndpointExecuted, It.IsAny<string>(), It.IsAny<string?>()), Times.Once);
+        logMock.Verify(l => l.Log(ActivityLogCategory.HttpError, It.IsAny<string>(), It.IsAny<string?>()), Times.Never);
+    }
+
+    /// <summary>PostScript_Fehler_NachHttp200_ProtokolliertZusaetzlichInternalError</summary>
+    [Fact]
+    public async Task PostScript_Fehler_NachHttp200_ProtokolliertZusaetzlichInternalError()
+    {
+        var logMock = TestMockFactory.CreateActivityLogServiceMock();
+        var scriptMock = new Mock<IEndpointScriptRunner>();
+        scriptMock.Setup(r => r.ExecuteAsync(It.IsAny<string>(), It.IsAny<ScriptContext>()))
+            .ReturnsAsync(new ScriptExecutionResult { Success = false, ErrorMessage = "Post-Skript-Fehler" });
+
+        var (service, _, _) = CreateService(_credMock,
+            responseCode: System.Net.HttpStatusCode.OK,
+            body: "{}",
+            scriptRunnerMock: scriptMock,
+            activityLogServiceMock: logMock);
+
+        var endpoint = CreateEndpoint(postRequestScript: "invalid@@");
+
+        await service.ExecuteAsync(endpoint);
+
+        logMock.Verify(l => l.Log(ActivityLogCategory.InternalError, It.IsAny<string>(), It.IsAny<string?>()), Times.Once);
+    }
+
+    /// <summary>BuildMaskedDetails_MaskiertUrlKodierteVariablenWerte</summary>
+    [Fact]
+    public async Task BuildMaskedDetails_MaskiertUrlKodierteVariablenWerte()
+    {
+        var logMock = TestMockFactory.CreateActivityLogServiceMock();
+
+        const string secretValue = "My Secret";
+        var envMock = new Mock<IActiveEnvironmentService>();
+        var env = new Core.Models.SystemEnvironment
+        {
+            Id = 1,
+            Name = "Test",
+            Variables =
+            [
+                new Core.Models.EnvironmentVariable { Name = "token", Value = secretValue, IsValueMasked = true }
+            ]
+        };
+        envMock.Setup(s => s.ActiveEnvironment).Returns(env);
+        envMock.Setup(s => s.ActiveVariables).Returns(new Dictionary<string, string> { ["token"] = secretValue });
+
+        string? capturedDetails = null;
+        logMock.Setup(l => l.Log(ActivityLogCategory.EndpointExecuted, It.IsAny<string>(), It.IsAny<string?>()))
+            .Callback<ActivityLogCategory, string, string?>((_, _, d) => capturedDetails = d);
+
+        var (service, _, _) = CreateService(_credMock,
+            body: $"{{\"token\":\"{Uri.EscapeDataString(secretValue)}\"}}",
+            activeEnvironmentMock: envMock,
+            activityLogServiceMock: logMock);
+        var endpoint = CreateEndpoint(AuthenticationType.None);
+
+        await service.ExecuteAsync(endpoint);
+
+        Assert.NotNull(capturedDetails);
+        Assert.DoesNotContain(Uri.EscapeDataString(secretValue), capturedDetails);
+        Assert.Contains("***", capturedDetails);
+    }
+
     /// <summary>SzExecute_MehrdeutigerName_GibtFehlerZurueck</summary>
     [Fact]
     public async Task SzExecute_MehrdeutigerName_GibtFehlerZurueck()

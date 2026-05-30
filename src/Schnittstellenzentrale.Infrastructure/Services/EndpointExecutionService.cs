@@ -116,7 +116,25 @@ public class EndpointExecutionService : IEndpointExecutionService
                 };
             }
 
-            if (result.Success)
+            if (!string.IsNullOrEmpty(endpoint.PostRequestScript))
+            {
+                var responseData = new ScriptResponseData
+                {
+                    Body = result.ResponseBody,
+                    Headers = result.ResponseHeaders ?? new Dictionary<string, string>()
+                };
+                var postContext = BuildScriptContext(endpoint, callDepth, response: responseData);
+                var postResult = await _scriptRunner.ExecuteAsync(endpoint.PostRequestScript, postContext);
+                if (!postResult.Success)
+                {
+                    result.Success = false;
+                    result.ErrorMessage = string.IsNullOrEmpty(result.ErrorMessage)
+                        ? postResult.ErrorMessage
+                        : $"{result.ErrorMessage}\n{postResult.ErrorMessage}";
+                }
+            }
+
+            if (result.HttpSuccess)
             {
                 var maskedVariables = _activeEnvironmentService.ActiveEnvironment?.Variables
                     ?? Enumerable.Empty<EnvironmentVariable>();
@@ -139,22 +157,11 @@ public class EndpointExecutionService : IEndpointExecutionService
                     $"{result.RequestDetails} — {result.StatusCode}");
             }
 
-            if (!string.IsNullOrEmpty(endpoint.PostRequestScript))
+            if (!result.Success && result.HttpSuccess)
             {
-                var responseData = new ScriptResponseData
-                {
-                    Body = result.ResponseBody,
-                    Headers = result.ResponseHeaders ?? new Dictionary<string, string>()
-                };
-                var postContext = BuildScriptContext(endpoint, callDepth, response: responseData);
-                var postResult = await _scriptRunner.ExecuteAsync(endpoint.PostRequestScript, postContext);
-                if (!postResult.Success)
-                {
-                    result.Success = false;
-                    result.ErrorMessage = string.IsNullOrEmpty(result.ErrorMessage)
-                        ? postResult.ErrorMessage
-                        : $"{result.ErrorMessage}\n{postResult.ErrorMessage}";
-                }
+                _activityLogService.Log(
+                    ActivityLogCategory.InternalError,
+                    $"{result.RequestDetails} — Post-Script-Fehler: {result.ErrorMessage}");
             }
 
             await PersistHistoryEntryAsync(endpoint, result);
@@ -264,6 +271,7 @@ public class EndpointExecutionService : IEndpointExecutionService
         return new EndpointExecutionResult
         {
             Success = response.IsSuccessStatusCode,
+            HttpSuccess = response.IsSuccessStatusCode,
             StatusCode = (int)response.StatusCode,
             RequestDetails = $"{endpoint.Method} {resolvedUrl}",
             ResponseBody = body,
@@ -354,7 +362,12 @@ public class EndpointExecutionService : IEndpointExecutionService
     private static string BuildMaskedDetails(string details, IEnumerable<EnvironmentVariable> variables)
     {
         foreach (var variable in variables.Where(v => v.IsValueMasked && !string.IsNullOrEmpty(v.Value)))
+        {
             details = details.Replace(variable.Value, "***", StringComparison.OrdinalIgnoreCase);
+            var urlEncoded = Uri.EscapeDataString(variable.Value!);
+            if (!string.Equals(urlEncoded, variable.Value, StringComparison.OrdinalIgnoreCase))
+                details = details.Replace(urlEncoded, "***", StringComparison.OrdinalIgnoreCase);
+        }
         return details;
     }
 

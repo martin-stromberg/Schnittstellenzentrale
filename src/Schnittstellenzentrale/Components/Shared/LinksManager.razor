@@ -146,11 +146,16 @@
         }
         var existing = _links.FirstOrDefault(l => l.Id == _editingLinkId);
         if (existing == null) return;
-        existing.Url = _editUrl;
-        existing.Label = string.IsNullOrEmpty(_editLabel) ? null : _editLabel;
+        var updated = new ApplicationLink
+        {
+            Id = existing.Id,
+            ApplicationId = existing.ApplicationId,
+            Url = _editUrl,
+            Label = string.IsNullOrEmpty(_editLabel) ? null : _editLabel
+        };
         try
         {
-            await ApplicationLinkService.UpdateLinkAsync(existing);
+            await ApplicationLinkService.UpdateLinkAsync(updated);
         }
         catch (DbUpdateConcurrencyException)
         {

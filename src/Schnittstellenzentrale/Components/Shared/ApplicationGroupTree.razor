@@ -15,11 +15,6 @@
         <div class="sz-alert sz-alert-danger">@_errorMessage</div>
     }
 
-    <div class="sz-tree-topbar">
-        <button type="button" class="sz-btn sz-btn-outline sz-btn-sm" @onclick="RequestCreateGroup">Neue Sammlung</button>
-        <button type="button" class="sz-btn sz-btn-outline sz-btn-sm" @onclick="RequestCreateApplication">Neue Anwendung</button>
-    </div>
-
     <div class="sz-tree-body">
         @if (_groups != null)
         {
