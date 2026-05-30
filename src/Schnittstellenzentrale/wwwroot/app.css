@@ -1,4 +1,4 @@
-[data-bs-theme="light"] {
+:root {
     --sz-sidebar-bg-start: rgb(5, 39, 103);
     --sz-sidebar-bg-end: #3a0647;
     --sz-toprow-bg: #f7f7f7;
@@ -8,7 +8,7 @@
     --sz-nav-toprow-bg: rgba(0,0,0,0.4);
 }
 
-[data-bs-theme="dark"] {
+.dark {
     --sz-sidebar-bg-start: #0d1b2a;
     --sz-sidebar-bg-end: #1a0a1e;
     --sz-toprow-bg: #1e1e2e;
@@ -46,8 +46,8 @@ a, .btn-link {
 .sz-tree-sidebar {
     width: 280px;
     flex-shrink: 0;
-    border-right: 1px solid var(--bs-border-color);
-    background-color: var(--bs-body-bg);
+    border-right: 1px solid var(--border);
+    background-color: var(--background);
     overflow: hidden;
     display: flex;
     flex-direction: column;
@@ -74,7 +74,7 @@ a, .btn-link {
     flex-shrink: 0;
     display: flex;
     gap: 0.375rem;
-    border-bottom: 1px solid var(--bs-border-color);
+    border-bottom: 1px solid var(--border);
 }
 
 /* Scrollbarer Baum-Bereich */
@@ -98,7 +98,7 @@ a, .btn-link {
     background-color: rgba(128, 128, 128, 0.1);
 }
 
-[data-bs-theme="dark"] .sz-tree-row:hover {
+.dark .sz-tree-row:hover {
     background-color: rgba(255, 255, 255, 0.07);
 }
 
@@ -112,7 +112,7 @@ a, .btn-link {
     height: 1.75rem;
     background: transparent;
     border: none;
-    color: var(--bs-secondary-color);
+    color: var(--muted-foreground);
     cursor: pointer;
     padding: 0;
     flex-shrink: 0;
@@ -120,7 +120,7 @@ a, .btn-link {
 }
 
 .sz-tree-chevron-btn:hover {
-    color: var(--bs-body-color);
+    color: var(--foreground);
 }
 
 /* Haupt-Button (anklickbarer Eintrag) */
@@ -131,7 +131,7 @@ a, .btn-link {
     background: transparent;
     border: none;
     text-align: left;
-    color: var(--bs-body-color);
+    color: var(--foreground);
     font-size: 0.85rem;
     cursor: pointer;
     line-height: 1.25;
@@ -141,7 +141,7 @@ a, .btn-link {
 }
 
 .sz-tree-item-btn:hover {
-    color: var(--bs-body-color);
+    color: var(--foreground);
 }
 
 /* Nicht-anklickbares Label (z. B. Ordner-Gruppe) */
@@ -150,7 +150,7 @@ a, .btn-link {
     min-width: 0;
     padding: 0.25rem 0.25rem 0.25rem 0;
     font-size: 0.85rem;
-    color: var(--bs-body-color);
+    color: var(--foreground);
     line-height: 1.25;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -216,7 +216,7 @@ h1:focus {
 }
 
 .form-floating > .form-control-plaintext::placeholder, .form-floating > .form-control::placeholder {
-    color: var(--bs-secondary-color);
+    color: var(--muted-foreground);
     text-align: end;
 }
 
@@ -249,15 +249,15 @@ h1:focus {
     left: 0;
     right: 0;
     z-index: 1000;
-    background-color: var(--bs-body-bg);
-    border: 1px solid var(--bs-border-color);
+    background-color: var(--background);
+    border: 1px solid var(--border);
     border-radius: 0.5rem;
     box-shadow: 0 0.375rem 1rem rgba(0, 0, 0, 0.18);
     overflow: hidden;
     padding: 0.25rem 0;
 }
 
-[data-bs-theme="dark"] .context-menu-dropdown {
+.dark .context-menu-dropdown {
     background-color: #2c2c3e;
     border-color: #44445a;
     box-shadow: 0 0.375rem 1rem rgba(0, 0, 0, 0.5);
@@ -270,7 +270,7 @@ h1:focus {
     width: 100%;
     padding: 0.45rem 0.85rem;
     font-size: 0.825rem;
-    color: var(--bs-body-color);
+    color: var(--foreground);
     background: transparent;
     border: none;
     text-align: left;
@@ -281,18 +281,18 @@ h1:focus {
 .context-menu-item:hover,
 .context-menu-item:focus-visible {
     background-color: rgba(128, 128, 128, 0.15);
-    color: var(--bs-body-color);
+    color: var(--foreground);
     outline: none;
 }
 
 .context-menu-item--danger {
-    color: var(--bs-danger);
+    color: var(--destructive);
 }
 
 .context-menu-item--danger:hover,
 .context-menu-item--danger:focus-visible {
     background-color: rgba(220, 53, 69, 0.12);
-    color: var(--bs-danger);
+    color: var(--destructive);
     outline: none;
 }
 

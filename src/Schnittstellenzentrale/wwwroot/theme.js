@@ -9,7 +9,11 @@ export function setStoredTheme(scheme) {
 }
 
 export function applyTheme(scheme) {
-    document.documentElement.setAttribute('data-theme', scheme.toLowerCase());
+    if (scheme.toLowerCase() === 'dark') {
+        document.documentElement.classList.add('dark');
+    } else {
+        document.documentElement.classList.remove('dark');
+    }
 }
 
 export function getAndApplyStoredTheme() {
