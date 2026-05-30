@@ -39,7 +39,7 @@ public class PlaywrightServer : IAsyncLifetime
         var currentUserMock = new Mock<ICurrentUserService>();
         currentUserMock.Setup(s => s.GetCurrentUserName()).Returns("TEST\\testuser");
 
-        var contentRoot = Path.GetDirectoryName(typeof(Program).Assembly.Location)!;
+        var contentRoot = FindWebProjectRoot();
 
         _app = await Program.BuildWebApplicationAsync(
             [],
@@ -68,6 +68,20 @@ public class PlaywrightServer : IAsyncLifetime
             });
 
         await _app.StartAsync();
+    }
+
+    private static string FindWebProjectRoot()
+    {
+        var current = new DirectoryInfo(AppContext.BaseDirectory);
+        while (current != null)
+        {
+            var candidate = Path.Combine(current.FullName, "src", "Schnittstellenzentrale");
+            if (Directory.Exists(Path.Combine(candidate, "wwwroot")))
+                return candidate;
+            current = current.Parent;
+        }
+        throw new DirectoryNotFoundException(
+            "Schnittstellenzentrale-Projektverzeichnis nicht gefunden. Suche startete in: " + AppContext.BaseDirectory);
     }
 
     /// <inheritdoc/>
