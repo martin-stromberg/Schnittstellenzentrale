@@ -11,7 +11,7 @@
 @implements IAsyncDisposable
 
 <div class="sz-app-shell">
-    <TopBar />
+    <TopBar @ref="_topBar" />
     <div class="sz-app-content">
         @if (NavigationStateService.CurrentArea == NavigationArea.Workspaces)
         {
@@ -38,15 +38,25 @@
 </div>
 
 @code {
+    private TopBar? _topBar;
     private EnvironmentManagementOverlay? _environmentManagementOverlay;
     private HubConnection? _hubConnection;
 
     protected override void OnInitialized()
     {
-        StorageModeService.OnModeChanged += OnStateChanged;
+        StorageModeService.OnModeChanged += OnStorageModeChanged;
         ThemeService.OnThemeChanged += OnStateChanged;
         ActiveEnvironmentService.OnActiveEnvironmentChanged += OnStateChanged;
         NavigationStateService.OnAreaChanged += OnStateChanged;
+    }
+
+    private void OnStorageModeChanged()
+    {
+        _ = InvokeAsync(async () =>
+        {
+            await RestoreEnvironmentFromLocalStorageAsync(StorageModeService.CurrentMode);
+            StateHasChanged();
+        });
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -133,6 +143,9 @@
                 ActiveEnvironmentService.SetActiveEnvironment(updated);
             }
         }
+
+        if (_topBar != null)
+            await _topBar.RefreshEnvironmentSelectorAsync();
     }
 
     private async Task ClearEnvironmentAndRemoveStorageKeyAsync(string key)
@@ -159,7 +172,7 @@
     /// <summary>Gibt verwaltete Ressourcen frei und meldet Event-Abonnements ab.</summary>
     public async ValueTask DisposeAsync()
     {
-        StorageModeService.OnModeChanged -= OnStateChanged;
+        StorageModeService.OnModeChanged -= OnStorageModeChanged;
         ThemeService.OnThemeChanged -= OnStateChanged;
         ActiveEnvironmentService.OnActiveEnvironmentChanged -= OnStateChanged;
         NavigationStateService.OnAreaChanged -= OnStateChanged;

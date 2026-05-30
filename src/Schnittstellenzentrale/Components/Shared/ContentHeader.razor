@@ -75,16 +75,20 @@
     private string? _nameError;
     private string? _uploadError;
     private string? _iconDataUrl;
+    private byte[]? _lastIconData;
     private InputFile? _inputFile;
     private readonly string _fileInputId = $"sz-file-input-{Guid.NewGuid():N}";
     private IJSObjectReference? _jsModule;
 
     protected override void OnParametersSet()
     {
-        if (IconData != null)
-            _iconDataUrl = $"data:{DetectMimeType(IconData)};base64,{Convert.ToBase64String(IconData)}";
-        else
-            _iconDataUrl = null;
+        if (!ReferenceEquals(IconData, _lastIconData))
+        {
+            _lastIconData = IconData;
+            _iconDataUrl = IconData != null
+                ? $"data:{DetectMimeType(IconData)};base64,{Convert.ToBase64String(IconData)}"
+                : null;
+        }
     }
 
     private static string DetectMimeType(byte[] data)

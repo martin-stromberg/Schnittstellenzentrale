@@ -14,11 +14,11 @@ public class ActivityLogServiceTests
     public void Log_ErstelltEintragMitKorrektenFeldern()
     {
         var service = CreateService();
-        var before = DateTime.Now;
+        var before = DateTime.UtcNow;
 
         service.Log(ActivityLogCategory.EndpointExecuted, "Test-Nachricht", "Test-Details");
 
-        var after = DateTime.Now;
+        var after = DateTime.UtcNow;
         Assert.Single(service.Entries);
         var entry = service.Entries[0];
         Assert.Equal(ActivityLogCategory.EndpointExecuted, entry.Category);

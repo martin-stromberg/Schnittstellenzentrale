@@ -57,7 +57,7 @@
                         {
                             <tr>
                                 <td>
-                                    <span class="@GetMethodBadgeClass(ep.Method.ToString())">@ep.Method</span>
+                                    <span class="@HttpMethodBadgeHelper.GetMethodBadgeClass(ep.Method.ToString())">@ep.Method</span>
                                 </td>
                                 <td><span class="sz-endpoint-path">@ep.RelativePath</span></td>
                                 <td><span class="sz-endpoint-desc">@ep.Name</span></td>
@@ -91,24 +91,10 @@
         _applicationCount = await ApplicationRepository.GetApplicationCountByGroupAsync(Group.Id);
         _endpointCount = await ApplicationRepository.GetEndpointCountByGroupAsync(Group.Id);
 
-        var all = new List<Core.Models.Endpoint>();
-        foreach (var app in Group.Applications)
-        {
-            var eps = await EndpointRepository.GetEndpointsAsync(app.Id);
-            all.AddRange(eps);
-        }
+        var appIds = Group.Applications.Select(a => a.Id);
+        var all = await EndpointRepository.GetEndpointsByApplicationIdsAsync(appIds);
         _endpoints = all.Take(5).ToList();
     }
-
-    private static string GetMethodBadgeClass(string method) => method.ToUpperInvariant() switch
-    {
-        "GET" => "sz-method-badge sz-method-badge--get",
-        "POST" => "sz-method-badge sz-method-badge--post",
-        "PUT" => "sz-method-badge sz-method-badge--put",
-        "PATCH" => "sz-method-badge sz-method-badge--patch",
-        "DELETE" => "sz-method-badge sz-method-badge--delete",
-        _ => "sz-method-badge"
-    };
 
     private async Task OnNameChanged(string name)
     {

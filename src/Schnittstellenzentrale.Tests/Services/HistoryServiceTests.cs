@@ -98,4 +98,41 @@ public class HistoryServiceTests
             Assert.Equal(1, top[1].CallCount);
         }
     }
+
+    /// <summary>
+    /// GetTopEndpoints liefert Pfad und Methode aus dem aktuellen Endpoint-Entity,
+    /// nicht aus den historischen History-Einträgen (Issue 7).
+    /// </summary>
+    [Fact]
+    public async Task HistoryService_GetTopEndpoints_VerwendarAktuellenEndpointPfad()
+    {
+        var (factory, connection) = TestHelpers.CreateInMemoryDbContextWithHistory();
+        await using (connection)
+        {
+            await using (var ctx = factory.CreateDbContext())
+            {
+                var app = new Application { Id = 1, Name = "App", BaseUrl = "http://example.com", Description = string.Empty };
+                ctx.Applications.Add(app);
+                await ctx.SaveChangesAsync();
+                // Endpoint wurde von POST /api/v1/orders auf GET /api/v2/orders umbenannt.
+                // Die History-Einträge enthalten noch den alten Pfad und die alte Methode.
+                ctx.Endpoints.Add(new Endpoint { Id = 10, ApplicationId = 1, Name = "Orders", RelativePath = "/api/v2/orders", Method = Schnittstellenzentrale.Core.Enums.HttpMethod.GET });
+                await ctx.SaveChangesAsync();
+                var now = DateTime.UtcNow;
+                for (var i = 0; i < 5; i++)
+                    ctx.EndpointCallHistory.Add(new EndpointCallHistoryEntry { ApplicationId = 1, EndpointId = 10, RelativePath = "/api/v1/orders", HttpMethod = "POST", ExecutedAt = now });
+                await ctx.SaveChangesAsync();
+            }
+
+            var service = new HistoryService(factory);
+            var top = await service.GetTopEndpointsAsync(applicationId: 1, count: 5);
+
+            var result = Assert.Single(top);
+            Assert.Equal(10, result.EndpointId);
+            Assert.Equal(5, result.CallCount);
+            // Pfad und Methode kommen aus dem aktuellen Endpoint-Entity, nicht aus der History
+            Assert.Equal("/api/v2/orders", result.RelativePath);
+            Assert.Equal("GET", result.HttpMethod);
+        }
+    }
 }

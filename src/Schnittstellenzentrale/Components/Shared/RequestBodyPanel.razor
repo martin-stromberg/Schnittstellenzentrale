@@ -1,25 +1,25 @@
 @using System.Text.Json
 @using System.Xml.Linq
 
-<div class="request-body-panel">
-    <div class="d-flex gap-2 align-items-center mb-2">
-        <label class="form-label mb-0">Body-Format:</label>
-        <select class="form-select form-select-sm" style="width:auto;" value="@BodyMode" @onchange="OnBodyModeChanged">
+<div class="sz-body-panel">
+    <div class="sz-body-panel-toolbar">
+        <label class="sz-form-label">Body-Format:</label>
+        <select class="sz-form-select" value="@BodyMode" @onchange="OnBodyModeChanged">
             @foreach (var mode in Enum.GetValues<BodyMode>())
             {
                 <option value="@mode">@mode</option>
             }
         </select>
-        <button type="button" class="btn btn-outline-secondary btn-sm"
+        <button type="button" class="sz-btn-secondary sz-btn-sm"
                 @onclick="FormatBody"
                 disabled="@(BodyMode == BodyMode.None || BodyMode == BodyMode.PlainText)">
             Formatieren
         </button>
     </div>
-    <textarea class="form-control" rows="8" value="@Body" @oninput="OnBodyChanged" disabled="@(BodyMode == BodyMode.None)"></textarea>
+    <textarea class="sz-input sz-body-textarea" value="@Body" @oninput="OnBodyChanged" disabled="@(BodyMode == BodyMode.None)"></textarea>
     @if (!string.IsNullOrEmpty(_formatErrorMessage))
     {
-        <div class="alert alert-danger mt-2">@_formatErrorMessage</div>
+        <div class="sz-error">@_formatErrorMessage</div>
     }
 </div>
 

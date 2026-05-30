@@ -9,7 +9,7 @@
     <div class="sz-history-filter">
         <input type="datetime-local" class="sz-input" @bind="_filterFrom" @bind:event="onchange" />
         <input type="datetime-local" class="sz-input" @bind="_filterTo" @bind:event="onchange" />
-        <button type="button" class="sz-btn-primary" @onclick="LoadAsync">Filtern</button>
+        <button type="button" class="sz-btn-primary" @onclick="FilterAsync">Filtern</button>
         <button type="button" class="sz-btn-secondary" @onclick="ResetFilterAsync">Zurücksetzen</button>
     </div>
 
@@ -33,7 +33,7 @@
                 @foreach (var entry in _entries)
                 {
                     <tr>
-                        <td>@entry.ExecutedAt?.ToString("dd.MM.yyyy HH:mm:ss")</td>
+                        <td>@entry.ExecutedAt?.ToLocalTime().ToString("dd.MM.yyyy HH:mm:ss")</td>
                         <td>@entry.HttpMethod</td>
                         <td>@entry.RelativePath</td>
                         <td>@entry.StatusCode</td>
@@ -64,10 +64,18 @@
         await LoadAsync();
     }
 
+    private async Task FilterAsync()
+    {
+        _page = 1;
+        await LoadAsync();
+    }
+
     private async Task LoadAsync()
     {
         var pageSize = HistoryOptions.Value.DefaultPageSize;
-        var filter = new HistoryFilter(null, null, _filterFrom, _filterTo);
+        var filterFrom = _filterFrom.HasValue ? DateTime.SpecifyKind(_filterFrom.Value, DateTimeKind.Local).ToUniversalTime() : (DateTime?)null;
+        var filterTo = _filterTo.HasValue ? DateTime.SpecifyKind(_filterTo.Value, DateTimeKind.Local).ToUniversalTime() : (DateTime?)null;
+        var filter = new HistoryFilter(null, null, filterFrom, filterTo);
         var (items, total) = await HistoryService.GetPagedAsync(filter, _page, pageSize);
         _entries = items;
         _totalCount = total;

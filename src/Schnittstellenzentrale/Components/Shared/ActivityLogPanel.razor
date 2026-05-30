@@ -31,6 +31,7 @@ else
     protected override void OnInitialized()
     {
         ActivityLogService.OnEntryAdded += OnEntryAdded;
+        ActivityLogService.OnCleared += OnCleared;
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -86,6 +87,11 @@ else
     }
 
     private void OnEntryAdded()
+    {
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void OnCleared()
     {
         InvokeAsync(StateHasChanged);
     }
@@ -165,6 +171,7 @@ else
     public async ValueTask DisposeAsync()
     {
         ActivityLogService.OnEntryAdded -= OnEntryAdded;
+        ActivityLogService.OnCleared -= OnCleared;
         if (_jsModule != null)
         {
             try

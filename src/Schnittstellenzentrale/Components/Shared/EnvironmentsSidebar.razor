@@ -114,10 +114,17 @@
 
     private async Task DeleteAsync(SystemEnvironment env)
     {
-        await SystemEnvironmentRepository.DeleteAsync(env.Id);
-        if (_selectedId == env.Id)
-            _selectedId = null;
-        await LoadAsync();
+        try
+        {
+            await SystemEnvironmentRepository.DeleteAsync(env.Id);
+            if (_selectedId == env.Id)
+                _selectedId = null;
+            await LoadAsync();
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Fehler beim Löschen der Umgebung: {ex.Message}";
+        }
     }
 
     private void OnModeChanged() => _ = InvokeAsync(async () =>

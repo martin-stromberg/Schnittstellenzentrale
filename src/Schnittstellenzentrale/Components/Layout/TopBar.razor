@@ -2,8 +2,6 @@
 @inject IStorageModeService StorageModeService
 @inject ICurrentUserService CurrentUserService
 @inject IActiveEnvironmentService ActiveEnvironmentService
-@inject ISystemEnvironmentRepository SystemEnvironmentRepository
-@inject IJSRuntime JSRuntime
 @implements IDisposable
 
 <div class="sz-topbar">
@@ -34,7 +32,7 @@
             <option value="@StorageMode.User">Benutzer</option>
         </select>
 
-        <EnvironmentSelector OnEnvironmentSelectedByUser="OnEnvironmentSelectedByUser" />
+        <EnvironmentSelector @ref="_environmentSelector" OnEnvironmentSelectedByUser="OnEnvironmentSelectedByUser" />
 
         <ThemeToggle />
 
@@ -48,6 +46,7 @@
 @code {
     private string _userName = string.Empty;
     private string _initials = string.Empty;
+    private EnvironmentSelector? _environmentSelector;
 
     protected override void OnInitialized()
     {
@@ -67,7 +66,8 @@
         if (Enum.TryParse<StorageMode>(e.Value?.ToString(), out var mode))
         {
             StorageModeService.SetMode(mode);
-            await RestoreEnvironmentFromLocalStorageAsync(mode);
+            if (_environmentSelector != null)
+                await _environmentSelector.RefreshAsync();
         }
     }
 
@@ -75,37 +75,16 @@
     {
     }
 
-    private async Task RestoreEnvironmentFromLocalStorageAsync(StorageMode mode)
-    {
-        var key = LocalStorageKeys.SelectedEnvironmentId(mode);
-        string? storedId = null;
-        try
-        {
-            storedId = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", key);
-        }
-        catch (JSException) { return; }
-
-        if (string.IsNullOrEmpty(storedId) || !int.TryParse(storedId, out var id))
-        {
-            ActiveEnvironmentService.SetActiveEnvironment(null);
-            return;
-        }
-
-        var environment = await SystemEnvironmentRepository.GetByIdAsync(id);
-        if (environment != null)
-            ActiveEnvironmentService.SetActiveEnvironment(environment);
-        else
-        {
-            ActiveEnvironmentService.SetActiveEnvironment(null);
-            try { await JSRuntime.InvokeVoidAsync("localStorage.removeItem", key); }
-            catch (JSException) { }
-        }
-    }
-
     private static string BuildInitials(string userName)
     {
         var parts = userName.TrimStart('\\').Split(['\\', ' '], StringSplitOptions.RemoveEmptyEntries);
         return parts.Length > 0 ? parts[^1][..1].ToUpperInvariant() : "?";
+    }
+
+    public async Task RefreshEnvironmentSelectorAsync()
+    {
+        if (_environmentSelector != null)
+            await _environmentSelector.RefreshAsync();
     }
 
     private void OnStateChanged() => InvokeAsync(StateHasChanged);

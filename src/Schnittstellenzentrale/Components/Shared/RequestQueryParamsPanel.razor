@@ -1,5 +1,5 @@
-<div class="request-query-params-panel">
-    <table class="table table-sm">
+<div class="sz-panel-table-wrapper">
+    <table class="sz-table">
         <thead>
             <tr>
                 <th>Name</th>
@@ -12,22 +12,24 @@
             {
                 <tr @key="param">
                     <td>
-                        <input class="form-control form-control-sm" value="@param.Key" @onchange="(e) => OnFieldChanged(param, e, isKey: true)" />
+                        <input class="sz-input sz-input-sm" value="@param.Key" @onchange="(e) => OnFieldChanged(param, e, isKey: true)" />
                     </td>
                     <td>
-                        <input class="form-control form-control-sm" value="@param.Value" @onchange="(e) => OnFieldChanged(param, e, isKey: false)" />
+                        <input class="sz-input sz-input-sm" value="@param.Value" @onchange="(e) => OnFieldChanged(param, e, isKey: false)" />
                     </td>
                     <td>
                         @if (!param.IsPathParameter)
                         {
-                            <button type="button" class="btn btn-outline-danger btn-sm" @onclick="() => RemoveParam(param)">&#x2715;</button>
+                            <button type="button" class="sz-btn-icon sz-btn-danger" @onclick="() => RemoveParam(param)">&#x2715;</button>
                         }
                     </td>
                 </tr>
             }
         </tbody>
     </table>
-    <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="AddParam">+ Parameter</button>
+    <div class="sz-panel-table-footer">
+        <button type="button" class="sz-links-add-btn" @onclick="AddParam">+ Parameter</button>
+    </div>
 </div>
 
 @code {

@@ -53,6 +53,8 @@
     private SystemEnvironment? _environment;
     private bool _editingName;
     private bool _editingDescription;
+    private bool _savingName;
+    private bool _savingDescription;
     private string _nameInput = string.Empty;
     private string _descriptionInput = string.Empty;
     private string? _nameError;
@@ -77,6 +79,7 @@
 
     private async Task SaveNameAsync()
     {
+        if (_savingName) return;
         if (string.IsNullOrWhiteSpace(_nameInput))
         {
             _nameError = "Name darf nicht leer sein.";
@@ -88,10 +91,18 @@
             return;
         }
         if (_environment == null) return;
+        _savingName = true;
         _editingName = false;
         _nameError = null;
         _environment.Name = _nameInput;
-        await SystemEnvironmentRepository.UpdateAsync(_environment);
+        try
+        {
+            await SystemEnvironmentRepository.UpdateAsync(_environment);
+        }
+        finally
+        {
+            _savingName = false;
+        }
     }
 
     private void CancelNameEdit()
@@ -108,10 +119,19 @@
 
     private async Task SaveDescriptionAsync()
     {
+        if (_savingDescription) return;
         if (_environment == null) return;
+        _savingDescription = true;
         _editingDescription = false;
         _environment.Description = string.IsNullOrEmpty(_descriptionInput) ? null : _descriptionInput;
-        await SystemEnvironmentRepository.UpdateAsync(_environment);
+        try
+        {
+            await SystemEnvironmentRepository.UpdateAsync(_environment);
+        }
+        finally
+        {
+            _savingDescription = false;
+        }
     }
 
     private void CancelDescriptionEdit()

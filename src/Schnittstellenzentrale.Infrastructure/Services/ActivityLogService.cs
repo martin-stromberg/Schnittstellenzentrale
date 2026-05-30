@@ -32,7 +32,7 @@ public class ActivityLogService : IActivityLogService
     {
         var entry = new ActivityLogEntry
         {
-            Timestamp = DateTime.Now,
+            Timestamp = DateTime.UtcNow,
             Category = category,
             Message = message,
             Details = details

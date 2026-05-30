@@ -60,14 +60,16 @@ public class HistoryService : IHistoryService
         await using var context = await _factory.CreateDbContextAsync();
         var rows = await context.EndpointCallHistory
             .Where(e => e.ApplicationId == applicationId && e.EndpointId != null)
-            .GroupBy(e => new { e.EndpointId, e.RelativePath, e.HttpMethod })
-            .Select(g => new { g.Key.EndpointId, g.Key.RelativePath, g.Key.HttpMethod, CallCount = g.Count() })
+            .GroupBy(e => e.EndpointId)
+            .Select(g => new { EndpointId = g.Key, CallCount = g.Count() })
             .OrderByDescending(r => r.CallCount)
             .Take(count)
+            .Join(context.Endpoints,
+                r => r.EndpointId,
+                e => e.Id,
+                (r, e) => new TopEndpointResult(r.EndpointId!.Value, e.RelativePath, e.Method.ToString(), r.CallCount))
             .ToListAsync();
 
-        return rows
-            .Select(r => new TopEndpointResult(r.EndpointId!.Value, r.RelativePath, r.HttpMethod, r.CallCount))
-            .ToList();
+        return rows;
     }
 }

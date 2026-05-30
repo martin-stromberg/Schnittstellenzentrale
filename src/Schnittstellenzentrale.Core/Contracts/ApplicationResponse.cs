@@ -11,4 +11,7 @@ public class ApplicationResponse
     public string? InterfaceUrl { get; set; }
     public int InterfaceType { get; set; }
     public string? Owner { get; set; }
+    public string? Subtitle { get; set; }
+    public byte[]? IconData { get; set; }
+    public byte[] RowVersion { get; set; } = [];
 }

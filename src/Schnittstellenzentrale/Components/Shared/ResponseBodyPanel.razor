@@ -1,21 +1,21 @@
 @using System.Text.Json
 @using System.Xml.Linq
 
-<div class="response-body-panel">
-    <div class="d-flex gap-2 align-items-center mb-2">
-        <div class="btn-group btn-group-sm">
-            <button type="button" class="btn @(_viewMode == "pretty" ? "btn-primary" : "btn-outline-secondary")" @onclick='() => SetViewMode("pretty")'>Pretty</button>
-            <button type="button" class="btn @(_viewMode == "raw" ? "btn-primary" : "btn-outline-secondary")" @onclick='() => SetViewMode("raw")'>Raw</button>
+<div class="sz-response-body-panel">
+    <div class="sz-response-body-toolbar">
+        <div class="sz-btn-group">
+            <button type="button" class="sz-btn-group-item @(_viewMode == "pretty" ? "sz-btn-group-item--active" : "")" @onclick='() => SetViewMode("pretty")'>Pretty</button>
+            <button type="button" class="sz-btn-group-item @(_viewMode == "raw" ? "sz-btn-group-item--active" : "")" @onclick='() => SetViewMode("raw")'>Raw</button>
         </div>
         @if (_viewMode == "pretty")
         {
-            <select class="form-select form-select-sm" style="width:auto;" value="@_prettyFormat" @onchange="OnPrettyFormatChanged">
+            <select class="sz-form-select" value="@_prettyFormat" @onchange="OnPrettyFormatChanged">
                 <option value="Json">JSON</option>
                 <option value="Xml">XML</option>
             </select>
         }
     </div>
-    <pre class="bg-body-secondary text-body p-2 border rounded small" style="max-height: 400px; overflow:auto;">@GetDisplayBody()</pre>
+    <pre class="sz-response-body-pre">@GetDisplayBody()</pre>
 </div>
 
 @code {

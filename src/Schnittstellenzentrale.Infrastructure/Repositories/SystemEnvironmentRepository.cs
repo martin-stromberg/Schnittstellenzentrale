@@ -62,6 +62,7 @@ public class SystemEnvironmentRepository : ISystemEnvironmentRepository
 
         existing.Name = systemEnvironment.Name;
         existing.Mode = systemEnvironment.Mode;
+        existing.Description = systemEnvironment.Description;
 
         var existingVariableIds = existing.Variables.Select(v => v.Id).ToHashSet();
         var updatedVariableIds = systemEnvironment.Variables.Where(v => v.Id != 0).Select(v => v.Id).ToHashSet();

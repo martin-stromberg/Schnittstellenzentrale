@@ -187,7 +187,9 @@
         _deleteTargetGroup = null;
         try
         {
-            foreach (var app in group.Applications.ToList())
+            var freshGroup = await ApplicationApiClient.GetGroupByIdAsync(group.Id);
+            var applications = freshGroup?.Applications ?? group.Applications;
+            foreach (var app in applications.ToList())
                 await ApplicationApiClient.DeleteApplicationAsync(app.Id);
             await ApplicationApiClient.DeleteGroupAsync(group.Id);
             await NavigationStateService.SetWorkspaceSelectionAsync(null);
@@ -304,10 +306,19 @@
         try
         {
             _deleteTargetEndpoints = await EndpointRepository.GetEndpointsAsync(group.ApplicationId);
-            _deleteTargetEndpointCount = _deleteTargetEndpoints.Count(e => e.EndpointGroupId == group.Id);
+            var allGroups = await EndpointRepository.GetEndpointGroupsAsync(group.ApplicationId);
+            _deleteTargetEndpointCount = CountEndpointsRecursive(group.Id, _deleteTargetEndpoints, allGroups);
             _deleteTargetEndpointGroup = group;
         }
         catch (Exception ex) { _errorMessage = $"Fehler beim Vorbereiten der Löschung: {ex.Message}"; }
+    }
+
+    private static int CountEndpointsRecursive(int groupId, IList<Core.Models.Endpoint> endpoints, IList<EndpointGroup> allGroups)
+    {
+        var count = endpoints.Count(e => e.EndpointGroupId == groupId);
+        foreach (var child in allGroups.Where(g => g.ParentGroupId == groupId))
+            count += CountEndpointsRecursive(child.Id, endpoints, allGroups);
+        return count;
     }
 
     private async Task OnEndpointGroupDeleteConfirmed(EndpointGroup group)

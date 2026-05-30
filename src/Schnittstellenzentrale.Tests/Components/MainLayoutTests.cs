@@ -191,7 +191,16 @@ public class MainLayoutTests : BunitContext
     {
         var userKey = LocalStorageKeys.SelectedEnvironmentId(StorageMode.User);
         JSInterop.Setup<string?>("localStorage.getItem", _ => true).SetResult(null);
-        _storageMock.Setup(s => s.CurrentMode).Returns(StorageMode.Team);
+
+        // Nach SetMode(User) muss CurrentMode User zurückliefern, damit AppShell den richtigen Key verwendet
+        var currentMode = StorageMode.Team;
+        _storageMock.Setup(s => s.CurrentMode).Returns(() => currentMode);
+        _storageMock.Setup(s => s.SetMode(It.IsAny<StorageMode>()))
+            .Callback<StorageMode>(m =>
+            {
+                currentMode = m;
+                _storageMock.Raise(s => s.OnModeChanged += null);
+            });
 
         var cut = Render<AppShell>(p => p.Add(x => x.Body, (RenderFragment)(_ => { })));
 

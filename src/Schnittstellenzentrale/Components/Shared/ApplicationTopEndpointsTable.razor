@@ -19,7 +19,7 @@
                 {
                     <tr>
                         <td>
-                            <span class="@GetMethodBadgeClass(ep.HttpMethod)">@ep.HttpMethod</span>
+                            <span class="@HttpMethodBadgeHelper.GetMethodBadgeClass(ep.HttpMethod)">@ep.HttpMethod</span>
                         </td>
                         <td><span class="sz-endpoint-path">@ep.RelativePath</span></td>
                         <td><span class="sz-endpoint-desc">@ep.CallCount</span></td>
@@ -49,13 +49,4 @@
         _topEndpoints = await HistoryService.GetTopEndpointsAsync(ApplicationId, 5);
     }
 
-    private static string GetMethodBadgeClass(string? method) => method?.ToUpperInvariant() switch
-    {
-        "GET" => "sz-method-badge sz-method-badge--get",
-        "POST" => "sz-method-badge sz-method-badge--post",
-        "PUT" => "sz-method-badge sz-method-badge--put",
-        "PATCH" => "sz-method-badge sz-method-badge--patch",
-        "DELETE" => "sz-method-badge sz-method-badge--delete",
-        _ => "sz-method-badge"
-    };
 }

@@ -1,4 +1,3 @@
-#pragma warning disable CS1591
 using System.Net.Http.Json;
 using Microsoft.AspNetCore.Http;
 using Schnittstellenzentrale.Core.Contracts;
@@ -9,6 +8,7 @@ using HttpMethod = System.Net.Http.HttpMethod;
 
 namespace Schnittstellenzentrale.Services;
 
+/// <summary>HTTP-basierter Client für die interne Application-API.</summary>
 public class ApplicationApiClient : IApplicationApiClient
 {
     private readonly HttpClient _httpClient;
@@ -20,6 +20,7 @@ public class ApplicationApiClient : IApplicationApiClient
     private readonly SemaphoreSlim _tokenLock = new(1, 1);
     private string? _currentToken;
 
+    /// <summary>Initialisiert eine neue Instanz von <see cref="ApplicationApiClient"/>.</summary>
     public ApplicationApiClient(
         HttpClient httpClient,
         IHttpContextAccessor httpContextAccessor,
@@ -44,6 +45,7 @@ public class ApplicationApiClient : IApplicationApiClient
         return _configuration["Api:BaseUrl"] ?? "https://localhost:5001";
     }
 
+    /// <inheritdoc/>
     public async Task<IList<ApplicationGroup>> GetGroupsAsync(StorageMode storageMode, string owner)
     {
         var baseUrl = GetBaseUrl();
@@ -53,6 +55,7 @@ public class ApplicationApiClient : IApplicationApiClient
         return responses.Select(MapToApplicationGroup).ToList();
     }
 
+    /// <inheritdoc/>
     public async Task<ApplicationGroup?> GetGroupByIdAsync(int id)
     {
         var baseUrl = GetBaseUrl();
@@ -62,6 +65,7 @@ public class ApplicationApiClient : IApplicationApiClient
         return response == null ? null : MapToApplicationGroup(response);
     }
 
+    /// <inheritdoc/>
     public async Task<ApplicationGroup> AddGroupAsync(ApplicationGroup group)
     {
         var baseUrl = GetBaseUrl();
@@ -74,6 +78,7 @@ public class ApplicationApiClient : IApplicationApiClient
         return MapToApplicationGroup(response);
     }
 
+    /// <inheritdoc/>
     public async Task<ApplicationGroup> UpdateGroupAsync(ApplicationGroup group)
     {
         var baseUrl = GetBaseUrl();
@@ -86,6 +91,7 @@ public class ApplicationApiClient : IApplicationApiClient
         return MapToApplicationGroup(response);
     }
 
+    /// <inheritdoc/>
     public async Task DeleteGroupAsync(int id)
     {
         var baseUrl = GetBaseUrl();
@@ -95,6 +101,7 @@ public class ApplicationApiClient : IApplicationApiClient
             t => BuildDeleteRequest($"{baseUrl}/api/application-groups/{id}", storageMode, t));
     }
 
+    /// <inheritdoc/>
     public async Task<IList<Application>> GetUngroupedApplicationsAsync(StorageMode storageMode, string owner)
     {
         var baseUrl = GetBaseUrl();
@@ -104,6 +111,7 @@ public class ApplicationApiClient : IApplicationApiClient
         return responses.Select(MapToApplication).ToList();
     }
 
+    /// <inheritdoc/>
     public async Task<Application?> GetApplicationByIdAsync(int id)
     {
         var baseUrl = GetBaseUrl();
@@ -113,6 +121,7 @@ public class ApplicationApiClient : IApplicationApiClient
         return response == null ? null : MapToApplication(response);
     }
 
+    /// <inheritdoc/>
     public async Task<Application> AddApplicationAsync(Application application)
     {
         var baseUrl = GetBaseUrl();
@@ -133,6 +142,7 @@ public class ApplicationApiClient : IApplicationApiClient
         return MapToApplication(response);
     }
 
+    /// <inheritdoc/>
     public async Task<Application> UpdateApplicationAsync(Application application)
     {
         var baseUrl = GetBaseUrl();
@@ -153,6 +163,7 @@ public class ApplicationApiClient : IApplicationApiClient
         return MapToApplication(response);
     }
 
+    /// <inheritdoc/>
     public async Task DeleteApplicationAsync(int id)
     {
         var baseUrl = GetBaseUrl();
@@ -300,6 +311,10 @@ public class ApplicationApiClient : IApplicationApiClient
     {
         Id = response.Id,
         Name = response.Name,
+        Description = response.Description,
+        Subtitle = response.Subtitle,
+        IconData = response.IconData,
+        RowVersion = response.RowVersion,
         Applications = response.Applications.Select(MapToApplication).ToList()
     };
 
@@ -312,6 +327,9 @@ public class ApplicationApiClient : IApplicationApiClient
         Description = response.Description,
         InterfaceUrl = response.InterfaceUrl,
         InterfaceType = (Core.Enums.InterfaceType)response.InterfaceType,
-        Owner = response.Owner
+        Owner = response.Owner,
+        Subtitle = response.Subtitle,
+        IconData = response.IconData,
+        RowVersion = response.RowVersion
     };
 }
