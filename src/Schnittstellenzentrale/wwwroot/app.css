@@ -1895,6 +1895,7 @@ a, .btn-link {
     flex-shrink: 0;
     font-size: 0.8rem;
     opacity: 0.75;
+    padding-right:5px;
 }
 
 /* Text-Label */

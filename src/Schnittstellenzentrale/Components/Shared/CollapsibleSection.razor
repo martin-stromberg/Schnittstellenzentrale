@@ -11,7 +11,7 @@
         {
             <i class="@IconClass sz-tree-icon"></i>
         }
-        <span class="sz-tree-node-text" @onclick="OnTitleClick">@Title</span>
+        <span class="sz-tree-node-text" title="@Title" @onclick="OnTitleClick">@Title</span>
         @if (TitleActions != null)
         {
             @TitleActions
@@ -46,7 +46,7 @@
 
     private async Task OnTitleClick()
     {
-        Toggle();
+        _expanded = true;
         if (OnTitleClicked.HasDelegate)
             await OnTitleClicked.InvokeAsync();
     }

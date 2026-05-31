@@ -252,12 +252,15 @@
         }
     }
 
-    private async Task SelectAndToggleApplication(int appId)
+    private async Task SelectAndExpandApplication(int appId)
     {
-        var isExpanding = !_expandedApplicationIds.Contains(appId);
-        await ToggleApplicationExpanded(appId);
-        if (isExpanding)
-            await SelectApplication(appId);
+        if (!_expandedApplicationIds.Contains(appId))
+        {
+            _expandedApplicationIds.Add(appId);
+            if (_hubConnection?.State == HubConnectionState.Connected)
+                await _hubConnection.InvokeAsync("SubscribeToApplication", appId);
+        }
+        await SelectApplication(appId);
     }
 
     private void ToggleEndpointGroupExpanded(int endpointGroupId)
@@ -301,7 +304,7 @@
     private async Task RequestSelectGroup(ApplicationGroup group) => await OnApplicationGroupSelected.InvokeAsync(group);
     private async Task RequestSelectEndpointGroup(EndpointGroup group)
     {
-        ToggleEndpointGroupExpanded(group.Id);
+        _expandedEndpointGroupIds.Add(group.Id);
         await OnEndpointGroupSelected.InvokeAsync(group);
     }
 
@@ -437,7 +440,7 @@
                     <i class="sz-icon @(_expandedEndpointGroupIds.Contains(group.Id) ? "sz-icon-chevron-down" : "sz-icon-chevron-right")"></i>
                 </button>
                 <i class="sz-icon sz-icon-folder sz-tree-icon"></i>
-                <span class="sz-tree-item-label" @onclick="() => RequestSelectEndpointGroup(group)">@group.Name</span>
+                <span class="sz-tree-item-label" title="@group.Name" @onclick="() => RequestSelectEndpointGroup(group)">@group.Name</span>
                 <EndpointGroupContextMenu Group="group"
                                          OnCreateEndpointRequested="@(g => RequestCreateEndpointForGroup(app, g))"
                                          OnRenameEndpointGroupRequested="RequestRenameEndpointGroup"
@@ -451,7 +454,7 @@
                         <div class="sz-tree-row" @key="@($"ep-{endpoint.Id}")">
                             <span class="sz-tree-indent"></span>
                             <i class="sz-icon sz-icon-lightning sz-tree-icon"></i>
-                            <button class="sz-tree-item-btn" @onclick="() => RequestSelectEndpoint(endpoint)">@endpoint.Name</button>
+                            <button class="sz-tree-item-btn" title="@endpoint.Name" @onclick="() => RequestSelectEndpoint(endpoint)">@endpoint.Name</button>
                             <EndpointContextMenu Endpoint="endpoint" OnDeleteRequested="RequestDeleteEndpoint" />
                         </div>
                     }
@@ -475,7 +478,7 @@
                     <i class="sz-icon @(_expandedApplicationIds.Contains(app.Id) ? "sz-icon-chevron-down" : "sz-icon-chevron-right")"></i>
                 </button>
                 <i class="sz-icon sz-icon-window sz-tree-icon"></i>
-                <button class="sz-tree-item-btn" @onclick="() => SelectAndToggleApplication(app.Id)">@app.Name</button>
+                <button class="sz-tree-item-btn" title="@app.Name" @onclick="() => SelectAndExpandApplication(app.Id)">@app.Name</button>
                 <ApplicationContextMenu Application="app"
                                         OnEditRequested="RequestEditApplication"
                                         OnRemoveFromGroupRequested="OnRemoveFromGroupRequested"
@@ -502,7 +505,7 @@
                         <div class="sz-tree-row" @key="@($"ep-{endpoint.Id}")">
                             <span class="sz-tree-indent"></span>
                             <i class="sz-icon sz-icon-lightning sz-tree-icon"></i>
-                            <button class="sz-tree-item-btn" @onclick="() => RequestSelectEndpoint(endpoint)">@endpoint.Name</button>
+                            <button class="sz-tree-item-btn" title="@endpoint.Name" @onclick="() => RequestSelectEndpoint(endpoint)">@endpoint.Name</button>
                             <EndpointContextMenu Endpoint="endpoint" OnDeleteRequested="RequestDeleteEndpoint" />
                         </div>
                     }
