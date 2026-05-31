@@ -59,7 +59,7 @@ public class EndpointPageTests : BunitContext
     {
         var cut = Render<EndpointPage>(p => p.Add(x => x.Endpoint, CreateEndpoint()));
 
-        Assert.Empty(cut.FindAll(".response-section"));
+        Assert.Empty(cut.FindAll(".sz-endpoint-response"));
     }
 
     /// <summary>Das Anfrageergebnis zeigt den Response-Body korrekt an.</summary>
@@ -79,7 +79,7 @@ public class EndpointPageTests : BunitContext
             });
 
         var cut = Render<EndpointPage>(p => p.Add(x => x.Endpoint, endpoint));
-        cut.Find("button.btn-success").Click();
+        cut.Find("button.sz-btn-send").Click();
 
         // ResponseBodyPanel formatiert JSON (pretty-print), daher Teilstring prüfen
         Assert.Contains("status", cut.Find("pre").TextContent);
@@ -102,9 +102,9 @@ public class EndpointPageTests : BunitContext
             });
 
         var cut = Render<EndpointPage>(p => p.Add(x => x.Endpoint, endpoint));
-        cut.Find("button.btn-success").Click();
+        cut.Find("button.sz-btn-send").Click();
 
-        Assert.Contains("404", cut.Find(".response-section").TextContent);
+        Assert.Contains("404", cut.Find(".sz-endpoint-response").TextContent);
     }
 
     /// <summary>Die Body-Textarea zeigt den gespeicherten Body-Inhalt des Endpunkts an.</summary>
@@ -115,7 +115,7 @@ public class EndpointPageTests : BunitContext
         var endpoint = CreateEndpoint(body: body);
 
         var cut = Render<EndpointPage>(p => p.Add(x => x.Endpoint, endpoint));
-        cut.FindAll("button.nav-link")
+        cut.FindAll("button.sz-endpoint-tab")
             .First(b => b.TextContent.Trim() == "Body")
             .Click();
 
@@ -129,14 +129,14 @@ public class EndpointPageTests : BunitContext
         var endpoint = CreateEndpoint(relPath: "/api/{id}/items");
 
         var cut = Render<EndpointPage>(p => p.Add(x => x.Endpoint, endpoint));
-        cut.FindAll("button.nav-link")
+        cut.FindAll("button.sz-endpoint-tab")
             .First(b => b.TextContent.Trim() == "Query-Parameter")
             .Click();
 
-        var rows = cut.FindAll(".request-query-params-panel tbody tr");
+        var rows = cut.FindAll(".sz-panel-table-wrapper tbody tr");
         Assert.Single(rows);
 
-        var deleteButtons = cut.FindAll(".request-query-params-panel tbody tr .btn-outline-danger");
+        var deleteButtons = cut.FindAll(".sz-panel-table-wrapper tbody tr .sz-btn-danger");
         Assert.Empty(deleteButtons);
 
         var inputs = rows[0].QuerySelectorAll("input");
@@ -150,12 +150,12 @@ public class EndpointPageTests : BunitContext
         var endpoint = CreateEndpoint(relPath: "/api/{id}/items");
 
         var cut = Render<EndpointPage>(p => p.Add(x => x.Endpoint, endpoint));
-        cut.FindAll("button.nav-link")
+        cut.FindAll("button.sz-endpoint-tab")
             .First(b => b.TextContent.Trim() == "Query-Parameter")
             .Click();
 
         // Wert für den Platzhalter eingeben (Change löst @onchange aus)
-        var rows = cut.FindAll(".request-query-params-panel tbody tr");
+        var rows = cut.FindAll(".sz-panel-table-wrapper tbody tr");
         var valueInput = rows[0].QuerySelectorAll("input")[1];
         valueInput.Change("42");
 
@@ -164,7 +164,7 @@ public class EndpointPageTests : BunitContext
         pathInput.Blur();
 
         // Wert muss noch vorhanden sein
-        rows = cut.FindAll(".request-query-params-panel tbody tr");
+        rows = cut.FindAll(".sz-panel-table-wrapper tbody tr");
         Assert.Single(rows);
         var inputs = rows[0].QuerySelectorAll("input");
         Assert.Equal("id", inputs[0].GetAttribute("value"));
@@ -184,12 +184,12 @@ public class EndpointPageTests : BunitContext
         var endpoint = CreateEndpoint(relPath: "/api/{id}/items", queryParameters: queryParams);
 
         var cut = Render<EndpointPage>(p => p.Add(x => x.Endpoint, endpoint));
-        cut.FindAll("button.nav-link")
+        cut.FindAll("button.sz-endpoint-tab")
             .First(b => b.TextContent.Trim() == "Query-Parameter")
             .Click();
 
         // Es darf nur einen einzigen Eintrag für "id" geben
-        var rows = cut.FindAll(".request-query-params-panel tbody tr");
+        var rows = cut.FindAll(".sz-panel-table-wrapper tbody tr");
         Assert.Single(rows);
 
         var inputs = rows[0].QuerySelectorAll("input");
@@ -197,7 +197,7 @@ public class EndpointPageTests : BunitContext
         Assert.Equal("42", inputs[1].GetAttribute("value"));
 
         // Kein Löschen-Button — der Eintrag wurde zum Pfad-Parameter hochgestuft
-        Assert.Empty(cut.FindAll(".request-query-params-panel tbody tr .btn-outline-danger"));
+        Assert.Empty(cut.FindAll(".sz-panel-table-wrapper tbody tr .sz-btn-danger"));
     }
 
     /// <summary>Nach OnPathBlur mit geändertem Pfad werden entfernte Platzhalter gelöscht und neue hinzugefügt.</summary>
@@ -207,7 +207,7 @@ public class EndpointPageTests : BunitContext
         var endpoint = CreateEndpoint(relPath: "/api/{alterId}/items");
 
         var cut = Render<EndpointPage>(p => p.Add(x => x.Endpoint, endpoint));
-        cut.FindAll("button.nav-link")
+        cut.FindAll("button.sz-endpoint-tab")
             .First(b => b.TextContent.Trim() == "Query-Parameter")
             .Click();
 
@@ -215,7 +215,7 @@ public class EndpointPageTests : BunitContext
         pathInput.Input("/api/{neuerId}/data");
         pathInput.Blur();
 
-        var rows = cut.FindAll(".request-query-params-panel tbody tr");
+        var rows = cut.FindAll(".sz-panel-table-wrapper tbody tr");
         Assert.Single(rows);
 
         var firstRowInputs = rows[0].QuerySelectorAll("input");
@@ -234,15 +234,15 @@ public class EndpointPageTests : BunitContext
         var endpoint = CreateEndpoint(relPath: "/api/items?filter=active&page=1");
 
         var cut = Render<EndpointPage>(p => p.Add(x => x.Endpoint, endpoint));
-        cut.FindAll("button.nav-link")
+        cut.FindAll("button.sz-endpoint-tab")
             .First(b => b.TextContent.Trim() == "Query-Parameter")
             .Click();
 
         // Query-Parameter wurden als löschbare Einträge extrahiert
-        var rows = cut.FindAll(".request-query-params-panel tbody tr");
+        var rows = cut.FindAll(".sz-panel-table-wrapper tbody tr");
         Assert.Equal(2, rows.Count);
 
-        var deleteButtons = cut.FindAll(".request-query-params-panel tbody tr .btn-outline-danger");
+        var deleteButtons = cut.FindAll(".sz-panel-table-wrapper tbody tr .sz-btn-danger");
         Assert.Equal(2, deleteButtons.Count);
 
         // Der Pfad wird intern bereinigt — ResolveDisplayUrl() hängt die Parameter als Query-String an,
@@ -261,7 +261,7 @@ public class EndpointPageTests : BunitContext
 
         var cut = Render<EndpointPage>(p => p.Add(x => x.Endpoint, endpoint));
 
-        var tab = cut.FindAll("button.nav-link").FirstOrDefault(b => b.TextContent.Trim() == "Pre-Request-Skript");
+        var tab = cut.FindAll("button.sz-endpoint-tab").FirstOrDefault(b => b.TextContent.Trim() == "Pre-Request-Skript");
         Assert.NotNull(tab);
     }
 
@@ -273,7 +273,7 @@ public class EndpointPageTests : BunitContext
 
         var cut = Render<EndpointPage>(p => p.Add(x => x.Endpoint, endpoint));
 
-        var tab = cut.FindAll("button.nav-link").FirstOrDefault(b => b.TextContent.Trim() == "Post-Request-Skript");
+        var tab = cut.FindAll("button.sz-endpoint-tab").FirstOrDefault(b => b.TextContent.Trim() == "Post-Request-Skript");
         Assert.NotNull(tab);
     }
 
@@ -284,13 +284,13 @@ public class EndpointPageTests : BunitContext
         var endpoint = CreateEndpoint();
 
         var cut = Render<EndpointPage>(p => p.Add(x => x.Endpoint, endpoint));
-        cut.FindAll("button.nav-link")
+        cut.FindAll("button.sz-endpoint-tab")
             .First(b => b.TextContent.Trim() == "Pre-Request-Skript")
             .Click();
 
         cut.Find("textarea").Input("sz.environment.set('x', '1');");
 
-        Assert.NotEmpty(cut.FindAll(".badge.bg-warning"));
+        Assert.NotEmpty(cut.FindAll(".sz-endpoint-dirty-badge"));
     }
 
     /// <summary>Textänderung im Post-Skript-Textarea ruft MarkDirty() auf.</summary>
@@ -300,13 +300,13 @@ public class EndpointPageTests : BunitContext
         var endpoint = CreateEndpoint();
 
         var cut = Render<EndpointPage>(p => p.Add(x => x.Endpoint, endpoint));
-        cut.FindAll("button.nav-link")
+        cut.FindAll("button.sz-endpoint-tab")
             .First(b => b.TextContent.Trim() == "Post-Request-Skript")
             .Click();
 
         cut.Find("textarea").Input("sz.environment.set('x', '1');");
 
-        Assert.NotEmpty(cut.FindAll(".badge.bg-warning"));
+        Assert.NotEmpty(cut.FindAll(".sz-endpoint-dirty-badge"));
     }
 
     /// <summary>ResolveDisplayUrl zeigt bei leerem Wert den Platzhalter; nach Werteingabe die aufgelöste URL.</summary>
@@ -326,12 +326,12 @@ public class EndpointPageTests : BunitContext
         var pathInput = cut.Find("input[placeholder='Relativer Pfad']");
         Assert.Contains("{id}", pathInput.GetAttribute("value") ?? string.Empty);
 
-        cut.FindAll("button.nav-link")
+        cut.FindAll("button.sz-endpoint-tab")
             .First(b => b.TextContent.Trim() == "Query-Parameter")
             .Click();
 
         // Wert für den Platzhalter eingeben (Change löst @onchange aus)
-        var rows = cut.FindAll(".request-query-params-panel tbody tr");
+        var rows = cut.FindAll(".sz-panel-table-wrapper tbody tr");
         var idRow = rows.First(r => r.QuerySelector("input")?.GetAttribute("value") == "id");
         var idValueInput = idRow.QuerySelectorAll("input")[1];
         idValueInput.Change("42");

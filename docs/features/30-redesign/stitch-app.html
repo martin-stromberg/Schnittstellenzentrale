@@ -1,0 +1,373 @@
+<!DOCTYPE html><html class="dark" lang="en" style=""><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>API Architect Pro - Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;family=Hanken+Grotesk:wght@600;700;800&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<style>
+    /* Custom Scrollbar for Developer Tool Feel */
+    ::-webkit-scrollbar {
+      width: 4px;
+      height: 4px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #424754;
+      border-radius: 10px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #8c909f;
+    }
+    
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+      font-size: 18px;
+    }
+    
+    .method-get { color: #adc6ff; }
+    .method-post { color: #ffb786; }
+    
+    /* Layout heights to account for fixed TopNavBar */
+    .content-height {
+      height: calc(100vh - 3.5rem);
+    }
+  </style>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+                  "on-secondary-fixed-variant": "#38485d",
+                  "on-surface-variant": "#c2c6d6",
+                  "secondary-container": "#3a4a5f",
+                  "on-primary-fixed": "#001a42",
+                  "tertiary-fixed": "#ffdcc6",
+                  "tertiary": "#ffb786",
+                  "on-secondary-container": "#a9bad3",
+                  "on-tertiary-container": "#461f00",
+                  "primary-container": "#4d8eff",
+                  "on-tertiary-fixed-variant": "#723600",
+                  "surface-container-lowest": "#060e20",
+                  "on-tertiary-fixed": "#311400",
+                  "secondary-fixed-dim": "#b7c8e1",
+                  "surface-container-highest": "#2d3449",
+                  "outline-variant": "#424754",
+                  "surface-dim": "#0b1326",
+                  "inverse-primary": "#005ac2",
+                  "on-error-container": "#ffdad6",
+                  "on-secondary-fixed": "#0b1c30",
+                  "inverse-on-surface": "#283044",
+                  "on-primary-container": "#00285d",
+                  "background": "#0b1326",
+                  "primary": "#adc6ff",
+                  "inverse-surface": "#dae2fd",
+                  "on-secondary": "#213145",
+                  "error": "#ffb4ab",
+                  "on-tertiary": "#502400",
+                  "tertiary-container": "#df7412",
+                  "on-error": "#690005",
+                  "on-primary-fixed-variant": "#004395",
+                  "secondary": "#b7c8e1",
+                  "surface-container-high": "#222a3d",
+                  "error-container": "#93000a",
+                  "surface-container": "#171f33",
+                  "surface-bright": "#31394d",
+                  "primary-fixed-dim": "#adc6ff",
+                  "surface-container-low": "#131b2e",
+                  "on-surface": "#dae2fd",
+                  "primary-fixed": "#d8e2ff",
+                  "tertiary-fixed-dim": "#ffb786",
+                  "on-background": "#dae2fd",
+                  "surface-tint": "#adc6ff",
+                  "on-primary": "#002e6a",
+                  "surface-variant": "#2d3449",
+                  "secondary-fixed": "#d3e4fe",
+                  "outline": "#8c909f",
+                  "surface": "#0b1326"
+          },
+          "borderRadius": {
+                  "DEFAULT": "0.125rem",
+                  "lg": "0.25rem",
+                  "xl": "0.5rem",
+                  "full": "0.75rem"
+          },
+          "spacing": {
+                  "gutter": "1px",
+                  "padding_standard": "1rem",
+                  "sidebar_width": "260px",
+                  "padding_compact": "0.5rem",
+                  "pane_gap": "0px"
+          },
+          "fontFamily": {
+                  "body-md": ["Inter"],
+                  "code-md": ["JetBrains Mono"],
+                  "code-sm": ["JetBrains Mono"],
+                  "headline-sm": ["Hanken Grotesk"],
+                  "label-caps": ["Inter"],
+                  "body-sm": ["Inter"]
+          },
+          "fontSize": {
+                  "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                  "code-md": ["13px", {"lineHeight": "20px", "fontWeight": "400"}],
+                  "code-sm": ["11px", {"lineHeight": "14px", "letterSpacing": "0.02em", "fontWeight": "500"}],
+                  "headline-sm": ["18px", {"lineHeight": "24px", "fontWeight": "600"}],
+                  "label-caps": ["10px", {"lineHeight": "12px", "letterSpacing": "0.05em", "fontWeight": "700"}],
+                  "body-sm": ["12px", {"lineHeight": "16px", "fontWeight": "400"}]
+          }
+        },
+      },
+    }
+  </script>
+</head>
+<body class="bg-background text-on-surface font-body-md selection:bg-primary-container selection:text-on-primary-container">
+<!-- TopNavBar Implementation -->
+<header class="fixed top-0 left-0 w-full bg-background border-b border-outline-variant z-50 flex justify-between items-center px-padding_standard h-14">
+<div class="flex items-center gap-8">
+<div class="text-headline-sm font-headline-sm font-bold text-primary">Schnittstellenzentrale</div>
+<nav class="hidden md:flex items-center gap-6 h-full">
+<a class="text-label-caps font-label-caps text-primary border-b-2 border-primary pb-1" href="#">Workspaces</a>
+<a class="text-label-caps font-label-caps text-on-surface-variant hover:text-primary transition-colors" href="#">Environments</a>
+<a class="text-label-caps font-label-caps text-on-surface-variant hover:text-primary transition-colors" href="#">History</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<span class="text-label-caps text-on-surface-variant font-bold">Modus:</span><div class="flex items-center gap-2 mr-4"><select class="bg-surface-container-high text-on-surface text-label-caps border border-outline-variant rounded px-2 py-1 outline-none focus:border-primary"><option>Team</option><option>User</option></select></div><div class="flex items-center gap-2 mr-2"><select class="bg-surface-container-high text-on-surface text-label-caps border border-outline-variant rounded px-2 py-1 outline-none focus:border-primary"><option>Production</option><option>Staging</option><option>Dev</option></select></div><div class="flex items-center gap-1 border-outline-variant px-2 border-r">
+<span class="material-symbols-outlined text-on-surface-variant hover:text-primary cursor-pointer p-2 transition-colors">help</span>
+<span class="material-symbols-outlined text-on-surface-variant hover:text-primary cursor-pointer p-2 transition-colors">settings</span>
+<span class="material-symbols-outlined text-on-surface-variant hover:text-primary cursor-pointer p-2 transition-colors">dark_mode</span></div>
+<img alt="User Profile Avatar" class="w-8 h-8 rounded-full border border-outline-variant bg-surface-container-high" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCYw-5Cq9E2XOiKf9MZJgaDZKk2L6KUwG-TM8bl7ygGFH81W09Z9_XAn69STSn0BEMceE1oh70PA74Zq-hGNFt0qQsgemKobOhualW79M7Og1i5M6xzd_YuOZ7ToC7hQTLvXHzYj6Hu0vq7ZH73siVFeaY5-bryESO_zJjdbjjgSLxFxy4vqsNltbkO3dD8SsBjI5MMU4LRexoMhU_HHRLcXPgzhhvaZL6xDjUQCDxgNkKjAJdc3PXLtZdAJuSIwRhLlI0zJriDp3g">
+</div>
+</header>
+<!-- SideNavBar Implementation -->
+<aside class="fixed left-0 top-14 h-[calc(100vh-3.5rem)] w-[sidebar_width] bg-surface-container-low border-r border-outline-variant flex flex-col z-40">
+<div class="p-4 border-b border-outline-variant">
+<button class="w-full py-2 bg-primary text-on-primary font-label-caps rounded flex items-center justify-center gap-2 hover:opacity-90 transition-all active:scale-[0.98]">
+<span class="material-symbols-outlined !text-[16px]">add</span>
+        New Collection
+      </button>
+</div>
+<nav class="flex-1 overflow-y-auto py-2">
+<!-- Active Tab -->
+<!-- Resource Tree -->
+<div class="mt-6 px-4">
+<div class="text-label-caps font-label-caps text-outline mb-2">Workspace Files</div>
+<div class="space-y-1">
+<!-- Root Level -->
+<details class="group" open="">
+<summary class="flex items-center gap-1 list-none cursor-pointer text-on-surface py-1 hover:bg-surface-container-high rounded transition-colors">
+<span class="material-symbols-outlined text-[16px] transition-transform group-open:rotate-90">chevron_right</span>
+<span class="material-symbols-outlined text-[16px] text-tertiary">folder_shared</span>
+<span class="text-body-sm">Finance App Group</span>
+</summary>
+<div class="ml-4 border-l border-outline-variant pl-2">
+<details class="group" open="">
+<summary class="flex items-center gap-1 list-none cursor-pointer text-on-surface py-1 hover:bg-surface-container-high rounded transition-colors bg-surface-container-highest">
+<span class="material-symbols-outlined text-[16px] transition-transform group-open:rotate-90">chevron_right</span>
+<span class="material-symbols-outlined text-[16px] text-primary">api</span>
+<span class="text-body-sm font-semibold">Payment API</span>
+</summary>
+<div class="ml-4 border-l border-outline-variant pl-2">
+<details class="group" open="">
+<summary class="flex items-center gap-1 list-none cursor-pointer text-on-surface py-1 hover:bg-surface-container-high rounded transition-colors">
+<span class="material-symbols-outlined text-[16px] transition-transform group-open:rotate-90">chevron_right</span>
+<span class="material-symbols-outlined text-[16px]">folder</span>
+<span class="text-body-sm">Payments</span>
+</summary>
+<div class="ml-4 border-l border-outline-variant pl-2">
+<div class="flex items-center gap-2 py-1 px-2 cursor-pointer hover:bg-surface-container-high rounded text-body-sm">
+<span class="text-label-caps font-bold method-get">GET</span>
+<span class="text-on-surface-variant">/transactions</span>
+</div>
+<div class="flex items-center gap-2 py-1 px-2 cursor-pointer hover:bg-surface-container-high rounded text-body-sm">
+<span class="text-label-caps font-bold method-post">POST</span>
+<span class="text-on-surface-variant">/pay</span>
+</div>
+</div>
+</details>
+</div>
+</details>
+</div>
+</details>
+</div>
+</div>
+</nav>
+<div class="p-4 mt-auto border-t border-outline-variant">
+<div class="text-label-caps text-outline text-[10px] leading-relaxed">
+    © 2024 Schnittstellenzentrale
+  </div>
+<a class="text-label-caps text-on-surface-variant hover:text-primary transition-colors text-[10px] mt-1 block" href="#">
+    Impressum
+  </a>
+</div></aside>
+<!-- Main Content Area -->
+<main class="mt-14 content-height overflow-hidden flex flex-col bg-surface ml-[260px]">
+<!-- Breadcrumbs -->
+<div class="h-10 border-b border-outline-variant flex items-center px-6 gap-2 text-body-sm text-on-surface-variant bg-surface-container-low">
+<span class="hover:text-primary cursor-pointer">Finance App Group</span>
+<span class="material-symbols-outlined text-[14px]">chevron_right</span>
+<span class="text-on-surface">Payment API</span>
+</div>
+<!-- Scrollable Content Canvas -->
+<div class="flex-1 overflow-y-auto">
+<!-- Hero Header Section -->
+<section class="relative h-64 border-b border-outline-variant overflow-hidden flex items-end">
+<div class="absolute inset-0 z-0">
+<div class="absolute inset-0 bg-gradient-to-t from-surface to-transparent z-10"></div>
+<img alt="Digital Abstract Landscape" class="w-full h-full object-cover grayscale opacity-30 blur-sm" data-alt="A cinematic, high-resolution digital rendering of a data-driven landscape with flowing neon blue lines and floating geometric structures. The scene is set in a dark, atmospheric environment with a cool color temperature. Volumetric lighting and subtle depth-of-field effects emphasize a sense of immense scale and technological precision, perfectly matching a professional developer tool aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBymtadqf6svHxlYZk-fOyFL-n9pZcD8iA_mj5081-p1Nia1ZFpRYOT_gqIK5jUoYdqfh2D3P8jsVf75FfSKCHxHGH4Rqa0luQz1dSHvngtlE4AqI9EPYKnbWJdYyeOCnt7J76H7hHQswo7ElzSqsFONu5KIAWpqslkC0uHbv8lC0-PLlUDJECVdygGCavhiHEkfHw6AXgF3-EpYuRgNb470mWRsI0qrfISr6qyRxgXqxe-9Qi0y5tG__k-fW8UfYSsj4KYRrqN-gg">
+</div>
+<div class="relative z-20 px-10 pb-8 w-full flex justify-between items-end">
+<div class="flex gap-6 items-end">
+<div class="w-24 h-24 bg-surface-container-high border-2 border-primary rounded-xl flex items-center justify-center shadow-xl">
+<span class="material-symbols-outlined !text-[48px] text-primary" style="font-variation-settings: 'FILL' 1;">payments</span>
+</div>
+<div>
+<div class="flex items-center gap-3 mb-1">
+<span class="px-2 py-0.5 bg-tertiary-container/20 text-tertiary rounded-full text-label-caps border border-tertiary/30">V1.2.4</span>
+</div>
+<h1 class="text-4xl font-headline-sm font-extrabold tracking-tight text-on-surface">Payment API</h1>
+<p class="text-on-surface-variant font-body-md mt-1">Managed by Finance Tech Ops Team</p>
+</div>
+</div>
+<div class="flex gap-3">
+<button class="px-4 py-2 border border-outline-variant text-on-surface font-label-caps rounded-lg hover:bg-surface-container-high transition-all flex items-center gap-2">
+<span class="material-symbols-outlined !text-[18px]">share</span> Share
+            </button>
+</div>
+</div>
+</section>
+<!-- Dashboard Grid -->
+<div class="p-10 max-w-6xl mx-auto space-y-10">
+<!-- Details Section -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+<!-- Main Info -->
+<div class="md:col-span-2 space-y-8">
+<div>
+<h2 class="text-label-caps text-primary mb-4">Description</h2>
+<p class="text-on-surface-variant leading-relaxed text-body-md bg-surface-container-low p-4 rounded-lg border border-outline-variant">
+                The Payment API is the core engine for processing global transactions within the Finance ecosystem. It provides secure endpoints for initiating payments, checking transaction statuses, and managing merchant accounts. This version supports multi-currency settlement and integrated 3DS authentication flows.
+              </p>
+</div>
+<div class="grid grid-cols-2 gap-4">
+<div class="bg-surface-container-high p-4 rounded-lg border border-outline-variant">
+<div class="text-label-caps text-on-surface-variant mb-2">Base URL</div>
+<div class="font-code-md text-code-md text-primary flex items-center justify-between">
+<span class="">https://api.payments.com/v1</span>
+<span class="material-symbols-outlined text-on-surface-variant hover:text-on-surface cursor-pointer">content_copy</span>
+</div>
+</div>
+<div class="bg-surface-container-high p-4 rounded-lg border border-outline-variant">
+<div class="text-label-caps text-on-surface-variant mb-2">Swagger URL</div>
+<a class="font-code-md text-code-md text-tertiary flex items-center justify-between hover:underline" href="#">
+<span class="">docs.payments.com/swagger.json</span>
+<span class="material-symbols-outlined text-[16px]">open_in_new</span>
+</a>
+</div>
+</div>
+</div>
+<!-- Quick Stats Sidebar -->
+<div class="space-y-4">
+<h2 class="text-label-caps text-on-surface-variant">KPI</h2>
+<div class="bg-surface-container-low border border-outline-variant rounded-xl p-6 space-y-6"><div><div class="flex justify-between items-center"><span class="text-body-sm text-on-surface-variant">Anzahl Endpunkte</span><span class="text-on-surface font-bold text-body-sm">12</span></div></div><div class="h-px bg-outline-variant"></div><div><div class="flex justify-between items-center mb-1"><span class="text-body-sm text-on-surface-variant">Letzte Anfrage</span></div><div class="text-on-surface font-code-md text-code-md">2024-05-20 14:35:12</div></div></div>
+</div>
+</div>
+<!-- Endpoints List -->
+<div>
+
+<div class="bg-surface-container-low border border-outline-variant rounded-xl p-6 mb-8">
+<div class="flex justify-between items-center mb-6">
+<h2 class="text-label-caps text-on-surface-variant uppercase tracking-wider">Verwaltbare Links</h2>
+<a class="text-primary text-body-sm hover:underline flex items-center gap-1" href="#">
+<span class="material-symbols-outlined !text-[16px]">add</span>
+      Link hinzuf%C3%BCgen
+    </a>
+</div>
+<div class="space-y-4"><!-- Startseite Link -->
+<div class="flex items-center justify-between group">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary !text-[20px]">home</span>
+<a class="text-on-surface hover:text-primary transition-colors text-body-md" href="#">Startseite</a>
+</div>
+<button class="text-on-surface-variant opacity-0 group-hover:opacity-100 hover:text-error transition-all">
+<span class="material-symbols-outlined !text-[18px]">delete</span>
+</button>
+</div>
+<div class="h-px bg-outline-variant/30"></div>
+<!-- Verwaltung Link -->
+<div class="flex items-center justify-between group">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary !text-[20px]">settings</span>
+<a class="text-on-surface hover:text-primary transition-colors text-body-md" href="#">Verwaltung</a>
+</div>
+<button class="text-on-surface-variant opacity-0 group-hover:opacity-100 hover:text-error transition-all">
+<span class="material-symbols-outlined !text-[18px]">delete</span>
+</button>
+</div></div>
+</div><div class="flex justify-between items-end mb-4">
+  <h2 class="text-label-caps text-on-surface-variant">Core Endpoints</h2>
+  <a class="text-primary text-body-sm hover:underline" href="#">View all 12 endpoints</a>
+</div><div class="bg-surface-container-low border border-outline-variant rounded-xl overflow-hidden">
+<table class="w-full text-left">
+<thead>
+<tr class="bg-surface-container-high text-label-caps text-on-surface-variant">
+<th class="px-6 py-3 font-semibold">Method</th>
+<th class="px-6 py-3 font-semibold">Endpoint</th>
+<th class="px-6 py-3 font-semibold">Description</th>
+<th class="px-6 py-3 font-semibold text-right">Action</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant">
+<tr class="hover:bg-surface-container-highest transition-colors group">
+<td class="px-6 py-4"><span class="text-label-caps font-bold method-get px-2 py-0.5 bg-primary/10 rounded">GET</span></td>
+<td class="px-6 py-4 font-code-md text-on-surface">/transactions</td>
+<td class="px-6 py-4 text-on-surface-variant text-body-sm">Retrieve list of processed payments</td>
+<td class="px-6 py-4 text-right">
+<span class="material-symbols-outlined text-on-surface-variant group-hover:text-primary cursor-pointer">play_arrow</span>
+</td>
+</tr>
+<tr class="hover:bg-surface-container-highest transition-colors group">
+<td class="px-6 py-4"><span class="text-label-caps font-bold method-post px-2 py-0.5 bg-tertiary/10 rounded">POST</span></td>
+<td class="px-6 py-4 font-code-md text-on-surface">/pay</td>
+<td class="px-6 py-4 text-on-surface-variant text-body-sm">Execute a new payment request</td>
+<td class="px-6 py-4 text-right">
+<span class="material-symbols-outlined text-on-surface-variant group-hover:text-primary cursor-pointer">play_arrow</span>
+</td>
+</tr>
+<tr class="hover:bg-surface-container-highest transition-colors group">
+<td class="px-6 py-4"><span class="text-label-caps font-bold method-get px-2 py-0.5 bg-primary/10 rounded">GET</span></td>
+<td class="px-6 py-4 font-code-md text-on-surface">/transactions/{id}</td>
+<td class="px-6 py-4 text-on-surface-variant text-body-sm">Fetch details for a specific transaction</td>
+<td class="px-6 py-4 text-right">
+<span class="material-symbols-outlined text-on-surface-variant group-hover:text-primary cursor-pointer">play_arrow</span>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+</div>
+</main>
+<script>
+    // Simple micro-interactions for the sidebar
+    document.querySelectorAll('details').forEach(el => {
+      el.addEventListener('click', (e) => {
+        // Prevent event bubbling if needed
+      });
+    });
+
+    // Mock search interaction
+    const searchBtn = document.querySelector('.material-symbols-outlined[data-icon="search"]');
+    if(searchBtn) {
+      searchBtn.addEventListener('click', () => {
+        console.log('Search focused');
+      });
+    }
+  </script>
+
+
+</body></html>

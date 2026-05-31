@@ -1,0 +1,41 @@
+@inject INavigationStateService NavigationStateService
+@implements IDisposable
+
+<div class="sz-environments-layout">
+    <div class="sz-environments-sidebar-panel">
+        <EnvironmentsSidebar OnEnvironmentSelected="OnEnvironmentSelected" />
+    </div>
+    <div class="sz-environments-content-panel">
+        @if (_selectedEnvironmentId.HasValue)
+        {
+            <EnvironmentContentView EnvironmentId="_selectedEnvironmentId.Value" />
+        }
+        else
+        {
+            <EmptyContentView />
+        }
+    </div>
+</div>
+
+@code {
+    private int? _selectedEnvironmentId;
+
+    protected override void OnInitialized()
+    {
+        NavigationStateService.OnAreaChanged += OnStateChanged;
+    }
+
+    private void OnEnvironmentSelected(int environmentId)
+    {
+        _selectedEnvironmentId = environmentId;
+        StateHasChanged();
+    }
+
+    private void OnStateChanged() => InvokeAsync(StateHasChanged);
+
+    /// <summary>Meldet Event-Abonnements ab.</summary>
+    public void Dispose()
+    {
+        NavigationStateService.OnAreaChanged -= OnStateChanged;
+    }
+}

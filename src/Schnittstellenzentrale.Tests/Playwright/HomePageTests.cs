@@ -8,7 +8,7 @@ namespace Schnittstellenzentrale.Tests.Playwright;
 public class HomePageTests : PlaywrightTestBase
 {
     /// <summary>Initialisiert den Test mit der gemeinsamen Playwright-Factory.</summary>
-    public HomePageTests(PlaywrightTestFactory factory) : base(factory) { }
+    public HomePageTests(PlaywrightServer server) : base(server) { }
 
     /// <summary>Systemgruppe „Schnittstellenzentrale" ist im ApplicationGroupTree sichtbar.</summary>
     [Fact]

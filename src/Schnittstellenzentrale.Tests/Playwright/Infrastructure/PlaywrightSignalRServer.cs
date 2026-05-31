@@ -6,14 +6,12 @@ using Schnittstellenzentrale.Infrastructure.Services;
 
 namespace Schnittstellenzentrale.Tests.Playwright.Infrastructure;
 
-/// <summary>Variante von <see cref="PlaywrightTestFactory"/> mit echtem SignalR für Echtzeitsynchronisations-Tests.</summary>
-public class PlaywrightSignalRFactory : PlaywrightTestFactory
+/// <summary>Variante von <see cref="PlaywrightServer"/> mit echtem SignalR für Echtzeitsynchronisations-Tests.</summary>
+public class PlaywrightSignalRServer : PlaywrightServer
 {
     /// <inheritdoc/>
-    protected override void ConfigureTestServices(Microsoft.Extensions.DependencyInjection.IServiceCollection services)
+    protected override void ConfigureTestServices(IServiceCollection services)
     {
-        base.ConfigureTestServices(services);
-
         services.RemoveAll<ISignalRNotificationService>();
         services.AddScoped<ISignalRNotificationService, SignalRNotificationService<EndpointHub>>();
     }

@@ -8,6 +8,7 @@ namespace Schnittstellenzentrale.Infrastructure.Services;
 /// <summary>Scoped In-Memory-Implementierung von <see cref="IActivityLogService"/>.</summary>
 public class ActivityLogService : IActivityLogService
 {
+    private const int MaxEntries = 500;
     private readonly List<ActivityLogEntry> _entries = [];
     private readonly Lock _entriesLock = new();
     private readonly ILogger<ActivityLogService> _logger;
@@ -25,11 +26,14 @@ public class ActivityLogService : IActivityLogService
     public event Action? OnEntryAdded;
 
     /// <inheritdoc/>
+    public event Action? OnCleared;
+
+    /// <inheritdoc/>
     public void Log(ActivityLogCategory category, string message, string? details = null)
     {
         var entry = new ActivityLogEntry
         {
-            Timestamp = DateTime.Now,
+            Timestamp = DateTime.UtcNow,
             Category = category,
             Message = message,
             Details = details
@@ -38,6 +42,8 @@ public class ActivityLogService : IActivityLogService
         lock (_entriesLock)
         {
             _entries.Add(entry);
+            if (_entries.Count > MaxEntries)
+                _entries.RemoveAt(0);
         }
 
         try
@@ -56,6 +62,15 @@ public class ActivityLogService : IActivityLogService
         lock (_entriesLock)
         {
             _entries.Clear();
+        }
+
+        try
+        {
+            OnCleared?.Invoke();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "Fehler im OnCleared-Event-Handler.");
         }
     }
 }

@@ -1,5 +1,5 @@
-<div class="request-headers-panel">
-    <table class="table table-sm">
+<div class="sz-panel-table-wrapper">
+    <table class="sz-table">
         <thead>
             <tr>
                 <th>Name</th>
@@ -12,23 +12,25 @@
             {
                 <tr @key="header">
                     <td>
-                        <input class="form-control form-control-sm @(header.IsAutoContentType ? "text-muted" : "")"
+                        <input class="sz-input sz-input-sm @(header.IsAutoContentType ? "sz-input-muted" : "")"
                                value="@header.Key"
                                @oninput="(e) => OnKeyChanged(header, e)" />
                     </td>
                     <td>
-                        <input class="form-control form-control-sm @(header.IsAutoContentType ? "text-muted" : "")"
+                        <input class="sz-input sz-input-sm @(header.IsAutoContentType ? "sz-input-muted" : "")"
                                value="@header.Value"
                                @oninput="(e) => OnValueChanged(header, e)" />
                     </td>
                     <td>
-                        <button type="button" class="btn btn-outline-danger btn-sm" @onclick="() => RemoveHeader(header)">&#x2715;</button>
+                        <button type="button" class="sz-btn-icon sz-btn-danger" @onclick="() => RemoveHeader(header)">&#x2715;</button>
                     </td>
                 </tr>
             }
         </tbody>
     </table>
-    <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="AddHeader">+ Header</button>
+    <div class="sz-panel-table-footer">
+        <button type="button" class="sz-links-add-btn" @onclick="AddHeader">+ Header</button>
+    </div>
 </div>
 
 @code {

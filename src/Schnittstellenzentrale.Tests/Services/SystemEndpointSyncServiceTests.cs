@@ -78,13 +78,12 @@ public class SystemEndpointSyncServiceTests
     private static OpenApiDocument DocumentWithNegotiateAuth(params (string Path, HttpMethod Method, string OperationId)[] operations)
     {
         var doc = DocumentWithPaths(operations);
-        doc.Components = new OpenApiComponents
-        {
-            SecuritySchemes = new Dictionary<string, IOpenApiSecurityScheme>
-            {
-                ["Negotiate"] = new OpenApiSecurityScheme { Type = SecuritySchemeType.Http, Scheme = "negotiate" }
-            }
-        };
+        foreach (var pathItem in doc.Paths.Values)
+            foreach (var operation in pathItem.Operations.Values)
+                (operation.Security ??= []).Add(new OpenApiSecurityRequirement
+                {
+                    { new OpenApiSecuritySchemeReference("Negotiate", null), new List<string>() }
+                });
         return doc;
     }
 

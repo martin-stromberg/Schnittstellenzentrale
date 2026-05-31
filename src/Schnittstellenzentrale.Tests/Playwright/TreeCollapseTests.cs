@@ -1,3 +1,4 @@
+using Microsoft.Playwright;
 using Schnittstellenzentrale.Tests.Playwright.Infrastructure;
 
 namespace Schnittstellenzentrale.Tests.Playwright;
@@ -7,7 +8,7 @@ namespace Schnittstellenzentrale.Tests.Playwright;
 public class TreeCollapseTests : PlaywrightTestBase
 {
     /// <summary>Initialisiert den Test mit der gemeinsamen Playwright-Factory.</summary>
-    public TreeCollapseTests(PlaywrightTestFactory factory) : base(factory) { }
+    public TreeCollapseTests(PlaywrightServer server) : base(server) { }
 
     /// <summary>Ein Klick auf den ApplicationGroup-Titeltext klappt den Knoten zu; ein zweiter Klick klappt ihn wieder auf.</summary>
     [Fact]
@@ -15,7 +16,7 @@ public class TreeCollapseTests : PlaywrightTestBase
     {
         await Page.GotoAsync(BaseUrl);
 
-        await Page.GetByRole(Microsoft.Playwright.AriaRole.Button, new() { Name = "Neue Gruppe" }).ClickAsync();
+        await Page.GetByRole(Microsoft.Playwright.AriaRole.Button, new() { Name = "Neue Sammlung" }).ClickAsync();
         await Page.GetByLabel("Name").FillAsync("Collapse-Test-Gruppe");
         await Page.GetByRole(Microsoft.Playwright.AriaRole.Button, new() { Name = "Speichern" }).ClickAsync();
 
@@ -54,7 +55,7 @@ public class TreeCollapseTests : PlaywrightTestBase
 
         await appBtn.ClickAsync();
 
-        await Microsoft.Playwright.Assertions.Expect(appRow.Locator(".sz-tree-chevron-btn .bi-chevron-down")).ToBeVisibleAsync();
+        await Microsoft.Playwright.Assertions.Expect(appRow.Locator(".sz-tree-chevron-btn .sz-icon-chevron-down")).ToBeVisibleAsync();
     }
 
     /// <summary>Ein Klick auf den Anwendungsnamen selektiert die Anwendung.</summary>
@@ -93,36 +94,45 @@ public class TreeCollapseTests : PlaywrightTestBase
         var appBtn = appRow.Locator(".sz-tree-item-btn");
 
         await appBtn.ClickAsync();
-        await Microsoft.Playwright.Assertions.Expect(appRow.Locator(".sz-tree-chevron-btn .bi-chevron-down")).ToBeVisibleAsync();
+        await Microsoft.Playwright.Assertions.Expect(appRow.Locator(".sz-tree-chevron-btn .sz-icon-chevron-down")).ToBeVisibleAsync();
 
         await appBtn.ClickAsync();
-        await Microsoft.Playwright.Assertions.Expect(appRow.Locator(".sz-tree-chevron-btn .bi-chevron-right")).ToBeVisibleAsync();
+        await Microsoft.Playwright.Assertions.Expect(appRow.Locator(".sz-tree-chevron-btn .sz-icon-chevron-right")).ToBeVisibleAsync();
     }
+
+    private async Task ExpandSystemGroupAsync()
+    {
+        var groupChevron = Page.Locator(".collapsible-section .sz-tree-chevron-btn").First;
+        await groupChevron.ClickAsync();
+    }
+
+    private ILocator SystemAppRow =>
+        Page.Locator(".sz-tree-row", new() { Has = Page.Locator(".sz-tree-item-btn", new() { HasText = "Schnittstellenzentrale" }) });
 
     /// <summary>Ein Klick auf den Endpunktordner-Namen klappt den Ordner auf; ein zweiter Klick klappt ihn wieder zu.</summary>
     [Fact]
     public async Task ClickEndpointGroupName_TogglesCollapse()
     {
         await Page.GotoAsync(BaseUrl);
+        await ExpandSystemGroupAsync();
 
-        var systemAppRow = Page.Locator(".sz-tree-row", new() { Has = Page.GetByText("Schnittstellenzentrale") }).First;
-        var contextMenuToggle = systemAppRow.Locator("[data-testid=\"context-menu-toggle\"]");
+        var contextMenuToggle = SystemAppRow.Locator("[data-testid=\"context-menu-toggle\"]");
         await contextMenuToggle.ClickAsync();
-        await Page.GetByRole(Microsoft.Playwright.AriaRole.Button, new() { Name = "Endpunktordner anlegen" }).ClickAsync();
+        await Page.GetByRole(Microsoft.Playwright.AriaRole.Button, new() { Name = "Ordner anlegen" }).ClickAsync();
         await Page.GetByLabel("Name").FillAsync("Collapse-Ordner-Test");
         await Page.GetByRole(Microsoft.Playwright.AriaRole.Button, new() { Name = "Speichern" }).ClickAsync();
 
-        var appBtn = systemAppRow.Locator(".sz-tree-item-btn");
+        var appBtn = SystemAppRow.Locator(".sz-tree-item-btn");
         await appBtn.ClickAsync();
 
         var groupRow = Page.Locator(".sz-tree-row", new() { Has = Page.GetByText("Collapse-Ordner-Test") });
         var labelSpan = groupRow.Locator(".sz-tree-item-label");
 
         await labelSpan.ClickAsync();
-        await Microsoft.Playwright.Assertions.Expect(groupRow.Locator(".bi-chevron-down")).ToBeVisibleAsync();
+        await Microsoft.Playwright.Assertions.Expect(groupRow.Locator(".sz-icon-chevron-down")).ToBeVisibleAsync();
 
         await labelSpan.ClickAsync();
-        await Microsoft.Playwright.Assertions.Expect(groupRow.Locator(".bi-chevron-right")).ToBeVisibleAsync();
+        await Microsoft.Playwright.Assertions.Expect(groupRow.Locator(".sz-icon-chevron-right")).ToBeVisibleAsync();
     }
 
     /// <summary>Ein Klick auf den Chevron-Button des Endpunktordners klappt den Ordner auf; ein zweiter Klick klappt ihn wieder zu.</summary>
@@ -130,25 +140,25 @@ public class TreeCollapseTests : PlaywrightTestBase
     public async Task ClickEndpointGroupChevron_TogglesCollapse()
     {
         await Page.GotoAsync(BaseUrl);
+        await ExpandSystemGroupAsync();
 
-        var systemAppRow = Page.Locator(".sz-tree-row", new() { Has = Page.GetByText("Schnittstellenzentrale") }).First;
-        var contextMenuToggle = systemAppRow.Locator("[data-testid=\"context-menu-toggle\"]");
+        var contextMenuToggle = SystemAppRow.Locator("[data-testid=\"context-menu-toggle\"]");
         await contextMenuToggle.ClickAsync();
-        await Page.GetByRole(Microsoft.Playwright.AriaRole.Button, new() { Name = "Endpunktordner anlegen" }).ClickAsync();
+        await Page.GetByRole(Microsoft.Playwright.AriaRole.Button, new() { Name = "Ordner anlegen" }).ClickAsync();
         await Page.GetByLabel("Name").FillAsync("Chevron-Ordner-Test");
         await Page.GetByRole(Microsoft.Playwright.AriaRole.Button, new() { Name = "Speichern" }).ClickAsync();
 
-        var appBtn = systemAppRow.Locator(".sz-tree-item-btn");
+        var appBtn = SystemAppRow.Locator(".sz-tree-item-btn");
         await appBtn.ClickAsync();
 
         var groupRow = Page.Locator(".sz-tree-row", new() { Has = Page.GetByText("Chevron-Ordner-Test") });
         var chevronBtn = groupRow.Locator(".sz-tree-chevron-btn");
 
         await chevronBtn.ClickAsync();
-        await Microsoft.Playwright.Assertions.Expect(groupRow.Locator(".bi-chevron-down")).ToBeVisibleAsync();
+        await Microsoft.Playwright.Assertions.Expect(groupRow.Locator(".sz-icon-chevron-down")).ToBeVisibleAsync();
 
         await chevronBtn.ClickAsync();
-        await Microsoft.Playwright.Assertions.Expect(groupRow.Locator(".bi-chevron-right")).ToBeVisibleAsync();
+        await Microsoft.Playwright.Assertions.Expect(groupRow.Locator(".sz-icon-chevron-right")).ToBeVisibleAsync();
     }
 
     /// <summary>Endpunktordner sind beim Laden des Baums initial zugeklappt.</summary>
@@ -156,11 +166,11 @@ public class TreeCollapseTests : PlaywrightTestBase
     public async Task EndpointGroupInitiallyCollapsed()
     {
         await Page.GotoAsync(BaseUrl);
+        await ExpandSystemGroupAsync();
 
-        var systemAppRow = Page.Locator(".sz-tree-row", new() { Has = Page.GetByText("Schnittstellenzentrale") }).First;
-        var contextMenuToggle = systemAppRow.Locator("[data-testid=\"context-menu-toggle\"]");
+        var contextMenuToggle = SystemAppRow.Locator("[data-testid=\"context-menu-toggle\"]");
         await contextMenuToggle.ClickAsync();
-        await Page.GetByRole(Microsoft.Playwright.AriaRole.Button, new() { Name = "Endpunktordner anlegen" }).ClickAsync();
+        await Page.GetByRole(Microsoft.Playwright.AriaRole.Button, new() { Name = "Ordner anlegen" }).ClickAsync();
         await Page.GetByLabel("Name").FillAsync("Initial-Collapsed-Ordner");
         await Page.GetByRole(Microsoft.Playwright.AriaRole.Button, new() { Name = "Speichern" }).ClickAsync();
 
@@ -170,11 +180,12 @@ public class TreeCollapseTests : PlaywrightTestBase
         await Page.GetByRole(Microsoft.Playwright.AriaRole.Button, new() { Name = "Speichern" }).ClickAsync();
 
         await Page.ReloadAsync();
+        await ExpandSystemGroupAsync();
 
-        var appBtn = systemAppRow.Locator(".sz-tree-item-btn");
+        var appBtn = SystemAppRow.Locator(".sz-tree-item-btn");
         await appBtn.ClickAsync();
 
         var groupRow = Page.Locator(".sz-tree-row", new() { Has = Page.GetByText("Initial-Collapsed-Ordner") });
-        await Microsoft.Playwright.Assertions.Expect(groupRow.Locator(".bi-chevron-right")).ToBeVisibleAsync();
+        await Microsoft.Playwright.Assertions.Expect(groupRow.Locator(".sz-icon-chevron-right")).ToBeVisibleAsync();
     }
 }

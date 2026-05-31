@@ -2,7 +2,7 @@
 
 ## Übersicht
 
-Die Anwendung folgt einem klassischen Blazor-Server-Muster: UI-Komponenten rufen Services über Dependency Injection auf, Services kommunizieren mit der Datenbankschicht über Repositories und mit externen Systemen über `IHttpClientFactory`. Schreiboperationen im Team-Modus lösen anschließend SignalR-Broadcasts aus. Der Ablauf gliedert sich in vier Hauptbereiche: Anwendungsstart, Datenzugriff, Endpunktausführung und Import.
+Die Anwendung folgt einem klassischen Blazor-Server-Muster: UI-Komponenten rufen Services über Dependency Injection auf, Services kommunizieren mit der Datenbankschicht über Repositories und mit externen Systemen über `IHttpClientFactory`. Schreiboperationen im Team-Modus lösen anschließend SignalR-Broadcasts aus. Der Ablauf gliedert sich in die folgenden Hauptbereiche: Anwendungsstart, Bereichsnavigation, Workspaces-Navigation und Inhaltsdarstellung, In-place-Editing, Icon-Upload, Links-Verwaltung, History-Persistenz, Environments-Bereich, Datenzugriff, Endpunktausführung und Import.
 
 ---
 
@@ -14,7 +14,10 @@ Die Anwendung folgt einem klassischen Blazor-Server-Muster: UI-Komponenten rufen
 
 - `DatabaseProviderFactory.RegisterDbContext` wertet `DatabaseProvider` aus und registriert `IDbContextFactory<AppDbContext>` mit SQLite oder SQL Server.
 - Windows-Authentifizierung wird über `AddNegotiate()` konfiguriert.
-- Alle Services werden als Scoped (`IApplicationRepository`, `IEndpointRepository`, `IStorageModeService`, `IEndpointExecutionService`, `ISwaggerImportService`, `IODataImportService`, `ISignalRNotificationService`) oder Singleton (`IHealthCheckService`, `ICredentialService`, `ICurrentUserService`) registriert.
+- Alle bisherigen Services werden als Scoped oder Singleton registriert.
+- Neue Scoped-Services: `INavigationStateService`, `IApplicationGroupService`, `IApplicationService`, `IApplicationLinkService`, `IApplicationLinkRepository`, `IHistoryService`.
+- Neue Konfigurationsklassen werden gebunden: `UploadSettings` aus `Upload`-Sektion, `HistorySettings` aus `History`-Sektion.
+- `builder.Services.AddShadcnBlazor()` registriert die ShadcnBlazor-Bibliothek.
 - `SystemEndpointSyncService` wird als `IHostedService` via `AddHostedService<SystemEndpointSyncService>()` registriert.
 - `EndpointHub` wird unter `/hubs/endpoint` gemappt.
 - Serilog wird als Logging-Provider mit EventLog- und Datei-Sink konfiguriert.
@@ -59,6 +62,116 @@ flowchart TD
     L --> M[ChangedEndpoints umbenennen\nUpdateEndpointNameAsync]
     M --> N[Scope disposed\nExecuteAsync endet]
 ```
+
+---
+
+## Ablauf: Bereichsnavigation (TopBar → Bereich wechseln)
+
+1. Benutzer klickt auf einen der drei Tabs in `TopBar` (Workspaces / Environments / History).
+2. `TopBar` ruft `INavigationStateService.SetAreaAsync(NavigationArea)` auf.
+3. `NavigationStateService` aktualisiert `CurrentArea` und feuert `OnAreaChanged`.
+4. `AppShell` reagiert auf `OnAreaChanged` und rendert das entsprechende Layout (`WorkspacesLayout`, `EnvironmentsLayout` oder `HistoryLayout`).
+
+Beteiligte Komponenten: `TopBar`, `INavigationStateService`, `NavigationStateService`, `AppShell`, `NavigationArea` (Enum: `Workspaces`, `Environments`, `History`)
+
+---
+
+## Ablauf: Workspaces-Navigation (Baumelement → Inhaltsbereich)
+
+1. Benutzer klickt in `WorkspacesSidebar` auf ein Element (Sammlung, Anwendung, Ordner, Endpunkt).
+2. `ApplicationGroupTree` löst den entsprechenden `EventCallback` aus.
+3. `WorkspacesSidebar` ruft `INavigationStateService.SetWorkspaceSelectionAsync(new WorkspaceSelection(item, path))` auf.
+4. `NavigationStateService` aktualisiert `CurrentSelection` und feuert `OnSelectionChanged`.
+5. `WorkspacesLayout` reagiert auf `OnSelectionChanged` und rendert die passende Content-View (`CollectionContentView`, `ApplicationContentView`, `FolderContentView`, `EndpointPage`) oder `EmptyContentView`.
+6. `ContentBreadcrumb` leitet seinen Zustand aus `INavigationStateService.CurrentSelectionPath` ab und stellt bis zu vier klickbare Ebenen dar. Ein Klick auf ein Breadcrumb-Element ruft erneut `SetWorkspaceSelectionAsync` mit dem gekürzten Pfad auf.
+
+Beteiligte Komponenten: `WorkspacesSidebar`, `ApplicationGroupTree`, `INavigationStateService`, `WorkspacesLayout`, `ContentBreadcrumb`, `WorkspaceSelection` (record), `CollectionContentView`, `ApplicationContentView`, `FolderContentView`, `EmptyContentView`
+
+---
+
+## Ablauf: In-place-Editing (Name / Untertitel)
+
+1. Benutzer klickt auf Name oder Untertitel im `ContentHeader`.
+2. `ContentHeader` schaltet in den Bearbeitungsmodus: zeigt ein Inline-`<input>`-Element.
+3. Benutzer gibt Text ein. Bei leerem Pflichtfeld wird die Inline-Fehlermeldung „Name darf nicht leer sein." angezeigt und `SaveNameAsync` kehrt ohne Persistierung zurück.
+4. Benutzer bestätigt mit Enter oder Blur → `ContentHeader` ruft `OnNameChanged` bzw. `OnSubtitleChanged` `EventCallback` auf. Die übergeordnete Content-View ruft den zugehörigen Service auf (`IApplicationGroupService.UpdateNameAsync`, `UpdateSubtitleAsync` oder `IApplicationService.UpdateNameAsync`, `UpdateSubtitleAsync`).
+5. Bei Escape: `CancelNameEdit` / `CancelSubtitleEdit` beendet den Bearbeitungsmodus ohne Änderung.
+
+Beteiligte Komponenten: `ContentHeader`, `IApplicationGroupService`, `ApplicationGroupService`, `IApplicationService`, `ApplicationService`
+
+---
+
+## Ablauf: Icon-Upload
+
+1. Benutzer klickt auf das Upload-Icon in `ContentHeader`.
+2. `ContentHeader` öffnet den unsichtbaren `<InputFile>` per JS-Interop (`eval document.querySelector... .click()`).
+3. Benutzer wählt eine Datei aus.
+4. `OnFileSelected` prüft `file.ContentType` (nur `image/png` oder `image/jpeg`) und `file.Size` (≤ `UploadSettings.MaxIconSizeBytes`, Standard 524 288 Bytes).
+5. Bei ungültiger Datei: `_uploadError` wird gesetzt, kein Upload.
+6. Bei gültiger Datei: Bytes werden via `MemoryStream` gelesen und der `OnIconChanged`-`EventCallback` aufgerufen. Die Content-View ruft `IApplicationGroupService.UpdateIconAsync` bzw. `IApplicationService.UpdateIconAsync` auf.
+7. `ContentHeader` zeigt das neue Icon als `<img src="data:{mimeType};base64,{base64}">`.
+
+Beteiligte Komponenten: `ContentHeader`, `UploadSettings`, `IApplicationGroupService`, `IApplicationService`
+
+---
+
+## Ablauf: Links-Verwaltung (CRUD in ApplicationContentView)
+
+1. `ApplicationContentView` initialisiert `LinksManager` mit `ApplicationId`.
+2. `LinksManager.OnParametersSetAsync` ruft `IApplicationLinkService.GetLinksAsync(applicationId)` auf und zeigt die vorhandenen Links an.
+3. **Neu:** Benutzer klickt „+ Link hinzufügen" → Inline-Formular mit URL und Beschriftungsfeld erscheint. Bei Speichern wird URL validiert (Pflichtfeld, muss mit `http://` oder `https://` beginnen) und Beschriftung auf max. 200 Zeichen geprüft; danach `IApplicationLinkService.AddLinkAsync(link)`.
+4. **Bearbeiten:** Benutzer klickt den Bearbeiten-Button (✏) → Inline-Formular mit vorausgefüllten Werten; bei Speichern `IApplicationLinkService.UpdateLinkAsync(link)`.
+5. **Löschen:** Benutzer klickt den Löschen-Button (🗑) → `IApplicationLinkService.DeleteLinkAsync(linkId)`.
+6. Nach jeder Schreiboperation wird die Liste neu geladen.
+
+Beteiligte Komponenten: `ApplicationContentView`, `LinksManager`, `IApplicationLinkService`, `ApplicationLinkService`, `IApplicationLinkRepository`, `ApplicationLinkRepository`
+
+---
+
+## Ablauf: History-Persistenz (Endpunkt wird ausgeführt)
+
+1. Benutzer löst eine Endpunktausführung aus.
+2. `EndpointExecutionService.ExecuteAsync` führt den HTTP-Aufruf durch.
+3. Nach der Ausführung (Erfolg oder Fehler) wird ein `EndpointCallHistoryEntry` befüllt (`ApplicationId`, `EndpointId`, `ExecutedAt`, `HttpMethod`, `RelativePath`, `StatusCode`, `DurationMs`) und via `IHistoryService.AddEntryAsync(entry)` persistiert.
+
+Beteiligte Komponenten: `EndpointExecutionService`, `IHistoryService`, `HistoryService`, `EndpointCallHistoryEntry`
+
+---
+
+## Ablauf: History-Anzeige (HistoryContentView)
+
+1. Benutzer wechselt in den History-Bereich.
+2. `HistoryContentView.OnInitializedAsync` ruft `IHistoryService.GetPagedAsync(filter, page, pageSize)` auf (`pageSize` aus `HistorySettings.DefaultPageSize`).
+3. `HistoryService` fragt die `EndpointCallHistory`-Tabelle ab (Filterung nach `From`/`To`, absteigende Sortierung nach `ExecutedAt`) und gibt `(Items, TotalCount)` zurück.
+4. `HistoryContentView` rendert die Tabelle mit Paginierungssteuerung (← / →, „Seite X von Y").
+5. Bei Filtereingabe oder Seitenwechsel wird `LoadAsync` erneut aufgerufen.
+
+Beteiligte Komponenten: `HistoryContentView`, `IHistoryService`, `HistoryService`, `HistoryFilter`, `HistorySettings`
+
+---
+
+## Ablauf: Top-5-Endpunkte (ApplicationContentView)
+
+1. `ApplicationContentView.OnInitializedAsync` ruft `IHistoryService.GetPagedAsync` (5 Einträge, für Statusblock) und `ApplicationTopEndpointsTable.OnParametersSetAsync` ruft `IHistoryService.GetTopEndpointsAsync(applicationId, 5)` auf.
+2. `HistoryService` aggregiert die Aufrufhäufigkeit aus `EndpointCallHistory` für die gegebene `ApplicationId`.
+3. `ApplicationTopEndpointsTable` rendert die Ergebniszeilen mit Methode, Pfad und Anzahl der Aufrufe.
+
+Beteiligte Komponenten: `ApplicationContentView`, `ApplicationTopEndpointsTable`, `IHistoryService`, `TopEndpointResult`
+
+---
+
+## Ablauf: Environments-Bereich
+
+1. Benutzer wechselt in den Environments-Bereich.
+2. `EnvironmentsLayout` rendert `EnvironmentsSidebar` und — falls eine Umgebung ausgewählt ist — `EnvironmentContentView`.
+3. `EnvironmentsSidebar` lädt alle Umgebungen via `ISystemEnvironmentRepository.GetEnvironmentsAsync(mode, owner)` und zeigt sie als Liste. Ein Klick wählt die Umgebung aus (`OnEnvironmentSelected`-Callback).
+4. `EnvironmentContentView` lädt die Umgebung via `ISystemEnvironmentRepository.GetByIdAsync(id)` und zeigt Name, Beschreibung (inline editierbar) und die `EnvironmentEditor`-Komponente (Variablentabelle).
+5. Name-Speichern: Pflichtfeld, max. 200 Zeichen, bei Enter oder Blur → `ISystemEnvironmentRepository.UpdateAsync`.
+6. Beschreibung-Speichern: Optional, bei Blur → `ISystemEnvironmentRepository.UpdateAsync`.
+7. **Neue Umgebung:** Button „+ Neue Umgebung" → Inline-Formular in `EnvironmentsSidebar` → bei Speichern `ISystemEnvironmentRepository.AddAsync`.
+8. **Löschen:** Button (🗑) neben Eintrag → `ISystemEnvironmentRepository.DeleteAsync`.
+
+Beteiligte Komponenten: `EnvironmentsLayout`, `EnvironmentsSidebar`, `EnvironmentContentView`, `EnvironmentEditor`, `ISystemEnvironmentRepository`
 
 ---
 

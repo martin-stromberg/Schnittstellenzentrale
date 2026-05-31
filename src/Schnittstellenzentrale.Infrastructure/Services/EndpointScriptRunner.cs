@@ -4,6 +4,7 @@ using Jint.Runtime;
 using Schnittstellenzentrale.Core.Enums;
 using Schnittstellenzentrale.Core.Interfaces;
 using Schnittstellenzentrale.Core.Models;
+using ScriptType = Schnittstellenzentrale.Core.Enums.ScriptType;
 
 namespace Schnittstellenzentrale.Infrastructure.Services;
 
@@ -32,7 +33,9 @@ public class EndpointScriptRunner : IEndpointScriptRunner
         var scriptName = !string.IsNullOrEmpty(context.EndpointName)
             ? context.EndpointName
             : "Skript";
-        _activityLogService.Log(ActivityLogCategory.ScriptExecuted, $"Skript ausgeführt: {scriptName}");
+        var scriptTypeLabel = context.ScriptType == ScriptType.PostRequest
+            ? "Post-Request-Skript"
+            : "Pre-Request-Skript";
 
         try
         {
@@ -46,6 +49,7 @@ public class EndpointScriptRunner : IEndpointScriptRunner
 
             engine.Execute(script);
 
+            _activityLogService.Log(ActivityLogCategory.ScriptExecuted, $"{scriptTypeLabel} ausgeführt: {scriptName}");
             return Task.FromResult(new ScriptExecutionResult { Success = true });
         }
         catch (TimeoutException ex)
@@ -193,16 +197,20 @@ public class EndpointScriptRunner : IEndpointScriptRunner
             }
             : new SystemEnvironment
             {
+                Id = 0,
                 Name = string.Empty,
                 Variables = updatedVariables
             };
 
         context.EnvironmentService.SetActiveEnvironment(updatedEnv);
 
-        if (activeEnv != null)
+        if (activeEnv != null && activeEnv.Id > 0)
         {
-            // Jint callbacks sind synchron — await ist nicht möglich. Task.Run + GetAwaiter().GetResult()
-            // ist das etablierte Muster, um async-Methoden aus synchronen Jint-Lambdas heraus zu blockieren.
+            // Bekannte Einschränkung: Jint-Callbacks sind synchron; await ist in diesem Kontext nicht möglich.
+            // Task.Run + GetAwaiter().GetResult() blockiert einen Thread-Pool-Thread für die Dauer des
+            // Datenbankzugriffs. Bei vielen gleichzeitigen Skriptausführungen mit langsamer Datenbank kann
+            // dies zu Thread-Pool-Erschöpfung führen. Eine echte async-Lösung würde eine Jint-API erfordern,
+            // die asynchrone Callbacks unterstützt (aktuell nicht verfügbar).
             Task.Run(() => PersistVariableAsync(activeEnv.Id, name, value)).GetAwaiter().GetResult();
         }
     }

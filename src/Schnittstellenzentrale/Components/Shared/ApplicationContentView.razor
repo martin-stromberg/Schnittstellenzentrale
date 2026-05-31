@@ -1,0 +1,142 @@
+@inject IApplicationService ApplicationService
+@inject IEndpointRepository EndpointRepository
+@inject ISwaggerImportService SwaggerImportService
+@inject IHealthCheckService HealthCheckService
+@inject IApplicationApiClient ApplicationApiClient
+
+<div class="sz-content-view">
+    <section class="sz-hero">
+        <div class="sz-hero-bg">
+            <div class="sz-hero-bg-gradient"></div>
+            <div class="sz-hero-bg-pattern"></div>
+        </div>
+        <div class="sz-hero-content">
+            <div class="sz-hero-left">
+                @if (!string.IsNullOrEmpty(Application.InterfaceUrl))
+                {
+                    <div class="sz-hero-badge-row">
+                        <span class="sz-hero-badge">@Application.InterfaceType</span>
+                    </div>
+                }
+                <ContentHeader Name="@Application.Name"
+                               Subtitle="@Application.Subtitle"
+                               IconData="@Application.IconData"
+                               OnNameChanged="OnNameChanged"
+                               OnSubtitleChanged="OnSubtitleChanged"
+                               OnIconChanged="OnIconChanged" />
+            </div>
+            <div class="sz-hero-right">
+                @if (Application.InterfaceType == Core.Enums.InterfaceType.Rest && !string.IsNullOrEmpty(Application.InterfaceUrl))
+                {
+                    <button type="button" class="sz-btn sz-btn-outline sz-btn-sm" @onclick="OpenSwaggerImportAsync">Swagger-Import</button>
+                }
+                <button type="button" class="sz-btn sz-btn-outline sz-btn-sm" @onclick="RunHealthCheckAsync">Health-Check</button>
+            </div>
+        </div>
+    </section>
+
+    @if (_showSwaggerImport && _swaggerDiff != null)
+    {
+        <SwaggerImportDialog Diff="_swaggerDiff" Application="Application" OnClose="CloseSwaggerImport" />
+    }
+    @if (_showHealthCheck)
+    {
+        <HealthCheckDialog Application="Application" IsReachable="_healthCheckResult" OnClose="CloseHealthCheck" OnRemove="OnHealthCheckRemove" />
+    }
+
+    <div class="sz-dashboard">
+        <div class="sz-dashboard-grid">
+            <div class="sz-dashboard-col-main">
+                <div class="sz-info-block">
+                    <span class="sz-section-label">Beschreibung</span>
+                    <p class="sz-info-description">
+                        @(string.IsNullOrEmpty(Application.Description) ? "Keine Beschreibung vorhanden." : Application.Description)
+                    </p>
+                    <div class="sz-info-url-grid">
+                        <div class="sz-info-url-card">
+                            <div class="sz-info-url-label">Basis-URL</div>
+                            <div class="sz-info-url-value">@Application.BaseUrl</div>
+                        </div>
+                        @if (!string.IsNullOrEmpty(Application.InterfaceUrl))
+                        {
+                            <div class="sz-info-url-card">
+                                <div class="sz-info-url-label">Swagger / OData URL</div>
+                                <a class="sz-info-url-value sz-info-url-value--link" href="@Application.InterfaceUrl" target="_blank" rel="noopener">
+                                    @Application.InterfaceUrl
+                                </a>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+            <div class="sz-dashboard-col-aside">
+                <span class="sz-section-label">KPI</span>
+                <div class="sz-kpi-card">
+                    <div class="sz-kpi-row">
+                        <span class="sz-kpi-label">Anzahl Endpunkte</span>
+                        <span class="sz-kpi-value">@_endpointCount</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <LinksManager ApplicationId="@Application.Id" />
+
+        <ApplicationTopEndpointsTable ApplicationId="@Application.Id" />
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public Application Application { get; set; } = null!;
+
+    private int _endpointCount;
+    private bool _showSwaggerImport;
+    private bool _showHealthCheck;
+    private ImportDiff? _swaggerDiff;
+    private bool? _healthCheckResult;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        var endpoints = await EndpointRepository.GetEndpointsAsync(Application.Id);
+        _endpointCount = endpoints.Count;
+    }
+
+    private async Task OnNameChanged(string name)
+    {
+        await ApplicationService.UpdateNameAsync(Application.Id, name);
+        Application.Name = name;
+    }
+
+    private async Task OnSubtitleChanged(string? subtitle)
+    {
+        await ApplicationService.UpdateSubtitleAsync(Application.Id, subtitle);
+        Application.Subtitle = subtitle;
+    }
+
+    private async Task OnIconChanged(byte[] iconData)
+    {
+        await ApplicationService.UpdateIconAsync(Application.Id, iconData);
+        Application.IconData = iconData;
+    }
+
+    private async Task OpenSwaggerImportAsync()
+    {
+        _swaggerDiff = await SwaggerImportService.ImportAsync(Application);
+        _showSwaggerImport = true;
+    }
+
+    private async Task RunHealthCheckAsync()
+    {
+        _healthCheckResult = await HealthCheckService.CheckAsync(Application);
+        _showHealthCheck = true;
+    }
+
+    private void CloseSwaggerImport() => _showSwaggerImport = false;
+    private void CloseHealthCheck() => _showHealthCheck = false;
+
+    private async Task OnHealthCheckRemove()
+    {
+        _showHealthCheck = false;
+        await ApplicationApiClient.DeleteApplicationAsync(Application.Id);
+    }
+}

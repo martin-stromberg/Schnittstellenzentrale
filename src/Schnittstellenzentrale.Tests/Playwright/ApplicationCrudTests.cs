@@ -8,13 +8,14 @@ namespace Schnittstellenzentrale.Tests.Playwright;
 public class ApplicationCrudTests : PlaywrightTestBase
 {
     /// <summary>Initialisiert den Test mit der gemeinsamen Playwright-Factory.</summary>
-    public ApplicationCrudTests(PlaywrightTestFactory factory) : base(factory) { }
+    public ApplicationCrudTests(PlaywrightServer server) : base(server) { }
 
     /// <summary>Eine neu angelegte Anwendung erscheint im Baum.</summary>
     [Fact]
     public async Task CreateApplication_AppearsInTree()
     {
         await Page.GotoAsync(BaseUrl);
+        await Page.Locator(".sz-topbar-tab", new() { HasText = "Workspaces" }).ClickAsync();
 
         await Page.GetByRole(Microsoft.Playwright.AriaRole.Button, new() { Name = "Neue Anwendung" }).ClickAsync();
 
@@ -31,6 +32,7 @@ public class ApplicationCrudTests : PlaywrightTestBase
     public async Task EditApplication_UpdatesNameInTree()
     {
         await Page.GotoAsync(BaseUrl);
+        await Page.Locator(".sz-topbar-tab", new() { HasText = "Workspaces" }).ClickAsync();
 
         await Page.GetByRole(Microsoft.Playwright.AriaRole.Button, new() { Name = "Neue Anwendung" }).ClickAsync();
         await Page.GetByLabel("Name").FillAsync("Umbenennung-Test");
@@ -58,6 +60,7 @@ public class ApplicationCrudTests : PlaywrightTestBase
     public async Task DeleteApplication_DisappearsFromTree()
     {
         await Page.GotoAsync(BaseUrl);
+        await Page.Locator(".sz-topbar-tab", new() { HasText = "Workspaces" }).ClickAsync();
 
         await Page.GetByRole(Microsoft.Playwright.AriaRole.Button, new() { Name = "Neue Anwendung" }).ClickAsync();
         await Page.GetByLabel("Name").FillAsync("Zu-loeschende-Anwendung");

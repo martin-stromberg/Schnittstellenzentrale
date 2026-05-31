@@ -8,28 +8,44 @@
 
 ---
 
+## Bereich wechseln
+
+Die Titelleiste (**TopBar**) enthält drei Tabs: **Workspaces**, **Environments** und **History**. Ein Klick auf einen Tab wechselt den angezeigten Bereich sofort — ohne Neuladen der Seite.
+
+---
+
 ## Speichermodus wählen
 
-In der Kopfzeile der Anwendung befindet sich ein Auswahlfeld „Modus" mit den Optionen **Team** und **Benutzer**.
+In der Titelleiste befindet sich ein Auswahlfeld **Modus** mit den Optionen **Team** und **Benutzer**.
 
 - **Team:** Alle Anwendungen und Endpunkte sind für alle Benutzer sichtbar und gemeinsam bearbeitbar.
-- **Benutzer:** Es werden nur die eigenen Anwendungen angezeigt.
+- **Benutzer:** Es werden nur die eigenen Anwendungen und Umgebungen angezeigt.
 
 Der Modus kann jederzeit gewechselt werden; die Ansicht aktualisiert sich sofort.
 
 ---
 
-## Anwendung aufrufen
+## Anwendung aufrufen (Bereich Workspaces)
 
 ### 1. Anwendung in der Seitenleiste auswählen
 
-Die linke Seitenleiste zeigt alle Anwendungsgruppen als zugeklappte Abschnitte. Ein Klick auf einen Gruppennamen klappt die Gruppe auf und zeigt die enthaltenen Anwendungen. Nicht gruppierten Anwendungen erscheinen unter „Ohne Gruppe".
+Die linke Seitenleiste zeigt alle Sammlungen als zugeklappte Abschnitte. Ein Klick auf einen Sammlungsnamen klappt die Gruppe auf und zeigt die enthaltenen Anwendungen. Nicht gruppierten Anwendungen erscheinen unter „Ohne Gruppe".
 
-Ein Klick auf einen Anwendungsnamen öffnet die Detailansicht rechts.
+Ein Klick auf einen Anwendungsnamen öffnet die Inhaltsansicht der Anwendung rechts.
 
-### 2. Anwendungsdetails ansehen
+### 2. Breadcrumb nutzen
 
-Die Detailansicht zeigt Name, Beschreibung, Basis-URL sowie optional Swagger-URL und Metadata-URL der Anwendung. Darunter werden die Endpunkte der Anwendung, gruppiert in Abschnitte, angezeigt.
+Über dem Inhaltsbereich zeigt die Breadcrumb-Leiste den aktuellen Navigationspfad, z. B. **MeineSammlung / MeineAnwendung / MeinOrdner**. Ein Klick auf ein übergeordnetes Element in der Breadcrumb-Leiste navigiert direkt dorthin zurück.
+
+### 3. Anwendungsdetails ansehen
+
+Die Inhaltsansicht zeigt:
+- Kopfbereich mit Name, optionalem Untertitel und Icon
+- Block **Beschreibung**
+- Block **URLs** (Basis-URL, optional Swagger/OData-URL)
+- Block **Letzte Aufrufe** (die jüngsten 5 Einträge aus der Aufrufhistorie)
+- Block **Links** (verwaltete URL-Links zur Anwendung)
+- Block **Top-5-Endpunkte** (die meistaufgerufenen Endpunkte)
 
 ---
 
@@ -124,6 +140,59 @@ Der Button **Health-Check** in der Anwendungsdetailansicht sendet eine Anfrage a
 ### 3. Anwendung entfernen (optional)
 
 Wenn die Anwendung nicht erreichbar ist, erscheint der Button **Anwendung entfernen**. Ein Klick löscht die Anwendung und alle zugehörigen Endpunkte unwiderruflich.
+
+---
+
+---
+
+## Name oder Untertitel bearbeiten (In-place-Editing)
+
+In der Inhaltsansicht einer Sammlung oder Anwendung kann der Name bzw. Untertitel direkt bearbeitet werden:
+
+1. Auf den Namen oder Untertitel klicken — ein Eingabefeld erscheint.
+2. Text eingeben. Ein leerer Name wird nicht akzeptiert (Fehlermeldung erscheint inline).
+3. Mit **Enter** oder Klick außerhalb speichern; mit **Escape** abbrechen.
+
+---
+
+## Icon hochladen
+
+Im Kopfbereich einer Sammlung oder Anwendung befindet sich ein Upload-Symbol (↑):
+
+1. Auf das Upload-Symbol klicken.
+2. Eine Datei im Format **PNG** oder **JPEG** auswählen (max. 512 KB).
+3. Das Icon erscheint sofort im Kopfbereich. Bei ungültigem Format oder zu großer Datei erscheint eine Fehlermeldung; kein Upload wird durchgeführt.
+
+---
+
+## Links einer Anwendung verwalten
+
+Im Block **Links** der Anwendungsansicht:
+
+- **Hinzufügen:** „+ Link hinzufügen" klicken, URL (Pflichtfeld, muss mit `http://` oder `https://` beginnen) und optionale Beschriftung (max. 200 Zeichen) eingeben, **Speichern** klicken.
+- **Bearbeiten:** Stift-Icon (✏) neben dem Link anklicken, Werte ändern, **Speichern** klicken.
+- **Löschen:** Papierkorb-Icon (🗑) neben dem Link anklicken.
+
+---
+
+## Aufrufhistorie einsehen (Bereich History)
+
+1. Tab **History** in der Titelleiste anklicken.
+2. Die Liste zeigt alle vergangenen Endpunktaufrufe mit Zeitpunkt, Methode, Pfad, Statuscode und Dauer in Millisekunden.
+3. Optionaler Filter: Zeitraum über die beiden Datumsfelder „Von" und „Bis" einschränken, dann **Filtern** klicken.
+4. Über die Pfeiltasten (← →) kann zwischen Seiten navigiert werden.
+5. **Zurücksetzen** entfernt den Zeitraumfilter und zeigt wieder alle Einträge.
+
+---
+
+## Systemumgebungen verwalten (Bereich Environments)
+
+1. Tab **Environments** in der Titelleiste anklicken.
+2. Die Seitenleiste zeigt alle Umgebungen. Ein Klick auf einen Umgebungsnamen öffnet die Inhaltsansicht.
+3. In der Inhaltsansicht können **Name** (Pflichtfeld, max. 200 Zeichen) und **Beschreibung** (optional) direkt durch Anklicken des Texts bearbeitet werden; Speichern bei Blur oder Enter.
+4. Darunter befindet sich die Variablentabelle zum Anlegen, Bearbeiten und Löschen von Umgebungsvariablen.
+5. **Neue Umgebung anlegen:** „+ Neue Umgebung"-Button klicken, Name eingeben und **Anlegen** bestätigen.
+6. **Umgebung löschen:** Papierkorb-Icon (🗑) neben dem Eintrag in der Seitenleiste anklicken.
 
 ---
 

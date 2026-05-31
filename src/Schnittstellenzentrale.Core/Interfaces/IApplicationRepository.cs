@@ -18,4 +18,7 @@ public interface IApplicationRepository
     Task<Application> AddApplicationAsync(Application application);
     Task<Application> UpdateApplicationAsync(Application application);
     Task DeleteApplicationAsync(int id);
+
+    Task<int> GetApplicationCountByGroupAsync(int groupId);
+    Task<int> GetEndpointCountByGroupAsync(int groupId);
 }

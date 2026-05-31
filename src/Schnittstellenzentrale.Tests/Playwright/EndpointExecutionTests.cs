@@ -8,16 +8,25 @@ namespace Schnittstellenzentrale.Tests.Playwright;
 public class EndpointExecutionTests : PlaywrightTestBase
 {
     /// <summary>Initialisiert den Test mit der gemeinsamen Playwright-Factory.</summary>
-    public EndpointExecutionTests(PlaywrightTestFactory factory) : base(factory) { }
+    public EndpointExecutionTests(PlaywrightServer server) : base(server) { }
+
+    private async Task ExpandSystemGroupAsync()
+    {
+        var groupChevron = Page.Locator(".collapsible-section .sz-tree-chevron-btn").First;
+        await groupChevron.ClickAsync();
+    }
+
+    private ILocator SystemAppRow =>
+        Page.Locator(".sz-tree-row", new() { Has = Page.Locator(".sz-tree-item-btn", new() { HasText = "Schnittstellenzentrale" }) });
 
     /// <summary>Eine HTTP-2xx-Response erscheint im Response-Bereich nach dem Ausführen eines Endpunkts.</summary>
     [Fact]
     public async Task ExecuteEndpoint_ReturnsSuccessResponse()
     {
         await Page.GotoAsync(BaseUrl);
+        await ExpandSystemGroupAsync();
 
-        var systemAppRow = Page.Locator(".sz-tree-row", new() { Has = Page.GetByText("Schnittstellenzentrale") }).First;
-        var contextMenuToggle = systemAppRow.Locator("[data-testid=\"context-menu-toggle\"]");
+        var contextMenuToggle = SystemAppRow.Locator("[data-testid=\"context-menu-toggle\"]");
         await contextMenuToggle.ClickAsync();
 
         await Page.GetByRole(Microsoft.Playwright.AriaRole.Button, new() { Name = "Endpunkt anlegen" }).ClickAsync();
@@ -44,24 +53,29 @@ public class EndpointExecutionTests : PlaywrightTestBase
     {
         await Page.GotoAsync(BaseUrl);
 
-        // Umgebung mit Variable anlegen
-        await Page.GetByTitle("Umgebungen verwalten").ClickAsync();
-        await Page.GetByRole(AriaRole.Button, new() { Name = "Neu" }).ClickAsync();
-        await Page.Locator(".environment-editor input[type='text']").First.FillAsync("VariablenTestUmgebung");
+        // Umgebung mit Variable im Environments-Tab anlegen
+        await Page.Locator(".sz-topbar-tab", new() { HasText = "Environments" }).ClickAsync();
+        await Page.GetByRole(AriaRole.Button, new() { Name = "+ Neue Umgebung" }).ClickAsync();
+        await Page.Locator(".sz-env-create-form .sz-input").FillAsync("VariablenTestUmgebung");
+        await Page.GetByRole(AriaRole.Button, new() { Name = "Anlegen" }).ClickAsync();
+
+        // Neu angelegte Umgebung selektieren
+        await Page.GetByRole(AriaRole.Button, new() { Name = "VariablenTestUmgebung" }).ClickAsync();
+
+        // Variable hinzufügen
         await Page.GetByRole(AriaRole.Button, new() { Name = "+ Variable hinzufügen" }).ClickAsync();
         var variableRows = Page.Locator(".environment-editor table tbody tr");
         await variableRows.First.Locator("input").First.FillAsync("pfad");
         await variableRows.First.Locator("input").Nth(1).FillAsync("api/application-groups");
         await Page.GetByRole(AriaRole.Button, new() { Name = "Speichern" }).ClickAsync();
-        await Page.Locator(".btn-close").ClickAsync();
 
-        // Umgebung aktivieren
-        var envSelector = Page.Locator(".top-row select").Last;
-        await envSelector.SelectOptionAsync(new SelectOptionValue { Label = "VariablenTestUmgebung" });
+        // Umgebung aktivieren und zu Workspaces wechseln
+        await Page.Locator(".sz-topbar-actions .form-select").SelectOptionAsync(new SelectOptionValue { Label = "VariablenTestUmgebung" });
+        await Page.Locator(".sz-topbar-tab", new() { HasText = "Workspaces" }).ClickAsync();
 
         // Endpunkt mit {{pfad}}-Platzhalter anlegen
-        var systemAppRow = Page.Locator(".sz-tree-row", new() { Has = Page.GetByText("Schnittstellenzentrale") }).First;
-        await systemAppRow.Locator("[data-testid=\"context-menu-toggle\"]").ClickAsync();
+        await ExpandSystemGroupAsync();
+        await SystemAppRow.Locator("[data-testid=\"context-menu-toggle\"]").ClickAsync();
         await Page.GetByRole(AriaRole.Button, new() { Name = "Endpunkt anlegen" }).ClickAsync();
 
         var pathInput = Page.GetByPlaceholder("Relativer Pfad");
@@ -89,9 +103,9 @@ public class EndpointExecutionTests : PlaywrightTestBase
     public async Task EndpunktMitPlatzhalterUndQueryString_ZeigtKorrekteEintraegeUndSendetAufgeloestUrl()
     {
         await Page.GotoAsync(BaseUrl);
+        await ExpandSystemGroupAsync();
 
-        var systemAppRow = Page.Locator(".sz-tree-row", new() { Has = Page.GetByText("Schnittstellenzentrale") }).First;
-        var contextMenuToggle = systemAppRow.Locator("[data-testid=\"context-menu-toggle\"]");
+        var contextMenuToggle = SystemAppRow.Locator("[data-testid=\"context-menu-toggle\"]");
         await contextMenuToggle.ClickAsync();
 
         await Page.GetByRole(Microsoft.Playwright.AriaRole.Button, new() { Name = "Endpunkt anlegen" }).ClickAsync();

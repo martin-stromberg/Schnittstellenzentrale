@@ -25,6 +25,10 @@ public class AppDbContext : DbContext
     public DbSet<Core.Models.SystemEnvironment> SystemEnvironments => Set<Core.Models.SystemEnvironment>();
     /// <summary>Umgebungsvariablen.</summary>
     public DbSet<EnvironmentVariable> EnvironmentVariables => Set<EnvironmentVariable>();
+    /// <summary>Anwendungslinks.</summary>
+    public DbSet<ApplicationLink> ApplicationLinks => Set<ApplicationLink>();
+    /// <summary>Endpunkt-Aufrufhistorie.</summary>
+    public DbSet<EndpointCallHistoryEntry> EndpointCallHistory => Set<EndpointCallHistoryEntry>();
 
     /// <inheritdoc/>
     public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
@@ -151,6 +155,31 @@ public class AppDbContext : DbContext
             entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
             entity.Property(e => e.Value).IsRequired().HasMaxLength(4000);
             entity.HasIndex(e => new { e.Name, e.SystemEnvironmentId }).IsUnique();
+        });
+
+        modelBuilder.Entity<ApplicationLink>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.RowVersion).IsConcurrencyToken();
+            entity.HasOne(e => e.Application)
+                  .WithMany(a => a.Links)
+                  .HasForeignKey(e => e.ApplicationId)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<EndpointCallHistoryEntry>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).ValueGeneratedOnAdd();
+            entity.Property(e => e.HttpMethod).HasMaxLength(20);
+            entity.HasOne(e => e.Application)
+                  .WithMany()
+                  .HasForeignKey(e => e.ApplicationId)
+                  .OnDelete(DeleteBehavior.SetNull);
+            entity.HasOne(e => e.Endpoint)
+                  .WithMany()
+                  .HasForeignKey(e => e.EndpointId)
+                  .OnDelete(DeleteBehavior.SetNull);
         });
     }
 }

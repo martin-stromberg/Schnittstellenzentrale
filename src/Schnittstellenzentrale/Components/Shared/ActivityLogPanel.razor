@@ -31,13 +31,21 @@ else
     protected override void OnInitialized()
     {
         ActivityLogService.OnEntryAdded += OnEntryAdded;
+        ActivityLogService.OnCleared += OnCleared;
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
-            _jsModule = await JSRuntime.InvokeAsync<IJSObjectReference>("import", "./activity-log-panel.js");
+            try
+            {
+                _jsModule = await JSRuntime.InvokeAsync<IJSObjectReference>("import", "./activity-log-panel.js");
+            }
+            catch (JSException)
+            {
+                return;
+            }
 
             try
             {
@@ -83,6 +91,11 @@ else
         InvokeAsync(StateHasChanged);
     }
 
+    private void OnCleared()
+    {
+        InvokeAsync(StateHasChanged);
+    }
+
     private async Task ToggleDisplayMode()
     {
         _displayMode = _displayMode == "dock" ? "overlay" : "dock";
@@ -113,13 +126,13 @@ else
     {
         <div class="activity-log-panel__toolbar">
             <span class="activity-log-panel__title">Protokoll</span>
-            <button type="button" class="btn btn-sm btn-outline-secondary" title="@(_displayMode == "dock" ? "Overlay" : "Angedockt")"
+            <button type="button" class="sz-btn-icon" title="@(_displayMode == "dock" ? "Overlay" : "Angedockt")"
                     @onclick="ToggleDisplayMode">
-                <i class="bi @(_displayMode == "dock" ? "bi-pip" : "bi-layout-sidebar-reverse")"></i>
+                @(_displayMode == "dock" ? "⧉" : "⬜")
             </button>
-            <button type="button" class="btn btn-sm btn-outline-secondary" title="Protokoll leeren"
+            <button type="button" class="sz-btn-icon" title="Protokoll leeren"
                     @onclick="ClearLog">
-                <i class="bi bi-trash"></i>
+                &#128465;
             </button>
         </div>
         <div class="activity-log-panel__entries">
@@ -127,7 +140,7 @@ else
             {
                 <div class="activity-log-entry activity-log-entry--@entry.Category.ToString().ToLowerInvariant()">
                     <span class="activity-log-entry__timestamp">@entry.Timestamp.ToLocalTime().ToString("HH:mm:ss")</span>
-                    <span class="activity-log-entry__icon"><i class="bi @GetCategoryIcon(entry.Category)"></i></span>
+                    <span class="activity-log-entry__icon">@GetCategoryIcon(entry.Category)</span>
                     <span class="activity-log-entry__message">@entry.Message</span>
                     @if (!string.IsNullOrEmpty(entry.Details))
                     {
@@ -143,21 +156,22 @@ else
 
     private static string GetCategoryIcon(ActivityLogCategory category) => category switch
     {
-        ActivityLogCategory.EntityCreated => "bi-plus-circle",
-        ActivityLogCategory.EntityModified => "bi-pencil",
-        ActivityLogCategory.EntityMoved => "bi-arrows-move",
-        ActivityLogCategory.ContextSwitched => "bi-arrow-left-right",
-        ActivityLogCategory.EndpointExecuted => "bi-lightning",
-        ActivityLogCategory.ScriptExecuted => "bi-code-slash",
-        ActivityLogCategory.ScriptConsoleOutput => "bi-terminal",
-        ActivityLogCategory.HttpError => "bi-exclamation-triangle",
-        ActivityLogCategory.InternalError => "bi-bug",
-        _ => "bi-info-circle"
+        ActivityLogCategory.EntityCreated => "＋",
+        ActivityLogCategory.EntityModified => "✎",
+        ActivityLogCategory.EntityMoved => "⇄",
+        ActivityLogCategory.ContextSwitched => "⇌",
+        ActivityLogCategory.EndpointExecuted => "⚡",
+        ActivityLogCategory.ScriptExecuted => "⟨/⟩",
+        ActivityLogCategory.ScriptConsoleOutput => "▶",
+        ActivityLogCategory.HttpError => "⚠",
+        ActivityLogCategory.InternalError => "✖",
+        _ => "ℹ"
     };
 
     public async ValueTask DisposeAsync()
     {
         ActivityLogService.OnEntryAdded -= OnEntryAdded;
+        ActivityLogService.OnCleared -= OnCleared;
         if (_jsModule != null)
         {
             try

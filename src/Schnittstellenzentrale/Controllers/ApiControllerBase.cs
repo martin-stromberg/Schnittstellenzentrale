@@ -68,7 +68,10 @@ public abstract class ApiControllerBase : ControllerBase
         Description = application.Description,
         InterfaceUrl = application.InterfaceUrl,
         InterfaceType = (int)application.InterfaceType,
-        Owner = application.Owner
+        Owner = application.Owner,
+        Subtitle = application.Subtitle,
+        IconData = application.IconData,
+        RowVersion = application.RowVersion
     };
 
     /// <summary>Mappt eine <see cref="ApplicationGroup"/> auf ein <see cref="ApplicationGroupResponse"/>-DTO.</summary>
@@ -77,6 +80,10 @@ public abstract class ApiControllerBase : ControllerBase
         Id = group.Id,
         Name = group.Name,
         IsSystem = group.IsSystem,
+        Description = group.Description,
+        Subtitle = group.Subtitle,
+        IconData = group.IconData,
+        RowVersion = group.RowVersion,
         Applications = group.Applications.Select(MapToResponse).ToList()
     };
 }

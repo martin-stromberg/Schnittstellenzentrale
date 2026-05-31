@@ -16,7 +16,7 @@
             @if (Application.ApplicationGroupId.HasValue)
             {
                 <button type="button" class="context-menu-item" @onclick="RemoveFromGroupRequested">
-                    <i class="bi bi-folder-minus"></i> Aus Gruppe entfernen
+                    <i class="bi bi-folder-minus"></i> Aus Sammlung entfernen
                 </button>
             }
             <button type="button" class="context-menu-item context-menu-item--danger" @onclick="DeleteRequested" disabled="@(Application.IsSystem)">

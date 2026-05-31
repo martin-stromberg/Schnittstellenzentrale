@@ -1,0 +1,199 @@
+@using Microsoft.EntityFrameworkCore
+@inject IApplicationLinkService ApplicationLinkService
+
+<div class="sz-links-section">
+    <div class="sz-links-header">
+        <span class="sz-section-label">Verwaltbare Links</span>
+        @if (!_addingNew)
+        {
+            <button type="button" class="sz-links-add-btn" @onclick="StartAdd">+ Link hinzufügen</button>
+        }
+    </div>
+
+    @if (_addingNew)
+    {
+        <div class="sz-link-edit-row">
+            <input class="sz-input" @bind="_newUrl" placeholder="URL (https://...)" />
+            <input class="sz-input" @bind="_newLabel" placeholder="Beschriftung (optional, max. 200 Zeichen)" />
+            @if (!string.IsNullOrEmpty(_linkError))
+            {
+                <span class="sz-inplace-error">@_linkError</span>
+            }
+            <div class="sz-link-edit-actions">
+                <button type="button" class="sz-btn-primary" @onclick="SaveNewAsync">Speichern</button>
+                <button type="button" class="sz-btn-secondary" @onclick="CancelNew">Abbrechen</button>
+            </div>
+        </div>
+    }
+
+    <div class="sz-links-list">
+        @for (int i = 0; i < _links.Count; i++)
+        {
+            var link = _links[i];
+            var isLast = i == _links.Count - 1;
+
+            @if (_editingLinkId == link.Id)
+            {
+                <div class="sz-link-edit-row">
+                    <input class="sz-input" @bind="_editUrl" placeholder="URL (https://...)" />
+                    <input class="sz-input" @bind="_editLabel" placeholder="Beschriftung (optional)" />
+                    @if (!string.IsNullOrEmpty(_linkError))
+                    {
+                        <span class="sz-inplace-error">@_linkError</span>
+                    }
+                    <div class="sz-link-edit-actions">
+                        <button type="button" class="sz-btn-primary" @onclick="SaveEditAsync">Speichern</button>
+                        <button type="button" class="sz-btn-secondary" @onclick="CancelEdit">Abbrechen</button>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="sz-link-entry">
+                    <div class="sz-link-entry-left">
+                        <span class="sz-link-icon">&#128279;</span>
+                        <a class="sz-link-anchor" href="@link.Url" target="_blank" rel="noopener">
+                            @(string.IsNullOrEmpty(link.Label) ? link.Url : link.Label)
+                        </a>
+                        <button type="button" class="sz-btn-icon" title="Bearbeiten" @onclick="() => StartEdit(link)">&#9998;</button>
+                    </div>
+                    <button type="button" class="sz-link-delete-btn" title="Löschen" @onclick="() => DeleteLinkAsync(link.Id)">&#128465;</button>
+                </div>
+                @if (!isLast)
+                {
+                    <div class="sz-link-divider"></div>
+                }
+            }
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public int ApplicationId { get; set; }
+
+    private IList<ApplicationLink> _links = [];
+    private bool _addingNew;
+    private string _newUrl = string.Empty;
+    private string _newLabel = string.Empty;
+    private int? _editingLinkId;
+    private string _editUrl = string.Empty;
+    private string _editLabel = string.Empty;
+    private string? _linkError;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _links = await ApplicationLinkService.GetLinksAsync(ApplicationId);
+    }
+
+    private void StartAdd()
+    {
+        _newUrl = string.Empty;
+        _newLabel = string.Empty;
+        _linkError = null;
+        _addingNew = true;
+    }
+
+    private void CancelNew()
+    {
+        _addingNew = false;
+        _linkError = null;
+    }
+
+    private async Task SaveNewAsync()
+    {
+        if (!ValidateUrl(_newUrl, out var error))
+        {
+            _linkError = error;
+            return;
+        }
+        if (_newLabel.Length > 200)
+        {
+            _linkError = "Beschriftung darf maximal 200 Zeichen lang sein.";
+            return;
+        }
+        var link = new ApplicationLink { ApplicationId = ApplicationId, Url = _newUrl, Label = string.IsNullOrEmpty(_newLabel) ? null : _newLabel };
+        await ApplicationLinkService.AddLinkAsync(link);
+        _addingNew = false;
+        _linkError = null;
+        _links = await ApplicationLinkService.GetLinksAsync(ApplicationId);
+    }
+
+    private void StartEdit(ApplicationLink link)
+    {
+        _editingLinkId = link.Id;
+        _editUrl = link.Url ?? string.Empty;
+        _editLabel = link.Label ?? string.Empty;
+        _linkError = null;
+    }
+
+    private void CancelEdit()
+    {
+        _editingLinkId = null;
+        _linkError = null;
+    }
+
+    private async Task SaveEditAsync()
+    {
+        if (!ValidateUrl(_editUrl, out var error))
+        {
+            _linkError = error;
+            return;
+        }
+        if (_editLabel.Length > 200)
+        {
+            _linkError = "Beschriftung darf maximal 200 Zeichen lang sein.";
+            return;
+        }
+        var existing = _links.FirstOrDefault(l => l.Id == _editingLinkId);
+        if (existing == null) return;
+        var updated = new ApplicationLink
+        {
+            Id = existing.Id,
+            ApplicationId = existing.ApplicationId,
+            Url = _editUrl,
+            Label = string.IsNullOrEmpty(_editLabel) ? null : _editLabel
+        };
+        try
+        {
+            await ApplicationLinkService.UpdateLinkAsync(updated);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            _linkError = "Der Link wurde zwischenzeitlich von jemand anderem geändert. Bitte lade die Seite neu.";
+            return;
+        }
+        _editingLinkId = null;
+        _linkError = null;
+        _links = await ApplicationLinkService.GetLinksAsync(ApplicationId);
+    }
+
+    private async Task DeleteLinkAsync(int linkId)
+    {
+        await ApplicationLinkService.DeleteLinkAsync(linkId);
+        _links = await ApplicationLinkService.GetLinksAsync(ApplicationId);
+    }
+
+    private const int MaxUrlLength = 2048;
+
+    private static bool ValidateUrl(string url, out string error)
+    {
+        if (string.IsNullOrWhiteSpace(url))
+        {
+            error = "URL ist ein Pflichtfeld.";
+            return false;
+        }
+        if (!url.StartsWith("http://", StringComparison.OrdinalIgnoreCase) &&
+            !url.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+        {
+            error = "URL muss mit http:// oder https:// beginnen.";
+            return false;
+        }
+        if (url.Length > MaxUrlLength)
+        {
+            error = $"URL darf maximal {MaxUrlLength} Zeichen lang sein.";
+            return false;
+        }
+        error = string.Empty;
+        return true;
+    }
+}

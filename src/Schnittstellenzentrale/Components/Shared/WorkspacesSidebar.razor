@@ -1,0 +1,117 @@
+@inject INavigationStateService NavigationStateService
+@inject IApplicationApiClient ApplicationApiClient
+@inject IStorageModeService StorageModeService
+@inject ICurrentUserService CurrentUserService
+
+<div class="sz-workspaces-sidebar">
+    <div class="sz-sidebar-topbar">
+        <button type="button" class="sz-btn-primary" @onclick="OnCreateCollectionRequested">+ New Collection</button>
+    </div>
+    <ApplicationGroupTree @ref="_tree"
+        OnApplicationSelected="OnApplicationSelected"
+        OnSelectionCleared="OnSelectionCleared"
+        OnCreateGroupRequested="ForwardCreateGroupRequested"
+        OnCreateApplicationRequested="OnCreateApplicationRequested"
+        OnEditApplicationRequested="OnEditApplicationRequested"
+        OnRenameGroupRequested="OnRenameGroupRequested"
+        OnDeleteGroupRequested="OnDeleteGroupRequested"
+        OnDeleteApplicationRequested="OnDeleteApplicationRequested"
+        OnCreateEndpointGroupRequested="OnCreateEndpointGroupRequested"
+        OnCreateEndpointRequested="OnCreateEndpointRequested"
+        OnRenameEndpointGroupRequested="OnRenameEndpointGroupRequested"
+        OnDeleteEndpointGroupRequested="OnDeleteEndpointGroupRequested"
+        OnDeleteEndpointRequested="OnDeleteEndpointRequested"
+        OnEndpointSelected="OnEndpointSelected"
+        OnApplicationGroupSelected="OnApplicationGroupSelected"
+        OnEndpointGroupSelected="OnEndpointGroupSelected" />
+    <div class="sz-sidebar-footer">
+        <p class="sz-sidebar-footer-copyright">© 2025 Schnittstellenzentrale</p>
+        <a href="/impressum" class="sz-sidebar-footer-link">Impressum</a>
+    </div>
+</div>
+
+@code {
+    [Parameter] public EventCallback OnCreateCollectionRequested { get; set; }
+    [Parameter] public EventCallback OnCreateApplicationRequested { get; set; }
+    [Parameter] public EventCallback<Application> OnEditApplicationRequested { get; set; }
+    [Parameter] public EventCallback<ApplicationGroup> OnRenameGroupRequested { get; set; }
+    [Parameter] public EventCallback<ApplicationGroup> OnDeleteGroupRequested { get; set; }
+    [Parameter] public EventCallback<Application> OnDeleteApplicationRequested { get; set; }
+    [Parameter] public EventCallback<Application> OnCreateEndpointGroupRequested { get; set; }
+    [Parameter] public EventCallback<(Application Application, EndpointGroup? Group)> OnCreateEndpointRequested { get; set; }
+    [Parameter] public EventCallback<EndpointGroup> OnRenameEndpointGroupRequested { get; set; }
+    [Parameter] public EventCallback<EndpointGroup> OnDeleteEndpointGroupRequested { get; set; }
+    [Parameter] public EventCallback<Core.Models.Endpoint> OnDeleteEndpointRequested { get; set; }
+
+    internal ApplicationGroupTree? _tree;
+    private string _owner = string.Empty;
+
+    protected override void OnInitialized()
+    {
+        _owner = CurrentUserService.GetCurrentUserName();
+    }
+
+    internal async Task RefreshTreeAsync()
+    {
+        if (_tree != null)
+            await _tree.RefreshAsync();
+    }
+
+    private async Task OnApplicationSelected(int applicationId)
+    {
+        var app = await ApplicationApiClient.GetApplicationByIdAsync(applicationId);
+        if (app == null) return;
+        ApplicationGroup? group = null;
+        if (app.ApplicationGroupId.HasValue)
+            group = await ApplicationApiClient.GetGroupByIdAsync(app.ApplicationGroupId.Value);
+        var path = new List<object>();
+        if (group != null) path.Add(group);
+        path.Add(app);
+        await NavigationStateService.SetWorkspaceSelectionAsync(
+            new WorkspaceSelection(app, path));
+    }
+
+    private async Task OnSelectionCleared()
+    {
+        await NavigationStateService.SetWorkspaceSelectionAsync(null);
+    }
+
+    private async Task OnEndpointSelected(Core.Models.Endpoint endpoint)
+    {
+        var path = new List<object>();
+        if (endpoint.Application != null)
+        {
+            if (endpoint.Application.ApplicationGroup != null)
+                path.Add(endpoint.Application.ApplicationGroup);
+            path.Add(endpoint.Application);
+        }
+        if (endpoint.EndpointGroup != null)
+            path.Add(endpoint.EndpointGroup);
+        path.Add(endpoint);
+        await NavigationStateService.SetWorkspaceSelectionAsync(
+            new WorkspaceSelection(endpoint, path));
+    }
+
+    private async Task OnApplicationGroupSelected(ApplicationGroup group)
+    {
+        var path = new List<object> { group };
+        await NavigationStateService.SetWorkspaceSelectionAsync(
+            new WorkspaceSelection(group, path));
+    }
+
+    private async Task OnEndpointGroupSelected(EndpointGroup endpointGroup)
+    {
+        var path = new List<object>();
+        if (endpointGroup.Application != null)
+        {
+            if (endpointGroup.Application.ApplicationGroup != null)
+                path.Add(endpointGroup.Application.ApplicationGroup);
+            path.Add(endpointGroup.Application);
+        }
+        path.Add(endpointGroup);
+        await NavigationStateService.SetWorkspaceSelectionAsync(
+            new WorkspaceSelection(endpointGroup, path));
+    }
+
+    private Task ForwardCreateGroupRequested() => OnCreateCollectionRequested.InvokeAsync();
+}

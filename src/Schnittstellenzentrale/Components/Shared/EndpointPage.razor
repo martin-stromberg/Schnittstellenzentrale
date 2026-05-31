@@ -9,59 +9,49 @@
 @using Schnittstellenzentrale.Core.Helpers
 @implements IAsyncDisposable
 
-<div class="endpoint-page">
-    <div class="endpoint-header d-flex align-items-center gap-2 mb-3">
-        <input class="form-control form-control-lg flex-grow-1" value="@_model.Name" @oninput="OnNameChanged" />
-        @if (_isDirty)
-        {
-            <span class="badge bg-warning text-dark">geändert</span>
-        }
-        <button class="btn btn-primary" @onclick="SaveAsync" disabled="@(string.IsNullOrWhiteSpace(_model.Name))">Speichern</button>
-    </div>
-
-    @if (!string.IsNullOrEmpty(_errorMessage))
-    {
-        <div class="alert alert-danger">@_errorMessage</div>
-    }
-
-    @if (string.IsNullOrWhiteSpace(_model.Name))
-    {
-        <div class="alert alert-warning">Der Name darf nicht leer sein.</div>
-    }
-
-    <div class="endpoint-address d-flex gap-2 mb-3">
-        <select class="form-select" style="width:auto;" value="@_model.Method" @onchange="OnMethodChanged">
-            @foreach (var method in Enum.GetValues<Core.Enums.HttpMethod>())
+<div class="sz-endpoint-page">
+    <div class="sz-endpoint-header">
+        <div class="sz-endpoint-name-row">
+            <input class="sz-endpoint-name-input" value="@_model.Name" @oninput="OnNameChanged" placeholder="Endpunktname" />
+            @if (_isDirty)
             {
-                <option value="@method">@method</option>
+                <span class="sz-endpoint-dirty-badge">geändert</span>
             }
-        </select>
-        <input class="form-control flex-grow-1" placeholder="Relativer Pfad" value="@ResolveDisplayUrl()" @oninput="OnPathChanged" @onblur="OnPathBlur" />
-        <button class="btn btn-success" @onclick="SendRequestAsync">Anfrage senden</button>
+            <button class="sz-btn-primary" @onclick="SaveAsync" disabled="@(string.IsNullOrWhiteSpace(_model.Name))">Speichern</button>
+        </div>
+
+        @if (!string.IsNullOrEmpty(_errorMessage))
+        {
+            <div class="sz-error">@_errorMessage</div>
+        }
+
+        @if (string.IsNullOrWhiteSpace(_model.Name))
+        {
+            <div class="sz-endpoint-warning">Der Name darf nicht leer sein.</div>
+        }
+
+        <div class="sz-endpoint-address-row">
+            <select class="sz-endpoint-method-select" value="@_model.Method" @onchange="OnMethodChanged">
+                @foreach (var method in Enum.GetValues<Core.Enums.HttpMethod>())
+                {
+                    <option value="@method">@method</option>
+                }
+            </select>
+            <input class="sz-input sz-endpoint-path-input" placeholder="Relativer Pfad" value="@ResolveDisplayUrl()" @oninput="OnPathChanged" @onblur="OnPathBlur" />
+            <button class="sz-btn-primary sz-btn-send" @onclick="SendRequestAsync">Anfrage senden</button>
+        </div>
     </div>
 
-    <ul class="nav nav-tabs">
-        <li class="nav-item">
-            <button class="nav-link @(_activeRequestTab == "auth" ? "active" : "")" @onclick='() => _activeRequestTab = "auth"'>Autorisierung</button>
-        </li>
-        <li class="nav-item">
-            <button class="nav-link @(_activeRequestTab == "headers" ? "active" : "")" @onclick='() => _activeRequestTab = "headers"'>Headers</button>
-        </li>
-        <li class="nav-item">
-            <button class="nav-link @(_activeRequestTab == "query" ? "active" : "")" @onclick='() => _activeRequestTab = "query"'>Query-Parameter</button>
-        </li>
-        <li class="nav-item">
-            <button class="nav-link @(_activeRequestTab == "body" ? "active" : "")" @onclick='() => _activeRequestTab = "body"'>Body</button>
-        </li>
-        <li class="nav-item">
-            <button class="nav-link @(_activeRequestTab == "pre-script" ? "active" : "")" @onclick='() => _activeRequestTab = "pre-script"'>Pre-Request-Skript</button>
-        </li>
-        <li class="nav-item">
-            <button class="nav-link @(_activeRequestTab == "post-script" ? "active" : "")" @onclick='() => _activeRequestTab = "post-script"'>Post-Request-Skript</button>
-        </li>
-    </ul>
+    <div class="sz-endpoint-tabs-bar">
+        <button class="sz-endpoint-tab @(_activeRequestTab == "auth" ? "sz-endpoint-tab--active" : "")" @onclick='() => _activeRequestTab = "auth"'>Autorisierung</button>
+        <button class="sz-endpoint-tab @(_activeRequestTab == "headers" ? "sz-endpoint-tab--active" : "")" @onclick='() => _activeRequestTab = "headers"'>Headers</button>
+        <button class="sz-endpoint-tab @(_activeRequestTab == "query" ? "sz-endpoint-tab--active" : "")" @onclick='() => _activeRequestTab = "query"'>Query-Parameter</button>
+        <button class="sz-endpoint-tab @(_activeRequestTab == "body" ? "sz-endpoint-tab--active" : "")" @onclick='() => _activeRequestTab = "body"'>Body</button>
+        <button class="sz-endpoint-tab @(_activeRequestTab == "pre-script" ? "sz-endpoint-tab--active" : "")" @onclick='() => _activeRequestTab = "pre-script"'>Pre-Request-Skript</button>
+        <button class="sz-endpoint-tab @(_activeRequestTab == "post-script" ? "sz-endpoint-tab--active" : "")" @onclick='() => _activeRequestTab = "post-script"'>Post-Request-Skript</button>
+    </div>
 
-    <div class="request-panel-body border border-top-0 p-3 mb-3">
+    <div class="sz-endpoint-tab-content">
         @if (_activeRequestTab == "auth")
         {
             <RequestAuthPanel AuthenticationType="_model.AuthenticationType"
@@ -83,13 +73,13 @@
         }
         else if (_activeRequestTab == "pre-script")
         {
-            <textarea class="form-control font-monospace" rows="12"
+            <textarea class="sz-input sz-endpoint-script-editor"
                       value="@_model.PreRequestScript"
                       @oninput="OnPreRequestScriptChanged"></textarea>
         }
         else if (_activeRequestTab == "post-script")
         {
-            <textarea class="form-control font-monospace" rows="12"
+            <textarea class="sz-input sz-endpoint-script-editor"
                       value="@_model.PostRequestScript"
                       @oninput="OnPostRequestScriptChanged"></textarea>
         }
@@ -97,32 +87,30 @@
 
     @if (_result != null)
     {
-        <div class="response-section">
-            <h5>Antwort</h5>
-            <div class="d-flex gap-3 mb-2 small text-muted">
-                <span>Status: <strong>@_result.StatusCode</strong></span>
-                @if (_result.DurationMs.HasValue)
-                {
-                    <span>Dauer: <strong>@_result.DurationMs ms</strong></span>
-                }
-                @if (_result.ResponseSizeBytes.HasValue)
-                {
-                    <span>Größe: <strong>@_result.ResponseSizeBytes Bytes</strong></span>
-                }
+        <div class="sz-endpoint-response">
+            <div class="sz-endpoint-response-header">
+                <span class="sz-section-label">Antwort</span>
+                <div class="sz-endpoint-response-meta">
+                    <span>Status: <strong>@_result.StatusCode</strong></span>
+                    @if (_result.DurationMs.HasValue)
+                    {
+                        <span>Dauer: <strong>@_result.DurationMs ms</strong></span>
+                    }
+                    @if (_result.ResponseSizeBytes.HasValue)
+                    {
+                        <span>Größe: <strong>@_result.ResponseSizeBytes Bytes</strong></span>
+                    }
+                </div>
             </div>
             @if (!string.IsNullOrEmpty(_result.ErrorMessage))
             {
-                <div class="alert alert-danger">@_result.ErrorMessage</div>
+                <div class="sz-error">@_result.ErrorMessage</div>
             }
-            <ul class="nav nav-tabs">
-                <li class="nav-item">
-                    <button class="nav-link @(_activeResponseTab == "body" ? "active" : "")" @onclick='() => _activeResponseTab = "body"'>Body</button>
-                </li>
-                <li class="nav-item">
-                    <button class="nav-link @(_activeResponseTab == "headers" ? "active" : "")" @onclick='() => _activeResponseTab = "headers"'>Headers</button>
-                </li>
-            </ul>
-            <div class="response-panel-body border border-top-0 p-3">
+            <div class="sz-endpoint-tabs-bar">
+                <button class="sz-endpoint-tab @(_activeResponseTab == "body" ? "sz-endpoint-tab--active" : "")" @onclick='() => _activeResponseTab = "body"'>Body</button>
+                <button class="sz-endpoint-tab @(_activeResponseTab == "headers" ? "sz-endpoint-tab--active" : "")" @onclick='() => _activeResponseTab = "headers"'>Headers</button>
+            </div>
+            <div class="sz-endpoint-tab-content">
                 @if (_activeResponseTab == "body")
                 {
                     <ResponseBodyPanel Body="@_result.ResponseBody" />

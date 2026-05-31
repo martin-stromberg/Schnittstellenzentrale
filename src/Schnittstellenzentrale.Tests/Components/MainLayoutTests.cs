@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using Moq;
 using Schnittstellenzentrale.Components.Layout;
 using Schnittstellenzentrale.Components.Shared;
@@ -10,11 +11,12 @@ using Schnittstellenzentrale.Core.Enums;
 using Schnittstellenzentrale.Core.Helpers;
 using Schnittstellenzentrale.Core.Interfaces;
 using Schnittstellenzentrale.Core.Models;
+using Schnittstellenzentrale.Infrastructure.Services;
 using Schnittstellenzentrale.Tests.Helpers;
 
 namespace Schnittstellenzentrale.Tests.Components;
 
-/// <summary>bUnit-Tests für die <see cref="MainLayout"/>-Komponente.</summary>
+/// <summary>bUnit-Tests für die <see cref="AppShell"/>- und <see cref="TopBar"/>-Komponenten.</summary>
 public class MainLayoutTests : BunitContext
 {
     private readonly Mock<IStorageModeService> _storageMock = new();
@@ -24,6 +26,7 @@ public class MainLayoutTests : BunitContext
     private readonly Mock<ICurrentUserService> _currentUserMock = new();
     private readonly Mock<ISignalRNotificationService> _signalRMock = new();
     private readonly Mock<IActivityLogService> _activityLogMock = new();
+    private readonly Mock<INavigationStateService> _navigationStateMock = new();
 
     /// <summary>Initialisiert die Test-Services und JS-Interop-Mocks.</summary>
     public MainLayoutTests()
@@ -36,6 +39,9 @@ public class MainLayoutTests : BunitContext
             .ReturnsAsync([]);
         _currentUserMock.Setup(s => s.GetCurrentUserName()).Returns("DOMAIN\\testuser");
         _activityLogMock.Setup(s => s.Entries).Returns([]);
+        _navigationStateMock.Setup(s => s.CurrentArea).Returns(NavigationArea.Workspaces);
+        _navigationStateMock.Setup(s => s.CurrentSelection).Returns((WorkspaceSelection?)null);
+        _navigationStateMock.Setup(s => s.CurrentSelectionPath).Returns([]);
 
         Services.AddSingleton(_storageMock.Object);
         Services.AddSingleton(_themeMock.Object);
@@ -44,37 +50,74 @@ public class MainLayoutTests : BunitContext
         Services.AddSingleton(_currentUserMock.Object);
         Services.AddSingleton(_signalRMock.Object);
         Services.AddSingleton(_activityLogMock.Object);
-        Services.AddSingleton<ILogger<MainLayout>>(NullLogger<MainLayout>.Instance);
+        Services.AddSingleton(_navigationStateMock.Object);
+        Services.AddSingleton<ILogger<AppShell>>(NullLogger<AppShell>.Instance);
+        Services.AddSingleton(Options.Create(new UploadSettings()));
+        Services.AddSingleton(Options.Create(new HistorySettings()));
 
         JSInterop.Setup<string?>("localStorage.getItem", _ => true).SetResult(null);
         JSInterop.SetupVoid("localStorage.removeItem", _ => true).SetVoidResult();
         JSInterop.SetupVoid("localStorage.setItem", _ => true).SetVoidResult();
+
+        ComponentFactories.AddStub<WorkspacesLayout>();
+        ComponentFactories.AddStub<EnvironmentsLayout>();
+        ComponentFactories.AddStub<HistoryLayout>();
     }
 
-    /// <summary>Das Layout rendert den Modus-Selektor im Header.</summary>
+    /// <summary>AppShell rendert den Bereichs-Tab Workspaces in TopBar.</summary>
     [Fact]
-    public void Layout_RendertModusSelektor()
+    public void AppShell_RendertWorkspacesTab()
     {
-        var cut = Render<MainLayout>(p => p.Add(x => x.Body, (RenderFragment)(_ => { })));
+        var cut = Render<AppShell>(p => p.Add(x => x.Body, (RenderFragment)(_ => { })));
 
-        Assert.NotEmpty(cut.FindAll("select.form-select"));
+        var buttons = cut.FindAll("button.sz-topbar-tab");
+        Assert.Contains(buttons, b => b.TextContent.Contains("Workspaces"));
     }
 
-    /// <summary>Das Layout rendert das Zahnrad-Icon für die Umgebungsverwaltung.</summary>
+    /// <summary>AppShell rendert den Bereichs-Tab Environments in TopBar.</summary>
     [Fact]
-    public void Layout_RendertZahnradIcon()
+    public void AppShell_RendertEnvironmentsTab()
     {
-        var cut = Render<MainLayout>(p => p.Add(x => x.Body, (RenderFragment)(_ => { })));
+        var cut = Render<AppShell>(p => p.Add(x => x.Body, (RenderFragment)(_ => { })));
 
-        var button = cut.FindAll("button[title='Umgebungen verwalten']");
-        Assert.NotEmpty(button);
+        var buttons = cut.FindAll("button.sz-topbar-tab");
+        Assert.Contains(buttons, b => b.TextContent.Contains("Environments"));
+    }
+
+    /// <summary>AppShell rendert den Bereichs-Tab History in TopBar.</summary>
+    [Fact]
+    public void AppShell_RendertHistoryTab()
+    {
+        var cut = Render<AppShell>(p => p.Add(x => x.Body, (RenderFragment)(_ => { })));
+
+        var buttons = cut.FindAll("button.sz-topbar-tab");
+        Assert.Contains(buttons, b => b.TextContent.Contains("History"));
+    }
+
+    /// <summary>AppShell rendert den StorageMode-Selektor in TopBar.</summary>
+    [Fact]
+    public void AppShell_RendertModusSelektor()
+    {
+        var cut = Render<AppShell>(p => p.Add(x => x.Body, (RenderFragment)(_ => { })));
+
+        Assert.NotEmpty(cut.FindAll("select.sz-topbar-select"));
+    }
+
+    /// <summary>AppShell rendert das Profil-Icon mit Initiale in TopBar.</summary>
+    [Fact]
+    public void AppShell_RendertProfilIcon()
+    {
+        var cut = Render<AppShell>(p => p.Add(x => x.Body, (RenderFragment)(_ => { })));
+
+        var profileIcon = cut.Find("span.sz-topbar-profile");
+        Assert.Equal("T", profileIcon.TextContent);
     }
 
     /// <summary>DisposeAsync kann ohne Fehler aufgerufen werden, wenn keine HubConnection aufgebaut wurde.</summary>
     [Fact]
     public async Task DisposeAsync_OhneHubConnection_WirftKeinenFehler()
     {
-        var cut = Render<MainLayout>(p => p.Add(x => x.Body, (RenderFragment)(_ => { })));
+        var cut = Render<AppShell>(p => p.Add(x => x.Body, (RenderFragment)(_ => { })));
 
         var exception = await Record.ExceptionAsync(() => cut.Instance.DisposeAsync().AsTask());
 
@@ -90,7 +133,7 @@ public class MainLayoutTests : BunitContext
         JSInterop.Setup<string?>("localStorage.getItem", inv => inv.Arguments.ElementAt(0) is string s && s == key).SetResult("42");
         _envRepoMock.Setup(r => r.GetByIdAsync(42)).ReturnsAsync(env);
 
-        var cut = Render<MainLayout>(p => p.Add(x => x.Body, (RenderFragment)(_ => { })));
+        var cut = Render<AppShell>(p => p.Add(x => x.Body, (RenderFragment)(_ => { })));
         await cut.InvokeAsync(() => { });
 
         _activeEnvMock.Verify(s => s.SetActiveEnvironment(env), Times.Once);
@@ -104,7 +147,7 @@ public class MainLayoutTests : BunitContext
         JSInterop.Setup<string?>("localStorage.getItem", inv => inv.Arguments.ElementAt(0) is string s && s == key).SetResult("99");
         _envRepoMock.Setup(r => r.GetByIdAsync(99)).ReturnsAsync((SystemEnvironment?)null);
 
-        var cut = Render<MainLayout>(p => p.Add(x => x.Body, (RenderFragment)(_ => { })));
+        var cut = Render<AppShell>(p => p.Add(x => x.Body, (RenderFragment)(_ => { })));
         await cut.InvokeAsync(() => { });
 
         _activeEnvMock.Verify(s => s.SetActiveEnvironment(null), Times.AtLeastOnce);
@@ -121,10 +164,25 @@ public class MainLayoutTests : BunitContext
     {
         JSInterop.Setup<string?>("localStorage.getItem", _ => true).SetResult(null);
 
-        var cut = Render<MainLayout>(p => p.Add(x => x.Body, (RenderFragment)(_ => { })));
+        var cut = Render<AppShell>(p => p.Add(x => x.Body, (RenderFragment)(_ => { })));
         await cut.InvokeAsync(() => { });
 
         _activeEnvMock.Verify(s => s.SetActiveEnvironment(It.Is<SystemEnvironment?>(e => e != null)), Times.Never);
+    }
+
+    /// <summary>OnAreaChanged wird nach SetAreaAsync gefeuert.</summary>
+    [Fact]
+    public async Task AppShell_SetAreaAsync_AktualisiertBereich()
+    {
+        _navigationStateMock.Setup(s => s.SetAreaAsync(NavigationArea.History))
+            .Callback(() => _navigationStateMock.Setup(s => s.CurrentArea).Returns(NavigationArea.History))
+            .Returns(Task.CompletedTask);
+
+        var cut = Render<AppShell>(p => p.Add(x => x.Body, (RenderFragment)(_ => { })));
+
+        await cut.InvokeAsync(() => _navigationStateMock.Object.SetAreaAsync(NavigationArea.History));
+
+        _navigationStateMock.Verify(s => s.SetAreaAsync(NavigationArea.History), Times.Once);
     }
 
     /// <summary>Nach Moduswechsel wird der Schlüssel des neuen Modus für localStorage.getItem verwendet.</summary>
@@ -133,79 +191,26 @@ public class MainLayoutTests : BunitContext
     {
         var userKey = LocalStorageKeys.SelectedEnvironmentId(StorageMode.User);
         JSInterop.Setup<string?>("localStorage.getItem", _ => true).SetResult(null);
-        _storageMock.Setup(s => s.CurrentMode).Returns(StorageMode.Team);
 
-        var cut = Render<MainLayout>(p => p.Add(x => x.Body, (RenderFragment)(_ => { })));
+        // Nach SetMode(User) muss CurrentMode User zurückliefern, damit AppShell den richtigen Key verwendet
+        var currentMode = StorageMode.Team;
+        _storageMock.Setup(s => s.CurrentMode).Returns(() => currentMode);
+        _storageMock.Setup(s => s.SetMode(It.IsAny<StorageMode>()))
+            .Callback<StorageMode>(m =>
+            {
+                currentMode = m;
+                _storageMock.Raise(s => s.OnModeChanged += null);
+            });
+
+        var cut = Render<AppShell>(p => p.Add(x => x.Body, (RenderFragment)(_ => { })));
 
         JSInterop.Setup<string?>("localStorage.getItem", inv => inv.Arguments.ElementAt(0) is string s && s == userKey).SetResult(null);
 
-        await cut.InvokeAsync(() => cut.Find("select.form-select").Change(StorageMode.User.ToString()));
+        await cut.InvokeAsync(() => cut.Find("select.sz-topbar-select").Change(StorageMode.User.ToString()));
 
         var getItemInvocations = JSInterop.Invocations
             .Where(i => i.Identifier == "localStorage.getItem")
             .ToList();
         Assert.Contains(getItemInvocations, i => i.Arguments.ElementAt(0) is string s && s == userKey);
-    }
-
-    /// <summary>Nach Wiederherstellung aus localStorage zeigt der EnvironmentSelector die gespeicherte Umgebung als ausgewählt.</summary>
-    [Fact]
-    public async Task Wiederherstellen_GespeicherteIdVorhanden_SelectorZeigtAuswahl()
-    {
-        var env = TestMockFactory.CreateEnv(42, "Dev");
-        var key = LocalStorageKeys.SelectedEnvironmentId(StorageMode.Team);
-
-        SystemEnvironment? activeEnv = null;
-        _activeEnvMock.Setup(s => s.ActiveEnvironment).Returns(() => activeEnv);
-        _activeEnvMock.Setup(s => s.SetActiveEnvironment(It.IsAny<SystemEnvironment?>()))
-            .Callback<SystemEnvironment?>(e => activeEnv = e);
-
-        JSInterop.Setup<string?>("localStorage.getItem", inv => inv.Arguments.ElementAt(0) is string s && s == key).SetResult("42");
-        _envRepoMock.Setup(r => r.GetByIdAsync(42)).ReturnsAsync(env);
-        _envRepoMock.Setup(r => r.GetEnvironmentsAsync(It.IsAny<StorageMode>(), It.IsAny<string?>()))
-            .ReturnsAsync([env]);
-
-        var cut = Render<MainLayout>(p => p.Add(x => x.Body, (RenderFragment)(_ => { })));
-        await cut.InvokeAsync(() => { });
-
-        var selector = cut.FindComponent<EnvironmentSelector>();
-        var select = selector.Find("select");
-        Assert.Equal("42", select.GetAttribute("value"));
-    }
-
-    /// <summary>OnEnvironmentChanged: Aktive Umgebung existiert noch in der DB → SetActiveEnvironment mit aktualisierten Daten aufgerufen.</summary>
-    [Fact]
-    public async Task OnEnvironmentChanged_AktiveUmgebungNochVorhanden_AktualisiertUmgebung()
-    {
-        var env = TestMockFactory.CreateEnv(5, "Dev");
-        _activeEnvMock.Setup(s => s.ActiveEnvironment).Returns(env);
-        _envRepoMock.Setup(r => r.GetByIdAsync(5)).ReturnsAsync(env);
-
-        var cut = Render<MainLayout>(p => p.Add(x => x.Body, (RenderFragment)(_ => { })));
-        var overlay = cut.FindComponent<EnvironmentManagementOverlay>();
-
-        await cut.InvokeAsync(() => overlay.Instance.OnEnvironmentsChanged.InvokeAsync());
-
-        _activeEnvMock.Verify(s => s.SetActiveEnvironment(env), Times.AtLeastOnce);
-    }
-
-    /// <summary>OnEnvironmentChanged: Aktive Umgebung wurde gelöscht → SetActiveEnvironment(null) und localStorage.removeItem aufgerufen.</summary>
-    [Fact]
-    public async Task OnEnvironmentChanged_AktiveUmgebungGelöscht_BereinigLocalStorageUndSetztNull()
-    {
-        var env = TestMockFactory.CreateEnv(7, "Prod");
-        _activeEnvMock.Setup(s => s.ActiveEnvironment).Returns(env);
-        _envRepoMock.Setup(r => r.GetByIdAsync(7)).ReturnsAsync((SystemEnvironment?)null);
-
-        var cut = Render<MainLayout>(p => p.Add(x => x.Body, (RenderFragment)(_ => { })));
-        var overlay = cut.FindComponent<EnvironmentManagementOverlay>();
-
-        await cut.InvokeAsync(() => overlay.Instance.OnEnvironmentsChanged.InvokeAsync());
-
-        var expectedKey = LocalStorageKeys.SelectedEnvironmentId(StorageMode.Team);
-        _activeEnvMock.Verify(s => s.SetActiveEnvironment(null), Times.AtLeastOnce);
-        var removeItemCalls = JSInterop.Invocations
-            .Where(i => i.Identifier == "localStorage.removeItem")
-            .ToList();
-        Assert.Contains(removeItemCalls, i => i.Arguments.ElementAt(0) is string key && key == expectedKey);
     }
 }

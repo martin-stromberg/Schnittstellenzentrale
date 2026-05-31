@@ -14,11 +14,11 @@ public class ActivityLogServiceTests
     public void Log_ErstelltEintragMitKorrektenFeldern()
     {
         var service = CreateService();
-        var before = DateTime.Now;
+        var before = DateTime.UtcNow;
 
         service.Log(ActivityLogCategory.EndpointExecuted, "Test-Nachricht", "Test-Details");
 
-        var after = DateTime.Now;
+        var after = DateTime.UtcNow;
         Assert.Single(service.Entries);
         var entry = service.Entries[0];
         Assert.Equal(ActivityLogCategory.EndpointExecuted, entry.Category);
@@ -64,5 +64,19 @@ public class ActivityLogServiceTests
         service.Clear();
 
         Assert.Empty(service.Entries);
+    }
+
+    /// <summary>Log_MaxEntries_AeltesteEintraegeWerdenEntfernt</summary>
+    [Fact]
+    public void Log_MaxEntries_AeltesteEintraegeWerdenEntfernt()
+    {
+        var service = CreateService();
+
+        for (var i = 0; i < 502; i++)
+            service.Log(ActivityLogCategory.EntityCreated, $"Eintrag {i}");
+
+        Assert.Equal(500, service.Entries.Count);
+        Assert.Equal("Eintrag 2", service.Entries[0].Message);
+        Assert.Equal("Eintrag 501", service.Entries[499].Message);
     }
 }

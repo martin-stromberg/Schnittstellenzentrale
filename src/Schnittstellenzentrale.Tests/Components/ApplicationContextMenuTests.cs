@@ -16,7 +16,7 @@ public class ApplicationContextMenuTests : BunitContext
     private static Application SystemApplication() =>
         new() { Id = 3, Name = "Schnittstellenzentrale", BaseUrl = "http://app", IsSystem = true };
 
-    /// <summary>Der Menüeintrag „Aus Gruppe entfernen" ist nur sichtbar, wenn die Anwendung einer Gruppe zugeordnet ist.</summary>
+    /// <summary>Der Menüeintrag „Aus Sammlung entfernen" ist nur sichtbar, wenn die Anwendung einer Gruppe zugeordnet ist.</summary>
     [Fact]
     public void AusGruppeEntfernen_NurSichtbar_WennAnwendungInGruppe()
     {
@@ -27,10 +27,10 @@ public class ApplicationContextMenuTests : BunitContext
 
         Assert.Contains(
             cut.FindAll("button.context-menu-item"),
-            b => b.TextContent.Contains("Aus Gruppe entfernen"));
+            b => b.TextContent.Contains("Aus Sammlung entfernen"));
     }
 
-    /// <summary>Der Menüeintrag „Aus Gruppe entfernen" ist nicht sichtbar, wenn die Anwendung keiner Gruppe zugeordnet ist.</summary>
+    /// <summary>Der Menüeintrag „Aus Sammlung entfernen" ist nicht sichtbar, wenn die Anwendung keiner Gruppe zugeordnet ist.</summary>
     [Fact]
     public void AusGruppeEntfernen_NichtSichtbar_WennAnwendungOhneGruppe()
     {
@@ -41,10 +41,10 @@ public class ApplicationContextMenuTests : BunitContext
 
         Assert.DoesNotContain(
             cut.FindAll("button.context-menu-item"),
-            b => b.TextContent.Contains("Aus Gruppe entfernen"));
+            b => b.TextContent.Contains("Aus Sammlung entfernen"));
     }
 
-    /// <summary>Klick auf „Aus Gruppe entfernen" löst den Callback aus und schließt das Menü.</summary>
+    /// <summary>Klick auf „Aus Sammlung entfernen" löst den Callback aus und schließt das Menü.</summary>
     [Fact]
     public void AusGruppeEntfernen_LöstCallbackAus_UndSchliestMenu()
     {
@@ -57,7 +57,7 @@ public class ApplicationContextMenuTests : BunitContext
 
         cut.Find(".context-menu-toggle").Click();
         cut.FindAll("button.context-menu-item")
-            .First(b => b.TextContent.Contains("Aus Gruppe entfernen"))
+            .First(b => b.TextContent.Contains("Aus Sammlung entfernen"))
             .Click();
 
         Assert.Equal(application, received);

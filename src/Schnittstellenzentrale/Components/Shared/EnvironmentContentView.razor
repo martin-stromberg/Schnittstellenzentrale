@@ -1,0 +1,159 @@
+@inject ISystemEnvironmentRepository SystemEnvironmentRepository
+
+@if (_environment == null)
+{
+    <div class="sz-env-content">
+        <p class="sz-env-loading">Umgebung wird geladen…</p>
+    </div>
+}
+else
+{
+    <div class="sz-env-content">
+        <div class="sz-env-page-header">
+            <div class="sz-env-page-header-left">
+                @if (_editingName)
+                {
+                    <input class="sz-env-name-input" @bind="_nameInput" @onkeydown="OnNameKeyDown" @onblur="SaveNameAsync" autofocus />
+                    @if (!string.IsNullOrEmpty(_nameError))
+                    {
+                        <span class="sz-inplace-error">@_nameError</span>
+                    }
+                }
+                else
+                {
+                    <h1 class="sz-env-title sz-editable" @onclick="StartEditName">
+                        @_environment.Name <span class="sz-edit-icon">&#9998;</span>
+                    </h1>
+                }
+
+                @if (_editingDescription)
+                {
+                    <textarea class="sz-env-desc-input" @bind="_descriptionInput" @onblur="SaveDescriptionAsync"></textarea>
+                    <button type="button" class="sz-btn-secondary sz-btn-sm" @onclick="CancelDescriptionEdit">Abbrechen</button>
+                }
+                else
+                {
+                    <p class="sz-env-subtitle sz-editable" @onclick="StartEditDescription">
+                        @(string.IsNullOrEmpty(_environment.Description) ? "Beschreibung hinzufügen…" : _environment.Description)
+                        <span class="sz-edit-icon">&#9998;</span>
+                    </p>
+                }
+            </div>
+        </div>
+
+        <div class="sz-env-stats-row">
+            <div class="sz-env-stat-card">
+                <div class="sz-env-stat-header">
+                    <span class="sz-section-label">Variablen</span>
+                    <span class="sz-icon sz-icon-environment"></span>
+                </div>
+                <p class="sz-env-stat-value">@_environment.Variables.Count</p>
+            </div>
+        </div>
+
+            <EnvironmentEditor ExistingEnvironment="_environment"
+                               OnSaved="OnEnvironmentSaved"
+                               OnCancel="OnEditorCancel" />
+        
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired] public int EnvironmentId { get; set; }
+
+    private SystemEnvironment? _environment;
+    private bool _editingName;
+    private bool _editingDescription;
+    private bool _savingName;
+    private bool _savingDescription;
+    private string _nameInput = string.Empty;
+    private string _descriptionInput = string.Empty;
+    private string? _nameError;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _environment = await SystemEnvironmentRepository.GetByIdAsync(EnvironmentId);
+    }
+
+    private void StartEditName()
+    {
+        _nameInput = _environment?.Name ?? string.Empty;
+        _nameError = null;
+        _editingName = true;
+    }
+
+    private async Task OnNameKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") await SaveNameAsync();
+        else if (e.Key == "Escape") CancelNameEdit();
+    }
+
+    private async Task SaveNameAsync()
+    {
+        if (_savingName) return;
+        if (string.IsNullOrWhiteSpace(_nameInput))
+        {
+            _nameError = "Name darf nicht leer sein.";
+            return;
+        }
+        if (_nameInput.Length > 200)
+        {
+            _nameError = "Name darf maximal 200 Zeichen lang sein.";
+            return;
+        }
+        if (_environment == null) return;
+        _savingName = true;
+        _editingName = false;
+        _nameError = null;
+        _environment.Name = _nameInput;
+        try
+        {
+            await SystemEnvironmentRepository.UpdateAsync(_environment);
+        }
+        finally
+        {
+            _savingName = false;
+        }
+    }
+
+    private void CancelNameEdit()
+    {
+        _editingName = false;
+        _nameError = null;
+    }
+
+    private void StartEditDescription()
+    {
+        _descriptionInput = _environment?.Description ?? string.Empty;
+        _editingDescription = true;
+    }
+
+    private async Task SaveDescriptionAsync()
+    {
+        if (_savingDescription) return;
+        if (_environment == null) return;
+        _savingDescription = true;
+        _editingDescription = false;
+        _environment.Description = string.IsNullOrEmpty(_descriptionInput) ? null : _descriptionInput;
+        try
+        {
+            await SystemEnvironmentRepository.UpdateAsync(_environment);
+        }
+        finally
+        {
+            _savingDescription = false;
+        }
+    }
+
+    private void CancelDescriptionEdit()
+    {
+        _editingDescription = false;
+    }
+
+    private async Task OnEnvironmentSaved(SystemEnvironment saved)
+    {
+        _environment = await SystemEnvironmentRepository.GetByIdAsync(saved.Id);
+    }
+
+    private Task OnEditorCancel() => Task.CompletedTask;
+}

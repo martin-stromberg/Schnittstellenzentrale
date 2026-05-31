@@ -5,13 +5,13 @@
      @ondrop:stopPropagation="IsDropTarget">
     <div class="sz-tree-row">
         <button class="sz-tree-chevron-btn" @onclick="Toggle">
-            <i class="bi @(_expanded ? "bi-chevron-down" : "bi-chevron-right")"></i>
+            <i class="sz-icon @(_expanded ? "sz-icon-chevron-down" : "sz-icon-chevron-right")"></i>
         </button>
         @if (!string.IsNullOrEmpty(IconClass))
         {
             <i class="@IconClass sz-tree-icon"></i>
         }
-        <span class="sz-tree-node-text" @onclick="Toggle">@Title</span>
+        <span class="sz-tree-node-text" title="@Title" @onclick="OnTitleClick">@Title</span>
         @if (TitleActions != null)
         {
             @TitleActions
@@ -33,6 +33,7 @@
     [Parameter] public bool InitiallyExpanded { get; set; } = false;
     [Parameter] public bool IsDropTarget { get; set; } = false;
     [Parameter] public EventCallback OnDrop { get; set; }
+    [Parameter] public EventCallback OnTitleClicked { get; set; }
 
     private bool _expanded;
 
@@ -42,6 +43,13 @@
     }
 
     private void Toggle() => _expanded = !_expanded;
+
+    private async Task OnTitleClick()
+    {
+        _expanded = true;
+        if (OnTitleClicked.HasDelegate)
+            await OnTitleClicked.InvokeAsync();
+    }
 
     private void HandleDragOver() { }
 

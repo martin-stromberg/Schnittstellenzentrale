@@ -159,6 +159,23 @@ public class ApplicationRepository : IApplicationRepository
         }
     }
 
+    /// <inheritdoc/>
+    public async Task<int> GetApplicationCountByGroupAsync(int groupId)
+    {
+        await using var context = await _factory.CreateDbContextAsync();
+        return await context.Applications.CountAsync(a => a.ApplicationGroupId == groupId);
+    }
+
+    /// <inheritdoc/>
+    public async Task<int> GetEndpointCountByGroupAsync(int groupId)
+    {
+        await using var context = await _factory.CreateDbContextAsync();
+        return await context.Applications
+            .Where(a => a.ApplicationGroupId == groupId)
+            .SelectMany(a => a.Endpoints)
+            .CountAsync();
+    }
+
     private static IQueryable<Core.Models.Application> ApplyOwnerFilter(
         IQueryable<Core.Models.Application> query,
         StorageMode storageMode,

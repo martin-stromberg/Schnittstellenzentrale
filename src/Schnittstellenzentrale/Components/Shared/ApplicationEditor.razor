@@ -3,70 +3,92 @@
 @inject IStorageModeService StorageModeService
 @inject ICurrentUserService CurrentUserService
 
-<div class="application-editor">
-    <EditForm Model="_model" OnValidSubmit="SaveAsync">
-        <DataAnnotationsValidator />
-
-        <div class="mb-3">
-            <label class="form-label">Name</label>
-            <InputText class="form-control" @bind-Value="_model.Name" />
-            <ValidationMessage For="() => _model.Name" />
+<div class="sz-content-view">
+    <section class="sz-hero">
+        <div class="sz-hero-bg">
+            <div class="sz-hero-bg-gradient"></div>
+            <div class="sz-hero-bg-pattern"></div>
         </div>
-
-        <div class="mb-3">
-            <label class="form-label">Basis-URL</label>
-            <InputText class="form-control" @bind-Value="_model.BaseUrl" />
-            <ValidationMessage For="() => _model.BaseUrl" />
-        </div>
-
-        <div class="mb-3">
-            <label class="form-label">Beschreibung</label>
-            <InputText class="form-control" @bind-Value="_model.Description" />
-        </div>
-
-        <div class="mb-3">
-            <label class="form-label">Schnittstellen-URL</label>
-            <input type="text" class="form-control" value="@_model.InterfaceUrl" @oninput="OnInterfaceUrlChanged" />
-            @if (!string.IsNullOrEmpty(_model.InterfaceUrl))
-            {
-                <div class="mt-1">
-                    @switch (_model.InterfaceType)
-                    {
-                        case InterfaceType.Rest:
-                            <span class="badge bg-primary">REST (Swagger/OpenAPI)</span>
-                            break;
-                        case InterfaceType.OData:
-                            <span class="badge bg-secondary">OData</span>
-                            break;
-                        default:
-                            <span class="badge bg-warning text-dark">Typ nicht erkannt</span>
-                            break;
-                    }
+        <div class="sz-hero-content">
+            <div class="sz-hero-left">
+                <div class="sz-content-header">
+                    <div class="sz-content-header-icon">
+                        <span class="sz-icon-placeholder">&#128187;</span>
+                    </div>
+                    <div class="sz-content-header-text">
+                        <span class="sz-content-title">@(_isEditMode ? _model.Name : "Neue Anwendung")</span>
+                        <span class="sz-content-subtitle">@(_isEditMode ? "Anwendung bearbeiten" : "Anwendung anlegen")</span>
+                    </div>
                 </div>
-            }
+            </div>
         </div>
+    </section>
 
-        <div class="mb-3">
-            <label class="form-label">Gruppe</label>
-            <InputSelect class="form-select" @bind-Value="_model.ApplicationGroupId">
-                <option value="">Ohne Gruppe</option>
-                @foreach (var group in _groups)
+    <div class="sz-dashboard">
+        <EditForm Model="_model" OnValidSubmit="SaveAsync">
+            <DataAnnotationsValidator />
+
+            <div class="sz-form-group">
+                <label class="sz-form-label" for="app-name">Name</label>
+                <InputText id="app-name" class="sz-input" @bind-Value="_model.Name" />
+                <ValidationMessage For="() => _model.Name" />
+            </div>
+
+            <div class="sz-form-group">
+                <label class="sz-form-label" for="app-base-url">Basis-URL</label>
+                <InputText id="app-base-url" class="sz-input" @bind-Value="_model.BaseUrl" />
+                <ValidationMessage For="() => _model.BaseUrl" />
+            </div>
+
+            <div class="sz-form-group">
+                <label class="sz-form-label" for="app-description">Beschreibung</label>
+                <InputText id="app-description" class="sz-input" @bind-Value="_model.Description" />
+            </div>
+
+            <div class="sz-form-group">
+                <label class="sz-form-label" for="app-interface-url">Schnittstellen-URL</label>
+                <input id="app-interface-url" type="text" class="sz-input" value="@_model.InterfaceUrl" @oninput="OnInterfaceUrlChanged" />
+                @if (!string.IsNullOrEmpty(_model.InterfaceUrl))
                 {
-                    <option value="@group.Id">@group.Name</option>
+                    <span class="sz-form-hint">
+                        @switch (_model.InterfaceType)
+                        {
+                            case InterfaceType.Rest:
+                                <span>REST (Swagger/OpenAPI)</span>
+                                break;
+                            case InterfaceType.OData:
+                                <span>OData</span>
+                                break;
+                            default:
+                                <span>Typ nicht erkannt</span>
+                                break;
+                        }
+                    </span>
                 }
-            </InputSelect>
-        </div>
+            </div>
 
-        @if (!string.IsNullOrEmpty(_errorMessage))
-        {
-            <div class="alert alert-danger mt-2">@_errorMessage</div>
-        }
+            <div class="sz-form-group">
+                <label class="sz-form-label" for="app-group">Sammlung</label>
+                <InputSelect id="app-group" class="sz-form-select" @bind-Value="_model.ApplicationGroupId">
+                    <option value="">Ohne Sammlung</option>
+                    @foreach (var group in _groups)
+                    {
+                        <option value="@group.Id">@group.Name</option>
+                    }
+                </InputSelect>
+            </div>
 
-        <div class="d-flex gap-2">
-            <button type="submit" class="btn btn-primary">Speichern</button>
-            <button type="button" class="btn btn-secondary" @onclick="Cancel">Abbrechen</button>
-        </div>
-    </EditForm>
+            @if (!string.IsNullOrEmpty(_errorMessage))
+            {
+                <div class="sz-alert sz-alert-danger">@_errorMessage</div>
+            }
+
+            <div class="sz-editor-actions">
+                <button type="submit" class="sz-btn-primary">Speichern</button>
+                <button type="button" class="sz-btn-secondary" @onclick="Cancel">Abbrechen</button>
+            </div>
+        </EditForm>
+    </div>
 </div>
 
 @code {

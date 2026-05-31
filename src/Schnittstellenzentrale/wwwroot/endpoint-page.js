@@ -1,5 +1,9 @@
 const SIDEBAR_STORAGE_KEY = 'sidebarWidth';
 
+export function clickElement(id) {
+    document.getElementById(id)?.click();
+}
+
 let keydownHandler = null;
 let beforeUnloadHandler = null;
 

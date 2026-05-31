@@ -3,10 +3,12 @@ using System.Net.Http.Headers;
 using System.Security.Principal;
 using System.Text;
 using System.Text.RegularExpressions;
+using Microsoft.Extensions.Logging;
 using Schnittstellenzentrale.Core.Enums;
 using Schnittstellenzentrale.Core.Helpers;
 using Schnittstellenzentrale.Core.Interfaces;
 using Schnittstellenzentrale.Core.Models;
+using ScriptType = Schnittstellenzentrale.Core.Enums.ScriptType;
 
 namespace Schnittstellenzentrale.Infrastructure.Services;
 
@@ -27,6 +29,8 @@ public class EndpointExecutionService : IEndpointExecutionService
     private readonly ISystemEnvironmentRepository _environmentRepository;
     private readonly ISignalRNotificationService _signalRNotificationService;
     private readonly IActivityLogService _activityLogService;
+    private readonly IHistoryService _historyService;
+    private readonly ILogger<EndpointExecutionService> _logger;
 
     /// <summary>Initialisiert eine neue Instanz des <see cref="EndpointExecutionService"/>.</summary>
     public EndpointExecutionService(
@@ -37,7 +41,9 @@ public class EndpointExecutionService : IEndpointExecutionService
         IEndpointRepository endpointRepository,
         ISystemEnvironmentRepository environmentRepository,
         ISignalRNotificationService signalRNotificationService,
-        IActivityLogService activityLogService)
+        IActivityLogService activityLogService,
+        IHistoryService historyService,
+        ILogger<EndpointExecutionService> logger)
     {
         _httpClientFactory = httpClientFactory;
         _credentialService = credentialService;
@@ -47,6 +53,8 @@ public class EndpointExecutionService : IEndpointExecutionService
         _environmentRepository = environmentRepository;
         _signalRNotificationService = signalRNotificationService;
         _activityLogService = activityLogService;
+        _historyService = historyService;
+        _logger = logger;
     }
 
     /// <inheritdoc/>
@@ -78,7 +86,7 @@ public class EndpointExecutionService : IEndpointExecutionService
         {
             if (!string.IsNullOrEmpty(endpoint.PreRequestScript))
             {
-                var preContext = BuildScriptContext(endpoint, callDepth, response: null);
+                var preContext = BuildScriptContext(endpoint, callDepth, response: null, scriptType: ScriptType.PreRequest);
                 var preResult = await _scriptRunner.ExecuteAsync(endpoint.PreRequestScript, preContext);
                 if (!preResult.Success)
                     return new EndpointExecutionResult
@@ -113,29 +121,6 @@ public class EndpointExecutionService : IEndpointExecutionService
                 };
             }
 
-            if (result.Success)
-            {
-                var maskedVariables = _activeEnvironmentService.ActiveEnvironment?.Variables
-                    ?? Enumerable.Empty<EnvironmentVariable>();
-                var requestDetails = result.RequestDetails ?? string.Empty;
-                var responseDetails = result.ResponseBody ?? string.Empty;
-                if (requestDetails.Length > 10240) requestDetails = requestDetails[..10240];
-                if (responseDetails.Length > 10240) responseDetails = responseDetails[..10240];
-                var details = BuildMaskedDetails(
-                    $"Request: {requestDetails}\nResponse: {responseDetails}",
-                    maskedVariables);
-                _activityLogService.Log(
-                    ActivityLogCategory.EndpointExecuted,
-                    $"{result.RequestDetails} — {result.StatusCode}",
-                    details);
-            }
-            else if (result.StatusCode.HasValue)
-            {
-                _activityLogService.Log(
-                    ActivityLogCategory.HttpError,
-                    $"{result.RequestDetails} — {result.StatusCode}");
-            }
-
             if (!string.IsNullOrEmpty(endpoint.PostRequestScript))
             {
                 var responseData = new ScriptResponseData
@@ -143,7 +128,7 @@ public class EndpointExecutionService : IEndpointExecutionService
                     Body = result.ResponseBody,
                     Headers = result.ResponseHeaders ?? new Dictionary<string, string>()
                 };
-                var postContext = BuildScriptContext(endpoint, callDepth, response: responseData);
+                var postContext = BuildScriptContext(endpoint, callDepth, response: responseData, scriptType: ScriptType.PostRequest);
                 var postResult = await _scriptRunner.ExecuteAsync(endpoint.PostRequestScript, postContext);
                 if (!postResult.Success)
                 {
@@ -154,6 +139,41 @@ public class EndpointExecutionService : IEndpointExecutionService
                 }
             }
 
+            var maskedVariables = _activeEnvironmentService.ActiveEnvironment?.Variables
+                ?? Enumerable.Empty<EnvironmentVariable>();
+
+            if (result.HttpSuccess && result.Success)
+            {
+                var requestDetails = result.RequestDetails ?? string.Empty;
+                var responseDetails = result.ResponseBody ?? string.Empty;
+                if (requestDetails.Length > 10240) requestDetails = requestDetails[..10240];
+                if (responseDetails.Length > 10240) responseDetails = responseDetails[..10240];
+                var details = MaskSensitiveData(
+                    $"Request: {requestDetails}\nResponse: {responseDetails}",
+                    maskedVariables);
+                _activityLogService.Log(
+                    ActivityLogCategory.EndpointExecuted,
+                    MaskSensitiveData($"{result.RequestDetails} — {result.StatusCode}", maskedVariables),
+                    details);
+            }
+            else if (result.StatusCode.HasValue && !result.HttpSuccess)
+            {
+                _activityLogService.Log(
+                    ActivityLogCategory.HttpError,
+                    MaskSensitiveData($"{result.RequestDetails} — {result.StatusCode}", maskedVariables));
+            }
+
+            if (!result.Success && result.HttpSuccess)
+            {
+                _activityLogService.Log(
+                    ActivityLogCategory.InternalError,
+                    MaskSensitiveData($"{result.RequestDetails} — Post-Script-Fehler: {result.ErrorMessage}", maskedVariables));
+            }
+
+            // Absichtlich identisch zur Log-Bedingung: History-Eintrag nur bei vollständig erfolgreichem Aufruf (HTTP + Post-Script).
+            if (result.HttpSuccess && result.Success)
+                await PersistHistoryEntryAsync(endpoint, result);
+
             return result;
         }
         finally
@@ -162,10 +182,33 @@ public class EndpointExecutionService : IEndpointExecutionService
         }
     }
 
+    private async Task PersistHistoryEntryAsync(Core.Models.Endpoint endpoint, EndpointExecutionResult result)
+    {
+        try
+        {
+            var entry = new Core.Models.EndpointCallHistoryEntry
+            {
+                ApplicationId = endpoint.ApplicationId,
+                EndpointId = endpoint.Id,
+                ExecutedAt = DateTime.UtcNow,
+                HttpMethod = endpoint.Method.ToString(),
+                RelativePath = endpoint.RelativePath,
+                StatusCode = result.StatusCode,
+                DurationMs = result.DurationMs.HasValue ? (int)Math.Min(result.DurationMs.Value, int.MaxValue) : null
+            };
+            await _historyService.AddEntryAsync(entry);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "History-Eintrag konnte nicht gespeichert werden.");
+        }
+    }
+
     private ScriptContext BuildScriptContext(
         Core.Models.Endpoint endpoint,
         Dictionary<int, int> callDepth,
-        ScriptResponseData? response)
+        ScriptResponseData? response,
+        ScriptType scriptType = ScriptType.PreRequest)
     {
         var variables = _activeEnvironmentService.ActiveVariables;
         var baseUrl = ResolvePlaceholders(endpoint.Application?.BaseUrl ?? string.Empty, variables);
@@ -186,7 +229,8 @@ public class EndpointExecutionService : IEndpointExecutionService
             Response = response,
             CallDepth = callDepth,
             ExecuteEndpoint = name => ExecuteEndpointByNameAsync(endpoint.ApplicationId, name, callDepth),
-            EndpointName = endpoint.Name
+            EndpointName = endpoint.Name,
+            ScriptType = scriptType
         };
     }
 
@@ -237,6 +281,7 @@ public class EndpointExecutionService : IEndpointExecutionService
         return new EndpointExecutionResult
         {
             Success = response.IsSuccessStatusCode,
+            HttpSuccess = response.IsSuccessStatusCode,
             StatusCode = (int)response.StatusCode,
             RequestDetails = $"{endpoint.Method} {resolvedUrl}",
             ResponseBody = body,
@@ -324,11 +369,16 @@ public class EndpointExecutionService : IEndpointExecutionService
         return await ExecuteAsync(matches[0], callDepth);
     }
 
-    private static string BuildMaskedDetails(string details, IEnumerable<EnvironmentVariable> variables)
+    private static string MaskSensitiveData(string text, IEnumerable<EnvironmentVariable> variables)
     {
         foreach (var variable in variables.Where(v => v.IsValueMasked && !string.IsNullOrEmpty(v.Value)))
-            details = details.Replace(variable.Value, "***");
-        return details;
+        {
+            text = text.Replace(variable.Value, "***", StringComparison.OrdinalIgnoreCase);
+            var urlEncoded = Uri.EscapeDataString(variable.Value!);
+            if (!string.Equals(urlEncoded, variable.Value, StringComparison.OrdinalIgnoreCase))
+                text = text.Replace(urlEncoded, "***", StringComparison.OrdinalIgnoreCase);
+        }
+        return text;
     }
 
     private static string CombineUrl(string baseUrl, string relativePath)

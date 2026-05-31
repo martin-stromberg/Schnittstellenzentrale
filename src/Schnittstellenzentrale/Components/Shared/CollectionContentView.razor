@@ -1,0 +1,122 @@
+@inject IApplicationGroupService ApplicationGroupService
+@inject IApplicationRepository ApplicationRepository
+@inject IEndpointRepository EndpointRepository
+
+<div class="sz-content-view">
+    <section class="sz-hero">
+        <div class="sz-hero-bg">
+            <div class="sz-hero-bg-gradient"></div>
+            <div class="sz-hero-bg-pattern"></div>
+        </div>
+        <div class="sz-hero-content">
+            <div class="sz-hero-left">
+                <ContentHeader Name="@Group.Name"
+                               Subtitle="@Group.Subtitle"
+                               IconData="@Group.IconData"
+                               OnNameChanged="OnNameChanged"
+                               OnSubtitleChanged="OnSubtitleChanged"
+                               OnIconChanged="OnIconChanged" />
+            </div>
+            <div class="sz-hero-right">
+                <button type="button" class="sz-btn sz-btn-outline sz-btn-sm" @onclick="RequestCreateApplication">+ Neue Anwendung</button>
+            </div>
+        </div>
+    </section>
+
+    <div class="sz-dashboard">
+        <div class="sz-dashboard-grid">
+            <div class="sz-dashboard-col-aside">
+                <span class="sz-section-label">KPI</span>
+                <div class="sz-kpi-card">
+                    <div class="sz-kpi-row">
+                        <span class="sz-kpi-label">Anzahl Anwendungen</span>
+                        <span class="sz-kpi-value">@_applicationCount</span>
+                    </div>
+                    <div class="sz-kpi-divider"></div>
+                    <div class="sz-kpi-row">
+                        <span class="sz-kpi-label">Anzahl Endpunkte</span>
+                        <span class="sz-kpi-value">@_endpointCount</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="sz-endpoints-section">
+            <div class="sz-endpoints-header">
+                <span class="sz-section-label">Core Endpoints</span>
+            </div>
+            <div class="sz-table-wrapper">
+                <table class="sz-table">
+                    <thead>
+                        <tr>
+                            <th>Methode</th>
+                            <th>Endpunkt</th>
+                            <th>Beschreibung</th>
+                            <th>Aktion</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var ep in _endpoints)
+                        {
+                            <tr>
+                                <td>
+                                    <span class="@HttpMethodBadgeHelper.GetMethodBadgeClass(ep.Method.ToString())">@ep.Method</span>
+                                </td>
+                                <td><span class="sz-endpoint-path">@ep.RelativePath</span></td>
+                                <td><span class="sz-endpoint-desc">@ep.Name</span></td>
+                                <td>
+                                    <button type="button" class="sz-table-action-btn" title="Ausführen">&#9654;</button>
+                                </td>
+                            </tr>
+                        }
+                        @if (_endpoints.Count == 0)
+                        {
+                            <tr>
+                                <td colspan="4" class="sz-endpoint-desc">Keine Endpunkte vorhanden.</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public ApplicationGroup Group { get; set; } = null!;
+    [Parameter] public EventCallback OnCreateApplicationRequested { get; set; }
+
+    private int _applicationCount;
+    private int _endpointCount;
+    private IList<Core.Models.Endpoint> _endpoints = [];
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _applicationCount = await ApplicationRepository.GetApplicationCountByGroupAsync(Group.Id);
+        _endpointCount = await ApplicationRepository.GetEndpointCountByGroupAsync(Group.Id);
+
+        var appIds = Group.Applications.Select(a => a.Id);
+        var all = await EndpointRepository.GetEndpointsByApplicationIdsAsync(appIds);
+        _endpoints = all.Take(5).ToList();
+    }
+
+    private async Task OnNameChanged(string name)
+    {
+        await ApplicationGroupService.UpdateNameAsync(Group.Id, name);
+        Group.Name = name;
+    }
+
+    private async Task OnSubtitleChanged(string? subtitle)
+    {
+        await ApplicationGroupService.UpdateSubtitleAsync(Group.Id, subtitle);
+        Group.Subtitle = subtitle;
+    }
+
+    private async Task OnIconChanged(byte[] iconData)
+    {
+        await ApplicationGroupService.UpdateIconAsync(Group.Id, iconData);
+        Group.IconData = iconData;
+    }
+
+    private async Task RequestCreateApplication() => await OnCreateApplicationRequested.InvokeAsync();
+}

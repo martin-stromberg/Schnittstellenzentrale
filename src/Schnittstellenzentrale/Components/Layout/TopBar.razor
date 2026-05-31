@@ -1,0 +1,98 @@
+@inject INavigationStateService NavigationStateService
+@inject IStorageModeService StorageModeService
+@inject ICurrentUserService CurrentUserService
+@inject IActiveEnvironmentService ActiveEnvironmentService
+@implements IDisposable
+
+<div class="sz-topbar">
+    <span class="sz-topbar-title">Schnittstellenzentrale</span>
+
+    <nav class="sz-topbar-nav">
+        <button type="button"
+                class="sz-topbar-tab @(NavigationStateService.CurrentArea == NavigationArea.Workspaces ? "active" : "")"
+                @onclick="() => SetAreaAsync(NavigationArea.Workspaces)">
+            Workspaces
+        </button>
+        <button type="button"
+                class="sz-topbar-tab @(NavigationStateService.CurrentArea == NavigationArea.Environments ? "active" : "")"
+                @onclick="() => SetAreaAsync(NavigationArea.Environments)">
+            Environments
+        </button>
+        <button type="button"
+                class="sz-topbar-tab @(NavigationStateService.CurrentArea == NavigationArea.History ? "active" : "")"
+                @onclick="() => SetAreaAsync(NavigationArea.History)">
+            History
+        </button>
+    </nav>
+
+    <div class="sz-topbar-actions">
+        <label class="sz-topbar-label">Modus:</label>
+        <select class="sz-topbar-select" value="@StorageModeService.CurrentMode" @onchange="OnStorageModeChanged">
+            <option value="@StorageMode.Team">Team</option>
+            <option value="@StorageMode.User">Benutzer</option>
+        </select>
+
+        <EnvironmentSelector @ref="_environmentSelector" OnEnvironmentSelectedByUser="OnEnvironmentSelectedByUser" />
+
+        <ThemeToggle />
+
+        <a href="/settings" class="sz-topbar-icon-btn" title="Einstellungen">&#9881;</a>
+        <a href="/help" class="sz-topbar-icon-btn" title="Hilfe">&#63;</a>
+
+        <span class="sz-topbar-profile" title="@_userName">@_initials</span>
+    </div>
+</div>
+
+@code {
+    private string _userName = string.Empty;
+    private string _initials = string.Empty;
+    private EnvironmentSelector? _environmentSelector;
+
+    protected override void OnInitialized()
+    {
+        NavigationStateService.OnAreaChanged += OnStateChanged;
+        StorageModeService.OnModeChanged += OnStateChanged;
+        _userName = CurrentUserService.GetCurrentUserName();
+        _initials = BuildInitials(_userName);
+    }
+
+    private async Task SetAreaAsync(NavigationArea area)
+    {
+        await NavigationStateService.SetAreaAsync(area);
+    }
+
+    private async Task OnStorageModeChanged(ChangeEventArgs e)
+    {
+        if (Enum.TryParse<StorageMode>(e.Value?.ToString(), out var mode))
+        {
+            StorageModeService.SetMode(mode);
+            if (_environmentSelector != null)
+                await _environmentSelector.RefreshAsync();
+        }
+    }
+
+    private void OnEnvironmentSelectedByUser(SystemEnvironment? environment)
+    {
+    }
+
+    private static string BuildInitials(string userName)
+    {
+        var parts = userName.TrimStart('\\').Split(['\\', ' '], StringSplitOptions.RemoveEmptyEntries);
+        return parts.Length > 0 ? parts[^1][..1].ToUpperInvariant() : "?";
+    }
+
+    public async Task RefreshEnvironmentSelectorAsync()
+    {
+        if (_environmentSelector != null)
+            await _environmentSelector.RefreshAsync();
+    }
+
+    private void OnStateChanged() => InvokeAsync(StateHasChanged);
+
+    /// <summary>Meldet Event-Abonnements ab.</summary>
+    public void Dispose()
+    {
+        NavigationStateService.OnAreaChanged -= OnStateChanged;
+        StorageModeService.OnModeChanged -= OnStateChanged;
+    }
+}

@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Headers;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Moq.Protected;
 using Schnittstellenzentrale.Core.Enums;
@@ -100,6 +101,7 @@ public class EndpointExecutionServiceTests
         Mock<ISystemEnvironmentRepository>? environmentRepositoryMock = null,
         Mock<ISignalRNotificationService>? signalRNotificationServiceMock = null,
         Mock<IActivityLogService>? activityLogServiceMock = null,
+        Mock<IHistoryService>? historyServiceMock = null,
         IEndpointScriptRunner? realScriptRunner = null)
     {
         var handlerMock = new Mock<HttpMessageHandler>();
@@ -120,6 +122,7 @@ public class EndpointExecutionServiceTests
         var envRepoMock = environmentRepositoryMock ?? CreateEmptyEnvironmentRepositoryMock();
         var signalRMock = signalRNotificationServiceMock ?? CreateEmptySignalRNotificationServiceMock();
         var logMock = activityLogServiceMock ?? TestMockFactory.CreateActivityLogServiceMock();
+        var historyMock = historyServiceMock ?? CreateEmptyHistoryServiceMock();
 
         var service = new EndpointExecutionService(
             factoryMock.Object,
@@ -129,8 +132,18 @@ public class EndpointExecutionServiceTests
             repoMock.Object,
             envRepoMock.Object,
             signalRMock.Object,
-            logMock.Object);
+            logMock.Object,
+            historyMock.Object,
+            NullLogger<EndpointExecutionService>.Instance);
         return (service, handlerMock, factoryMock);
+    }
+
+    private static Mock<IHistoryService> CreateEmptyHistoryServiceMock()
+    {
+        var mock = new Mock<IHistoryService>();
+        mock.Setup(h => h.AddEntryAsync(It.IsAny<Core.Models.EndpointCallHistoryEntry>()))
+            .Returns(Task.CompletedTask);
+        return mock;
     }
 
     private (EndpointExecutionService service, Func<Uri?> getSentUri) CreateServiceCapturingUri(
@@ -208,12 +221,13 @@ public class EndpointExecutionServiceTests
     [Fact]
     public async Task Execute_WithNegotiateWithImpersonationAuthType_UsesNegotiateHandler()
     {
-        var (service, _, _) = CreateService(_credMock);
+        var (service, _, factoryMock) = CreateService(_credMock);
         var endpoint = CreateEndpoint(AuthenticationType.NegotiateWithImpersonation);
 
         var result = await service.ExecuteAsync(endpoint);
 
         Assert.True(result.Success);
+        factoryMock.Verify(f => f.CreateClient("negotiate"), Times.Once());
     }
 
     /// <summary>Execute_WithAuthTypeBearerToken_SendsBearerHeader</summary>
@@ -839,6 +853,165 @@ public class EndpointExecutionServiceTests
         Assert.NotNull(capturedDetails);
         Assert.DoesNotContain(secretValue, capturedDetails);
         Assert.Contains("***", capturedDetails);
+    }
+
+    /// <summary>PostScript_Fehler_NachHttp200_ProtokolliertNichtEndpointExecuted_NichtHttpError</summary>
+    [Fact]
+    public async Task PostScript_Fehler_NachHttp200_ProtokolliertNichtEndpointExecuted_NichtHttpError()
+    {
+        var logMock = TestMockFactory.CreateActivityLogServiceMock();
+        var scriptMock = new Mock<IEndpointScriptRunner>();
+        scriptMock.Setup(r => r.ExecuteAsync(It.IsAny<string>(), It.IsAny<ScriptContext>()))
+            .ReturnsAsync(new ScriptExecutionResult { Success = false, ErrorMessage = "Post-Skript-Fehler" });
+
+        var (service, _, _) = CreateService(_credMock,
+            responseCode: System.Net.HttpStatusCode.OK,
+            body: "{}",
+            scriptRunnerMock: scriptMock,
+            activityLogServiceMock: logMock);
+
+        var endpoint = CreateEndpoint(postRequestScript: "invalid@@");
+
+        var result = await service.ExecuteAsync(endpoint);
+
+        Assert.False(result.Success);
+        Assert.True(result.HttpSuccess);
+        Assert.Equal(200, result.StatusCode);
+        logMock.Verify(l => l.Log(ActivityLogCategory.EndpointExecuted, It.IsAny<string>(), It.IsAny<string?>()), Times.Never);
+        logMock.Verify(l => l.Log(ActivityLogCategory.HttpError, It.IsAny<string>(), It.IsAny<string?>()), Times.Never);
+    }
+
+    /// <summary>PostScript_Fehler_NachHttp200_ProtokolliertZusaetzlichInternalError</summary>
+    [Fact]
+    public async Task PostScript_Fehler_NachHttp200_ProtokolliertZusaetzlichInternalError()
+    {
+        var logMock = TestMockFactory.CreateActivityLogServiceMock();
+        var scriptMock = new Mock<IEndpointScriptRunner>();
+        scriptMock.Setup(r => r.ExecuteAsync(It.IsAny<string>(), It.IsAny<ScriptContext>()))
+            .ReturnsAsync(new ScriptExecutionResult { Success = false, ErrorMessage = "Post-Skript-Fehler" });
+
+        var (service, _, _) = CreateService(_credMock,
+            responseCode: System.Net.HttpStatusCode.OK,
+            body: "{}",
+            scriptRunnerMock: scriptMock,
+            activityLogServiceMock: logMock);
+
+        var endpoint = CreateEndpoint(postRequestScript: "invalid@@");
+
+        await service.ExecuteAsync(endpoint);
+
+        logMock.Verify(l => l.Log(ActivityLogCategory.InternalError, It.IsAny<string>(), It.IsAny<string?>()), Times.Once);
+    }
+
+    /// <summary>BuildMaskedDetails_MaskiertUrlKodierteVariablenWerte</summary>
+    [Fact]
+    public async Task BuildMaskedDetails_MaskiertUrlKodierteVariablenWerte()
+    {
+        var logMock = TestMockFactory.CreateActivityLogServiceMock();
+
+        const string secretValue = "My Secret";
+        var envMock = new Mock<IActiveEnvironmentService>();
+        var env = new Core.Models.SystemEnvironment
+        {
+            Id = 1,
+            Name = "Test",
+            Variables =
+            [
+                new Core.Models.EnvironmentVariable { Name = "token", Value = secretValue, IsValueMasked = true }
+            ]
+        };
+        envMock.Setup(s => s.ActiveEnvironment).Returns(env);
+        envMock.Setup(s => s.ActiveVariables).Returns(new Dictionary<string, string> { ["token"] = secretValue });
+
+        string? capturedDetails = null;
+        logMock.Setup(l => l.Log(ActivityLogCategory.EndpointExecuted, It.IsAny<string>(), It.IsAny<string?>()))
+            .Callback<ActivityLogCategory, string, string?>((_, _, d) => capturedDetails = d);
+
+        var (service, _, _) = CreateService(_credMock,
+            body: $"{{\"token\":\"{Uri.EscapeDataString(secretValue)}\"}}",
+            activeEnvironmentMock: envMock,
+            activityLogServiceMock: logMock);
+        var endpoint = CreateEndpoint(AuthenticationType.None);
+
+        await service.ExecuteAsync(endpoint);
+
+        Assert.NotNull(capturedDetails);
+        Assert.DoesNotContain(Uri.EscapeDataString(secretValue), capturedDetails);
+        Assert.Contains("***", capturedDetails);
+    }
+
+    /// <summary>Execute_MaskiertVariablen_ImMessageString</summary>
+    [Fact]
+    public async Task Execute_MaskiertVariablen_ImMessageString()
+    {
+        var logMock = TestMockFactory.CreateActivityLogServiceMock();
+
+        const string secretValue = "geheim123";
+        var envMock = new Mock<IActiveEnvironmentService>();
+        var env = new Core.Models.SystemEnvironment
+        {
+            Id = 1,
+            Name = "Test",
+            Variables =
+            [
+                new Core.Models.EnvironmentVariable { Name = "token", Value = secretValue, IsValueMasked = true }
+            ]
+        };
+        envMock.Setup(s => s.ActiveEnvironment).Returns(env);
+        envMock.Setup(s => s.ActiveVariables).Returns(new Dictionary<string, string> { ["token"] = secretValue });
+
+        string? capturedMessage = null;
+        logMock.Setup(l => l.Log(ActivityLogCategory.EndpointExecuted, It.IsAny<string>(), It.IsAny<string?>()))
+            .Callback<ActivityLogCategory, string, string?>((_, m, _) => capturedMessage = m);
+
+        var (service, _, _) = CreateService(_credMock,
+            activeEnvironmentMock: envMock,
+            activityLogServiceMock: logMock);
+        var endpoint = new Core.Models.Endpoint
+        {
+            Id = 1,
+            Name = "Test",
+            Method = Core.Enums.HttpMethod.GET,
+            RelativePath = $"/api/test?token={secretValue}",
+            AuthenticationType = AuthenticationType.None,
+            ApplicationId = 1,
+            Application = CreateApp(),
+            Headers = [],
+            QueryParameters = []
+        };
+
+        await service.ExecuteAsync(endpoint);
+
+        Assert.NotNull(capturedMessage);
+        Assert.DoesNotContain(secretValue, capturedMessage);
+        Assert.Contains("***", capturedMessage);
+    }
+
+    /// <summary>PostScript_Fehler_NachHttp200_SchreibtKeinenHistoryEintrag</summary>
+    [Fact]
+    public async Task PostScript_Fehler_NachHttp200_SchreibtKeinenHistoryEintrag()
+    {
+        var historyMock = new Mock<IHistoryService>();
+        historyMock.Setup(h => h.AddEntryAsync(It.IsAny<Core.Models.EndpointCallHistoryEntry>()))
+            .Returns(Task.CompletedTask);
+
+        var scriptMock = new Mock<IEndpointScriptRunner>();
+        scriptMock.Setup(r => r.ExecuteAsync(It.IsAny<string>(), It.IsAny<ScriptContext>()))
+            .ReturnsAsync(new ScriptExecutionResult { Success = false, ErrorMessage = "Post-Skript-Fehler" });
+
+        var (service, _, _) = CreateService(_credMock,
+            responseCode: System.Net.HttpStatusCode.OK,
+            body: "{}",
+            scriptRunnerMock: scriptMock,
+            historyServiceMock: historyMock);
+
+        var endpoint = CreateEndpoint(postRequestScript: "invalid@@");
+
+        var result = await service.ExecuteAsync(endpoint);
+
+        Assert.False(result.Success);
+        Assert.True(result.HttpSuccess);
+        historyMock.Verify(h => h.AddEntryAsync(It.IsAny<Core.Models.EndpointCallHistoryEntry>()), Times.Never);
     }
 
     /// <summary>SzExecute_MehrdeutigerName_GibtFehlerZurueck</summary>

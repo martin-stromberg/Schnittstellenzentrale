@@ -17,6 +17,17 @@ export function loadPanelHeight() {
     return localStorage.getItem(PANEL_HEIGHT_KEY);
 }
 
+const _GLOBAL_KEY = '__activityLogPanelListeners';
+
+// Remove any document-level listeners registered by a previous module instance
+// (e.g. after a Blazor circuit reconnect where the module is re-imported).
+if (document[_GLOBAL_KEY]) {
+    const prev = document[_GLOBAL_KEY];
+    document.removeEventListener('mousemove', prev.onMouseMove);
+    document.removeEventListener('mouseup', prev.onMouseUp);
+    delete document[_GLOBAL_KEY];
+}
+
 const _listenerRegistry = new Map();
 
 export function initializePanelResize(handleElement, panelElement) {
@@ -59,6 +70,7 @@ export function initializePanelResize(handleElement, panelElement) {
     document.addEventListener('mousemove', onMouseMove);
     document.addEventListener('mouseup', onMouseUp);
 
+    document[_GLOBAL_KEY] = { onMouseMove, onMouseUp };
     _listenerRegistry.set(handleElement, { onMouseDown, onMouseMove, onMouseUp });
 }
 
@@ -70,6 +82,7 @@ export function destroy(handleElement) {
             document.removeEventListener('mouseup', listeners.onMouseUp);
         });
         _listenerRegistry.clear();
+        delete document[_GLOBAL_KEY];
         return;
     }
     const listeners = _listenerRegistry.get(handleElement);
@@ -78,5 +91,7 @@ export function destroy(handleElement) {
         document.removeEventListener('mousemove', listeners.onMouseMove);
         document.removeEventListener('mouseup', listeners.onMouseUp);
         _listenerRegistry.delete(handleElement);
+        if (_listenerRegistry.size === 0)
+            delete document[_GLOBAL_KEY];
     }
 }
