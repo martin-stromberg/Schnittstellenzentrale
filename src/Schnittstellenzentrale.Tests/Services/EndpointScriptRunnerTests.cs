@@ -373,6 +373,42 @@ public class EndpointScriptRunnerTests
         logMock.Verify(l => l.Log(ActivityLogCategory.ScriptExecuted, It.Is<string>(m => m.Contains("TestEndpunkt")), It.IsAny<string?>()), Times.Once);
     }
 
+    /// <summary>ExecuteAsync_PreRequestSkript_ProtokolliertMitPreLabel</summary>
+    [Fact]
+    public async Task ExecuteAsync_PreRequestSkript_ProtokolliertMitPreLabel()
+    {
+        var logMock = TestMockFactory.CreateActivityLogServiceMock();
+        var runner = CreateRunner(activityLogService: logMock.Object);
+        var context = CreateContext();
+        context.EndpointName = "MeinEndpunkt";
+        context.ScriptType = Core.Enums.ScriptType.PreRequest;
+
+        await runner.ExecuteAsync("var x = 1;", context);
+
+        logMock.Verify(l => l.Log(
+            Core.Enums.ActivityLogCategory.ScriptExecuted,
+            It.Is<string>(m => m.Contains("Pre-Request-Skript") && m.Contains("MeinEndpunkt")),
+            It.IsAny<string?>()), Times.Once);
+    }
+
+    /// <summary>ExecuteAsync_PostRequestSkript_ProtokolliertMitPostLabel</summary>
+    [Fact]
+    public async Task ExecuteAsync_PostRequestSkript_ProtokolliertMitPostLabel()
+    {
+        var logMock = TestMockFactory.CreateActivityLogServiceMock();
+        var runner = CreateRunner(activityLogService: logMock.Object);
+        var context = CreateContext();
+        context.EndpointName = "MeinEndpunkt";
+        context.ScriptType = Core.Enums.ScriptType.PostRequest;
+
+        await runner.ExecuteAsync("var x = 1;", context);
+
+        logMock.Verify(l => l.Log(
+            Core.Enums.ActivityLogCategory.ScriptExecuted,
+            It.Is<string>(m => m.Contains("Post-Request-Skript") && m.Contains("MeinEndpunkt")),
+            It.IsAny<string?>()), Times.Once);
+    }
+
     /// <summary>SzConsoleWrite_ProtokolliertScriptConsoleOutput</summary>
     [Fact]
     public async Task SzConsoleWrite_ProtokolliertScriptConsoleOutput()

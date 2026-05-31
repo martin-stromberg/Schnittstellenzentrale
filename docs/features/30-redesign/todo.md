@@ -17,7 +17,7 @@ Branch: `30-redesign`
 | [x] | 8 | Code-Review (Unteragent) | `review-code.md` |
 | [x] | – | Iteration oder Abschluss entscheiden | – |
 | [x] | 8a | Folgeaufgaben dokumentieren (bei Schleifenabbruch) | `continue.md` |
-| [x] | 10 | Nacharbeiten abschließen (offene Punkte aus `continue.md`) | `continue-done.md` |
+| [x] | 10 | Nacharbeiten abschließen (offene Punkte aus `continue.md`) | `continue-done2.md` |
 | [x] | 9 | Dokumentation erstellen (Unteragent) | `docs/help/` |
 | [ ] | 11 | Nacharbeiten abschließen (offene Punkte aus neuer `continue.md`) | `continue-done.md` |
 | [ ] | – | Feature-Verzeichnis löschen | – |

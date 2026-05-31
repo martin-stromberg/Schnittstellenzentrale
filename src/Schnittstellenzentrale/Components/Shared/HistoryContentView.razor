@@ -2,51 +2,116 @@
 @inject IOptions<HistorySettings> HistoryOptions
 @using Microsoft.Extensions.Options
 @using Schnittstellenzentrale.Infrastructure.Services
+@using Schnittstellenzentrale.Core.Helpers
 
 <div class="sz-history-content">
-    <h2>Aufrufhistorie</h2>
+    <div class="sz-history-page-header">
+        <h1 class="sz-history-page-title">Historie der Anfragen</h1>
+        <p class="sz-history-page-subtitle">Überwachen und analysieren Sie alle ausgeführten API-Calls.</p>
+    </div>
 
-    <div class="sz-history-filter">
-        <input type="datetime-local" class="sz-input" @bind="_filterFrom" @bind:event="onchange" />
-        <input type="datetime-local" class="sz-input" @bind="_filterTo" @bind:event="onchange" />
-        <button type="button" class="sz-btn-primary" @onclick="FilterAsync">Filtern</button>
-        <button type="button" class="sz-btn-secondary" @onclick="ResetFilterAsync">Zurücksetzen</button>
+    <div class="sz-history-filter-bar">
+        <div class="sz-history-filter-row">
+            <div class="sz-history-filter-field">
+                <label class="sz-history-filter-label">Von</label>
+                <input type="datetime-local" class="sz-input sz-history-filter-input" @bind="_filterFrom" @bind:event="onchange" />
+            </div>
+            <div class="sz-history-filter-field">
+                <label class="sz-history-filter-label">Bis</label>
+                <input type="datetime-local" class="sz-input sz-history-filter-input" @bind="_filterTo" @bind:event="onchange" />
+            </div>
+            <div class="sz-history-filter-actions">
+                <button type="button" class="sz-btn sz-btn-outline sz-btn-sm" @onclick="FilterAsync">
+                    <span class="sz-icon sz-icon-history"></span>
+                    Filtern
+                </button>
+                <button type="button" class="sz-btn sz-btn-outline sz-btn-sm" @onclick="ResetFilterAsync">
+                    Zurücksetzen
+                </button>
+            </div>
+        </div>
     </div>
 
     @if (_entries.Count == 0)
     {
-        <p>Keine Einträge vorhanden.</p>
+        <div class="sz-history-empty">
+            <span class="sz-icon sz-icon-history sz-history-empty-icon"></span>
+            <p>Keine Einträge vorhanden.</p>
+        </div>
     }
     else
     {
-        <table class="sz-table">
-            <thead>
-                <tr>
-                    <th>Zeitpunkt</th>
-                    <th>Methode</th>
-                    <th>Pfad</th>
-                    <th>Status</th>
-                    <th>Dauer (ms)</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var entry in _entries)
-                {
+        <div class="sz-history-table-wrapper">
+            <table class="sz-table">
+                <thead>
                     <tr>
-                        <td>@entry.ExecutedAt?.ToLocalTime().ToString("dd.MM.yyyy HH:mm:ss")</td>
-                        <td>@entry.HttpMethod</td>
-                        <td>@entry.RelativePath</td>
-                        <td>@entry.StatusCode</td>
-                        <td>@entry.DurationMs</td>
+                        <th>Zeitpunkt</th>
+                        <th>Anwendung</th>
+                        <th>Endpunkt</th>
+                        <th>Status</th>
+                        <th>Dauer</th>
                     </tr>
-                }
-            </tbody>
-        </table>
+                </thead>
+                <tbody>
+                    @foreach (var entry in _entries)
+                    {
+                        <tr>
+                            <td>
+                                <span class="sz-history-timestamp">@entry.ExecutedAt?.ToLocalTime().ToString("dd.MM.yyyy HH:mm:ss")</span>
+                            </td>
+                            <td>
+                                <span class="sz-history-app-name">@(entry.Application?.Name ?? "—")</span>
+                            </td>
+                            <td>
+                                <div class="sz-history-endpoint-cell">
+                                    @if (!string.IsNullOrEmpty(entry.HttpMethod))
+                                    {
+                                        <span class="@HttpMethodBadgeHelper.GetMethodBadgeClass(entry.HttpMethod)">@entry.HttpMethod</span>
+                                    }
+                                    <span class="sz-endpoint-path">@(entry.RelativePath ?? "—")</span>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="sz-history-status-cell">
+                                    <span class="sz-history-status-dot @GetStatusDotClass(entry.StatusCode)"></span>
+                                    <span class="@GetStatusTextClass(entry.StatusCode)">@GetStatusText(entry.StatusCode)</span>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="sz-history-duration">@(entry.DurationMs.HasValue ? $"{entry.DurationMs} ms" : "—")</span>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
 
-        <div class="sz-pagination">
-            <button type="button" class="sz-btn-secondary" @onclick="PrevPageAsync" disabled="@(_page <= 1)">&#8592;</button>
-            <span>Seite @_page von @_totalPages</span>
-            <button type="button" class="sz-btn-secondary" @onclick="NextPageAsync" disabled="@(_page >= _totalPages)">&#8594;</button>
+            <div class="sz-history-pagination-footer">
+                <div class="sz-history-pagination-info">
+                    <span>Zeige <strong>@((_page - 1) * HistoryOptions.Value.DefaultPageSize + 1)–@(Math.Min(_page * HistoryOptions.Value.DefaultPageSize, _totalCount))</strong> von <strong>@_totalCount</strong> Einträgen</span>
+                </div>
+                <div class="sz-pagination">
+                    <button type="button" class="sz-btn sz-btn-outline sz-btn-sm sz-history-page-btn" @onclick="PrevPageAsync" disabled="@(_page <= 1)">&#8592;</button>
+                    <span class="sz-history-page-info">Seite @_page von @_totalPages</span>
+                    <button type="button" class="sz-btn sz-btn-outline sz-btn-sm sz-history-page-btn" @onclick="NextPageAsync" disabled="@(_page >= _totalPages)">&#8594;</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="sz-history-info-cards">
+            <div class="sz-history-info-card sz-history-info-card--primary">
+                <div class="sz-history-info-card-header">
+                    <span class="sz-icon sz-icon-history"></span>
+                    <h3 class="sz-history-info-card-title">Einträge</h3>
+                </div>
+                <p class="sz-history-info-card-text">Insgesamt <strong>@_totalCount</strong> Aufrufe in der Historie. Die neuesten Einträge werden zuerst angezeigt.</p>
+            </div>
+            <div class="sz-history-info-card sz-history-info-card--secondary">
+                <div class="sz-history-info-card-header">
+                    <span class="sz-icon sz-icon-environment"></span>
+                    <h3 class="sz-history-info-card-title">Aufbewahrung</h3>
+                </div>
+                <p class="sz-history-info-card-text">Einträge werden dauerhaft gespeichert.</p>
+            </div>
         </div>
     }
 </div>
@@ -73,8 +138,8 @@
     private async Task LoadAsync()
     {
         var pageSize = HistoryOptions.Value.DefaultPageSize;
-        var filterFrom = _filterFrom.HasValue ? DateTime.SpecifyKind(_filterFrom.Value, DateTimeKind.Local).ToUniversalTime() : (DateTime?)null;
-        var filterTo = _filterTo.HasValue ? DateTime.SpecifyKind(_filterTo.Value, DateTimeKind.Local).ToUniversalTime() : (DateTime?)null;
+        var filterFrom = _filterFrom.HasValue ? _filterFrom.Value : (DateTime?)null;
+        var filterTo = _filterTo.HasValue ? _filterTo.Value : (DateTime?)null;
         var filter = new HistoryFilter(null, null, filterFrom, filterTo);
         var (items, total) = await HistoryService.GetPagedAsync(filter, _page, pageSize);
         _entries = items;
@@ -99,4 +164,21 @@
     {
         if (_page < _totalPages) { _page++; await LoadAsync(); }
     }
+
+    private static string GetStatusDotClass(int? statusCode) => statusCode switch
+    {
+        >= 200 and < 300 => "sz-history-status-dot--success",
+        >= 400            => "sz-history-status-dot--error",
+        _                 => "sz-history-status-dot--neutral"
+    };
+
+    private static string GetStatusTextClass(int? statusCode) => statusCode switch
+    {
+        >= 200 and < 300 => "sz-history-status-text--success",
+        >= 400            => "sz-history-status-text--error",
+        _                 => string.Empty
+    };
+
+    private static string GetStatusText(int? statusCode) =>
+        statusCode.HasValue ? statusCode.Value.ToString() : "—";
 }

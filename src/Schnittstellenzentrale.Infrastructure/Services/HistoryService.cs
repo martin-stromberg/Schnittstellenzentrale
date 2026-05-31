@@ -29,7 +29,7 @@ public class HistoryService : IHistoryService
     {
         page = Math.Max(1, page);
         await using var context = await _factory.CreateDbContextAsync();
-        var query = context.EndpointCallHistory.AsQueryable();
+        var query = context.EndpointCallHistory.Include(e => e.Application).AsQueryable();
 
         if (filter.ApplicationId.HasValue)
             query = query.Where(e => e.ApplicationId == filter.ApplicationId.Value);

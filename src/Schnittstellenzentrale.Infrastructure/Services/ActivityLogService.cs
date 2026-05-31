@@ -8,6 +8,7 @@ namespace Schnittstellenzentrale.Infrastructure.Services;
 /// <summary>Scoped In-Memory-Implementierung von <see cref="IActivityLogService"/>.</summary>
 public class ActivityLogService : IActivityLogService
 {
+    private const int MaxEntries = 500;
     private readonly List<ActivityLogEntry> _entries = [];
     private readonly Lock _entriesLock = new();
     private readonly ILogger<ActivityLogService> _logger;
@@ -41,6 +42,8 @@ public class ActivityLogService : IActivityLogService
         lock (_entriesLock)
         {
             _entries.Add(entry);
+            if (_entries.Count > MaxEntries)
+                _entries.RemoveAt(0);
         }
 
         try

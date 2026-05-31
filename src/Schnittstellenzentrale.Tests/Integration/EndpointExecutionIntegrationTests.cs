@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Schnittstellenzentrale.Core.Enums;
 using Schnittstellenzentrale.Core.Helpers;
@@ -104,7 +105,8 @@ public class EndpointExecutionIntegrationTests : IAsyncLifetime
             new Mock<ISystemEnvironmentRepository>().Object,
             new Mock<ISignalRNotificationService>().Object,
             new Mock<IActivityLogService>().Object,
-            historyServiceMock.Object);
+            historyServiceMock.Object,
+            NullLogger<EndpointExecutionService>.Instance);
 
         // Act
         var result = await executionService.ExecuteAsync(endpoint);

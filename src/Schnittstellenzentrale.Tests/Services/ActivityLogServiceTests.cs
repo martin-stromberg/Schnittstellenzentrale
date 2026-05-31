@@ -65,4 +65,18 @@ public class ActivityLogServiceTests
 
         Assert.Empty(service.Entries);
     }
+
+    /// <summary>Log_MaxEntries_AeltesteEintraegeWerdenEntfernt</summary>
+    [Fact]
+    public void Log_MaxEntries_AeltesteEintraegeWerdenEntfernt()
+    {
+        var service = CreateService();
+
+        for (var i = 0; i < 502; i++)
+            service.Log(ActivityLogCategory.EntityCreated, $"Eintrag {i}");
+
+        Assert.Equal(500, service.Entries.Count);
+        Assert.Equal("Eintrag 2", service.Entries[0].Message);
+        Assert.Equal("Eintrag 501", service.Entries[499].Message);
+    }
 }

@@ -4,6 +4,7 @@ using Jint.Runtime;
 using Schnittstellenzentrale.Core.Enums;
 using Schnittstellenzentrale.Core.Interfaces;
 using Schnittstellenzentrale.Core.Models;
+using ScriptType = Schnittstellenzentrale.Core.Enums.ScriptType;
 
 namespace Schnittstellenzentrale.Infrastructure.Services;
 
@@ -32,6 +33,9 @@ public class EndpointScriptRunner : IEndpointScriptRunner
         var scriptName = !string.IsNullOrEmpty(context.EndpointName)
             ? context.EndpointName
             : "Skript";
+        var scriptTypeLabel = context.ScriptType == ScriptType.PostRequest
+            ? "Post-Request-Skript"
+            : "Pre-Request-Skript";
 
         try
         {
@@ -45,7 +49,7 @@ public class EndpointScriptRunner : IEndpointScriptRunner
 
             engine.Execute(script);
 
-            _activityLogService.Log(ActivityLogCategory.ScriptExecuted, $"Skript ausgeführt: {scriptName}");
+            _activityLogService.Log(ActivityLogCategory.ScriptExecuted, $"{scriptTypeLabel} ausgeführt: {scriptName}");
             return Task.FromResult(new ScriptExecutionResult { Success = true });
         }
         catch (TimeoutException ex)

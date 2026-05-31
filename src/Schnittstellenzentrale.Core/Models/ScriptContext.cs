@@ -1,3 +1,4 @@
+using Schnittstellenzentrale.Core.Enums;
 using Schnittstellenzentrale.Core.Interfaces;
 
 namespace Schnittstellenzentrale.Core.Models;
@@ -22,4 +23,7 @@ public class ScriptContext
 
     /// <summary>Optionaler Endpunktname für die Protokollierung in <c>EndpointScriptRunner</c>.</summary>
     public string? EndpointName { get; set; }
+
+    /// <summary>Gibt an, ob das Skript ein Pre- oder Post-Request-Skript ist.</summary>
+    public ScriptType ScriptType { get; set; }
 }
