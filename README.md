@@ -1,6 +1,12 @@
 # Schnittstellenzentrale
 
-Zentrale Verwaltungsoberfläche für lokale Webservice-Endpunkte. Die Anwendung ermöglicht das Anlegen, Gruppieren und direkte Ausführen von HTTP-Endpunkten mit verschiedenen Authentifizierungstypen, den Import aus Swagger/OpenAPI- und OData-Definitionen sowie Echtzeit-Synchronisation im Teammodus über SignalR.
+![.NET](https://img.shields.io/badge/.NET-9.0-512BD4?logo=dotnet&logoColor=white)
+![Blazor](https://img.shields.io/badge/Blazor-Server-512BD4?logo=blazor&logoColor=white)
+![EF Core](https://img.shields.io/badge/EF_Core-9-512BD4?logo=dotnet&logoColor=white)
+![xUnit](https://img.shields.io/badge/Tests-xUnit%20%2B%20Playwright-green?logo=xunit&logoColor=white)
+![Platform](https://img.shields.io/badge/Platform-Windows%20%2F%20IIS-0078D4?logo=windows&logoColor=white)
+
+Blazor Server-Anwendung zur zentralen Verwaltung lokaler Webservice-Endpunkte. Sie ermöglicht das Anlegen, Gruppieren und direkte Ausführen von HTTP-Endpunkten mit verschiedenen Authentifizierungstypen, den Import aus Swagger/OpenAPI- und OData-Definitionen sowie Echtzeit-Synchronisation im Teammodus über SignalR.
 
 ## Features
 
