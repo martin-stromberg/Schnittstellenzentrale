@@ -443,3 +443,6 @@ FodyWeavers.xsd
 claude.context.md
 claude.context.md.bak
 claude.context*.md
+
+# auto generated assembly information
+assemblyinfo.cs

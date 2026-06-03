@@ -2,7 +2,7 @@
 
   <PropertyGroup>
 	  <Authors>Martin Stromberg</Authors>
-	  <Copyright>© 2026 $(Authors)</Copyright>
+	  <Copyright>© $([System.DateTime]::Now.Year) $(Authors)</Copyright>
 	  <GeneratedAssemblyInfoFile>assemblyinfo.cs</GeneratedAssemblyInfoFile>
   </PropertyGroup>
 
