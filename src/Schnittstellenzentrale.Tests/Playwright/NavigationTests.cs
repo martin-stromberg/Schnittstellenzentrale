@@ -15,7 +15,7 @@ public class NavigationTests : PlaywrightTestBase
     public async Task Playwright_BereichswechselWorkspaces_ZeigtSidebar()
     {
         await Page.GotoAsync(BaseUrl);
-
+        await Page.WaitForLoadStateAsync(LoadState.NetworkIdle);
         await Page.Locator(".sz-topbar-tab", new() { HasText = "Workspaces" }).ClickAsync();
 
         var sidebar = Page.Locator(".sz-workspaces-sidebar");
@@ -27,6 +27,7 @@ public class NavigationTests : PlaywrightTestBase
     public async Task Playwright_BereichswechselEnvironments_ZeigtUmgebungsliste()
     {
         await Page.GotoAsync(BaseUrl);
+        await Page.WaitForLoadStateAsync(LoadState.NetworkIdle);
 
         await Page.Locator(".sz-topbar-tab", new() { HasText = "Environments" }).ClickAsync();
 
@@ -39,6 +40,7 @@ public class NavigationTests : PlaywrightTestBase
     public async Task Playwright_BereichswechselHistory_ZeigtHistorieliste()
     {
         await Page.GotoAsync(BaseUrl);
+        await Page.WaitForLoadStateAsync(LoadState.NetworkIdle);
 
         await Page.Locator(".sz-topbar-tab", new() { HasText = "History" }).ClickAsync();
 
@@ -51,7 +53,7 @@ public class NavigationTests : PlaywrightTestBase
     public async Task Playwright_BreadcrumbKlick_NavigiertZurückZurSammlung()
     {
         await Page.GotoAsync(BaseUrl);
-
+        await Page.WaitForLoadStateAsync(LoadState.NetworkIdle);
         await Page.Locator(".sz-topbar-tab", new() { HasText = "Workspaces" }).ClickAsync();
 
         // Sammlung im Baum anklicken
@@ -62,10 +64,7 @@ public class NavigationTests : PlaywrightTestBase
         var breadcrumb = Page.Locator(".sz-breadcrumb");
         await Assertions.Expect(breadcrumb).ToBeVisibleAsync();
 
-        // Anwendung aufklappen und selektieren, damit Breadcrumb mindestens 2 Ebenen zeigt
-        var appChevron = Page.Locator(".sz-tree-chevron-btn").First;
-        await appChevron.ClickAsync();
-
+        // Anwendung selektieren, damit Breadcrumb mindestens 2 Ebenen zeigt
         var appBtn = Page.Locator(".sz-tree-item-btn").First;
         await appBtn.ClickAsync();
 

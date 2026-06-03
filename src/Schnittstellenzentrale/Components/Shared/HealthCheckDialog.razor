@@ -1,34 +1,26 @@
-<div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Health-Check: @Application.Name</h5>
-                <button type="button" class="btn-close" @onclick="OnClose"></button>
-            </div>
-            <div class="modal-body">
-                @if (IsReachable == null)
-                {
-                    <div class="alert alert-warning">Health-Check wurde übersprungen (Cooldown aktiv).</div>
-                }
-                else if (IsReachable == true)
-                {
-                    <div class="alert alert-success">Die Anwendung ist erreichbar.</div>
-                }
-                else
-                {
-                    <div class="alert alert-danger">Die Anwendung ist nicht erreichbar.</div>
-                }
-            </div>
-            <div class="modal-footer">
-                @if (IsReachable == false)
-                {
-                    <button class="btn btn-danger" @onclick="OnRemove">Anwendung entfernen</button>
-                }
-                <button class="btn btn-secondary" @onclick="OnClose">Schließen</button>
-            </div>
-        </div>
-    </div>
-</div>
+<SzDialog Title="@($"Health-Check: {Application.Name}")" Small="true" OnClose="OnClose">
+    <ChildContent>
+        @if (IsReachable == null)
+        {
+            <div class="sz-alert sz-alert--warning">Health-Check wurde übersprungen (Cooldown aktiv).</div>
+        }
+        else if (IsReachable == true)
+        {
+            <div class="sz-alert sz-alert--success">Die Anwendung ist erreichbar.</div>
+        }
+        else
+        {
+            <div class="sz-alert sz-alert--destructive">Die Anwendung ist nicht erreichbar.</div>
+        }
+    </ChildContent>
+    <Footer>
+        @if (IsReachable == false)
+        {
+            <button type="button" class="sz-btn sz-btn-destructive" @onclick="OnRemove">Anwendung entfernen</button>
+        }
+        <button type="button" class="sz-btn sz-btn-outline" @onclick="OnClose">Schließen</button>
+    </Footer>
+</SzDialog>
 
 @code {
     [Parameter] public Application Application { get; set; } = null!;

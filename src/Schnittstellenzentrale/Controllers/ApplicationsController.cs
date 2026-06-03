@@ -121,7 +121,7 @@ public class ApplicationsController : ApiControllerBase
         var saved = await _applicationRepository.AddApplicationAsync(application);
 
         if (storageMode == StorageMode.Team)
-            await _signalRNotificationService.NotifyApplicationChangedAsync(saved.Id);
+            await _signalRNotificationService.NotifyTreeChangedAsync();
 
         var response = MapToResponse(saved);
         return CreatedAtAction(null, new { id = saved.Id }, response);
@@ -162,7 +162,7 @@ public class ApplicationsController : ApiControllerBase
         var saved = await _applicationRepository.UpdateApplicationAsync(application);
 
         if (storageMode == StorageMode.Team)
-            await _signalRNotificationService.NotifyApplicationChangedAsync(saved.Id);
+            await _signalRNotificationService.NotifyTreeChangedAsync();
 
         return Ok(MapToResponse(saved));
     }
@@ -197,7 +197,7 @@ public class ApplicationsController : ApiControllerBase
         await _applicationRepository.DeleteApplicationAsync(id);
 
         if (storageMode == StorageMode.Team)
-            await _signalRNotificationService.NotifyApplicationChangedAsync(id);
+            await _signalRNotificationService.NotifyTreeChangedAsync();
 
         return NoContent();
     }

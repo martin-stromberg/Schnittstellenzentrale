@@ -4,6 +4,7 @@ using Schnittstellenzentrale.Core.Contracts;
 using Schnittstellenzentrale.Core.Enums;
 using Schnittstellenzentrale.Core.Interfaces;
 using Schnittstellenzentrale.Core.Models;
+using Endpoint = Schnittstellenzentrale.Core.Models.Endpoint;
 
 namespace Schnittstellenzentrale.Controllers;
 
@@ -85,6 +86,53 @@ public abstract class ApiControllerBase : ControllerBase
         IconData = group.IconData,
         RowVersion = group.RowVersion,
         Applications = group.Applications.Select(MapToResponse).ToList()
+    };
+
+    /// <summary>Mappt eine <see cref="EndpointGroup"/> auf ein <see cref="EndpointGroupResponse"/>-DTO.</summary>
+    protected static EndpointGroupResponse MapToResponse(EndpointGroup group) => new()
+    {
+        Id = group.Id,
+        Name = group.Name,
+        ApplicationId = group.ApplicationId,
+        ParentGroupId = group.ParentGroupId,
+        RowVersion = group.RowVersion
+    };
+
+    /// <summary>Mappt einen <see cref="EndpointHeader"/> auf ein <see cref="EndpointKeyValueResponse"/>-DTO.</summary>
+    protected static EndpointKeyValueResponse MapToResponse(EndpointHeader header) => new()
+    {
+        Id = header.Id,
+        Key = header.Key,
+        Value = header.Value,
+        EndpointId = header.EndpointId
+    };
+
+    /// <summary>Mappt einen <see cref="EndpointQueryParameter"/> auf ein <see cref="EndpointKeyValueResponse"/>-DTO.</summary>
+    protected static EndpointKeyValueResponse MapToResponse(EndpointQueryParameter parameter) => new()
+    {
+        Id = parameter.Id,
+        Key = parameter.Key,
+        Value = parameter.Value,
+        EndpointId = parameter.EndpointId
+    };
+
+    /// <summary>Mappt einen <see cref="Endpoint"/> auf ein <see cref="EndpointResponse"/>-DTO inkl. Headers und QueryParameters.</summary>
+    protected static EndpointResponse MapToResponse(Endpoint endpoint) => new()
+    {
+        Id = endpoint.Id,
+        Name = endpoint.Name,
+        Method = endpoint.Method,
+        RelativePath = endpoint.RelativePath,
+        Body = endpoint.Body,
+        BodyMode = endpoint.BodyMode,
+        AuthenticationType = endpoint.AuthenticationType,
+        ApplicationId = endpoint.ApplicationId,
+        EndpointGroupId = endpoint.EndpointGroupId,
+        RowVersion = endpoint.RowVersion,
+        PreRequestScript = endpoint.PreRequestScript,
+        PostRequestScript = endpoint.PostRequestScript,
+        Headers = endpoint.Headers.Select(MapToResponse).ToList(),
+        QueryParameters = endpoint.QueryParameters.Select(MapToResponse).ToList()
     };
 }
 

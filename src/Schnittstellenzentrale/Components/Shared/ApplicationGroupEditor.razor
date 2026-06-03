@@ -45,7 +45,7 @@
 </div>
 
 @code {
-    [Parameter] public EventCallback OnSaved { get; set; }
+    [Parameter] public EventCallback<ApplicationGroup> OnSaved { get; set; }
     [Parameter] public EventCallback OnCancel { get; set; }
 
     private ApplicationGroup _model = new();
@@ -56,9 +56,9 @@
         _errorMessage = null;
         try
         {
-            await ApplicationApiClient.AddGroupAsync(new ApplicationGroup { Name = _model.Name });
+            var saved = await ApplicationApiClient.AddGroupAsync(new ApplicationGroup { Name = _model.Name });
             _model = new ApplicationGroup();
-            await OnSaved.InvokeAsync();
+            await OnSaved.InvokeAsync(saved);
         }
         catch (Exception ex)
         {

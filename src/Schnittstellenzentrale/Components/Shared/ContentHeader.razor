@@ -24,7 +24,7 @@
     <div class="sz-content-header-text">
         @if (_editingName)
         {
-            <input class="sz-inplace-input" @bind="_nameInput" @onkeydown="OnNameKeyDown" @onblur="SaveNameAsync" autofocus />
+            <input class="sz-inplace-input" value="@_nameInput" @oninput="e => _nameInput = e.Value?.ToString() ?? string.Empty" @onkeydown="OnNameKeyDown" @onblur="SaveNameAsync" autofocus />
             @if (!string.IsNullOrWhiteSpace(_nameError))
             {
                 <span class="sz-inplace-error">@_nameError</span>
@@ -70,6 +70,7 @@
     private bool _editingSubtitle;
     private bool _savingName;
     private bool _savingSubtitle;
+    private bool _cancelledName;
     private string _nameInput = string.Empty;
     private string _subtitleInput = string.Empty;
     private string? _nameError;
@@ -128,6 +129,7 @@
     private async Task SaveNameAsync()
     {
         if (_savingName) return;
+        if (_cancelledName) { _cancelledName = false; return; }
         if (string.IsNullOrWhiteSpace(_nameInput))
         {
             _nameError = "Name darf nicht leer sein.";
@@ -163,6 +165,7 @@
 
     private void CancelNameEdit()
     {
+        _cancelledName = true;
         _editingName = false;
         _nameError = null;
     }

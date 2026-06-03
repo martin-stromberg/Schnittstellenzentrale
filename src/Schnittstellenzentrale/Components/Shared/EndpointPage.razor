@@ -1,9 +1,10 @@
-@inject IEndpointRepository EndpointRepository
+@inject IApplicationApiClient ApplicationApiClient
 @inject IEndpointExecutionService ExecutionService
 @inject IJSRuntime JSRuntime
 @inject NavigationManager NavigationManager
 @inject IStorageModeService StorageModeService
 @inject ISignalRNotificationService SignalRNotificationService
+@inject IActiveEnvironmentService ActiveEnvironmentService
 @using Microsoft.EntityFrameworkCore
 @using System.Text.RegularExpressions
 @using Schnittstellenzentrale.Core.Helpers
@@ -60,11 +61,15 @@
         }
         else if (_activeRequestTab == "headers")
         {
-            <RequestHeadersPanel Headers="_headers" OnChanged="MarkDirty" />
+            <RequestHeadersPanel Headers="_headers" OnChanged="MarkDirty"
+                                 OnHeaderAdded="AddHeaderAsync"
+                                 OnHeaderRemoved="DeleteHeaderAsync" />
         }
         else if (_activeRequestTab == "query")
         {
-            <RequestQueryParamsPanel QueryParameters="_queryParameters" OnChanged="MarkDirty" />
+            <RequestQueryParamsPanel QueryParameters="_queryParameters" OnChanged="MarkDirty"
+                                     OnQueryParameterAdded="AddQueryParameterAsync"
+                                     OnQueryParameterRemoved="DeleteQueryParameterAsync" />
         }
         else if (_activeRequestTab == "body")
         {
@@ -87,7 +92,7 @@
 
     @if (_result != null)
     {
-        <div class="sz-endpoint-response">
+        <div class="sz-endpoint-response response-section">
             <div class="sz-endpoint-response-header">
                 <span class="sz-section-label">Antwort</span>
                 <div class="sz-endpoint-response-meta">
@@ -149,6 +154,11 @@
     private bool _beforeUnloadActive;
     private int _lastLoadedEndpointId;
 
+    protected override void OnInitialized()
+    {
+        ActiveEnvironmentService.OnActiveEnvironmentChanged += OnActiveEnvironmentChanged;
+    }
+
     protected override async Task OnParametersSetAsync()
     {
         if (Endpoint.Id != _lastLoadedEndpointId)
@@ -162,6 +172,8 @@
             UnregisterLocationChanging();
         }
     }
+
+    private void OnActiveEnvironmentChanged() => InvokeAsync(StateHasChanged);
 
     /// <summary>Spiegelt alle Felder von <see cref="Endpoint"/> in das lokale Modell. Bei neuen Feldern in <see cref="Core.Models.Endpoint"/> muss diese Methode ergänzt werden.</summary>
     private void LoadModelFromParameter()
@@ -184,10 +196,10 @@
             PostRequestScript = Endpoint.PostRequestScript
         };
         _headers = Endpoint.Headers
-            .Select(h => new RequestHeadersPanel.HeaderEntry { Key = h.Key, Value = h.Value })
+            .Select(h => new RequestHeadersPanel.HeaderEntry { Id = h.Id, Key = h.Key, Value = h.Value })
             .ToList();
         _queryParameters = Endpoint.QueryParameters
-            .Select(p => new RequestQueryParamsPanel.QueryParamEntry { Key = p.Key, Value = p.Value })
+            .Select(p => new RequestQueryParamsPanel.QueryParamEntry { Id = p.Id, Key = p.Key, Value = p.Value })
             .ToList();
         SyncAutoContentType();
         ExtractAndStripQueryString();
@@ -369,7 +381,7 @@
 
         if (_model.Id != 0)
         {
-            var current = await EndpointRepository.GetEndpointByIdAsync(_model.Id);
+            var current = await ApplicationApiClient.GetEndpointByIdAsync(_model.Id);
             if (current != null)
                 _model.RowVersion = current.RowVersion;
         }
@@ -390,9 +402,63 @@
     private async Task PersistAsync(Core.Models.Endpoint endpoint)
     {
         if (endpoint.Id == 0)
-            await EndpointRepository.AddEndpointAsync(endpoint);
+            await CreateEndpointWithDetailsAsync(endpoint);
         else
-            await EndpointRepository.UpdateEndpointAsync(endpoint);
+        {
+            var saved = await ApplicationApiClient.UpdateEndpointAsync(endpoint);
+            _model.RowVersion = saved.RowVersion;
+        }
+    }
+
+    private async Task CreateEndpointWithDetailsAsync(Core.Models.Endpoint endpoint)
+    {
+        var saved = await ApplicationApiClient.AddEndpointAsync(endpoint);
+        _model.Id = saved.Id;
+        _model.RowVersion = saved.RowVersion;
+        foreach (var header in _headers.Where(h => !string.IsNullOrWhiteSpace(h.Key)))
+        {
+            var savedHeader = await ApplicationApiClient.AddHeaderAsync(
+                new EndpointHeader { Key = header.Key, Value = header.Value, EndpointId = saved.Id });
+            header.Id = savedHeader.Id;
+        }
+        foreach (var param in _queryParameters.Where(p => !p.IsPathParameter && !string.IsNullOrWhiteSpace(p.Key)))
+        {
+            var savedParam = await ApplicationApiClient.AddQueryParameterAsync(
+                new EndpointQueryParameter { Key = param.Key, Value = param.Value, EndpointId = saved.Id });
+            param.Id = savedParam.Id;
+        }
+    }
+
+    private async Task AddHeaderAsync(RequestHeadersPanel.HeaderEntry entry)
+    {
+        if (_model.Id == 0 || string.IsNullOrWhiteSpace(entry.Key))
+            return;
+        var saved = await ApplicationApiClient.AddHeaderAsync(
+            new EndpointHeader { Key = entry.Key, Value = entry.Value, EndpointId = _model.Id });
+        entry.Id = saved.Id;
+    }
+
+    private async Task DeleteHeaderAsync(RequestHeadersPanel.HeaderEntry entry)
+    {
+        if (entry.Id == 0)
+            return;
+        await ApplicationApiClient.DeleteHeaderAsync(entry.Id);
+    }
+
+    private async Task AddQueryParameterAsync(RequestQueryParamsPanel.QueryParamEntry entry)
+    {
+        if (_model.Id == 0 || entry.IsPathParameter || string.IsNullOrWhiteSpace(entry.Key))
+            return;
+        var saved = await ApplicationApiClient.AddQueryParameterAsync(
+            new EndpointQueryParameter { Key = entry.Key, Value = entry.Value, EndpointId = _model.Id });
+        entry.Id = saved.Id;
+    }
+
+    private async Task DeleteQueryParameterAsync(RequestQueryParamsPanel.QueryParamEntry entry)
+    {
+        if (entry.Id == 0)
+            return;
+        await ApplicationApiClient.DeleteQueryParameterAsync(entry.Id);
     }
 
     private async Task OnSaveSuccessAsync()
@@ -414,21 +480,28 @@
                 return;
         }
 
-        var refreshed = await EndpointRepository.GetEndpointByIdAsync(_model.Id);
+        var refreshed = await ApplicationApiClient.GetEndpointByIdAsync(_model.Id);
         if (refreshed == null)
         {
             _errorMessage = "Endpunkt konnte nicht geladen werden.";
             return;
         }
 
+        // Application-Navigation wird vom API-DTO nicht befüllt; aus dem lokal geladenen Modell übernehmen.
+        // Wenn der Endpunkt über die Baumliste geöffnet wurde, ist Application dort nicht geladen — dann nachladen.
+        refreshed.Application = _model.Application
+            ?? await ApplicationApiClient.GetApplicationByIdAsync(refreshed.ApplicationId);
+
         _result = await ExecutionService.ExecuteAsync(refreshed);
     }
 
     private string ResolveDisplayUrl()
-        => EndpointUrlBuilder.Resolve(
-            _model.RelativePath,
-            _queryParameters.Select(p => (p.Key, p.Value)),
-            keepEmptyPlaceholders: true);
+    {
+        var path = _model.RelativePath;
+        foreach (var (key, value) in ActiveEnvironmentService.ActiveVariables)
+            path = path.Replace("{{" + key + "}}", value);
+        return EndpointUrlBuilder.Resolve(path, _queryParameters.Select(p => (p.Key, p.Value)), keepEmptyPlaceholders: true);
+    }
 
     private void ExtractAndStripQueryString()
     {
@@ -462,7 +535,7 @@
 
     private void SyncPathParameters()
     {
-        var matches = Regex.Matches(_model.RelativePath, @"\{([^}]+)\}");
+        var matches = Regex.Matches(_model.RelativePath, @"(?<!\{)\{([^{}]+)\}");
         var placeholderKeys = matches.Select(m => m.Groups[1].Value).ToList();
 
         _queryParameters.RemoveAll(p => p.IsPathParameter && !placeholderKeys.Contains(p.Key));
@@ -515,6 +588,7 @@
 
     public async ValueTask DisposeAsync()
     {
+        ActiveEnvironmentService.OnActiveEnvironmentChanged -= OnActiveEnvironmentChanged;
         UnregisterLocationChanging();
         if (_jsModule != null)
         {

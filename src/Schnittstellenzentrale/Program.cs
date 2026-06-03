@@ -145,11 +145,12 @@ public partial class Program {
             app.UseStaticFiles();
         else
             app.MapStaticAssets();
-        app.MapRazorComponents<App>()
-            .AddInteractiveServerRenderMode();
 
         app.MapControllers();
         app.MapHub<EndpointHub>("/hubs/endpoint");
+
+        app.MapRazorComponents<App>()
+            .AddInteractiveServerRenderMode();
 
         return app;
     }

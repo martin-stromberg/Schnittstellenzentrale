@@ -15,6 +15,7 @@ public class ApplicationCrudTests : PlaywrightTestBase
     public async Task CreateApplication_AppearsInTree()
     {
         await Page.GotoAsync(BaseUrl);
+        await Page.WaitForLoadStateAsync(LoadState.NetworkIdle);
         await Page.Locator(".sz-topbar-tab", new() { HasText = "Workspaces" }).ClickAsync();
 
         await Page.GetByRole(Microsoft.Playwright.AriaRole.Button, new() { Name = "Neue Anwendung" }).ClickAsync();
@@ -24,7 +25,7 @@ public class ApplicationCrudTests : PlaywrightTestBase
 
         await Page.GetByRole(Microsoft.Playwright.AriaRole.Button, new() { Name = "Speichern" }).ClickAsync();
 
-        await Assertions.Expect(Page.GetByText("Testanwendung")).ToBeVisibleAsync();
+        await Assertions.Expect(Page.Locator(".sz-tree-item-btn", new() { HasText = "Testanwendung" })).ToBeVisibleAsync();
     }
 
     /// <summary>Der geänderte Name einer Anwendung erscheint im Baum.</summary>
@@ -32,6 +33,7 @@ public class ApplicationCrudTests : PlaywrightTestBase
     public async Task EditApplication_UpdatesNameInTree()
     {
         await Page.GotoAsync(BaseUrl);
+        await Page.WaitForLoadStateAsync(LoadState.NetworkIdle);
         await Page.Locator(".sz-topbar-tab", new() { HasText = "Workspaces" }).ClickAsync();
 
         await Page.GetByRole(Microsoft.Playwright.AriaRole.Button, new() { Name = "Neue Anwendung" }).ClickAsync();
@@ -39,9 +41,9 @@ public class ApplicationCrudTests : PlaywrightTestBase
         await Page.GetByLabel("Basis-URL").FillAsync("http://test.example.com");
         await Page.GetByRole(Microsoft.Playwright.AriaRole.Button, new() { Name = "Speichern" }).ClickAsync();
 
-        await Assertions.Expect(Page.GetByText("Umbenennung-Test")).ToBeVisibleAsync();
+        await Assertions.Expect(Page.Locator(".sz-tree-item-btn", new() { HasText = "Umbenennung-Test" })).ToBeVisibleAsync();
 
-        var appRow = Page.Locator(".sz-tree-row", new() { Has = Page.GetByText("Umbenennung-Test") });
+        var appRow = Page.Locator(".sz-tree-row", new() { Has = Page.Locator(".sz-tree-item-btn", new() { HasText = "Umbenennung-Test" }) });
         var contextMenuToggle = appRow.Locator("[data-testid=\"context-menu-toggle\"]");
         await contextMenuToggle.ClickAsync();
 
@@ -52,7 +54,7 @@ public class ApplicationCrudTests : PlaywrightTestBase
 
         await Page.GetByRole(Microsoft.Playwright.AriaRole.Button, new() { Name = "Speichern" }).ClickAsync();
 
-        await Assertions.Expect(Page.GetByText("Umbenannt")).ToBeVisibleAsync();
+        await Assertions.Expect(Page.Locator(".sz-tree-item-btn", new() { HasText = "Umbenannt" })).ToBeVisibleAsync();
     }
 
     /// <summary>Eine gelöschte Anwendung ist nicht mehr im Baum vorhanden.</summary>
@@ -60,6 +62,7 @@ public class ApplicationCrudTests : PlaywrightTestBase
     public async Task DeleteApplication_DisappearsFromTree()
     {
         await Page.GotoAsync(BaseUrl);
+        await Page.WaitForLoadStateAsync(LoadState.NetworkIdle);
         await Page.Locator(".sz-topbar-tab", new() { HasText = "Workspaces" }).ClickAsync();
 
         await Page.GetByRole(Microsoft.Playwright.AriaRole.Button, new() { Name = "Neue Anwendung" }).ClickAsync();
@@ -67,9 +70,9 @@ public class ApplicationCrudTests : PlaywrightTestBase
         await Page.GetByLabel("Basis-URL").FillAsync("http://test.example.com");
         await Page.GetByRole(Microsoft.Playwright.AriaRole.Button, new() { Name = "Speichern" }).ClickAsync();
 
-        await Assertions.Expect(Page.GetByText("Zu-loeschende-Anwendung")).ToBeVisibleAsync();
+        await Assertions.Expect(Page.Locator(".sz-tree-item-btn", new() { HasText = "Zu-loeschende-Anwendung" })).ToBeVisibleAsync();
 
-        var appRow = Page.Locator(".sz-tree-row", new() { Has = Page.GetByText("Zu-loeschende-Anwendung") });
+        var appRow = Page.Locator(".sz-tree-row", new() { Has = Page.Locator(".sz-tree-item-btn", new() { HasText = "Zu-loeschende-Anwendung" }) });
         var contextMenuToggle = appRow.Locator("[data-testid=\"context-menu-toggle\"]");
         await contextMenuToggle.ClickAsync();
 
@@ -77,6 +80,6 @@ public class ApplicationCrudTests : PlaywrightTestBase
 
         await Page.GetByRole(Microsoft.Playwright.AriaRole.Button, new() { Name = "Löschen" }).ClickAsync();
 
-        await Assertions.Expect(Page.GetByText("Zu-loeschende-Anwendung")).Not.ToBeVisibleAsync();
+        await Assertions.Expect(Page.Locator(".sz-tree-item-btn", new() { HasText = "Zu-loeschende-Anwendung" })).Not.ToBeVisibleAsync();
     }
 }

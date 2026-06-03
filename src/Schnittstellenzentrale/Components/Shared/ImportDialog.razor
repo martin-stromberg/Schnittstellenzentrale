@@ -1,61 +1,63 @@
 @using Microsoft.EntityFrameworkCore
 
-<div class="modal-backdrop">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">@Title</h5>
-                <button type="button" class="btn-close" @onclick="OnClose"></button>
-            </div>
-            <div class="modal-body">
-                @if (Diff.NewEndpoints.Any())
+<SzDialog Title="@Title" OnClose="OnClose">
+    <ChildContent>
+        @if (!Diff.NewEndpoints.Any() && !Diff.ChangedEndpoints.Any() && !Diff.RemovedEndpoints.Any())
+        {
+            <p class="import-dialog__empty">Keine Änderungen gefunden.</p>
+        }
+        @if (Diff.NewEndpoints.Any())
+        {
+            <div class="import-section">
+                <p class="import-section__title import-section__title--new">Neue Endpunkte (@Diff.NewEndpoints.Count)</p>
+                @foreach (var ep in Diff.NewEndpoints)
                 {
-                    <h6 class="text-success">Neue Endpunkte (@Diff.NewEndpoints.Count)</h6>
-                    @foreach (var ep in Diff.NewEndpoints)
-                    {
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" checked="@IsSelected(ep, _selectedNew)"
-                                   @onchange="e => ToggleSelection(ep, _selectedNew, (bool)e.Value!)" />
-                            <label class="form-check-label">@ep.Method @ep.RelativePath — @ep.Name</label>
-                        </div>
-                    }
-                }
-                @if (Diff.ChangedEndpoints.Any())
-                {
-                    <h6 class="text-warning mt-2">Geänderte Endpunkte (@Diff.ChangedEndpoints.Count)</h6>
-                    @foreach (var ep in Diff.ChangedEndpoints)
-                    {
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" checked="@IsSelected(ep, _selectedChanged)"
-                                   @onchange="e => ToggleSelection(ep, _selectedChanged, (bool)e.Value!)" />
-                            <label class="form-check-label">@ep.Method @ep.RelativePath — @ep.Name</label>
-                        </div>
-                    }
-                }
-                @if (Diff.RemovedEndpoints.Any())
-                {
-                    <h6 class="text-danger mt-2">Entfernte Endpunkte (@Diff.RemovedEndpoints.Count)</h6>
-                    @foreach (var ep in Diff.RemovedEndpoints)
-                    {
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" checked="@IsSelected(ep, _selectedRemoved)"
-                                   @onchange="e => ToggleSelection(ep, _selectedRemoved, (bool)e.Value!)" />
-                            <label class="form-check-label">@ep.Method @ep.RelativePath — @ep.Name</label>
-                        </div>
-                    }
+                    <label class="import-section__item">
+                        <input type="checkbox" checked="@IsSelected(ep, _selectedNew)"
+                               @onchange="e => ToggleSelection(ep, _selectedNew, (bool)e.Value!)" />
+                        <span>@ep.Method @ep.RelativePath — @ep.Name</span>
+                    </label>
                 }
             </div>
-            @if (!string.IsNullOrEmpty(_errorMessage))
-            {
-                <div class="alert alert-danger mx-3">@_errorMessage</div>
-            }
-            <div class="modal-footer">
-                <button class="btn btn-primary" @onclick="ApplyAsync">Übernehmen</button>
-                <button class="btn btn-secondary" @onclick="OnClose">Abbrechen</button>
+        }
+        @if (Diff.ChangedEndpoints.Any())
+        {
+            <div class="import-section">
+                <p class="import-section__title import-section__title--changed">Geänderte Endpunkte (@Diff.ChangedEndpoints.Count)</p>
+                @foreach (var ep in Diff.ChangedEndpoints)
+                {
+                    <label class="import-section__item">
+                        <input type="checkbox" checked="@IsSelected(ep, _selectedChanged)"
+                               @onchange="e => ToggleSelection(ep, _selectedChanged, (bool)e.Value!)" />
+                        <span>@ep.Method @ep.RelativePath — @ep.Name</span>
+                    </label>
+                }
             </div>
-        </div>
-    </div>
-</div>
+        }
+        @if (Diff.RemovedEndpoints.Any())
+        {
+            <div class="import-section">
+                <p class="import-section__title import-section__title--removed">Entfernte Endpunkte (@Diff.RemovedEndpoints.Count)</p>
+                @foreach (var ep in Diff.RemovedEndpoints)
+                {
+                    <label class="import-section__item">
+                        <input type="checkbox" checked="@IsSelected(ep, _selectedRemoved)"
+                               @onchange="e => ToggleSelection(ep, _selectedRemoved, (bool)e.Value!)" />
+                        <span>@ep.Method @ep.RelativePath — @ep.Name</span>
+                    </label>
+                }
+            </div>
+        }
+        @if (!string.IsNullOrEmpty(_errorMessage))
+        {
+            <div class="sz-alert sz-alert--destructive">@_errorMessage</div>
+        }
+    </ChildContent>
+    <Footer>
+        <button type="button" class="sz-btn sz-btn-primary" @onclick="ApplyAsync">Übernehmen</button>
+        <button type="button" class="sz-btn sz-btn-outline" @onclick="OnClose">Abbrechen</button>
+    </Footer>
+</SzDialog>
 
 @code {
     [Parameter] public string Title { get; set; } = string.Empty;

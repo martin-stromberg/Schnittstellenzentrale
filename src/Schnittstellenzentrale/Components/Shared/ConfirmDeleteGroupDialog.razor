@@ -1,21 +1,14 @@
-<div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Sammlung löschen</h5>
-            </div>
-            <div class="modal-body">
-                <p>Sammlung '@Group.Name' wirklich löschen?</p>
-                <p>Die Sammlung enthält <strong>@Group.Applications.Count</strong> Anwendung(en).</p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-danger" @onclick="DeleteAllConfirmed">Mitlöschen</button>
-                <button type="button" class="btn btn-warning" @onclick="DeleteGroupOnlyConfirmed">Nur Sammlung löschen</button>
-                <button type="button" class="btn btn-secondary" @onclick="Cancelled">Abbrechen</button>
-            </div>
-        </div>
-    </div>
-</div>
+<SzDialog Title="Sammlung löschen" Small="true">
+    <ChildContent>
+        <p class="sz-dialog__text">Sammlung <strong>@Group.Name</strong> wirklich löschen?</p>
+        <p class="sz-dialog__text">Die Sammlung enthält <strong>@Group.Applications.Count</strong> Anwendung(en).</p>
+    </ChildContent>
+    <Footer>
+        <button type="button" class="sz-btn sz-btn-destructive" @onclick="DeleteAllConfirmed">Mitlöschen</button>
+        <button type="button" class="sz-btn sz-btn-outline sz-btn-danger" @onclick="DeleteGroupOnlyConfirmed">Nur Sammlung löschen</button>
+        <button type="button" class="sz-btn sz-btn-outline" @onclick="Cancelled">Abbrechen</button>
+    </Footer>
+</SzDialog>
 
 @code {
     [Parameter] public ApplicationGroup Group { get; set; } = default!;

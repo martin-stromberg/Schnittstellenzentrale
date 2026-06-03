@@ -4,6 +4,7 @@ using Schnittstellenzentrale.Core.Contracts;
 using Schnittstellenzentrale.Core.Enums;
 using Schnittstellenzentrale.Core.Interfaces;
 using Schnittstellenzentrale.Core.Models;
+using Endpoint = Schnittstellenzentrale.Core.Models.Endpoint;
 using HttpMethod = System.Net.Http.HttpMethod;
 
 namespace Schnittstellenzentrale.Services;
@@ -173,6 +174,214 @@ public class ApplicationApiClient : IApplicationApiClient
             t => BuildDeleteRequest($"{baseUrl}/api/applications/{id}", storageMode, t));
     }
 
+    /// <inheritdoc/>
+    public async Task<IList<EndpointGroup>> GetEndpointGroupsAsync(int applicationId)
+    {
+        var baseUrl = GetBaseUrl();
+        var storageMode = _storageModeService.CurrentMode;
+        var responses = await SendWithTokenAsync<IList<EndpointGroupResponse>>(
+            t => BuildGetRequest($"{baseUrl}/api/endpoint-groups", storageMode, null, t,
+                new Dictionary<string, string> { ["applicationId"] = applicationId.ToString() }));
+
+        return responses.Select(MapToEndpointGroup).ToList();
+    }
+
+    /// <inheritdoc/>
+    public async Task<EndpointGroup?> GetEndpointGroupByIdAsync(int id)
+    {
+        var baseUrl = GetBaseUrl();
+        var response = await SendWithTokenNullableAsync<EndpointGroupResponse>(
+            t => BuildGetRequest($"{baseUrl}/api/endpoint-groups/{id}", null, null, t));
+
+        return response == null ? null : MapToEndpointGroup(response);
+    }
+
+    /// <inheritdoc/>
+    public async Task<EndpointGroup> AddEndpointGroupAsync(EndpointGroup group)
+    {
+        var baseUrl = GetBaseUrl();
+        var storageMode = _storageModeService.CurrentMode;
+        var request = new CreateEndpointGroupRequest
+        {
+            Name = group.Name,
+            ApplicationId = group.ApplicationId,
+            ParentGroupId = group.ParentGroupId
+        };
+
+        var response = await SendWithTokenAsync<EndpointGroupResponse>(
+            t => BuildRequestWithBody(HttpMethod.Post, $"{baseUrl}/api/endpoint-groups", request, storageMode, t));
+
+        return MapToEndpointGroup(response);
+    }
+
+    /// <inheritdoc/>
+    public async Task<EndpointGroup> UpdateEndpointGroupAsync(EndpointGroup group)
+    {
+        var baseUrl = GetBaseUrl();
+        var storageMode = _storageModeService.CurrentMode;
+        var request = new UpdateEndpointGroupRequest
+        {
+            Name = group.Name,
+            RowVersion = group.RowVersion
+        };
+
+        var response = await SendWithTokenAsync<EndpointGroupResponse>(
+            t => BuildRequestWithBody(HttpMethod.Put, $"{baseUrl}/api/endpoint-groups/{group.Id}", request, storageMode, t));
+
+        return MapToEndpointGroup(response);
+    }
+
+    /// <inheritdoc/>
+    public async Task DeleteEndpointGroupAsync(int id)
+    {
+        var baseUrl = GetBaseUrl();
+        var storageMode = _storageModeService.CurrentMode;
+
+        await SendWithTokenNoContentAsync(
+            t => BuildDeleteRequest($"{baseUrl}/api/endpoint-groups/{id}", storageMode, t));
+    }
+
+    /// <inheritdoc/>
+    public async Task<IList<Endpoint>> GetEndpointsAsync(int applicationId, int? endpointGroupId = null)
+    {
+        var baseUrl = GetBaseUrl();
+        var storageMode = _storageModeService.CurrentMode;
+        var queryParams = new Dictionary<string, string> { ["applicationId"] = applicationId.ToString() };
+        if (endpointGroupId.HasValue)
+            queryParams["groupId"] = endpointGroupId.Value.ToString();
+
+        var responses = await SendWithTokenAsync<IList<EndpointResponse>>(
+            t => BuildGetRequest($"{baseUrl}/api/endpoints", storageMode, null, t, queryParams));
+
+        return responses.Select(MapToEndpoint).ToList();
+    }
+
+    /// <inheritdoc/>
+    public async Task<Endpoint?> GetEndpointByIdAsync(int id)
+    {
+        var baseUrl = GetBaseUrl();
+        var response = await SendWithTokenNullableAsync<EndpointResponse>(
+            t => BuildGetRequest($"{baseUrl}/api/endpoints/{id}", null, null, t));
+
+        return response == null ? null : MapToEndpoint(response);
+    }
+
+    /// <inheritdoc/>
+    public async Task<Endpoint> AddEndpointAsync(Endpoint endpoint)
+    {
+        var baseUrl = GetBaseUrl();
+        var storageMode = _storageModeService.CurrentMode;
+        var request = new CreateEndpointRequest
+        {
+            Name = endpoint.Name,
+            RelativePath = endpoint.RelativePath,
+            ApplicationId = endpoint.ApplicationId,
+            EndpointGroupId = endpoint.EndpointGroupId,
+            Method = endpoint.Method,
+            BodyMode = endpoint.BodyMode,
+            Body = endpoint.Body,
+            AuthenticationType = endpoint.AuthenticationType,
+            PreRequestScript = endpoint.PreRequestScript,
+            PostRequestScript = endpoint.PostRequestScript
+        };
+
+        var response = await SendWithTokenAsync<EndpointResponse>(
+            t => BuildRequestWithBody(HttpMethod.Post, $"{baseUrl}/api/endpoints", request, storageMode, t));
+
+        return MapToEndpoint(response);
+    }
+
+    /// <inheritdoc/>
+    public async Task<Endpoint> UpdateEndpointAsync(Endpoint endpoint)
+    {
+        var baseUrl = GetBaseUrl();
+        var storageMode = _storageModeService.CurrentMode;
+        var request = new UpdateEndpointRequest
+        {
+            Name = endpoint.Name,
+            RelativePath = endpoint.RelativePath,
+            EndpointGroupId = endpoint.EndpointGroupId,
+            Method = endpoint.Method,
+            BodyMode = endpoint.BodyMode,
+            Body = endpoint.Body,
+            AuthenticationType = endpoint.AuthenticationType,
+            PreRequestScript = endpoint.PreRequestScript,
+            PostRequestScript = endpoint.PostRequestScript,
+            RowVersion = endpoint.RowVersion
+        };
+
+        var response = await SendWithTokenAsync<EndpointResponse>(
+            t => BuildRequestWithBody(HttpMethod.Put, $"{baseUrl}/api/endpoints/{endpoint.Id}", request, storageMode, t));
+
+        return MapToEndpoint(response);
+    }
+
+    /// <inheritdoc/>
+    public async Task DeleteEndpointAsync(int id)
+    {
+        var baseUrl = GetBaseUrl();
+        var storageMode = _storageModeService.CurrentMode;
+
+        await SendWithTokenNoContentAsync(
+            t => BuildDeleteRequest($"{baseUrl}/api/endpoints/{id}", storageMode, t));
+    }
+
+    /// <inheritdoc/>
+    public async Task<EndpointHeader> AddHeaderAsync(EndpointHeader header)
+    {
+        var baseUrl = GetBaseUrl();
+        var storageMode = _storageModeService.CurrentMode;
+        var request = new AddEndpointKeyValueRequest
+        {
+            Key = header.Key,
+            Value = header.Value,
+            EndpointId = header.EndpointId
+        };
+
+        var response = await SendWithTokenAsync<EndpointKeyValueResponse>(
+            t => BuildRequestWithBody(HttpMethod.Post, $"{baseUrl}/api/endpoints/headers", request, storageMode, t));
+
+        return MapToEndpointHeader(response);
+    }
+
+    /// <inheritdoc/>
+    public async Task DeleteHeaderAsync(int id)
+    {
+        var baseUrl = GetBaseUrl();
+        var storageMode = _storageModeService.CurrentMode;
+
+        await SendWithTokenNoContentAsync(
+            t => BuildDeleteRequest($"{baseUrl}/api/endpoints/headers/{id}", storageMode, t));
+    }
+
+    /// <inheritdoc/>
+    public async Task<EndpointQueryParameter> AddQueryParameterAsync(EndpointQueryParameter parameter)
+    {
+        var baseUrl = GetBaseUrl();
+        var storageMode = _storageModeService.CurrentMode;
+        var request = new AddEndpointKeyValueRequest
+        {
+            Key = parameter.Key,
+            Value = parameter.Value,
+            EndpointId = parameter.EndpointId
+        };
+
+        var response = await SendWithTokenAsync<EndpointKeyValueResponse>(
+            t => BuildRequestWithBody(HttpMethod.Post, $"{baseUrl}/api/endpoints/query-parameters", request, storageMode, t));
+
+        return MapToEndpointQueryParameter(response);
+    }
+
+    /// <inheritdoc/>
+    public async Task DeleteQueryParameterAsync(int id)
+    {
+        var baseUrl = GetBaseUrl();
+        var storageMode = _storageModeService.CurrentMode;
+
+        await SendWithTokenNoContentAsync(
+            t => BuildDeleteRequest($"{baseUrl}/api/endpoints/query-parameters/{id}", storageMode, t));
+    }
+
     private async Task<TResponse> SendWithTokenAsync<TResponse>(Func<string, HttpRequestMessage> buildRequest)
     {
         var response = await ExecuteWithTokenAsync(buildRequest);
@@ -205,65 +414,36 @@ public class ApplicationApiClient : IApplicationApiClient
     {
         await EnsureTokenAsync();
 
-        string token;
-        await _tokenLock.WaitAsync();
-        try
-        {
-            token = _currentToken!;
-        }
-        finally
-        {
-            _tokenLock.Release();
-        }
-
+        var token = await GetCurrentTokenAsync();
         var response = await _httpClient.SendAsync(buildRequest(token));
 
         if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
         {
-            await _tokenLock.WaitAsync();
-            try
-            {
-                _currentToken = null;
-            }
-            finally
-            {
-                _tokenLock.Release();
-            }
+            await SetCurrentTokenAsync(null);
 
             await EnsureTokenAsync();
 
-            await _tokenLock.WaitAsync();
-            try
-            {
-                token = _currentToken!;
-            }
-            finally
-            {
-                _tokenLock.Release();
-            }
-
+            token = await GetCurrentTokenAsync();
             response = await _httpClient.SendAsync(buildRequest(token));
         }
 
         if (response.Headers.TryGetValues("X-New-Token", out var tokenValues))
         {
-            await _tokenLock.WaitAsync();
-            try
-            {
-                _currentToken = tokenValues.FirstOrDefault();
-            }
-            finally
-            {
-                _tokenLock.Release();
-            }
+            await SetCurrentTokenAsync(tokenValues.FirstOrDefault());
         }
 
         return response;
     }
 
-    private static HttpRequestMessage BuildGetRequest(string relativeUrl, StorageMode? storageMode, string? owner, string token)
+    private static HttpRequestMessage BuildGetRequest(string baseUrl, StorageMode? storageMode, string? owner, string token, Dictionary<string, string>? queryParams = null)
     {
-        var httpRequest = new HttpRequestMessage(HttpMethod.Get, relativeUrl);
+        var url = baseUrl;
+        if (queryParams != null && queryParams.Count > 0)
+        {
+            var query = string.Join("&", queryParams.Select(kvp => $"{Uri.EscapeDataString(kvp.Key)}={Uri.EscapeDataString(kvp.Value)}"));
+            url = $"{baseUrl}?{query}";
+        }
+        var httpRequest = new HttpRequestMessage(HttpMethod.Get, url);
         httpRequest.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
         if (storageMode.HasValue)
             httpRequest.Headers.Add("X-Storage-Mode", storageMode.Value.ToString());
@@ -287,6 +467,32 @@ public class ApplicationApiClient : IApplicationApiClient
         httpRequest.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
         httpRequest.Headers.Add("X-Storage-Mode", storageMode.ToString());
         return httpRequest;
+    }
+
+    private async Task<string> GetCurrentTokenAsync()
+    {
+        await _tokenLock.WaitAsync();
+        try
+        {
+            return _currentToken!;
+        }
+        finally
+        {
+            _tokenLock.Release();
+        }
+    }
+
+    private async Task SetCurrentTokenAsync(string? token)
+    {
+        await _tokenLock.WaitAsync();
+        try
+        {
+            _currentToken = token;
+        }
+        finally
+        {
+            _tokenLock.Release();
+        }
     }
 
     private async Task EnsureTokenAsync()
@@ -333,5 +539,48 @@ public class ApplicationApiClient : IApplicationApiClient
         IconData = response.IconData,
         IsSystem = response.IsSystem,
         RowVersion = response.RowVersion
+    };
+
+    private static EndpointHeader MapToEndpointHeader(EndpointKeyValueResponse response) => new()
+    {
+        Id = response.Id,
+        Key = response.Key,
+        Value = response.Value,
+        EndpointId = response.EndpointId
+    };
+
+    private static EndpointQueryParameter MapToEndpointQueryParameter(EndpointKeyValueResponse response) => new()
+    {
+        Id = response.Id,
+        Key = response.Key,
+        Value = response.Value,
+        EndpointId = response.EndpointId
+    };
+
+    private static EndpointGroup MapToEndpointGroup(EndpointGroupResponse response) => new()
+    {
+        Id = response.Id,
+        Name = response.Name,
+        ApplicationId = response.ApplicationId,
+        ParentGroupId = response.ParentGroupId,
+        RowVersion = response.RowVersion
+    };
+
+    private static Endpoint MapToEndpoint(EndpointResponse response) => new()
+    {
+        Id = response.Id,
+        Name = response.Name,
+        Method = response.Method,
+        RelativePath = response.RelativePath,
+        Body = response.Body,
+        BodyMode = response.BodyMode,
+        AuthenticationType = response.AuthenticationType,
+        ApplicationId = response.ApplicationId,
+        EndpointGroupId = response.EndpointGroupId,
+        RowVersion = response.RowVersion,
+        PreRequestScript = response.PreRequestScript,
+        PostRequestScript = response.PostRequestScript,
+        Headers = response.Headers.Select(MapToEndpointHeader).ToList(),
+        QueryParameters = response.QueryParameters.Select(MapToEndpointQueryParameter).ToList()
     };
 }

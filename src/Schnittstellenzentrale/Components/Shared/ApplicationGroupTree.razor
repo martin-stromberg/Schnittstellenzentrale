@@ -1,11 +1,11 @@
 @inject IApplicationApiClient ApplicationApiClient
-@inject IEndpointRepository EndpointRepository
 @inject IStorageModeService StorageModeService
 @inject ICurrentUserService CurrentUserService
 @inject NavigationManager NavigationManager
 @inject IJSRuntime JSRuntime
 @inject ILogger<ApplicationGroupTree> Logger
 @inject IActivityLogService ActivityLogService
+@using Microsoft.AspNetCore.SignalR
 @using Microsoft.AspNetCore.SignalR.Client
 @implements IAsyncDisposable
 
@@ -24,7 +24,7 @@
                      class="@(_dropTargetGroupId == group.Id ? "drag-over" : "")"
                      @ondragenter="() => OnDragEnter(group.Id)"
                      @ondragleave="OnDragLeave">
-                    <CollapsibleSection Title="@group.Name" IconClass="sz-icon sz-icon-collection" IsDropTarget="true" OnDrop="() => OnDrop(group.Id)" OnTitleClicked="() => RequestSelectGroup(group)">
+                    <CollapsibleSection Title="@group.Name" IconClass="sz-icon sz-icon-collection" IsDropTarget="true" OnDrop="() => OnDrop(group.Id)" OnTitleClicked="() => RequestSelectGroup(group)" InitiallyExpanded="@_expandedGroupIds.Contains(group.Id)">
                         <TitleActions>
                             <ApplicationGroupContextMenu Group="group" OnRenameRequested="RequestRenameGroup" OnDeleteRequested="RequestDeleteGroup" />
                         </TitleActions>
@@ -43,7 +43,7 @@
             <div class="@(_dropTargetIsUngrouped ? "drag-over" : "")"
                  @ondragenter="OnDragEnterUngrouped"
                  @ondragleave="OnDragLeaveUngrouped">
-                <CollapsibleSection Title="Ohne Sammlung" IconClass="sz-icon sz-icon-layers" IsDropTarget="true" OnDrop="() => OnDrop(null)">
+                <CollapsibleSection Title="Ohne Sammlung" IconClass="sz-icon sz-icon-layers" IsDropTarget="true" OnDrop="() => OnDrop(null)" InitiallyExpanded="true">
                     <ChildContent>
                         @foreach (var app in _ungroupedApplications)
                         {
@@ -81,6 +81,7 @@
     private IList<Application>? _ungroupedApplications;
     private Dictionary<int, IList<EndpointGroup>> _endpointGroups = new();
     private Dictionary<int, IList<Core.Models.Endpoint>> _endpoints = new();
+    private HashSet<int> _expandedGroupIds = new();
     private HashSet<int> _expandedApplicationIds = new();
     private HashSet<int> _expandedEndpointGroupIds = new();
     private string _owner = string.Empty;
@@ -102,7 +103,7 @@
         StorageModeService.OnModeChanged += OnModeChanged;
         _owner = CurrentUserService.GetCurrentUserName();
         await LoadDataAsync();
-        await ConnectHubAsync();
+        _ = ConnectHubAsync();
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -124,6 +125,12 @@
                 .WithAutomaticReconnect()
                 .Build();
 
+            _hubConnection.On("TreeChanged", async () =>
+            {
+                await LoadDataAsync();
+                await InvokeAsync(StateHasChanged);
+            });
+
             _hubConnection.On<int, int>("EndpointChanged", async (endpointId, applicationId) =>
             {
                 await ReloadApplicationDataAsync(applicationId);
@@ -137,6 +144,7 @@
             });
 
             await _hubConnection.StartAsync();
+            await _hubConnection.InvokeAsync("SubscribeToWorkspace");
         }
         catch (Exception ex)
         {
@@ -151,11 +159,18 @@
         StateHasChanged();
     }
 
+    public void ExpandGroupAsync(int groupId)
+    {
+        _expandedGroupIds.Add(groupId);
+        StateHasChanged();
+    }
+
     public async Task ExpandApplicationAsync(int applicationId)
     {
         if (!_expandedApplicationIds.Contains(applicationId))
         {
             _expandedApplicationIds.Add(applicationId);
+            await ReloadApplicationDataAsync(applicationId);
             if (_hubConnection?.State == HubConnectionState.Connected)
                 await _hubConnection.InvokeAsync("SubscribeToApplication", applicationId);
         }
@@ -171,8 +186,8 @@
             _ungroupedApplications = await ApplicationApiClient.GetUngroupedApplicationsAsync(StorageModeService.CurrentMode, _owner);
             _endpointGroups = new Dictionary<int, IList<EndpointGroup>>();
             _endpoints = new Dictionary<int, IList<Core.Models.Endpoint>>();
-            foreach (var application in EnumerateApplications())
-                await ReloadApplicationDataAsync(application.Id);
+            foreach (var applicationId in _expandedApplicationIds.ToList())
+                await ReloadApplicationDataAsync(applicationId);
         }
         catch (Exception ex)
         {
@@ -184,11 +199,13 @@
     {
         try
         {
-            _endpointGroups[applicationId] = await EndpointRepository.GetEndpointGroupsAsync(applicationId);
-            _endpoints[applicationId] = await EndpointRepository.GetEndpointsAsync(applicationId);
+            _endpointGroups[applicationId] = await ApplicationApiClient.GetEndpointGroupsAsync(applicationId);
+            _endpoints[applicationId] = await ApplicationApiClient.GetEndpointsAsync(applicationId);
         }
         catch (Exception ex)
         {
+            // Fehler werden hier bewusst geschluckt: LoadDataAsync ruft diese Methode für jede Anwendung auf.
+            // Ein Fehler bei einer einzelnen Anwendung darf die Initialisierung der übrigen nicht abbrechen.
             _errorMessage = $"Fehler beim Laden der Endpunkte: {ex.Message}";
         }
     }
@@ -247,6 +264,7 @@
         else
         {
             _expandedApplicationIds.Add(applicationId);
+            await ReloadApplicationDataAsync(applicationId);
             if (_hubConnection?.State == HubConnectionState.Connected)
                 await _hubConnection.InvokeAsync("SubscribeToApplication", applicationId);
         }
@@ -254,12 +272,7 @@
 
     private async Task SelectAndExpandApplication(int appId)
     {
-        if (!_expandedApplicationIds.Contains(appId))
-        {
-            _expandedApplicationIds.Add(appId);
-            if (_hubConnection?.State == HubConnectionState.Connected)
-                await _hubConnection.InvokeAsync("SubscribeToApplication", appId);
-        }
+        await ToggleApplicationExpanded(appId);
         await SelectApplication(appId);
     }
 
@@ -283,9 +296,13 @@
                         await _hubConnection.InvokeAsync("UnsubscribeFromApplication", id);
                 await _hubConnection.DisposeAsync();
             }
-            catch (Exception)
+            catch (Exception ex) when (ex is HubException or TaskCanceledException or OperationCanceledException or ObjectDisposedException)
             {
                 // Fehler beim Dispose der Hub-Verbindung ignorieren (z. B. Verbindung bereits getrennt)
+            }
+            catch (Exception ex)
+            {
+                Logger.LogDebug(ex, "Unerwarteter Fehler beim Dispose der Hub-Verbindung");
             }
         }
         if (_jsModule != null)
@@ -304,7 +321,7 @@
     private async Task RequestSelectGroup(ApplicationGroup group) => await OnApplicationGroupSelected.InvokeAsync(group);
     private async Task RequestSelectEndpointGroup(EndpointGroup group)
     {
-        _expandedEndpointGroupIds.Add(group.Id);
+        ToggleEndpointGroupExpanded(group.Id);
         await OnEndpointGroupSelected.InvokeAsync(group);
     }
 

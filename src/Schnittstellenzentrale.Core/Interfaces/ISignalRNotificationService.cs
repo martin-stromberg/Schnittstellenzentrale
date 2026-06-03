@@ -5,6 +5,9 @@ namespace Schnittstellenzentrale.Core.Interfaces;
 /// </summary>
 public interface ISignalRNotificationService
 {
+    /// <summary>Benachrichtigt alle Clients im "workspace"-Channel über strukturelle Änderungen am Baum (App/Gruppe angelegt, umbenannt, gelöscht).</summary>
+    Task NotifyTreeChangedAsync();
+
     /// <summary>Benachrichtigt Clients über Änderungen an einer Anwendung.</summary>
     Task NotifyApplicationChangedAsync(int applicationId);
 

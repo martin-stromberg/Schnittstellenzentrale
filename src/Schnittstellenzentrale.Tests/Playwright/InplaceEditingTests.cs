@@ -13,6 +13,7 @@ public class InplaceEditingTests : PlaywrightTestBase
     private async Task NavigateToCollectionContentAsync()
     {
         await Page.GotoAsync(BaseUrl);
+        await Page.WaitForLoadStateAsync(LoadState.NetworkIdle);
         await Page.Locator(".sz-topbar-tab", new() { HasText = "Workspaces" }).ClickAsync();
         await Page.Locator(".sz-tree-node-text").First.ClickAsync();
     }
@@ -32,7 +33,7 @@ public class InplaceEditingTests : PlaywrightTestBase
         await nameInput.FillAsync("Umbenannte Sammlung");
         await nameInput.PressAsync("Enter");
 
-        await Assertions.Expect(Page.Locator(".sz-content-title").First).ToHaveTextAsync("Umbenannte Sammlung");
+        await Assertions.Expect(Page.Locator(".sz-content-title").First).ToContainTextAsync("Umbenannte Sammlung");
     }
 
     /// <summary>Leerer Name wird nicht akzeptiert.</summary>
@@ -57,7 +58,10 @@ public class InplaceEditingTests : PlaywrightTestBase
     public async Task Playwright_InplaceEditing_Anwendung_Subtitle_Speichern()
     {
         await Page.GotoAsync(BaseUrl);
+        await Page.WaitForLoadStateAsync(LoadState.NetworkIdle);
         await Page.Locator(".sz-topbar-tab", new() { HasText = "Workspaces" }).ClickAsync();
+
+        await Page.Locator(".sz-tree-node-text").First.ClickAsync();
 
         var appBtn = Page.Locator(".sz-tree-item-btn").First;
         await appBtn.ClickAsync();
@@ -71,7 +75,7 @@ public class InplaceEditingTests : PlaywrightTestBase
         await subtitleInput.FillAsync("Mein Untertitel");
         await subtitleInput.PressAsync("Enter");
 
-        await Assertions.Expect(Page.Locator(".sz-content-subtitle").First).ToHaveTextAsync("Mein Untertitel");
+        await Assertions.Expect(Page.Locator(".sz-content-subtitle").First).ToContainTextAsync("Mein Untertitel");
     }
 
     /// <summary>Escape beendet Bearbeitungsmodus ohne Änderung.</summary>

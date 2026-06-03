@@ -20,6 +20,14 @@ public class SignalRNotificationService<THub> : ISignalRNotificationService
     }
 
     /// <summary>
+    /// Benachrichtigt alle Clients im "workspace"-Channel über strukturelle Änderungen am Baum.
+    /// </summary>
+    public async Task NotifyTreeChangedAsync()
+    {
+        await _hubContext.Clients.Group("workspace").SendAsync("TreeChanged");
+    }
+
+    /// <summary>
     /// Benachrichtigt alle Clients in der Gruppe <c>application:{applicationId}</c> über eine Änderung der Anwendung.
     /// </summary>
     public async Task NotifyApplicationChangedAsync(int applicationId)

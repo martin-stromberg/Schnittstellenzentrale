@@ -2,24 +2,26 @@
 
 ## Zweck
 
-Die REST-API ermöglicht es, Anwendungsgruppen und Anwendungen programmatisch anzulegen, ohne direkt auf die Datenbank zuzugreifen. Intern wird sie von den Blazor-Komponenten `ApplicationGroupEditor` und `ApplicationEditor` genutzt; nach außen steht sie jedem HTTP-Client zur Verfügung, der sich über das Token-Verfahren authentifizieren kann.
+Die REST-API ermöglicht es, Anwendungsgruppen, Anwendungen, Endpunktgruppen und Endpunkte programmatisch zu verwalten, ohne direkt auf die Datenbank zuzugreifen. Intern wird sie ausschließlich von den Blazor-Komponenten über `IApplicationApiClient` genutzt; nach außen steht sie jedem HTTP-Client zur Verfügung, der sich über das Token-Verfahren authentifizieren kann.
 
 ## Funktionsweise
 
-Die API besteht aus drei Endpunkten:
+Die API umfasst folgende Ressourcenbereiche:
 
-| Endpunkt | Methode | Zweck |
-|----------|---------|-------|
-| `/authenticate` | POST | Token beziehen (erfordert Windows-Authentifizierung) |
-| `/api/application-groups` | POST | Neue `ApplicationGroup` anlegen |
-| `/api/applications` | POST | Neue `Application` anlegen |
+| Endpunkte | Zweck |
+|-----------|-------|
+| `POST /authenticate` | Token beziehen (erfordert Windows-Authentifizierung) |
+| `/api/application-groups` | CRUD für `ApplicationGroup` |
+| `/api/applications` | CRUD für `Application` |
+| `/api/endpoint-groups` | CRUD für `EndpointGroup` |
+| `/api/endpoints` | CRUD für `Endpoint` inkl. Header- und Query-Parameter-Routen |
 
 Der Ablauf für jeden Datenaufruf ist zweistufig:
 
 1. Der Client ruft `/authenticate` auf. ASP.NET Core wertet die Windows-Identität des Aufrufers aus und gibt ein kurzlebiges Token (GUID, 5 Minuten Ablaufzeit) zurück.
 2. Der Client übergibt dieses Token als Bearer-Token im `Authorization`-Header bei jedem nachfolgenden Datenendpunkt-Aufruf. Nach jedem erfolgreichen Aufruf wird das verwendete Token invalidiert und ein neues Token im Response-Header `X-New-Token` zurückgegeben.
 
-Die Controller delegieren Schreiboperationen an das bestehende `IApplicationRepository`; die Datenbankschicht bleibt unverändert. Im Team-Modus lösen die Controller SignalR-Benachrichtigungen aus, damit andere verbundene Clients den aktuellen Stand erhalten.
+Die Controller delegieren Lese- und Schreiboperationen an `IEndpointRepository` bzw. `IApplicationRepository`; die Datenbankschicht bleibt unverändert. Im Team-Modus lösen die Controller SignalR-Benachrichtigungen aus, damit andere verbundene Clients den aktuellen Stand erhalten.
 
 ## Beispiele
 
@@ -42,31 +44,44 @@ X-New-Token: 9c1c2ab0-...
 { "id": 42, "name": "Backend-Services" }
 ```
 
-**Beispiel: Anwendung anlegen**
+**Beispiel: Endpunkt anlegen**
 
 ```
-POST /api/applications
+POST /api/endpoints
 Authorization: Bearer 9c1c2ab0-...
-X-Storage-Mode: Team
+X-Storage-Mode: User
 Content-Type: application/json
 
 {
-  "name": "Bestellservice",
-  "baseUrl": "https://intern/bestellservice",
-  "description": "Verarbeitet Bestellungen",
-  "interfaceUrl": "https://intern/bestellservice/swagger/v1/swagger.json",
-  "applicationGroupId": 42
+  "name": "Artikel abrufen",
+  "relativePath": "/api/articles/{id}",
+  "applicationId": 7,
+  "method": "Get",
+  "authenticationType": "None"
 }
 
 → HTTP 201 Created
-Location: /api/applications/7
-X-New-Token: b4f8e...
-{ "id": 7, "name": "Bestellservice", "baseUrl": "https://intern/bestellservice", "applicationGroupId": 42 }
+Location: /api/endpoints/15
+X-New-Token: c7d1f...
+{ "id": 15, "name": "Artikel abrufen", "relativePath": "/api/articles/{id}", ... }
+```
+
+**Beispiel: Header zu einem Endpunkt hinzufügen**
+
+```
+POST /api/endpoints/headers
+Authorization: Bearer c7d1f...
+X-Storage-Mode: User
+Content-Type: application/json
+
+{ "key": "Accept", "value": "application/json", "endpointId": 15 }
+
+→ HTTP 201 Created
+{ "id": 3, "key": "Accept", "value": "application/json", "endpointId": 15 }
 ```
 
 ## Einschränkungen
 
-- Die API unterstützt derzeit ausschließlich Anlage-Operationen (POST). Lese-, Aktualisierungs- und Löschoperationen sind nicht implementiert.
-- Lesezugriffe (z. B. Laden der Gruppenliste) gehen weiterhin direkt über `IApplicationRepository`.
 - Tokens sind nicht persistiert; ein Neustart der Anwendung invalidiert alle aktiven Tokens.
 - Ein Token wird nach jedem erfolgreichen Datenendpunkt-Aufruf rotiert; das alte Token ist danach nicht mehr verwendbar.
+- Die atomaren DELETE-Routen für Header und Query-Parameter (`DELETE /api/endpoints/headers/{id}`, `DELETE /api/endpoints/query-parameters/{id}`) geben kein 404 zurück, wenn die ID nicht existiert — der Aufruf von `IEndpointRepository.DeleteHeaderAsync` schlägt dann mit einer Datenbankausnahme fehl.

@@ -39,7 +39,7 @@
         else if (_showApplicationEditor)
         {
             <div class="sz-content-panel-scroll">
-                <ApplicationEditor OnSaved="OnApplicationSaved" OnCancel="CloseAllPanels" />
+                <ApplicationEditor OnSaved="OnApplicationSaved" OnCancel="CloseAllPanels" DefaultGroupId="_newApplicationDefaultGroupId" />
             </div>
         }
         else if (_editTargetApplication != null)
@@ -115,6 +115,7 @@
     private WorkspacesSidebar? _sidebar;
     private bool _showGroupEditor;
     private bool _showApplicationEditor;
+    private int? _newApplicationDefaultGroupId;
     private Application? _editTargetApplication;
     private ApplicationGroup? _renameTargetGroup;
     private ApplicationGroup? _deleteTargetGroup;
@@ -136,6 +137,7 @@
     {
         _showGroupEditor = false;
         _showApplicationEditor = false;
+        _newApplicationDefaultGroupId = null;
         _editTargetApplication = null;
         _renameTargetGroup = null;
         _deleteTargetGroup = null;
@@ -150,30 +152,57 @@
     }
 
     private void OnCreateGroupRequested() { CloseAllPanels(); _showGroupEditor = true; }
-    private void OnCreateApplicationRequested() { CloseAllPanels(); _showApplicationEditor = true; }
+    private void OnCreateApplicationRequested()
+    {
+        CloseAllPanels();
+        _newApplicationDefaultGroupId = (NavigationStateService.CurrentSelection?.SelectedItem as ApplicationGroup)?.Id;
+        _showApplicationEditor = true;
+    }
     private void OnEditApplicationRequested(Application app) { CloseAllPanels(); _editTargetApplication = app; }
     private void OnRenameGroupRequested(ApplicationGroup group) { CloseAllPanels(); _renameTargetGroup = group; }
     private void OnDeleteGroupRequested(ApplicationGroup group) { CloseAllPanels(); _deleteTargetGroup = group; }
     private void OnDeleteApplicationRequested(Application app) { CloseAllPanels(); _deleteTargetApplication = app; }
 
-    private async Task OnGroupSaved()
+    private async Task OnGroupSaved(ApplicationGroup group)
     {
         _showGroupEditor = false;
         ActivityLogService.Log(ActivityLogCategory.EntityCreated, "Sammlung angelegt.");
+        _sidebar?.ExpandGroup(group.Id);
         await RefreshTreeAsync();
+        var path = new List<object> { group };
+        await NavigationStateService.SetWorkspaceSelectionAsync(new WorkspaceSelection(group, path));
     }
 
-    private async Task OnApplicationSaved()
+    private async Task OnApplicationSaved(Application? app)
     {
         _showApplicationEditor = false;
+        _newApplicationDefaultGroupId = null;
         ActivityLogService.Log(ActivityLogCategory.EntityCreated, "Anwendung angelegt.");
         await RefreshTreeAsync();
+        await SelectApplicationAsync(app);
     }
 
-    private async Task OnApplicationEdited()
+    private async Task OnApplicationEdited(Application? app)
     {
         _editTargetApplication = null;
         await RefreshTreeAsync();
+        await SelectApplicationAsync(app);
+    }
+
+    private async Task SelectApplicationAsync(Application? app)
+    {
+        if (app == null) return;
+        var fresh = await ApplicationApiClient.GetApplicationByIdAsync(app.Id);
+        if (fresh == null) return;
+        ApplicationGroup? group = fresh.ApplicationGroupId.HasValue
+            ? await ApplicationApiClient.GetGroupByIdAsync(fresh.ApplicationGroupId.Value)
+            : null;
+        if (group != null)
+            _sidebar?.ExpandGroup(group.Id);
+        var path = new List<object>();
+        if (group != null) path.Add(group);
+        path.Add(fresh);
+        await NavigationStateService.SetWorkspaceSelectionAsync(new WorkspaceSelection(fresh, path));
     }
 
     private async Task OnGroupRenamed(ApplicationGroup group)

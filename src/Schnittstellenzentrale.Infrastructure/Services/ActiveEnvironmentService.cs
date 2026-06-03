@@ -16,6 +16,9 @@ public class ActiveEnvironmentService : IActiveEnvironmentService
     public event Action? OnActiveEnvironmentChanged;
 
     /// <inheritdoc/>
+    public event Action? OnEnvironmentListChanged;
+
+    /// <inheritdoc/>
     public void SetActiveEnvironment(SystemEnvironment? environment)
     {
         ActiveEnvironment = environment;
@@ -24,4 +27,7 @@ public class ActiveEnvironmentService : IActiveEnvironmentService
             : new Dictionary<string, string>();
         OnActiveEnvironmentChanged?.Invoke();
     }
+
+    /// <inheritdoc/>
+    public void NotifyEnvironmentListChanged() => OnEnvironmentListChanged?.Invoke();
 }

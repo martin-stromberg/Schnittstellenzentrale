@@ -53,10 +53,32 @@
 **Beschreibung:** Die Blazor-Komponenten kennen den aktuellen `StorageMode` (`Team`/`User`), die Controller nicht. Der Modus wird deshalb als HTTP-Header übertragen, damit der Controller entscheiden kann, ob eine SignalR-Benachrichtigung ausgelöst werden soll.
 
 **Verhalten:**
-- Header `X-Storage-Mode: Team` → `StorageMode.Team` → nach erfolgreichem Speichern wird `ISignalRNotificationService.NotifyGroupChangedAsync` bzw. `NotifyApplicationChangedAsync` aufgerufen.
+- Header `X-Storage-Mode: Team` → `StorageMode.Team` → nach erfolgreichem Speichern wird `ISignalRNotificationService.NotifyGroupChangedAsync`, `NotifyApplicationChangedAsync`, `NotifyEndpointGroupChangedAsync` bzw. `NotifyEndpointChangedAsync` aufgerufen.
 - Header fehlt oder hat anderen Wert → `StorageMode.User` → keine SignalR-Benachrichtigung.
 
 **Umsetzung:** `ApiControllerBase.ParseStorageMode` — Vergleich des Header-Werts mit dem Literal `"Team"`.
+
+---
+
+## Token-Rotation betrifft alle Datenendpunkte
+
+**Beschreibung:** Die Token-Rotation gilt für alle Controller-Endpunkte unter `/api/*`, einschließlich der neuen Endpunkte für Endpunktgruppen (`/api/endpoint-groups`) und Endpunkte (`/api/endpoints`). Jeder erfolgreiche Aufruf invalidiert das verwendete Token und gibt einen neuen Token im `X-New-Token`-Header zurück.
+
+**Umsetzung:** `ApiControllerBase.ParseRequestContextAsync` — gemeinsame Basisklasse für alle Controller.
+
+---
+
+## Atomare Header- und Query-Parameter-Operationen
+
+**Beschreibung:** Header und Query-Parameter eines Endpunkts werden einzeln über dedizierte Routen hinzugefügt und gelöscht (`POST /api/endpoints/headers`, `DELETE /api/endpoints/headers/{id}`, `POST /api/endpoints/query-parameters`, `DELETE /api/endpoints/query-parameters/{id}`). Es ist nicht nötig, den gesamten Endpunkt für diese Änderungen erneut zu senden.
+
+**Verhalten:**
+- `POST /api/endpoints/headers`: legt genau einen `EndpointHeader` an; gibt `201 Created` mit `EndpointHeaderResponse` zurück.
+- `DELETE /api/endpoints/headers/{id}`: löscht genau einen `EndpointHeader` per ID; gibt `204 No Content` zurück.
+- Analog für `QueryParameter`.
+- Kein `404` bei `DELETE`-Aufrufen, wenn die ID nicht existiert — die Datenbankoperation schlägt dann intern fehl.
+
+**Umsetzung:** `EndpointsController.AddHeaderAsync`, `DeleteHeaderAsync`, `AddQueryParameterAsync`, `DeleteQueryParameterAsync` — direkte Delegation an `IEndpointRepository`.
 
 ---
 

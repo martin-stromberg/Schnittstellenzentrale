@@ -1,4 +1,5 @@
 @inject ISystemEnvironmentRepository SystemEnvironmentRepository
+@inject IActiveEnvironmentService ActiveEnvironmentService
 
 @if (_environment == null)
 {
@@ -153,6 +154,7 @@ else
     private async Task OnEnvironmentSaved(SystemEnvironment saved)
     {
         _environment = await SystemEnvironmentRepository.GetByIdAsync(saved.Id);
+        ActiveEnvironmentService.NotifyEnvironmentListChanged();
     }
 
     private Task OnEditorCancel() => Task.CompletedTask;

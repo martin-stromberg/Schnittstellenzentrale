@@ -36,7 +36,9 @@ public class SignalRSyncTests : PlaywrightTestBase
     public async Task BrowserA_CreatesApp_BrowserB_ReceivesViaSignalR()
     {
         await Page.GotoAsync(BaseUrl);
+        await Page.WaitForLoadStateAsync(LoadState.NetworkIdle);
         await _pageB.GotoAsync(BaseUrl);
+        await _pageB.WaitForLoadStateAsync(LoadState.NetworkIdle);
 
         await Page.Locator(".sz-topbar-select").SelectOptionAsync("Team");
         await _pageB.Locator(".sz-topbar-select").SelectOptionAsync("Team");
@@ -46,8 +48,8 @@ public class SignalRSyncTests : PlaywrightTestBase
         await Page.GetByLabel("Basis-URL").FillAsync("http://signalr-test.example.com");
         await Page.GetByRole(AriaRole.Button, new() { Name = "Speichern" }).ClickAsync();
 
-        await Assertions.Expect(Page.GetByText("SignalR-Sync-Test")).ToBeVisibleAsync();
+        await Assertions.Expect(Page.Locator(".sz-tree-item-btn", new() { HasText = "SignalR-Sync-Test" })).ToBeVisibleAsync();
 
-        await Assertions.Expect(_pageB.GetByText("SignalR-Sync-Test")).ToBeVisibleAsync();
+        await Assertions.Expect(_pageB.Locator(".sz-tree-item-btn", new() { HasText = "SignalR-Sync-Test" })).ToBeVisibleAsync();
     }
 }

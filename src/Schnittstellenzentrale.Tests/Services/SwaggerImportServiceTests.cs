@@ -249,6 +249,9 @@ public class SwaggerImportServiceTests
     public async Task ApplyDiff_WithBearerToken_CallsSavePassword()
     {
         var repoMock = new Mock<IEndpointRepository>();
+        repoMock.Setup(r => r.GetEndpointGroupsAsync(It.IsAny<int>())).ReturnsAsync([]);
+        repoMock.Setup(r => r.AddEndpointGroupAsync(It.IsAny<Core.Models.EndpointGroup>()))
+            .ReturnsAsync((Core.Models.EndpointGroup g) => { g.Id = 1; return g; });
         repoMock.Setup(r => r.AddEndpointAsync(It.IsAny<Core.Models.Endpoint>()))
             .ReturnsAsync((Core.Models.Endpoint e) => e);
         var credentialMock = new Mock<ICredentialService>();
@@ -275,5 +278,108 @@ public class SwaggerImportServiceTests
             It.Is<string>(t => t.Contains("BearerToken")),
             It.IsAny<string>(),
             "myToken"), Times.Once);
+    }
+
+    /// <summary>ApplyDiff_NewEndpoints_GroupsCreatedFromUrlSegments</summary>
+    [Fact]
+    public async Task ApplyDiff_NewEndpoints_GroupsCreatedFromUrlSegments()
+    {
+        var repoMock = new Mock<IEndpointRepository>();
+        repoMock.Setup(r => r.GetEndpointGroupsAsync(It.IsAny<int>())).ReturnsAsync([]);
+
+        var createdGroups = new List<Core.Models.EndpointGroup>();
+        int nextId = 10;
+        repoMock.Setup(r => r.AddEndpointGroupAsync(It.IsAny<Core.Models.EndpointGroup>()))
+            .ReturnsAsync((Core.Models.EndpointGroup g) => { g.Id = nextId++; createdGroups.Add(g); return g; });
+
+        Core.Models.Endpoint? addedEndpoint = null;
+        repoMock.Setup(r => r.AddEndpointAsync(It.IsAny<Core.Models.Endpoint>()))
+            .Callback<Core.Models.Endpoint>(e => addedEndpoint = e)
+            .ReturnsAsync((Core.Models.Endpoint e) => e);
+
+        var service = CreateService(SwaggerWithGetPost, repoMock);
+        var diff = new ImportDiff
+        {
+            NewEndpoints = [new Core.Models.Endpoint
+            {
+                Name = "getUngrouped",
+                Method = Core.Enums.HttpMethod.GET,
+                RelativePath = "/api/applications/ungrouped",
+                ApplicationId = 1
+            }]
+        };
+
+        await service.ApplyDiffAsync(diff);
+
+        Assert.Equal(2, createdGroups.Count);
+        Assert.Equal("applications", createdGroups[0].Name);
+        Assert.Null(createdGroups[0].ParentGroupId);
+        Assert.Equal("ungrouped", createdGroups[1].Name);
+        Assert.Equal(10, createdGroups[1].ParentGroupId);
+        Assert.NotNull(addedEndpoint);
+        Assert.Equal(11, addedEndpoint.EndpointGroupId);
+    }
+
+    /// <summary>ApplyDiff_PathParameterSegments_AreSkipped</summary>
+    [Fact]
+    public async Task ApplyDiff_PathParameterSegments_AreSkipped()
+    {
+        var repoMock = new Mock<IEndpointRepository>();
+        repoMock.Setup(r => r.GetEndpointGroupsAsync(It.IsAny<int>())).ReturnsAsync([]);
+
+        var createdGroups = new List<Core.Models.EndpointGroup>();
+        repoMock.Setup(r => r.AddEndpointGroupAsync(It.IsAny<Core.Models.EndpointGroup>()))
+            .ReturnsAsync((Core.Models.EndpointGroup g) => { g.Id = 20; createdGroups.Add(g); return g; });
+
+        Core.Models.Endpoint? addedEndpoint = null;
+        repoMock.Setup(r => r.AddEndpointAsync(It.IsAny<Core.Models.Endpoint>()))
+            .Callback<Core.Models.Endpoint>(e => addedEndpoint = e)
+            .ReturnsAsync((Core.Models.Endpoint e) => e);
+
+        var service = CreateService(SwaggerWithGetPost, repoMock);
+        var diff = new ImportDiff
+        {
+            NewEndpoints = [new Core.Models.Endpoint
+            {
+                Name = "getGroup",
+                Method = Core.Enums.HttpMethod.GET,
+                RelativePath = "/api/application-groups/{id}",
+                ApplicationId = 1
+            }]
+        };
+
+        await service.ApplyDiffAsync(diff);
+
+        Assert.Single(createdGroups);
+        Assert.Equal("application-groups", createdGroups[0].Name);
+        Assert.Null(createdGroups[0].ParentGroupId);
+        Assert.NotNull(addedEndpoint);
+        Assert.Equal(20, addedEndpoint.EndpointGroupId);
+    }
+
+    /// <summary>ApplyDiff_ExistingGroups_AreReusedAndNotCreatedAgain</summary>
+    [Fact]
+    public async Task ApplyDiff_ExistingGroups_AreReusedAndNotCreatedAgain()
+    {
+        var repoMock = new Mock<IEndpointRepository>();
+        repoMock.Setup(r => r.GetEndpointGroupsAsync(It.IsAny<int>()))
+            .ReturnsAsync([new Core.Models.EndpointGroup { Id = 5, Name = "items", ApplicationId = 1, ParentGroupId = null }]);
+        repoMock.Setup(r => r.AddEndpointAsync(It.IsAny<Core.Models.Endpoint>()))
+            .ReturnsAsync((Core.Models.Endpoint e) => e);
+
+        var service = CreateService(SwaggerWithGetPost, repoMock);
+        var diff = new ImportDiff
+        {
+            NewEndpoints =
+            [
+                new Core.Models.Endpoint { Name = "getItems", Method = Core.Enums.HttpMethod.GET, RelativePath = "/api/items", ApplicationId = 1 },
+                new Core.Models.Endpoint { Name = "createItem", Method = Core.Enums.HttpMethod.POST, RelativePath = "/api/items", ApplicationId = 1 }
+            ]
+        };
+
+        await service.ApplyDiffAsync(diff);
+
+        repoMock.Verify(r => r.AddEndpointGroupAsync(It.IsAny<Core.Models.EndpointGroup>()), Times.Never);
+        repoMock.Verify(r => r.AddEndpointAsync(It.Is<Core.Models.Endpoint>(e => e.EndpointGroupId == 5)), Times.Exactly(2));
     }
 }

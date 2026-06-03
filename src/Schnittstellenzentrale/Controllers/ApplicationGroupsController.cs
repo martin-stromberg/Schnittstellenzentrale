@@ -97,7 +97,7 @@ public class ApplicationGroupsController : ApiControllerBase
         var saved = await _applicationRepository.AddGroupAsync(group);
 
         if (storageMode == StorageMode.Team)
-            await _signalRNotificationService.NotifyGroupChangedAsync(saved.Id);
+            await _signalRNotificationService.NotifyTreeChangedAsync();
 
         var response = MapToResponse(saved);
         return CreatedAtAction(null, new { id = saved.Id }, response);
@@ -137,7 +137,7 @@ public class ApplicationGroupsController : ApiControllerBase
         var saved = await _applicationRepository.UpdateGroupAsync(group);
 
         if (storageMode == StorageMode.Team)
-            await _signalRNotificationService.NotifyGroupChangedAsync(saved.Id);
+            await _signalRNotificationService.NotifyTreeChangedAsync();
 
         return Ok(MapToResponse(saved));
     }
@@ -172,7 +172,7 @@ public class ApplicationGroupsController : ApiControllerBase
         await _applicationRepository.DeleteGroupAsync(id);
 
         if (storageMode == StorageMode.Team)
-            await _signalRNotificationService.NotifyGroupChangedAsync(id);
+            await _signalRNotificationService.NotifyTreeChangedAsync();
 
         return NoContent();
     }

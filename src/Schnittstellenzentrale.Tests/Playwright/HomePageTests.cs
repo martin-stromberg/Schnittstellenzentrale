@@ -15,6 +15,7 @@ public class HomePageTests : PlaywrightTestBase
     public async Task StartPage_ShowsSystemGroup()
     {
         await Page.GotoAsync(BaseUrl);
+        await Page.WaitForLoadStateAsync(LoadState.NetworkIdle);
 
         var systemGroup = Page.GetByText("Schnittstellenzentrale").First;
         await Assertions.Expect(systemGroup).ToBeVisibleAsync();
@@ -25,6 +26,7 @@ public class HomePageTests : PlaywrightTestBase
     public async Task StartPage_ShowsOwnApiEndpoints()
     {
         await Page.GotoAsync(BaseUrl);
+        await Page.WaitForLoadStateAsync(LoadState.NetworkIdle);
 
         var chevronButton = Page.Locator(".sz-tree-chevron-btn").First;
         await chevronButton.ClickAsync();

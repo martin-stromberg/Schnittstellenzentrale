@@ -93,7 +93,81 @@ Beteiligte Komponenten:
 
 ---
 
-## Ablauf 5: REST-Client (ApplicationApiClient)
+## Ablauf 5: Abruf von EndpointGroups — GET /api/endpoint-groups
+
+1. `EndpointGroupsController.GetAllAsync([FromQuery] int applicationId)` wird aufgerufen.
+2. Token-Validierung und -Rotation (siehe Ablauf 2). Bei ungültigem Token: `401 Unauthorized`.
+3. `ParseStorageMode()` liest `X-Storage-Mode`-Header.
+4. `IEndpointRepository.GetEndpointGroupsAsync(applicationId)` wird aufgerufen.
+5. Jede `EndpointGroup` wird via `ApiControllerBase.MapToResponse(EndpointGroup)` auf `EndpointGroupResponse` gemappt.
+6. Response: `200 OK` mit Liste von `EndpointGroupResponse` und `X-New-Token`-Header.
+
+Beteiligte Komponenten:
+- `EndpointGroupsController`
+- `ApiControllerBase.MapToResponse(EndpointGroup)` — statische Mapping-Methode
+- `EndpointGroupResponse`
+- `IEndpointRepository`, `ITokenStore`
+
+---
+
+## Ablauf 6: Anlage einer EndpointGroup — POST /api/endpoint-groups
+
+1. `EndpointGroupsController.CreateAsync([FromBody] CreateEndpointGroupRequest request)` wird aufgerufen.
+2. Model-Validation prüft Pflichtfelder (`Name`, `ApplicationId`). Bei Fehler: `400 Bad Request`.
+3. Token-Validierung und -Rotation (siehe Ablauf 2). Bei ungültigem Token: `401 Unauthorized`.
+4. `ParseStorageMode()` liest `X-Storage-Mode`-Header.
+5. Neues `EndpointGroup`-Objekt wird erstellt: `Name`, `ApplicationId`, `ParentGroupId`.
+6. `IEndpointRepository.AddEndpointGroupAsync(group)` wird aufgerufen.
+7. Bei `StorageMode.Team`: `ISignalRNotificationService.NotifyEndpointGroupChangedAsync(saved.Id, saved.ApplicationId)`.
+8. Response: `201 Created` mit `Location`-Header, `X-New-Token`-Header und `EndpointGroupResponse`.
+
+Beteiligte Komponenten:
+- `EndpointGroupsController`
+- `CreateEndpointGroupRequest`, `EndpointGroupResponse`
+- `IEndpointRepository`, `ISignalRNotificationService`
+- `ApiControllerBase`, `ITokenStore`
+
+---
+
+## Ablauf 7: Anlage eines Endpoint — POST /api/endpoints
+
+1. `EndpointsController.CreateAsync([FromBody] CreateEndpointRequest request)` wird aufgerufen.
+2. Model-Validation prüft Pflichtfelder (`Name`, `RelativePath`, `ApplicationId`). Bei Fehler: `400 Bad Request`.
+3. Token-Validierung und -Rotation (siehe Ablauf 2). Bei ungültigem Token: `401 Unauthorized`.
+4. `ParseStorageMode()` liest `X-Storage-Mode`-Header.
+5. Neues `Endpoint`-Objekt wird erstellt mit allen Feldern aus dem Request, einschließlich `PreRequestScript`, `PostRequestScript`, `AuthenticationType`.
+6. `IEndpointRepository.AddEndpointAsync(endpoint)` wird aufgerufen.
+7. Bei `StorageMode.Team`: `ISignalRNotificationService.NotifyEndpointChangedAsync(saved.Id, saved.ApplicationId)`.
+8. Controller mappt das gespeicherte `Endpoint` via `ApiControllerBase.MapToResponse(Endpoint)` auf `EndpointResponse` (inkl. `Headers` und `QueryParameters`).
+9. Response: `201 Created` mit `Location`-Header, `X-New-Token`-Header und `EndpointResponse`.
+
+Beteiligte Komponenten:
+- `EndpointsController`
+- `CreateEndpointRequest`, `EndpointResponse`
+- `ApiControllerBase.MapToResponse(Endpoint)` — statische Mapping-Methode inkl. `Headers` und `QueryParameters`
+- `IEndpointRepository`, `ISignalRNotificationService`
+- `ApiControllerBase`, `ITokenStore`
+
+---
+
+## Ablauf 8: Hinzufügen eines Headers — POST /api/endpoints/headers
+
+1. `EndpointsController.AddHeaderAsync([FromBody] AddEndpointHeaderRequest request)` wird aufgerufen.
+2. Model-Validation prüft `Key` und `EndpointId`. Bei Fehler: `400 Bad Request`.
+3. Token-Validierung und -Rotation (siehe Ablauf 2). Bei ungültigem Token: `401 Unauthorized`.
+4. Neues `EndpointHeader`-Objekt wird aus `Key`, `Value`, `EndpointId` erstellt.
+5. `IEndpointRepository.AddHeaderAsync(header)` wird aufgerufen.
+6. Response: `201 Created` mit `EndpointHeaderResponse` und `X-New-Token`-Header.
+
+Beteiligte Komponenten:
+- `EndpointsController`
+- `AddEndpointHeaderRequest`, `EndpointHeaderResponse`
+- `IEndpointRepository`
+- `ApiControllerBase`, `ITokenStore`
+
+---
+
+## Ablauf 9: REST-Client (ApplicationApiClient)
 
 `ApplicationApiClient` implementiert `IApplicationApiClient` und kapselt die gesamte Kommunikation mit der eigenen API. Er wird per `AddHttpClient<IApplicationApiClient, ApplicationApiClient>` mit der Basis-URL aus `Api:BaseUrl` registriert.
 
@@ -108,16 +182,39 @@ Beteiligte Komponenten:
 `SendWithTokenAsync<TResponse>` führt folgende Schritte durch:
 
 1. `EnsureTokenAsync()` — stellt sicher, dass ein Token vorhanden ist.
-2. `BuildRequest(method, relativeUrl, body, storageMode)` — erstellt `HttpRequestMessage` mit Bearer-Token im `Authorization`-Header und `storageMode.ToString()` im `X-Storage-Mode`-Header.
+2. `BuildGetRequest(relativeUrl)` oder `BuildRequestWithBody(method, relativeUrl, body)` oder `BuildDeleteRequest(relativeUrl)` — erstellt `HttpRequestMessage` mit Bearer-Token im `Authorization`-Header und optionalem `X-Storage-Mode`-Header.
 3. `_httpClient.SendAsync(request)`.
 4. Bei `401 Unauthorized`: `_currentToken = null`, erneut `EnsureTokenAsync()`, dann Wiederholung des Requests.
 5. `response.EnsureSuccessStatusCode()`.
 6. `X-New-Token`-Header auslesen → `_currentToken` aktualisieren.
 7. Response-Body deserialisieren und zurückgeben.
 
+Für `GET`-Anfragen, bei denen ein `null`-Ergebnis bei 404 erwartet wird, wird `SendWithTokenNullableAsync` verwendet, das `null` statt einer Exception bei `404 Not Found` zurückgibt.
+
+### Neue Methoden für Endpunktgruppen und Endpunkte
+
+| Methode | HTTP | Pfad | Mapping |
+|---------|------|------|---------|
+| `GetEndpointGroupsAsync(applicationId)` | GET | `/api/endpoint-groups?applicationId={id}` | `MapToEndpointGroup` auf jedes DTO |
+| `GetEndpointGroupByIdAsync(id)` | GET | `/api/endpoint-groups/{id}` | `MapToEndpointGroup`, `null` bei 404 |
+| `AddEndpointGroupAsync(group)` | POST | `/api/endpoint-groups` | `MapToEndpointGroup` |
+| `UpdateEndpointGroupAsync(group)` | PUT | `/api/endpoint-groups/{id}` | `MapToEndpointGroup` |
+| `DeleteEndpointGroupAsync(id)` | DELETE | `/api/endpoint-groups/{id}` | — |
+| `GetEndpointsAsync(applicationId)` | GET | `/api/endpoints?applicationId={id}` | `MapToEndpoint` auf jedes DTO |
+| `GetEndpointByIdAsync(id)` | GET | `/api/endpoints/{id}` | `MapToEndpoint`, `null` bei 404 |
+| `AddEndpointAsync(endpoint)` | POST | `/api/endpoints` | `MapToEndpoint` |
+| `UpdateEndpointAsync(endpoint)` | PUT | `/api/endpoints/{id}` | `MapToEndpoint` |
+| `DeleteEndpointAsync(id)` | DELETE | `/api/endpoints/{id}` | — |
+| `AddHeaderAsync(header)` | POST | `/api/endpoints/headers` | `EndpointHeaderResponse` → `EndpointHeader` |
+| `DeleteHeaderAsync(id)` | DELETE | `/api/endpoints/headers/{id}` | — |
+| `AddQueryParameterAsync(parameter)` | POST | `/api/endpoints/query-parameters` | `EndpointQueryParameterResponse` → `EndpointQueryParameter` |
+| `DeleteQueryParameterAsync(id)` | DELETE | `/api/endpoints/query-parameters/{id}` | — |
+
+`MapToEndpoint` mappt `EndpointResponse` auf `Endpoint`-Domänenobjekt inklusive `Headers`- und `QueryParameters`-Collections.
+
 Beteiligte Komponenten:
 - `ApplicationApiClient`
-- `AuthenticateResponse`, `ApplicationGroupResponse`, `ApplicationResponse`
+- `EndpointGroupResponse`, `EndpointResponse`, `EndpointHeaderResponse`, `EndpointQueryParameterResponse`
 
 ---
 

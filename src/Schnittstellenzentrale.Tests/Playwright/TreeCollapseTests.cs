@@ -15,26 +15,29 @@ public class TreeCollapseTests : PlaywrightTestBase
     public async Task ClickApplicationGroupTitle_TogglesCollapse()
     {
         await Page.GotoAsync(BaseUrl);
+        await Page.WaitForLoadStateAsync(LoadState.NetworkIdle);
 
         await Page.GetByRole(Microsoft.Playwright.AriaRole.Button, new() { Name = "Neue Sammlung" }).ClickAsync();
         await Page.GetByLabel("Name").FillAsync("Collapse-Test-Gruppe");
         await Page.GetByRole(Microsoft.Playwright.AriaRole.Button, new() { Name = "Speichern" }).ClickAsync();
+        await Microsoft.Playwright.Assertions.Expect(Page.Locator(".sz-alert-danger")).Not.ToBeVisibleAsync();
 
         await Page.GetByRole(Microsoft.Playwright.AriaRole.Button, new() { Name = "Neue Anwendung" }).ClickAsync();
         await Page.GetByLabel("Name").FillAsync("Anwendung-In-Gruppe");
         await Page.GetByLabel("Basis-URL").FillAsync("http://test.example.com");
         await Page.GetByRole(Microsoft.Playwright.AriaRole.Button, new() { Name = "Speichern" }).ClickAsync();
+        await Microsoft.Playwright.Assertions.Expect(Page.Locator(".sz-alert-danger")).Not.ToBeVisibleAsync();
 
-        var groupRow = Page.Locator(".sz-tree-row", new() { Has = Page.GetByText("Collapse-Test-Gruppe") });
+        var groupRow = Page.Locator(".sz-tree-row", new() { Has = Page.Locator(".sz-tree-node-text", new() { HasText = "Collapse-Test-Gruppe" }) });
         var titleSpan = groupRow.Locator(".sz-tree-node-text");
 
         await titleSpan.ClickAsync();
 
-        await Microsoft.Playwright.Assertions.Expect(Page.GetByText("Anwendung-In-Gruppe")).Not.ToBeVisibleAsync();
+        await Microsoft.Playwright.Assertions.Expect(Page.Locator(".sz-tree-item-btn", new() { HasText = "Anwendung-In-Gruppe" })).Not.ToBeVisibleAsync();
 
         await titleSpan.ClickAsync();
 
-        await Microsoft.Playwright.Assertions.Expect(Page.GetByText("Anwendung-In-Gruppe")).ToBeVisibleAsync();
+        await Microsoft.Playwright.Assertions.Expect(Page.Locator(".sz-tree-item-btn", new() { HasText = "Anwendung-In-Gruppe" })).ToBeVisibleAsync();
     }
 
     /// <summary>Ein Klick auf den Anwendungsnamen klappt die Anwendung auf und zeigt untergeordnete Elemente an.</summary>
@@ -42,15 +45,16 @@ public class TreeCollapseTests : PlaywrightTestBase
     public async Task ClickApplicationName_ExpandsApplication()
     {
         await Page.GotoAsync(BaseUrl);
+        await Page.WaitForLoadStateAsync(LoadState.NetworkIdle);
 
         await Page.GetByRole(Microsoft.Playwright.AriaRole.Button, new() { Name = "Neue Anwendung" }).ClickAsync();
         await Page.GetByLabel("Name").FillAsync("Expand-Test-Anwendung");
         await Page.GetByLabel("Basis-URL").FillAsync("http://test.example.com");
         await Page.GetByRole(Microsoft.Playwright.AriaRole.Button, new() { Name = "Speichern" }).ClickAsync();
 
-        await Microsoft.Playwright.Assertions.Expect(Page.GetByText("Expand-Test-Anwendung")).ToBeVisibleAsync();
+        await Microsoft.Playwright.Assertions.Expect(Page.Locator(".sz-tree-item-btn", new() { HasText = "Expand-Test-Anwendung" })).ToBeVisibleAsync();
 
-        var appRow = Page.Locator(".sz-tree-row", new() { Has = Page.GetByText("Expand-Test-Anwendung") });
+        var appRow = Page.Locator(".sz-tree-row", new() { Has = Page.Locator(".sz-tree-item-btn", new() { HasText = "Expand-Test-Anwendung" }) });
         var appBtn = appRow.Locator(".sz-tree-item-btn");
 
         await appBtn.ClickAsync();
@@ -63,18 +67,19 @@ public class TreeCollapseTests : PlaywrightTestBase
     public async Task ClickApplicationName_SelectsApplication()
     {
         await Page.GotoAsync(BaseUrl);
+        await Page.WaitForLoadStateAsync(LoadState.NetworkIdle);
 
         await Page.GetByRole(Microsoft.Playwright.AriaRole.Button, new() { Name = "Neue Anwendung" }).ClickAsync();
         await Page.GetByLabel("Name").FillAsync("Select-Test-Anwendung");
         await Page.GetByLabel("Basis-URL").FillAsync("http://test.example.com");
         await Page.GetByRole(Microsoft.Playwright.AriaRole.Button, new() { Name = "Speichern" }).ClickAsync();
 
-        await Microsoft.Playwright.Assertions.Expect(Page.GetByText("Select-Test-Anwendung")).ToBeVisibleAsync();
+        await Microsoft.Playwright.Assertions.Expect(Page.Locator(".sz-tree-item-btn", new() { HasText = "Select-Test-Anwendung" })).ToBeVisibleAsync();
 
-        var appRow = Page.Locator(".sz-tree-row", new() { Has = Page.GetByText("Select-Test-Anwendung") });
+        var appRow = Page.Locator(".sz-tree-row", new() { Has = Page.Locator(".sz-tree-item-btn", new() { HasText = "Select-Test-Anwendung" }) });
         await appRow.Locator(".sz-tree-item-btn").ClickAsync();
 
-        await Microsoft.Playwright.Assertions.Expect(Page.GetByRole(Microsoft.Playwright.AriaRole.Heading, new() { Name = "Select-Test-Anwendung" })).ToBeVisibleAsync();
+        await Microsoft.Playwright.Assertions.Expect(Page.Locator(".sz-content-title", new() { HasText = "Select-Test-Anwendung" })).ToBeVisibleAsync();
     }
 
     /// <summary>Ein Klick auf einen bereits aufgeklappten Anwendungsnamen klappt die Anwendung wieder zu.</summary>
@@ -82,15 +87,16 @@ public class TreeCollapseTests : PlaywrightTestBase
     public async Task ClickApplicationName_CollapsesExpandedApplication()
     {
         await Page.GotoAsync(BaseUrl);
+        await Page.WaitForLoadStateAsync(LoadState.NetworkIdle);
 
         await Page.GetByRole(Microsoft.Playwright.AriaRole.Button, new() { Name = "Neue Anwendung" }).ClickAsync();
         await Page.GetByLabel("Name").FillAsync("Collapse-App-Test");
         await Page.GetByLabel("Basis-URL").FillAsync("http://test.example.com");
         await Page.GetByRole(Microsoft.Playwright.AriaRole.Button, new() { Name = "Speichern" }).ClickAsync();
 
-        await Microsoft.Playwright.Assertions.Expect(Page.GetByText("Collapse-App-Test")).ToBeVisibleAsync();
+        await Microsoft.Playwright.Assertions.Expect(Page.Locator(".sz-tree-item-btn", new() { HasText = "Collapse-App-Test" })).ToBeVisibleAsync();
 
-        var appRow = Page.Locator(".sz-tree-row", new() { Has = Page.GetByText("Collapse-App-Test") });
+        var appRow = Page.Locator(".sz-tree-row", new() { Has = Page.Locator(".sz-tree-item-btn", new() { HasText = "Collapse-App-Test" }) });
         var appBtn = appRow.Locator(".sz-tree-item-btn");
 
         await appBtn.ClickAsync();
@@ -114,13 +120,16 @@ public class TreeCollapseTests : PlaywrightTestBase
     public async Task ClickEndpointGroupName_TogglesCollapse()
     {
         await Page.GotoAsync(BaseUrl);
+        await Page.WaitForLoadStateAsync(LoadState.NetworkIdle);
         await ExpandSystemGroupAsync();
 
         var contextMenuToggle = SystemAppRow.Locator("[data-testid=\"context-menu-toggle\"]");
         await contextMenuToggle.ClickAsync();
         await Page.GetByRole(Microsoft.Playwright.AriaRole.Button, new() { Name = "Ordner anlegen" }).ClickAsync();
-        await Page.GetByLabel("Name").FillAsync("Collapse-Ordner-Test");
-        await Page.GetByRole(Microsoft.Playwright.AriaRole.Button, new() { Name = "Speichern" }).ClickAsync();
+        var nameInput = Page.GetByLabel("Name");
+        await nameInput.FillAsync("Collapse-Ordner-Test");
+        await nameInput.PressAsync("Tab");
+        await Page.GetByRole(Microsoft.Playwright.AriaRole.Button, new() { Name = "Anlegen" }).ClickAsync();
 
         var appBtn = SystemAppRow.Locator(".sz-tree-item-btn");
         await appBtn.ClickAsync();
@@ -140,13 +149,16 @@ public class TreeCollapseTests : PlaywrightTestBase
     public async Task ClickEndpointGroupChevron_TogglesCollapse()
     {
         await Page.GotoAsync(BaseUrl);
+        await Page.WaitForLoadStateAsync(LoadState.NetworkIdle);
         await ExpandSystemGroupAsync();
 
         var contextMenuToggle = SystemAppRow.Locator("[data-testid=\"context-menu-toggle\"]");
         await contextMenuToggle.ClickAsync();
         await Page.GetByRole(Microsoft.Playwright.AriaRole.Button, new() { Name = "Ordner anlegen" }).ClickAsync();
-        await Page.GetByLabel("Name").FillAsync("Chevron-Ordner-Test");
-        await Page.GetByRole(Microsoft.Playwright.AriaRole.Button, new() { Name = "Speichern" }).ClickAsync();
+        var nameInput = Page.GetByLabel("Name");
+        await nameInput.FillAsync("Chevron-Ordner-Test");
+        await nameInput.PressAsync("Tab");
+        await Page.GetByRole(Microsoft.Playwright.AriaRole.Button, new() { Name = "Anlegen" }).ClickAsync();
 
         var appBtn = SystemAppRow.Locator(".sz-tree-item-btn");
         await appBtn.ClickAsync();
@@ -166,13 +178,16 @@ public class TreeCollapseTests : PlaywrightTestBase
     public async Task EndpointGroupInitiallyCollapsed()
     {
         await Page.GotoAsync(BaseUrl);
+        await Page.WaitForLoadStateAsync(LoadState.NetworkIdle);
         await ExpandSystemGroupAsync();
 
         var contextMenuToggle = SystemAppRow.Locator("[data-testid=\"context-menu-toggle\"]");
         await contextMenuToggle.ClickAsync();
         await Page.GetByRole(Microsoft.Playwright.AriaRole.Button, new() { Name = "Ordner anlegen" }).ClickAsync();
-        await Page.GetByLabel("Name").FillAsync("Initial-Collapsed-Ordner");
-        await Page.GetByRole(Microsoft.Playwright.AriaRole.Button, new() { Name = "Speichern" }).ClickAsync();
+        var nameInput = Page.GetByLabel("Name");
+        await nameInput.FillAsync("Initial-Collapsed-Ordner");
+        await nameInput.PressAsync("Tab");
+        await Page.GetByRole(Microsoft.Playwright.AriaRole.Button, new() { Name = "Anlegen" }).ClickAsync();
 
         await contextMenuToggle.ClickAsync();
         await Page.GetByRole(Microsoft.Playwright.AriaRole.Button, new() { Name = "Endpunkt anlegen" }).ClickAsync();

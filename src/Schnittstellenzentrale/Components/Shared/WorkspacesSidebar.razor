@@ -1,3 +1,4 @@
+@using System.Reflection
 @inject INavigationStateService NavigationStateService
 @inject IApplicationApiClient ApplicationApiClient
 @inject IStorageModeService StorageModeService
@@ -5,7 +6,8 @@
 
 <div class="sz-workspaces-sidebar">
     <div class="sz-sidebar-topbar">
-        <button type="button" class="sz-btn-primary" @onclick="OnCreateCollectionRequested">+ New Collection</button>
+        <button type="button" class="sz-btn-primary" @onclick="OnCreateCollectionRequested">+ Neue Sammlung</button>
+        <button type="button" class="sz-btn-secondary" @onclick="OnCreateApplicationRequested">+ Neue Anwendung</button>
     </div>
     <ApplicationGroupTree @ref="_tree"
         OnApplicationSelected="OnApplicationSelected"
@@ -25,7 +27,7 @@
         OnApplicationGroupSelected="OnApplicationGroupSelected"
         OnEndpointGroupSelected="OnEndpointGroupSelected" />
     <div class="sz-sidebar-footer">
-        <p class="sz-sidebar-footer-copyright">© 2025 Schnittstellenzentrale</p>
+        <p class="sz-sidebar-footer-copyright">@_copyrightInfo</p>
         <a href="/impressum" class="sz-sidebar-footer-link">Impressum</a>
     </div>
 </div>
@@ -45,16 +47,23 @@
 
     internal ApplicationGroupTree? _tree;
     private string _owner = string.Empty;
+    private string _copyrightInfo = "";
 
     protected override void OnInitialized()
     {
         _owner = CurrentUserService.GetCurrentUserName();
+        _copyrightInfo = $"{Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyCopyrightAttribute>()?.Copyright}";
     }
 
     internal async Task RefreshTreeAsync()
     {
         if (_tree != null)
             await _tree.RefreshAsync();
+    }
+
+    internal void ExpandGroup(int groupId)
+    {
+        _tree?.ExpandGroupAsync(groupId);
     }
 
     private async Task OnApplicationSelected(int applicationId)

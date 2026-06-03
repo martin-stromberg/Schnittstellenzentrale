@@ -92,9 +92,10 @@
 </div>
 
 @code {
-    [Parameter] public EventCallback OnSaved { get; set; }
+    [Parameter] public EventCallback<Application?> OnSaved { get; set; }
     [Parameter] public EventCallback OnCancel { get; set; }
     [Parameter] public Application? ExistingApplication { get; set; }
+    [Parameter] public int? DefaultGroupId { get; set; }
 
     private Application _model = new();
     private IList<ApplicationGroup> _groups = [];
@@ -117,6 +118,10 @@
             _isEditMode = true;
             _model = ExistingApplication.Clone();
         }
+        else if (DefaultGroupId.HasValue)
+        {
+            _model.ApplicationGroupId = DefaultGroupId;
+        }
     }
 
     private void OnInterfaceUrlChanged(ChangeEventArgs e)
@@ -133,17 +138,18 @@
             if (StorageModeService.CurrentMode == StorageMode.User)
                 _model.Owner = CurrentUserService.GetCurrentUserName();
 
+            Application? saved = null;
             if (_isEditMode)
             {
-                await ApplicationApiClient.UpdateApplicationAsync(_model);
+                saved = await ApplicationApiClient.UpdateApplicationAsync(_model);
             }
             else
             {
-                await ApplicationApiClient.AddApplicationAsync(_model);
+                saved = await ApplicationApiClient.AddApplicationAsync(_model);
                 _model = new Application();
             }
 
-            await OnSaved.InvokeAsync();
+            await OnSaved.InvokeAsync(saved);
         }
         catch (Exception ex)
         {

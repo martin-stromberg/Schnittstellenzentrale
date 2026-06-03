@@ -18,6 +18,7 @@ public class LayoutSmokeTests : PlaywrightTestBase
     public async Task AppShell_NimmtVollbildEin()
     {
         await Page.GotoAsync(BaseUrl);
+        await Page.WaitForLoadStateAsync(LoadState.NetworkIdle);
 
         var shell = Page.Locator(".sz-app-shell");
         await Assertions.Expect(shell).ToBeVisibleAsync();
@@ -33,6 +34,7 @@ public class LayoutSmokeTests : PlaywrightTestBase
     public async Task TopBar_IstSichtbarUndHatHoehe()
     {
         await Page.GotoAsync(BaseUrl);
+        await Page.WaitForLoadStateAsync(LoadState.NetworkIdle);
 
         var topbar = Page.Locator(".sz-topbar");
         await Assertions.Expect(topbar).ToBeVisibleAsync();
@@ -47,6 +49,7 @@ public class LayoutSmokeTests : PlaywrightTestBase
     public async Task WorkspacesBereich_SidebarUndContentHabenFlaeche()
     {
         await Page.GotoAsync(BaseUrl);
+        await Page.WaitForLoadStateAsync(LoadState.NetworkIdle);
 
         await Page.Locator(".sz-topbar-tab", new() { HasText = "Workspaces" }).ClickAsync();
 
@@ -67,6 +70,7 @@ public class LayoutSmokeTests : PlaywrightTestBase
     public async Task EnvironmentsBereich_SidebarHatFlaeche()
     {
         await Page.GotoAsync(BaseUrl);
+        await Page.WaitForLoadStateAsync(LoadState.NetworkIdle);
 
         await Page.Locator(".sz-topbar-tab", new() { HasText = "Environments" }).ClickAsync();
 
