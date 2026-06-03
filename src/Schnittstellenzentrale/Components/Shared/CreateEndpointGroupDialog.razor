@@ -1,26 +1,21 @@
-<div class="card mt-3">
-    <div class="card-header">
-        <h5 class="mb-0">Ordner anlegen</h5>
-    </div>
-    <div class="card-body">
+<SzDialog Title="Ordner anlegen" Small="true" OnClose="Cancel">
+    <ChildContent>
         <EditForm Model="_model" OnValidSubmit="SaveAsync">
-            <div class="mb-3">
-                <label class="form-label">Name</label>
-                <InputText class="form-control" @bind-Value="_model.Name" />
+            <div class="sz-form-group">
+                <label class="sz-form-label" for="endpoint-group-name">Name</label>
+                <InputText id="endpoint-group-name" class="sz-input" @bind-Value="_model.Name" />
             </div>
-
             @if (!string.IsNullOrEmpty(_errorMessage))
             {
-                <div class="alert alert-danger mt-2">@_errorMessage</div>
+                <div class="sz-alert sz-alert--destructive">@_errorMessage</div>
             }
-
-            <div class="d-flex gap-2">
-                <button type="submit" class="btn btn-primary" disabled="@(string.IsNullOrWhiteSpace(_model.Name))">Anlegen</button>
-                <button type="button" class="btn btn-secondary" @onclick="Cancel">Abbrechen</button>
+            <div class="sz-dialog__actions">
+                <button type="submit" class="sz-btn sz-btn-primary" disabled="@(string.IsNullOrWhiteSpace(_model.Name))">Anlegen</button>
+                <button type="button" class="sz-btn sz-btn-outline" @onclick="Cancel">Abbrechen</button>
             </div>
         </EditForm>
-    </div>
-</div>
+    </ChildContent>
+</SzDialog>
 
 @code {
     [Parameter] public Application Application { get; set; } = default!;

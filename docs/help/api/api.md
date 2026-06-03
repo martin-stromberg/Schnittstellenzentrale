@@ -155,3 +155,435 @@ Legt eine neue `Application` an.
 |--------|---------|
 | 400 Bad Request | Pflichtfeld fehlt oder überschreitet die maximale Länge |
 | 401 Unauthorized | Token fehlt, unbekannt oder abgelaufen |
+
+---
+
+## GET /api/endpoint-groups?applicationId={id}
+
+Gibt alle `EndpointGroup`-Objekte einer Anwendung zurück.
+
+**Authentifizierung:** Bearer-Token (aus `/authenticate`).
+
+**Request-Header:**
+
+| Header | Pflicht | Beschreibung |
+|--------|---------|--------------|
+| `Authorization` | Ja | `Bearer <token>` |
+| `X-Storage-Mode` | Nein | `Team` oder `User` (Standard: `User`) |
+
+**Query-Parameter:**
+
+| Parameter | Typ | Pflicht | Beschreibung |
+|-----------|-----|---------|--------------|
+| `applicationId` | `int` | Ja | ID der Anwendung |
+
+**Response: 200 OK**
+
+```json
+[
+  { "id": 1, "name": "Stammdaten", "applicationId": 7, "parentGroupId": null, "rowVersion": "AAAAAAA=" },
+  { "id": 2, "name": "Untergruppe", "applicationId": 7, "parentGroupId": 1, "rowVersion": "AAAAAAB=" }
+]
+```
+
+**Response-Header:**
+
+| Header | Beschreibung |
+|--------|--------------|
+| `X-New-Token` | Neuer Bearer-Token |
+
+**Fehler:**
+
+| Status | Ursache |
+|--------|---------|
+| 401 Unauthorized | Token fehlt, unbekannt oder abgelaufen |
+
+---
+
+## GET /api/endpoint-groups/{id}
+
+Gibt eine einzelne `EndpointGroup` per ID zurück.
+
+**Authentifizierung:** Bearer-Token.
+
+**Response: 200 OK** — `EndpointGroupResponse` (analog zur Liste oben)
+
+**Response-Header:** `X-New-Token`
+
+**Fehler:**
+
+| Status | Ursache |
+|--------|---------|
+| 401 Unauthorized | Token fehlt, unbekannt oder abgelaufen |
+| 404 Not Found | Endpunktgruppe nicht gefunden |
+
+---
+
+## POST /api/endpoint-groups
+
+Legt eine neue `EndpointGroup` an.
+
+**Authentifizierung:** Bearer-Token.
+
+**Request-Header:**
+
+| Header | Pflicht | Beschreibung |
+|--------|---------|--------------|
+| `Authorization` | Ja | `Bearer <token>` |
+| `X-Storage-Mode` | Nein | `Team` oder `User` |
+
+**Request-Body:**
+
+```json
+{
+  "name": "Stammdaten",
+  "applicationId": 7,
+  "parentGroupId": null
+}
+```
+
+| Feld | Typ | Pflicht | Validierung | Beschreibung |
+|------|-----|---------|-------------|--------------|
+| `name` | `string` | Ja | `[Required]`, `[MaxLength(200)]` | Anzeigename der Gruppe |
+| `applicationId` | `int` | Ja | `[Range(1, int.MaxValue)]` | ID der übergeordneten Anwendung |
+| `parentGroupId` | `int?` | Nein | — | ID der übergeordneten Gruppe; `null` für Gruppen der obersten Ebene |
+
+**Response: 201 Created**
+
+```json
+{ "id": 1, "name": "Stammdaten", "applicationId": 7, "parentGroupId": null, "rowVersion": "AAAAAAA=" }
+```
+
+**Response-Header:** `Location`, `X-New-Token`
+
+**Fehler:**
+
+| Status | Ursache |
+|--------|---------|
+| 400 Bad Request | Pflichtfeld fehlt oder zu lang |
+| 401 Unauthorized | Token fehlt, unbekannt oder abgelaufen |
+
+---
+
+## PUT /api/endpoint-groups/{id}
+
+Aktualisiert eine bestehende `EndpointGroup`.
+
+**Authentifizierung:** Bearer-Token.
+
+**Request-Body:**
+
+```json
+{ "name": "Stammdaten (neu)", "rowVersion": "AAAAAAA=" }
+```
+
+| Feld | Typ | Pflicht | Validierung | Beschreibung |
+|------|-----|---------|-------------|--------------|
+| `name` | `string` | Ja | `[Required]`, `[MaxLength(200)]` | Neuer Name |
+| `rowVersion` | `byte[]` | Ja | — | Concurrency-Token; muss mit dem gespeicherten Wert übereinstimmen |
+
+**Response: 200 OK** — aktualisierte `EndpointGroupResponse`
+
+**Response-Header:** `X-New-Token`
+
+**Fehler:**
+
+| Status | Ursache |
+|--------|---------|
+| 400 Bad Request | Pflichtfeld fehlt |
+| 401 Unauthorized | Token fehlt, unbekannt oder abgelaufen |
+| 404 Not Found | Endpunktgruppe nicht gefunden |
+
+---
+
+## DELETE /api/endpoint-groups/{id}
+
+Löscht eine `EndpointGroup`.
+
+**Authentifizierung:** Bearer-Token.
+
+**Response: 204 No Content**
+
+**Response-Header:** `X-New-Token`
+
+**Fehler:**
+
+| Status | Ursache |
+|--------|---------|
+| 401 Unauthorized | Token fehlt, unbekannt oder abgelaufen |
+| 404 Not Found | Endpunktgruppe nicht gefunden |
+
+---
+
+## GET /api/endpoints?applicationId={id}
+
+Gibt alle `Endpoint`-Objekte einer Anwendung zurück, inklusive `Headers` und `QueryParameters`.
+
+**Authentifizierung:** Bearer-Token.
+
+**Request-Header:**
+
+| Header | Pflicht | Beschreibung |
+|--------|---------|--------------|
+| `Authorization` | Ja | `Bearer <token>` |
+| `X-Storage-Mode` | Nein | `Team` oder `User` |
+
+**Query-Parameter:**
+
+| Parameter | Typ | Pflicht | Beschreibung |
+|-----------|-----|---------|--------------|
+| `applicationId` | `int` | Ja | ID der Anwendung |
+
+**Response: 200 OK**
+
+```json
+[
+  {
+    "id": 15,
+    "name": "Artikel abrufen",
+    "method": "Get",
+    "relativePath": "/api/articles/{id}",
+    "body": null,
+    "bodyMode": "None",
+    "authenticationType": "None",
+    "applicationId": 7,
+    "endpointGroupId": 1,
+    "rowVersion": "AAAAAAA=",
+    "preRequestScript": null,
+    "postRequestScript": null,
+    "headers": [
+      { "id": 3, "key": "Accept", "value": "application/json", "endpointId": 15 }
+    ],
+    "queryParameters": [
+      { "id": 8, "key": "id", "value": "", "endpointId": 15 }
+    ]
+  }
+]
+```
+
+**Response-Header:** `X-New-Token`
+
+**Fehler:**
+
+| Status | Ursache |
+|--------|---------|
+| 401 Unauthorized | Token fehlt, unbekannt oder abgelaufen |
+
+---
+
+## GET /api/endpoints/{id}
+
+Gibt einen einzelnen `Endpoint` per ID zurück, inklusive `Headers` und `QueryParameters`.
+
+**Authentifizierung:** Bearer-Token.
+
+**Response: 200 OK** — `EndpointResponse` (analog zur Liste oben)
+
+**Response-Header:** `X-New-Token`
+
+**Fehler:**
+
+| Status | Ursache |
+|--------|---------|
+| 401 Unauthorized | Token fehlt, unbekannt oder abgelaufen |
+| 404 Not Found | Endpunkt nicht gefunden |
+
+---
+
+## POST /api/endpoints
+
+Legt einen neuen `Endpoint` an.
+
+**Authentifizierung:** Bearer-Token.
+
+**Request-Body:**
+
+```json
+{
+  "name": "Artikel abrufen",
+  "relativePath": "/api/articles/{id}",
+  "applicationId": 7,
+  "endpointGroupId": 1,
+  "method": "Get",
+  "bodyMode": "None",
+  "body": null,
+  "authenticationType": "None",
+  "preRequestScript": null,
+  "postRequestScript": null
+}
+```
+
+| Feld | Typ | Pflicht | Validierung | Beschreibung |
+|------|-----|---------|-------------|--------------|
+| `name` | `string` | Ja | `[Required]`, `[MaxLength(200)]` | Anzeigename des Endpunkts |
+| `relativePath` | `string` | Ja | `[Required]`, `[MaxLength(500)]` | Relativer Pfad (ohne Basis-URL) |
+| `applicationId` | `int` | Ja | `[Range(1, int.MaxValue)]` | ID der zugehörigen Anwendung |
+| `endpointGroupId` | `int?` | Nein | — | ID der Endpunktgruppe; `null` für ungruppierten Endpunkt |
+| `method` | `HttpMethod` | Nein | — | HTTP-Methode (z. B. `Get`, `Post`, `Put`, `Delete`) |
+| `bodyMode` | `BodyMode` | Nein | — | Body-Modus (z. B. `None`, `Raw`, `FormData`) |
+| `body` | `string?` | Nein | — | Request-Body-Text |
+| `authenticationType` | `AuthenticationType` | Nein | — | Authentifizierungstyp (z. B. `None`, `BearerToken`, `Negotiate`) |
+| `preRequestScript` | `string?` | Nein | — | JavaScript-Code für Pre-Request-Skript |
+| `postRequestScript` | `string?` | Nein | — | JavaScript-Code für Post-Request-Skript |
+
+**Response: 201 Created** — `EndpointResponse` mit `headers: []` und `queryParameters: []`
+
+**Response-Header:** `Location`, `X-New-Token`
+
+**Fehler:**
+
+| Status | Ursache |
+|--------|---------|
+| 400 Bad Request | Pflichtfeld fehlt oder zu lang |
+| 401 Unauthorized | Token fehlt, unbekannt oder abgelaufen |
+
+---
+
+## PUT /api/endpoints/{id}
+
+Aktualisiert einen bestehenden `Endpoint`.
+
+**Authentifizierung:** Bearer-Token.
+
+**Request-Body:** alle Felder aus `POST /api/endpoints` ohne `applicationId`, zusätzlich:
+
+| Feld | Typ | Pflicht | Beschreibung |
+|------|-----|---------|--------------|
+| `rowVersion` | `byte[]` | Ja | Concurrency-Token |
+
+**Response: 200 OK** — aktualisierte `EndpointResponse`
+
+**Response-Header:** `X-New-Token`
+
+**Fehler:**
+
+| Status | Ursache |
+|--------|---------|
+| 400 Bad Request | Pflichtfeld fehlt |
+| 401 Unauthorized | Token fehlt, unbekannt oder abgelaufen |
+| 404 Not Found | Endpunkt nicht gefunden |
+
+---
+
+## DELETE /api/endpoints/{id}
+
+Löscht einen `Endpoint`.
+
+**Authentifizierung:** Bearer-Token.
+
+**Response: 204 No Content**
+
+**Response-Header:** `X-New-Token`
+
+**Fehler:**
+
+| Status | Ursache |
+|--------|---------|
+| 401 Unauthorized | Token fehlt, unbekannt oder abgelaufen |
+| 404 Not Found | Endpunkt nicht gefunden |
+
+---
+
+## POST /api/endpoints/headers
+
+Fügt einem Endpunkt einen neuen Header hinzu.
+
+**Authentifizierung:** Bearer-Token.
+
+**Request-Body:**
+
+```json
+{ "key": "Accept", "value": "application/json", "endpointId": 15 }
+```
+
+| Feld | Typ | Pflicht | Validierung | Beschreibung |
+|------|-----|---------|-------------|--------------|
+| `key` | `string` | Ja | `[Required]` | Header-Name |
+| `value` | `string` | Nein | — | Header-Wert |
+| `endpointId` | `int` | Ja | `[Range(1, int.MaxValue)]` | ID des Endpunkts |
+
+**Response: 201 Created**
+
+```json
+{ "id": 3, "key": "Accept", "value": "application/json", "endpointId": 15 }
+```
+
+**Response-Header:** `X-New-Token`
+
+**Fehler:**
+
+| Status | Ursache |
+|--------|---------|
+| 400 Bad Request | Pflichtfeld fehlt |
+| 401 Unauthorized | Token fehlt, unbekannt oder abgelaufen |
+
+---
+
+## DELETE /api/endpoints/headers/{id}
+
+Löscht einen Header eines Endpunkts.
+
+**Authentifizierung:** Bearer-Token.
+
+**Response: 204 No Content**
+
+**Response-Header:** `X-New-Token`
+
+**Fehler:**
+
+| Status | Ursache |
+|--------|---------|
+| 401 Unauthorized | Token fehlt, unbekannt oder abgelaufen |
+
+---
+
+## POST /api/endpoints/query-parameters
+
+Fügt einem Endpunkt einen neuen Query-Parameter hinzu.
+
+**Authentifizierung:** Bearer-Token.
+
+**Request-Body:**
+
+```json
+{ "key": "filter", "value": "active", "endpointId": 15 }
+```
+
+| Feld | Typ | Pflicht | Validierung | Beschreibung |
+|------|-----|---------|-------------|--------------|
+| `key` | `string` | Ja | `[Required]` | Parameter-Name |
+| `value` | `string` | Nein | — | Parameter-Wert |
+| `endpointId` | `int` | Ja | `[Range(1, int.MaxValue)]` | ID des Endpunkts |
+
+**Response: 201 Created**
+
+```json
+{ "id": 8, "key": "filter", "value": "active", "endpointId": 15 }
+```
+
+**Response-Header:** `X-New-Token`
+
+**Fehler:**
+
+| Status | Ursache |
+|--------|---------|
+| 400 Bad Request | Pflichtfeld fehlt |
+| 401 Unauthorized | Token fehlt, unbekannt oder abgelaufen |
+
+---
+
+## DELETE /api/endpoints/query-parameters/{id}
+
+Löscht einen Query-Parameter eines Endpunkts.
+
+**Authentifizierung:** Bearer-Token.
+
+**Response: 204 No Content**
+
+**Response-Header:** `X-New-Token`
+
+**Fehler:**
+
+| Status | Ursache |
+|--------|---------|
+| 401 Unauthorized | Token fehlt, unbekannt oder abgelaufen |

@@ -1,0 +1,28 @@
+<div class="sz-overlay">
+    <div class="sz-dialog @(Small ? "sz-dialog--sm" : string.Empty)">
+        <div class="sz-dialog__header">
+            <span class="sz-dialog__title">@Title</span>
+            @if (OnClose.HasDelegate)
+            {
+                <button type="button" class="sz-btn-icon" @onclick="OnClose" title="Schließen">&#x2715;</button>
+            }
+        </div>
+        <div class="sz-dialog__body">
+            @ChildContent
+        </div>
+        @if (Footer != null)
+        {
+            <div class="sz-dialog__footer">
+                @Footer
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public string Title { get; set; } = string.Empty;
+    [Parameter] public bool Small { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public RenderFragment? Footer { get; set; }
+}

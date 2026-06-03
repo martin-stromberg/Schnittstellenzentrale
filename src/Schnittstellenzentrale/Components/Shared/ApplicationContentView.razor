@@ -1,5 +1,4 @@
 @inject IApplicationService ApplicationService
-@inject IEndpointRepository EndpointRepository
 @inject ISwaggerImportService SwaggerImportService
 @inject IHealthCheckService HealthCheckService
 @inject IApplicationApiClient ApplicationApiClient
@@ -97,7 +96,7 @@
 
     protected override async Task OnParametersSetAsync()
     {
-        var endpoints = await EndpointRepository.GetEndpointsAsync(Application.Id);
+        var endpoints = await ApplicationApiClient.GetEndpointsAsync(Application.Id);
         _endpointCount = endpoints.Count;
     }
 

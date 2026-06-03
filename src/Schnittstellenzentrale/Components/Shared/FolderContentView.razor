@@ -1,4 +1,4 @@
-@inject IEndpointRepository EndpointRepository
+@inject IApplicationApiClient ApplicationApiClient
 
 <div class="sz-content-view">
     <div class="sz-dashboard">
@@ -50,8 +50,7 @@
 
     protected override async Task OnParametersSetAsync()
     {
-        var all = await EndpointRepository.GetEndpointsAsync(EndpointGroup.ApplicationId);
-        _endpoints = all.Where(e => e.EndpointGroupId == EndpointGroup.Id).ToList();
+        _endpoints = await ApplicationApiClient.GetEndpointsAsync(EndpointGroup.ApplicationId, EndpointGroup.Id);
     }
 
 }

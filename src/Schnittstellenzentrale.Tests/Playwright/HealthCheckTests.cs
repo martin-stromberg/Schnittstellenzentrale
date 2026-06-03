@@ -15,6 +15,7 @@ public class HealthCheckTests : PlaywrightTestBase
     public async Task HealthCheck_ShowsReachableStatus()
     {
         await Page.GotoAsync(BaseUrl);
+        await Page.WaitForLoadStateAsync(LoadState.NetworkIdle);
 
         var groupChevron = Page.Locator(".collapsible-section .sz-tree-chevron-btn").First;
         await groupChevron.ClickAsync();

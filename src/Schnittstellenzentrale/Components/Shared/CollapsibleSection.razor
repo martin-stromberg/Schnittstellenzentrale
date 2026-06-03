@@ -46,7 +46,7 @@
 
     private async Task OnTitleClick()
     {
-        _expanded = true;
+        _expanded = !_expanded;
         if (OnTitleClicked.HasDelegate)
             await OnTitleClicked.InvokeAsync();
     }

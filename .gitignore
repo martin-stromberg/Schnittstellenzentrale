@@ -442,3 +442,4 @@ FodyWeavers.xsd
 *.claude.task.md.bak
 claude.context.md
 claude.context.md.bak
+claude.context*.md

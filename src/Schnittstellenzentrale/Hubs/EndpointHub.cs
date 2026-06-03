@@ -29,6 +29,18 @@ public class EndpointHub : Hub
         await Groups.RemoveFromGroupAsync(Context.ConnectionId, $"group:{groupId}");
     }
 
+    /// <summary>Trägt den aktuellen Client in die SignalR-Gruppe <c>workspace</c> ein (empfängt <c>TreeChanged</c>-Events).</summary>
+    public async Task SubscribeToWorkspace()
+    {
+        await Groups.AddToGroupAsync(Context.ConnectionId, "workspace");
+    }
+
+    /// <summary>Entfernt den aktuellen Client aus der SignalR-Gruppe <c>workspace</c>.</summary>
+    public async Task UnsubscribeFromWorkspace()
+    {
+        await Groups.RemoveFromGroupAsync(Context.ConnectionId, "workspace");
+    }
+
     /// <summary>Trägt den aktuellen Client in die SignalR-Gruppe <c>environments</c> ein.</summary>
     public async Task SubscribeToEnvironments()
     {

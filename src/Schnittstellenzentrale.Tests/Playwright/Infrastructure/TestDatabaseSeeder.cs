@@ -1,7 +1,10 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Schnittstellenzentrale.Core.Interfaces;
+using Schnittstellenzentrale.Core.Models;
 using Schnittstellenzentrale.Infrastructure.Data;
+using CoreHttpMethod = Schnittstellenzentrale.Core.Enums.HttpMethod;
 
 namespace Schnittstellenzentrale.Tests.Playwright.Infrastructure;
 
@@ -29,5 +32,28 @@ public class TestDatabaseSeeder
         await db.Database.EnsureCreatedAsync();
 
         await SystemEntryInitializer.InitializeAsync(_services, _configuration);
+        await SeedSystemEndpointsAsync();
+    }
+
+    // Registriert die System-Endpunkte, die in Produktion via SystemEndpointSyncService aus Swagger
+    // importiert werden. Im Playwright-Test-Environment ist dieser Service deaktiviert.
+    private async Task SeedSystemEndpointsAsync()
+    {
+        using var scope = _services.CreateScope();
+        var appRepo = scope.ServiceProvider.GetRequiredService<IApplicationRepository>();
+        var endpointRepo = scope.ServiceProvider.GetRequiredService<IEndpointRepository>();
+
+        var group = await appRepo.GetSystemGroupAsync();
+        var systemApp = group?.Applications.FirstOrDefault(a => a.IsSystem);
+        if (systemApp == null)
+            return;
+
+        await endpointRepo.AddEndpointAsync(new Endpoint
+        {
+            Name = "POST /authenticate",
+            Method = CoreHttpMethod.POST,
+            RelativePath = "/authenticate",
+            ApplicationId = systemApp.Id
+        });
     }
 }

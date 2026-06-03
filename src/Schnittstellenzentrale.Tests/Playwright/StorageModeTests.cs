@@ -15,7 +15,7 @@ public class StorageModeTests : PlaywrightTestBase
     public async Task SwitchToTeamMode_ShowsTeamData()
     {
         await Page.GotoAsync(BaseUrl);
-
+        await Page.WaitForLoadStateAsync(LoadState.NetworkIdle);
         await Page.Locator(".sz-topbar-select").SelectOptionAsync("Team");
 
         var treeBody = Page.Locator(".sz-tree-body");
@@ -27,6 +27,7 @@ public class StorageModeTests : PlaywrightTestBase
     public async Task SwitchBackToUserMode_ShowsUserData()
     {
         await Page.GotoAsync(BaseUrl);
+        await Page.WaitForLoadStateAsync(LoadState.NetworkIdle);
 
         await Page.Locator(".sz-topbar-select").SelectOptionAsync("Team");
         await Page.Locator(".sz-topbar-select").SelectOptionAsync("User");

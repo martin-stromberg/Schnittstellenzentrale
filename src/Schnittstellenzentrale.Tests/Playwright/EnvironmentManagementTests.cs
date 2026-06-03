@@ -18,6 +18,7 @@ public class EnvironmentManagementTests : PlaywrightTestBase
     public async Task MaskierterWert_IstNichtImKlartextImDomSichtbar()
     {
         await Page.GotoAsync(BaseUrl);
+        await Page.WaitForLoadStateAsync(LoadState.NetworkIdle);
 
         // Environments-Tab klicken, um Umgebungsverwaltung zu öffnen
         await Page.Locator(".sz-topbar-tab", new() { HasText = "Environments" }).ClickAsync();

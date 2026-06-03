@@ -1,8 +1,18 @@
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.OpenApi;
+using Moq;
+using System.Text.Json.Nodes;
+using Schnittstellenzentrale.Core.Enums;
+using Schnittstellenzentrale.Core.Helpers;
 using Schnittstellenzentrale.Core.Interfaces;
+using Schnittstellenzentrale.Infrastructure.Data;
 using Schnittstellenzentrale.Infrastructure.Repositories;
 using Schnittstellenzentrale.Tests.Helpers;
+using Swashbuckle.AspNetCore.Swagger;
+using HttpMethod = System.Net.Http.HttpMethod;
 
 namespace Schnittstellenzentrale.Tests.Integration;
 
@@ -17,8 +27,7 @@ public class SystemEntryInitializerTests
         services.AddScoped<IApplicationRepository>(sp => new ApplicationRepository(factory));
         var provider = services.BuildServiceProvider();
 
-        var cleanup = new CompositeDisposable(connection);
-        return (provider, cleanup);
+        return (provider, connection);
     }
 
     private static IConfiguration BuildConfiguration(string? baseUrl)
@@ -168,22 +177,108 @@ public class SystemEntryInitializerTests
         }
     }
 
-    private sealed class CompositeDisposable : IDisposable
+    private static (TestableSyncServiceForInitTest Service, Mock<ICredentialService> CredentialServiceMock) CreateSyncServiceWithInMemoryDb(
+        IDbContextFactory<Schnittstellenzentrale.Infrastructure.Data.AppDbContext> factory,
+        ISwaggerProvider swaggerProvider)
     {
-        private readonly IDisposable[] _disposables;
+        var endpointRepo = new EndpointRepository(factory);
+        var appRepo = new ApplicationRepository(factory);
+        var credentialServiceMock = new Mock<ICredentialService>();
 
-        /// <summary>Initialisiert CompositeDisposable.</summary>
-        public CompositeDisposable(params IDisposable[] disposables)
-        {
-            _disposables = disposables;
-        }
+        var httpClientFactoryMock = new Mock<IHttpClientFactory>();
+        var swaggerImportService = new Schnittstellenzentrale.Infrastructure.Services.SwaggerImportService(
+            httpClientFactoryMock.Object,
+            endpointRepo,
+            credentialServiceMock.Object,
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<Schnittstellenzentrale.Infrastructure.Services.SwaggerImportService>.Instance);
 
-        /// <summary>Dispose</summary>
-        public void Dispose()
+        var services = new ServiceCollection();
+        services.AddSingleton<IApplicationRepository>(appRepo);
+        services.AddSingleton<IEndpointRepository>(endpointRepo);
+        services.AddSingleton<ISwaggerProvider>(swaggerProvider);
+        services.AddSingleton<ISwaggerImportService>(swaggerImportService);
+        var provider = services.BuildServiceProvider();
+
+        var scopeFactoryMock = new Mock<IServiceScopeFactory>();
+        var scopeMock = new Mock<IServiceScope>();
+        scopeMock.Setup(s => s.ServiceProvider).Returns(provider);
+        scopeFactoryMock.Setup(f => f.CreateScope()).Returns(scopeMock.Object);
+
+        var loggerMock = new Mock<ILogger<SystemEndpointSyncService>>();
+
+        var service = new TestableSyncServiceForInitTest(scopeFactoryMock.Object, loggerMock.Object);
+        return (service, credentialServiceMock);
+    }
+
+    /// <summary>InitializeAsync_AndSyncService_CreatesEndpointsWithCorrectAuthorizationAndCredentials</summary>
+    [Fact]
+    public async Task InitializeAsync_AndSyncService_CreatesEndpointsWithCorrectAuthorizationAndCredentials()
+    {
+        var (factory, connection) = TestHelpers.CreateInMemoryDbContext();
+        using var cleanup = connection;
+
+        var services = new ServiceCollection();
+        services.AddScoped<IApplicationRepository>(sp => new ApplicationRepository(factory));
+        var provider = services.BuildServiceProvider();
+
+        var config = BuildConfiguration("https://localhost:5001");
+        await SystemEntryInitializer.InitializeAsync(provider, config);
+
+        var swaggerProviderMock = new Mock<ISwaggerProvider>();
+        var negotiateOperation = new OpenApiOperation { OperationId = "getNegotiate" };
+        (negotiateOperation.Security ??= []).Add(new OpenApiSecurityRequirement
         {
-            foreach (var d in _disposables)
-                d.Dispose();
-        }
+            { new OpenApiSecuritySchemeReference("Negotiate", null), new List<string>() }
+        });
+        var bearerTokenExtension = new JsonNodeExtension(
+            System.Text.Json.Nodes.JsonValue.Create("test-bearer-token"));
+        var bearerOperation = new OpenApiOperation
+        {
+            OperationId = "getBearerToken",
+            Extensions = new Dictionary<string, IOpenApiExtension>
+            {
+                ["x-sz-bearer-token"] = bearerTokenExtension
+            }
+        };
+
+        var paths = new OpenApiPaths();
+        var negotiatePath = new OpenApiPathItem();
+        negotiatePath.AddOperation(HttpMethod.Get, negotiateOperation);
+        paths["/api/negotiate"] = negotiatePath;
+
+        var bearerPath = new OpenApiPathItem();
+        bearerPath.AddOperation(HttpMethod.Get, bearerOperation);
+        paths["/api/bearer"] = bearerPath;
+
+        var document = new OpenApiDocument { Paths = paths };
+        swaggerProviderMock.Setup(p => p.GetSwagger("v1", null, null)).Returns(document);
+
+        var (syncService, credentialServiceMock) = CreateSyncServiceWithInMemoryDb(factory, swaggerProviderMock.Object);
+
+        await syncService.RunAsync();
+
+        var endpointRepo = new EndpointRepository(factory);
+        var appRepo = new ApplicationRepository(factory);
+        var group = await appRepo.GetSystemGroupAsync();
+        Assert.NotNull(group);
+        var systemApp = group.Applications.First(a => a.IsSystem);
+
+        var endpoints = await endpointRepo.GetEndpointsAsync(systemApp.Id);
+        Assert.NotEmpty(endpoints);
+        Assert.Contains(endpoints, e => e.AuthenticationType == AuthenticationType.Negotiate);
+
+        credentialServiceMock.Verify(
+            c => c.SavePassword(
+                CredentialTargetHelper.Build(systemApp.Id, AuthenticationType.BearerToken),
+                string.Empty,
+                "test-bearer-token"),
+            Times.Once);
+    }
+
+    private sealed class TestableSyncServiceForInitTest(IServiceScopeFactory scopeFactory, ILogger<SystemEndpointSyncService> logger)
+        : SystemEndpointSyncService(scopeFactory, logger)
+    {
+        public Task RunAsync() => ExecuteAsync(System.Threading.CancellationToken.None);
     }
 
     private sealed class ThrowingApplicationRepository : IApplicationRepository

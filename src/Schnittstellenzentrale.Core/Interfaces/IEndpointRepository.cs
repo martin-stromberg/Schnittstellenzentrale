@@ -6,6 +6,7 @@ public interface IEndpointRepository
 {
     Task<IList<Endpoint>> GetEndpointsAsync(int applicationId);
     Task<IList<Endpoint>> GetEndpointsByApplicationIdsAsync(IEnumerable<int> applicationIds);
+    Task<IList<Endpoint>> GetByGroupIdAsync(int endpointGroupId);
     Task<Endpoint?> GetEndpointByIdAsync(int id);
     Task<IList<Endpoint>> GetEndpointByNameAsync(int applicationId, string name);
     Task<Endpoint> AddEndpointAsync(Endpoint endpoint);
@@ -18,9 +19,11 @@ public interface IEndpointRepository
     Task<EndpointGroup> UpdateEndpointGroupAsync(EndpointGroup group);
     Task DeleteEndpointGroupAsync(int id);
 
+    Task<EndpointHeader?> GetHeaderByIdAsync(int id);
     Task<EndpointHeader> AddHeaderAsync(EndpointHeader header);
     Task DeleteHeaderAsync(int id);
 
+    Task<EndpointQueryParameter?> GetQueryParameterByIdAsync(int id);
     Task<EndpointQueryParameter> AddQueryParameterAsync(EndpointQueryParameter parameter);
     Task DeleteQueryParameterAsync(int id);
 }

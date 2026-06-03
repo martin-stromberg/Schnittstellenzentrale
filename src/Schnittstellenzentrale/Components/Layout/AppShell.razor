@@ -65,8 +65,8 @@
         {
             await ThemeService.InitializeAsync();
             await RestoreEnvironmentFromLocalStorageAsync(StorageModeService.CurrentMode);
-            await ConnectHubAsync();
             await InvokeAsync(StateHasChanged);
+            _ = ConnectHubAsync();
         }
     }
 

@@ -1,25 +1,18 @@
-<div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Ordner löschen</h5>
+<SzDialog Title="Ordner löschen" Small="true">
+    <ChildContent>
+        <p class="sz-dialog__text">Ordner <strong>@Group.Name</strong> wirklich löschen?</p>
+        @if (EndpointCount > 0)
+        {
+            <div class="sz-alert sz-alert--warning">
+                Der Ordner enthält <strong>@EndpointCount</strong> Endpunkt(e). Beim Löschen des Ordners werden alle enthaltenen Endpunkte ebenfalls gelöscht.
             </div>
-            <div class="modal-body">
-                <p>Ordner '@Group.Name' wirklich löschen?</p>
-                @if (EndpointCount > 0)
-                {
-                    <div class="alert alert-warning">
-                        Der Ordner enthält <strong>@EndpointCount</strong> Endpunkt(e). Beim Löschen des Ordners werden alle enthaltenen Endpunkte ebenfalls gelöscht.
-                    </div>
-                }
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-danger" @onclick="Confirmed">Löschen</button>
-                <button type="button" class="btn btn-secondary" @onclick="Cancelled">Abbrechen</button>
-            </div>
-        </div>
-    </div>
-</div>
+        }
+    </ChildContent>
+    <Footer>
+        <button type="button" class="sz-btn sz-btn-destructive" @onclick="Confirmed">Löschen</button>
+        <button type="button" class="sz-btn sz-btn-outline" @onclick="Cancelled">Abbrechen</button>
+    </Footer>
+</SzDialog>
 
 @code {
     [Parameter] public EndpointGroup Group { get; set; } = default!;

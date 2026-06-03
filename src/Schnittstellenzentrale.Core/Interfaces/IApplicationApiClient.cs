@@ -15,4 +15,18 @@ public interface IApplicationApiClient
     Task<Application> AddApplicationAsync(Application application);
     Task<Application> UpdateApplicationAsync(Application application);
     Task DeleteApplicationAsync(int id);
+    Task<IList<EndpointGroup>> GetEndpointGroupsAsync(int applicationId);
+    Task<EndpointGroup?> GetEndpointGroupByIdAsync(int id);
+    Task<EndpointGroup> AddEndpointGroupAsync(EndpointGroup group);
+    Task<EndpointGroup> UpdateEndpointGroupAsync(EndpointGroup group);
+    Task DeleteEndpointGroupAsync(int id);
+    Task<IList<Endpoint>> GetEndpointsAsync(int applicationId, int? endpointGroupId = null);
+    Task<Endpoint?> GetEndpointByIdAsync(int id);
+    Task<Endpoint> AddEndpointAsync(Endpoint endpoint);
+    Task<Endpoint> UpdateEndpointAsync(Endpoint endpoint);
+    Task DeleteEndpointAsync(int id);
+    Task<EndpointHeader> AddHeaderAsync(EndpointHeader header);
+    Task DeleteHeaderAsync(int id);
+    Task<EndpointQueryParameter> AddQueryParameterAsync(EndpointQueryParameter parameter);
+    Task DeleteQueryParameterAsync(int id);
 }

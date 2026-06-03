@@ -3,6 +3,7 @@
 @inject IStorageModeService StorageModeService
 @inject ICurrentUserService CurrentUserService
 @inject IJSRuntime JSRuntime
+@implements IDisposable
 
 <select class="form-select w-auto" value="@_selectedId" @onchange="OnSelectionChanged">
     <option value="">— Keine Umgebung —</option>
@@ -26,7 +27,19 @@
 
     protected override async Task OnInitializedAsync()
     {
+        ActiveEnvironmentService.OnEnvironmentListChanged += OnEnvironmentListChanged;
         await LoadEnvironmentsAsync();
+    }
+
+    private void OnEnvironmentListChanged() => _ = InvokeAsync(async () =>
+    {
+        await LoadEnvironmentsAsync();
+        StateHasChanged();
+    });
+
+    public void Dispose()
+    {
+        ActiveEnvironmentService.OnEnvironmentListChanged -= OnEnvironmentListChanged;
     }
 
     private async Task LoadEnvironmentsAsync()

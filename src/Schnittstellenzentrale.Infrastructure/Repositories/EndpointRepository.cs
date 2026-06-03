@@ -54,6 +54,18 @@ public class EndpointRepository : IEndpointRepository
     }
 
     /// <inheritdoc/>
+    public async Task<IList<Core.Models.Endpoint>> GetByGroupIdAsync(int endpointGroupId)
+    {
+        await using var context = await _factory.CreateDbContextAsync();
+        return await context.Endpoints
+            .Include(e => e.Headers)
+            .Include(e => e.QueryParameters)
+            .Include(e => e.EndpointGroup)
+            .Where(e => e.EndpointGroupId == endpointGroupId)
+            .ToListAsync();
+    }
+
+    /// <inheritdoc/>
     public async Task<IList<Core.Models.Endpoint>> GetEndpointByNameAsync(int applicationId, string name)
     {
         await using var context = await _factory.CreateDbContextAsync();
@@ -157,6 +169,13 @@ public class EndpointRepository : IEndpointRepository
     }
 
     /// <inheritdoc/>
+    public async Task<EndpointHeader?> GetHeaderByIdAsync(int id)
+    {
+        await using var context = await _factory.CreateDbContextAsync();
+        return await context.EndpointHeaders.FindAsync(id);
+    }
+
+    /// <inheritdoc/>
     public async Task<EndpointHeader> AddHeaderAsync(EndpointHeader header)
     {
         await using var context = await _factory.CreateDbContextAsync();
@@ -169,6 +188,13 @@ public class EndpointRepository : IEndpointRepository
     public async Task DeleteHeaderAsync(int id)
     {
         await DeleteByIdAsync<EndpointHeader>(id);
+    }
+
+    /// <inheritdoc/>
+    public async Task<EndpointQueryParameter?> GetQueryParameterByIdAsync(int id)
+    {
+        await using var context = await _factory.CreateDbContextAsync();
+        return await context.EndpointQueryParameters.FindAsync(id);
     }
 
     /// <inheritdoc/>

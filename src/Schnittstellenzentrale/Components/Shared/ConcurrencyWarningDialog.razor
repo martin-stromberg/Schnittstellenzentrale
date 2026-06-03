@@ -1,19 +1,12 @@
-<div class="modal-backdrop">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Schreibkonflikt erkannt</h5>
-            </div>
-            <div class="modal-body">
-                <p>Die Daten wurden zwischenzeitlich von einem anderen Benutzer geändert. Möchten Sie Ihre Änderungen trotzdem speichern und die anderen Änderungen überschreiben?</p>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-danger" @onclick="OnForceSave">Überschreiben (Force-Save)</button>
-                <button class="btn btn-secondary" @onclick="OnCancel">Abbrechen</button>
-            </div>
-        </div>
-    </div>
-</div>
+<SzDialog Title="Schreibkonflikt erkannt" Small="true">
+    <ChildContent>
+        <p class="sz-dialog__text">Die Daten wurden zwischenzeitlich von einem anderen Benutzer geändert. Möchten Sie Ihre Änderungen trotzdem speichern und die anderen Änderungen überschreiben?</p>
+    </ChildContent>
+    <Footer>
+        <button type="button" class="sz-btn sz-btn-destructive" @onclick="OnForceSave">Überschreiben</button>
+        <button type="button" class="sz-btn sz-btn-outline" @onclick="OnCancel">Abbrechen</button>
+    </Footer>
+</SzDialog>
 
 @code {
     [Parameter] public EventCallback OnForceSave { get; set; }

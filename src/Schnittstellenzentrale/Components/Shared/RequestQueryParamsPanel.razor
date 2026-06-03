@@ -1,4 +1,4 @@
-<div class="sz-panel-table-wrapper">
+<div class="sz-panel-table-wrapper request-query-params-panel">
     <table class="sz-table">
         <thead>
             <tr>
@@ -35,9 +35,12 @@
 @code {
     [Parameter] public List<QueryParamEntry> QueryParameters { get; set; } = [];
     [Parameter] public EventCallback OnChanged { get; set; }
+    [Parameter] public EventCallback<QueryParamEntry> OnQueryParameterAdded { get; set; }
+    [Parameter] public EventCallback<QueryParamEntry> OnQueryParameterRemoved { get; set; }
 
     public class QueryParamEntry
     {
+        public int Id { get; set; }
         public string Key { get; set; } = string.Empty;
         public string Value { get; set; } = string.Empty;
         public bool IsPathParameter { get; set; }
@@ -55,13 +58,16 @@
 
     private async Task AddParam()
     {
-        QueryParameters.Add(new QueryParamEntry());
+        var entry = new QueryParamEntry();
+        QueryParameters.Add(entry);
+        await OnQueryParameterAdded.InvokeAsync(entry);
         await OnChanged.InvokeAsync();
     }
 
     private async Task RemoveParam(QueryParamEntry entry)
     {
         QueryParameters.Remove(entry);
+        await OnQueryParameterRemoved.InvokeAsync(entry);
         await OnChanged.InvokeAsync();
     }
 }

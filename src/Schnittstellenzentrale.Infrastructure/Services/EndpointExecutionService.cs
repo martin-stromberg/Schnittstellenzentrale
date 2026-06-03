@@ -71,7 +71,6 @@ public class EndpointExecutionService : IEndpointExecutionService
                 Success = false,
                 ErrorMessage = $"[Endpoint {endpoint.Id} {endpoint.RelativePath}] Application ist nicht geladen."
             };
-
         callDepth.TryGetValue(endpoint.Id, out var currentDepth);
         if (currentDepth >= MaxCallDepth)
             return new EndpointExecutionResult

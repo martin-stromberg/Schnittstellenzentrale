@@ -4,7 +4,6 @@ using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi;
 using Moq;
 using Schnittstellenzentrale.Core.Enums;
-using Schnittstellenzentrale.Core.Helpers;
 using Schnittstellenzentrale.Core.Interfaces;
 using Schnittstellenzentrale.Core.Models;
 using Swashbuckle.AspNetCore.Swagger;
@@ -16,32 +15,28 @@ namespace Schnittstellenzentrale.Tests.Services;
 /// <summary>SystemEndpointSyncServiceTests</summary>
 public class SystemEndpointSyncServiceTests
 {
-    private sealed class TestableSyncService(IServiceScopeFactory scopeFactory, ILogger<SystemEndpointSyncService> logger, ICredentialService credentialService)
-        : SystemEndpointSyncService(scopeFactory, logger, credentialService)
+    private sealed class TestableSyncService(IServiceScopeFactory scopeFactory, ILogger<SystemEndpointSyncService> logger)
+        : SystemEndpointSyncService(scopeFactory, logger)
     {
         /// <summary>RunAsync</summary>
         public Task RunAsync() => ExecuteAsync(CancellationToken.None);
     }
 
-    private static (TestableSyncService Service, Mock<IApplicationRepository> AppRepoMock, Mock<ISwaggerProvider> SwaggerProviderMock, Mock<IEndpointRepository> EndpointRepoMock, Mock<ILogger<SystemEndpointSyncService>> LoggerMock, Mock<ICredentialService> CredentialServiceMock) CreateService()
+    private static (TestableSyncService Service, Mock<IApplicationRepository> AppRepoMock, Mock<ISwaggerProvider> SwaggerProviderMock, Mock<IEndpointRepository> EndpointRepoMock, Mock<ISwaggerImportService> SwaggerImportServiceMock, Mock<ILogger<SystemEndpointSyncService>> LoggerMock) CreateService()
     {
         var appRepoMock = new Mock<IApplicationRepository>();
         var swaggerProviderMock = new Mock<ISwaggerProvider>();
         var endpointRepoMock = new Mock<IEndpointRepository>();
+        var swaggerImportServiceMock = new Mock<ISwaggerImportService>();
 
-        endpointRepoMock.Setup(r => r.AddEndpointAsync(It.IsAny<Endpoint>()))
-            .ReturnsAsync((Endpoint e) => e);
-        endpointRepoMock.Setup(r => r.GetEndpointsAsync(It.IsAny<int>()))
-            .ReturnsAsync([]);
-        endpointRepoMock.Setup(r => r.GetEndpointGroupsAsync(It.IsAny<int>()))
-            .ReturnsAsync([]);
-        endpointRepoMock.Setup(r => r.AddEndpointGroupAsync(It.IsAny<EndpointGroup>()))
-            .ReturnsAsync((EndpointGroup g) => { g.Id = 1; return g; });
+        endpointRepoMock.Setup(r => r.GetEndpointsAsync(It.IsAny<int>())).ReturnsAsync([]);
+        swaggerImportServiceMock.Setup(s => s.ApplyDiffAsync(It.IsAny<ImportDiff>())).Returns(Task.CompletedTask);
 
         var services = new ServiceCollection();
         services.AddSingleton<IApplicationRepository>(appRepoMock.Object);
         services.AddSingleton<ISwaggerProvider>(swaggerProviderMock.Object);
         services.AddSingleton<IEndpointRepository>(endpointRepoMock.Object);
+        services.AddSingleton<ISwaggerImportService>(swaggerImportServiceMock.Object);
         var provider = services.BuildServiceProvider();
 
         var scopeFactoryMock = new Mock<IServiceScopeFactory>();
@@ -50,10 +45,9 @@ public class SystemEndpointSyncServiceTests
         scopeFactoryMock.Setup(f => f.CreateScope()).Returns(scopeMock.Object);
 
         var loggerMock = new Mock<ILogger<SystemEndpointSyncService>>();
-        var credentialServiceMock = new Mock<ICredentialService>();
-        var service = new TestableSyncService(scopeFactoryMock.Object, loggerMock.Object, credentialServiceMock.Object);
+        var service = new TestableSyncService(scopeFactoryMock.Object, loggerMock.Object);
 
-        return (service, appRepoMock, swaggerProviderMock, endpointRepoMock, loggerMock, credentialServiceMock);
+        return (service, appRepoMock, swaggerProviderMock, endpointRepoMock, swaggerImportServiceMock, loggerMock);
     }
 
     private static ApplicationGroup SystemGroup()
@@ -91,22 +85,22 @@ public class SystemEndpointSyncServiceTests
     [Fact]
     public async Task ExecuteAsync_NewEndpoints_AreAdded()
     {
-        var (service, appRepoMock, swaggerProviderMock, endpointRepoMock, _, _) = CreateService();
+        var (service, appRepoMock, swaggerProviderMock, _, swaggerImportServiceMock, _) = CreateService();
         appRepoMock.Setup(r => r.GetSystemGroupAsync()).ReturnsAsync(SystemGroup());
         swaggerProviderMock.Setup(p => p.GetSwagger("v1", null, null))
             .Returns(DocumentWithPaths(("/items", HttpMethod.Get, "getItems"), ("/items", HttpMethod.Post, "createItem")));
 
         await service.RunAsync();
 
-        endpointRepoMock.Verify(r => r.AddEndpointAsync(It.IsAny<Endpoint>()), Times.Exactly(2));
-        endpointRepoMock.Verify(r => r.DeleteEndpointAsync(It.IsAny<int>()), Times.Never);
+        swaggerImportServiceMock.Verify(s => s.ApplyDiffAsync(
+            It.Is<ImportDiff>(d => d.NewEndpoints.Count == 2)), Times.Once);
     }
 
     /// <summary>ExecuteAsync_RemovedEndpoints_AreDeleted</summary>
     [Fact]
     public async Task ExecuteAsync_RemovedEndpoints_AreDeleted()
     {
-        var (service, appRepoMock, swaggerProviderMock, endpointRepoMock, _, _) = CreateService();
+        var (service, appRepoMock, swaggerProviderMock, endpointRepoMock, swaggerImportServiceMock, _) = CreateService();
         appRepoMock.Setup(r => r.GetSystemGroupAsync()).ReturnsAsync(SystemGroup());
         swaggerProviderMock.Setup(p => p.GetSwagger("v1", null, null))
             .Returns(new OpenApiDocument { Paths = new OpenApiPaths() });
@@ -115,15 +109,15 @@ public class SystemEndpointSyncServiceTests
 
         await service.RunAsync();
 
-        endpointRepoMock.Verify(r => r.DeleteEndpointAsync(10), Times.Once);
-        endpointRepoMock.Verify(r => r.AddEndpointAsync(It.IsAny<Endpoint>()), Times.Never);
+        swaggerImportServiceMock.Verify(s => s.ApplyDiffAsync(
+            It.Is<ImportDiff>(d => d.RemovedEndpoints.Count == 1)), Times.Once);
     }
 
     /// <summary>ExecuteAsync_ExistingEndpoints_AreLeftUntouched</summary>
     [Fact]
     public async Task ExecuteAsync_ExistingEndpoints_AreLeftUntouched()
     {
-        var (service, appRepoMock, swaggerProviderMock, endpointRepoMock, _, _) = CreateService();
+        var (service, appRepoMock, swaggerProviderMock, endpointRepoMock, swaggerImportServiceMock, _) = CreateService();
         appRepoMock.Setup(r => r.GetSystemGroupAsync()).ReturnsAsync(SystemGroup());
         swaggerProviderMock.Setup(p => p.GetSwagger("v1", null, null))
             .Returns(DocumentWithPaths(("/items", HttpMethod.Get, "getItems")));
@@ -132,15 +126,15 @@ public class SystemEndpointSyncServiceTests
 
         await service.RunAsync();
 
-        endpointRepoMock.Verify(r => r.AddEndpointAsync(It.IsAny<Endpoint>()), Times.Never);
-        endpointRepoMock.Verify(r => r.DeleteEndpointAsync(It.IsAny<int>()), Times.Never);
+        swaggerImportServiceMock.Verify(s => s.ApplyDiffAsync(
+            It.Is<ImportDiff>(d => d.NewEndpoints.Count == 0 && d.RemovedEndpoints.Count == 0)), Times.Once);
     }
 
     /// <summary>ExecuteAsync_WhenSwaggerProviderThrows_LogsErrorAndDoesNotThrow</summary>
     [Fact]
     public async Task ExecuteAsync_WhenSwaggerProviderThrows_LogsErrorAndDoesNotThrow()
     {
-        var (service, appRepoMock, swaggerProviderMock, endpointRepoMock, loggerMock, _) = CreateService();
+        var (service, appRepoMock, swaggerProviderMock, _, swaggerImportServiceMock, loggerMock) = CreateService();
         appRepoMock.Setup(r => r.GetSystemGroupAsync()).ReturnsAsync(SystemGroup());
         swaggerProviderMock.Setup(p => p.GetSwagger("v1", null, null))
             .Throws(new InvalidOperationException("Swagger nicht verfügbar"));
@@ -156,20 +150,19 @@ public class SystemEndpointSyncServiceTests
                 It.IsAny<Exception>(),
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once);
-        endpointRepoMock.Verify(r => r.AddEndpointAsync(It.IsAny<Endpoint>()), Times.Never);
-        endpointRepoMock.Verify(r => r.DeleteEndpointAsync(It.IsAny<int>()), Times.Never);
+        swaggerImportServiceMock.Verify(s => s.ApplyDiffAsync(It.IsAny<ImportDiff>()), Times.Never);
     }
 
-    /// <summary>ExecuteAsync_WhenDbThrows_DoesNotThrow</summary>
+    /// <summary>ExecuteAsync_WhenApplyDiffThrows_DoesNotThrow</summary>
     [Fact]
-    public async Task ExecuteAsync_WhenDbThrows_DoesNotThrow()
+    public async Task ExecuteAsync_WhenApplyDiffThrows_DoesNotThrow()
     {
-        var (service, appRepoMock, swaggerProviderMock, endpointRepoMock, _, _) = CreateService();
+        var (service, appRepoMock, swaggerProviderMock, _, swaggerImportServiceMock, _) = CreateService();
         appRepoMock.Setup(r => r.GetSystemGroupAsync()).ReturnsAsync(SystemGroup());
         swaggerProviderMock.Setup(p => p.GetSwagger("v1", null, null))
             .Returns(DocumentWithPaths(("/items", HttpMethod.Get, "getItems")));
-        endpointRepoMock.Setup(r => r.AddEndpointAsync(It.IsAny<Endpoint>()))
-            .ThrowsAsync(new InvalidOperationException("Simulierter Datenbankfehler"));
+        swaggerImportServiceMock.Setup(s => s.ApplyDiffAsync(It.IsAny<ImportDiff>()))
+            .ThrowsAsync(new InvalidOperationException("Simulierter Fehler"));
 
         var exception = await Record.ExceptionAsync(() => service.RunAsync());
 
@@ -180,7 +173,7 @@ public class SystemEndpointSyncServiceTests
     [Fact]
     public async Task ExecuteAsync_IsIdempotent_OnRepeatedCall()
     {
-        var (service, appRepoMock, swaggerProviderMock, endpointRepoMock, _, _) = CreateService();
+        var (service, appRepoMock, swaggerProviderMock, endpointRepoMock, swaggerImportServiceMock, _) = CreateService();
         appRepoMock.Setup(r => r.GetSystemGroupAsync()).ReturnsAsync(SystemGroup());
         swaggerProviderMock.Setup(p => p.GetSwagger("v1", null, null))
             .Returns(DocumentWithPaths(("/items", HttpMethod.Get, "getItems")));
@@ -189,30 +182,29 @@ public class SystemEndpointSyncServiceTests
 
         await service.RunAsync();
 
-        endpointRepoMock.Verify(r => r.AddEndpointAsync(It.IsAny<Endpoint>()), Times.Never);
-        endpointRepoMock.Verify(r => r.DeleteEndpointAsync(It.IsAny<int>()), Times.Never);
+        swaggerImportServiceMock.Verify(s => s.ApplyDiffAsync(
+            It.Is<ImportDiff>(d => d.NewEndpoints.Count == 0 && d.RemovedEndpoints.Count == 0)), Times.Once);
     }
 
     /// <summary>ExecuteAsync_WhenSystemGroupMissing_LogsWarningAndSkips</summary>
     [Fact]
     public async Task ExecuteAsync_WhenSystemGroupMissing_LogsWarningAndSkips()
     {
-        var (service, appRepoMock, swaggerProviderMock, endpointRepoMock, _, _) = CreateService();
+        var (service, appRepoMock, swaggerProviderMock, _, swaggerImportServiceMock, _) = CreateService();
         appRepoMock.Setup(r => r.GetSystemGroupAsync()).ReturnsAsync((ApplicationGroup?)null);
 
         var exception = await Record.ExceptionAsync(() => service.RunAsync());
 
         Assert.Null(exception);
         swaggerProviderMock.Verify(p => p.GetSwagger(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<string?>()), Times.Never);
-        endpointRepoMock.Verify(r => r.AddEndpointAsync(It.IsAny<Endpoint>()), Times.Never);
-        endpointRepoMock.Verify(r => r.DeleteEndpointAsync(It.IsAny<int>()), Times.Never);
+        swaggerImportServiceMock.Verify(s => s.ApplyDiffAsync(It.IsAny<ImportDiff>()), Times.Never);
     }
 
     /// <summary>ExecuteAsync_WhenSystemAppMissing_LogsWarningAndSkips</summary>
     [Fact]
     public async Task ExecuteAsync_WhenSystemAppMissing_LogsWarningAndSkips()
     {
-        var (service, appRepoMock, swaggerProviderMock, endpointRepoMock, loggerMock, _) = CreateService();
+        var (service, appRepoMock, swaggerProviderMock, _, swaggerImportServiceMock, loggerMock) = CreateService();
         var groupWithoutSystemApp = new ApplicationGroup
         {
             Id = 1,
@@ -233,115 +225,49 @@ public class SystemEndpointSyncServiceTests
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once);
         swaggerProviderMock.Verify(p => p.GetSwagger(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<string?>()), Times.Never);
-        endpointRepoMock.Verify(r => r.AddEndpointAsync(It.IsAny<Endpoint>()), Times.Never);
-        endpointRepoMock.Verify(r => r.DeleteEndpointAsync(It.IsAny<int>()), Times.Never);
-    }
-
-    /// <summary>ExecuteAsync_NewEndpoint_GroupsAreCreatedFromUrlSegments</summary>
-    [Fact]
-    public async Task ExecuteAsync_NewEndpoint_GroupsAreCreatedFromUrlSegments()
-    {
-        var (service, appRepoMock, swaggerProviderMock, endpointRepoMock, _, _) = CreateService();
-        appRepoMock.Setup(r => r.GetSystemGroupAsync()).ReturnsAsync(SystemGroup());
-        swaggerProviderMock.Setup(p => p.GetSwagger("v1", null, null))
-            .Returns(DocumentWithPaths(("/api/applications/ungrouped", HttpMethod.Get, "getUngrouped")));
-
-        var createdGroups = new List<EndpointGroup>();
-        int nextId = 10;
-        endpointRepoMock.Setup(r => r.AddEndpointGroupAsync(It.IsAny<EndpointGroup>()))
-            .ReturnsAsync((EndpointGroup g) => { g.Id = nextId++; createdGroups.Add(g); return g; });
-
-        await service.RunAsync();
-
-        Assert.Equal(2, createdGroups.Count);
-        Assert.Equal("applications", createdGroups[0].Name);
-        Assert.Null(createdGroups[0].ParentGroupId);
-        Assert.Equal("ungrouped", createdGroups[1].Name);
-        Assert.Equal(10, createdGroups[1].ParentGroupId);
-
-        endpointRepoMock.Verify(r => r.AddEndpointAsync(It.Is<Endpoint>(e => e.EndpointGroupId == 11)), Times.Once);
-    }
-
-    /// <summary>ExecuteAsync_PathParameterSegments_AreSkipped</summary>
-    [Fact]
-    public async Task ExecuteAsync_PathParameterSegments_AreSkipped()
-    {
-        var (service, appRepoMock, swaggerProviderMock, endpointRepoMock, _, _) = CreateService();
-        appRepoMock.Setup(r => r.GetSystemGroupAsync()).ReturnsAsync(SystemGroup());
-        swaggerProviderMock.Setup(p => p.GetSwagger("v1", null, null))
-            .Returns(DocumentWithPaths(("/api/application-groups/{id}", HttpMethod.Get, "getGroup")));
-
-        var createdGroups = new List<EndpointGroup>();
-        endpointRepoMock.Setup(r => r.AddEndpointGroupAsync(It.IsAny<EndpointGroup>()))
-            .ReturnsAsync((EndpointGroup g) => { g.Id = 20; createdGroups.Add(g); return g; });
-
-        await service.RunAsync();
-
-        Assert.Single(createdGroups);
-        Assert.Equal("application-groups", createdGroups[0].Name);
-        Assert.Null(createdGroups[0].ParentGroupId);
-
-        endpointRepoMock.Verify(r => r.AddEndpointAsync(It.Is<Endpoint>(e => e.EndpointGroupId == 20)), Times.Once);
-    }
-
-    /// <summary>ExecuteAsync_ExistingGroups_AreReusedAndNotCreatedAgain</summary>
-    [Fact]
-    public async Task ExecuteAsync_ExistingGroups_AreReusedAndNotCreatedAgain()
-    {
-        var (service, appRepoMock, swaggerProviderMock, endpointRepoMock, _, _) = CreateService();
-        appRepoMock.Setup(r => r.GetSystemGroupAsync()).ReturnsAsync(SystemGroup());
-        swaggerProviderMock.Setup(p => p.GetSwagger("v1", null, null))
-            .Returns(DocumentWithPaths(
-                ("/api/items", HttpMethod.Get, "getItems"),
-                ("/api/items", HttpMethod.Post, "createItem")));
-
-        endpointRepoMock.Setup(r => r.GetEndpointGroupsAsync(1))
-            .ReturnsAsync([new EndpointGroup { Id = 5, Name = "items", ApplicationId = 1, ParentGroupId = null }]);
-
-        await service.RunAsync();
-
-        endpointRepoMock.Verify(r => r.AddEndpointGroupAsync(It.IsAny<EndpointGroup>()), Times.Never);
-        endpointRepoMock.Verify(r => r.AddEndpointAsync(It.Is<Endpoint>(e => e.EndpointGroupId == 5)), Times.Exactly(2));
+        swaggerImportServiceMock.Verify(s => s.ApplyDiffAsync(It.IsAny<ImportDiff>()), Times.Never);
     }
 
     /// <summary>ExecuteAsync_WithNegotiateSecurityScheme_SetsNegotiateAuthenticationType</summary>
     [Fact]
     public async Task ExecuteAsync_WithNegotiateSecurityScheme_SetsNegotiateAuthenticationType()
     {
-        var (service, appRepoMock, swaggerProviderMock, endpointRepoMock, _, _) = CreateService();
+        var (service, appRepoMock, swaggerProviderMock, _, swaggerImportServiceMock, _) = CreateService();
         appRepoMock.Setup(r => r.GetSystemGroupAsync()).ReturnsAsync(SystemGroup());
         swaggerProviderMock.Setup(p => p.GetSwagger("v1", null, null))
             .Returns(DocumentWithNegotiateAuth(("/api/items", HttpMethod.Get, "getItems")));
 
-        var addedEndpoints = new List<Endpoint>();
-        endpointRepoMock.Setup(r => r.AddEndpointAsync(It.IsAny<Endpoint>()))
-            .Callback<Endpoint>(e => addedEndpoints.Add(e))
-            .ReturnsAsync((Endpoint e) => e);
+        ImportDiff? capturedDiff = null;
+        swaggerImportServiceMock.Setup(s => s.ApplyDiffAsync(It.IsAny<ImportDiff>()))
+            .Callback<ImportDiff>(d => capturedDiff = d)
+            .Returns(Task.CompletedTask);
 
         await service.RunAsync();
 
-        Assert.Single(addedEndpoints);
-        Assert.Equal(AuthenticationType.Negotiate, addedEndpoints[0].AuthenticationType);
+        Assert.NotNull(capturedDiff);
+        Assert.Single(capturedDiff.NewEndpoints);
+        Assert.Equal(AuthenticationType.Negotiate, capturedDiff.NewEndpoints[0].AuthenticationType);
     }
 
     /// <summary>ExecuteAsync_WithoutNegotiateSecurityScheme_SetsNoneAuthenticationType</summary>
     [Fact]
     public async Task ExecuteAsync_WithoutNegotiateSecurityScheme_SetsNoneAuthenticationType()
     {
-        var (service, appRepoMock, swaggerProviderMock, endpointRepoMock, _, _) = CreateService();
+        var (service, appRepoMock, swaggerProviderMock, _, swaggerImportServiceMock, _) = CreateService();
         appRepoMock.Setup(r => r.GetSystemGroupAsync()).ReturnsAsync(SystemGroup());
         swaggerProviderMock.Setup(p => p.GetSwagger("v1", null, null))
             .Returns(DocumentWithPaths(("/api/items", HttpMethod.Get, "getItems")));
 
-        var addedEndpoints = new List<Endpoint>();
-        endpointRepoMock.Setup(r => r.AddEndpointAsync(It.IsAny<Endpoint>()))
-            .Callback<Endpoint>(e => addedEndpoints.Add(e))
-            .ReturnsAsync((Endpoint e) => e);
+        ImportDiff? capturedDiff = null;
+        swaggerImportServiceMock.Setup(s => s.ApplyDiffAsync(It.IsAny<ImportDiff>()))
+            .Callback<ImportDiff>(d => capturedDiff = d)
+            .Returns(Task.CompletedTask);
 
         await service.RunAsync();
 
-        Assert.Single(addedEndpoints);
-        Assert.Equal(AuthenticationType.None, addedEndpoints[0].AuthenticationType);
+        Assert.NotNull(capturedDiff);
+        Assert.Single(capturedDiff.NewEndpoints);
+        Assert.Equal(AuthenticationType.None, capturedDiff.NewEndpoints[0].AuthenticationType);
     }
 
     private static OpenApiDocument DocumentWithBearerToken(string path, HttpMethod method, string operationId, string bearerToken)
@@ -359,22 +285,96 @@ public class SystemEndpointSyncServiceTests
         return new OpenApiDocument { Paths = new OpenApiPaths { [path] = pathItem } };
     }
 
-    /// <summary>ExecuteAsync_WithBearerTokenExtension_SavesBearerToken</summary>
+    /// <summary>ExecuteAsync_WithBearerTokenExtension_IncludesBearerTokenInDiff</summary>
     [Fact]
-    public async Task ExecuteAsync_WithBearerTokenExtension_SavesBearerToken()
+    public async Task ExecuteAsync_WithBearerTokenExtension_IncludesBearerTokenInDiff()
     {
-        var (service, appRepoMock, swaggerProviderMock, endpointRepoMock, _, credentialServiceMock) = CreateService();
+        var (service, appRepoMock, swaggerProviderMock, _, swaggerImportServiceMock, _) = CreateService();
         appRepoMock.Setup(r => r.GetSystemGroupAsync()).ReturnsAsync(SystemGroup());
         swaggerProviderMock.Setup(p => p.GetSwagger("v1", null, null))
             .Returns(DocumentWithBearerToken("/api/items", HttpMethod.Get, "getItems", "my-secret-token"));
 
+        ImportDiff? capturedDiff = null;
+        swaggerImportServiceMock.Setup(s => s.ApplyDiffAsync(It.IsAny<ImportDiff>()))
+            .Callback<ImportDiff>(d => capturedDiff = d)
+            .Returns(Task.CompletedTask);
+
         await service.RunAsync();
 
-        credentialServiceMock.Verify(
-            c => c.SavePassword(
-                CredentialTargetHelper.Build(1, AuthenticationType.BearerToken),
-                string.Empty,
-                "my-secret-token"),
-            Times.Once);
+        Assert.NotNull(capturedDiff);
+        Assert.True(capturedDiff.BearerTokens.ContainsKey("GET:/api/items"));
+        Assert.Equal("my-secret-token", capturedDiff.BearerTokens["GET:/api/items"]);
+    }
+
+    private static OpenApiDocument DocumentWithPreRequestScript(string path, HttpMethod method, string operationId, string script)
+    {
+        var operation = new OpenApiOperation
+        {
+            OperationId = operationId,
+            Extensions = new Dictionary<string, IOpenApiExtension>
+            {
+                ["x-sz-pre-request-script"] = new JsonNodeExtension(JsonValue.Create(script))
+            }
+        };
+        var pathItem = new OpenApiPathItem();
+        pathItem.AddOperation(method, operation);
+        return new OpenApiDocument { Paths = new OpenApiPaths { [path] = pathItem } };
+    }
+
+    private static OpenApiDocument DocumentWithPostRequestScript(string path, HttpMethod method, string operationId, string script)
+    {
+        var operation = new OpenApiOperation
+        {
+            OperationId = operationId,
+            Extensions = new Dictionary<string, IOpenApiExtension>
+            {
+                ["x-sz-post-request-script"] = new JsonNodeExtension(JsonValue.Create(script))
+            }
+        };
+        var pathItem = new OpenApiPathItem();
+        pathItem.AddOperation(method, operation);
+        return new OpenApiDocument { Paths = new OpenApiPaths { [path] = pathItem } };
+    }
+
+    /// <summary>ExecuteAsync_WithPreRequestScript_SetsPreRequestScriptOnEndpoint</summary>
+    [Fact]
+    public async Task ExecuteAsync_WithPreRequestScript_SetsPreRequestScriptOnEndpoint()
+    {
+        var (service, appRepoMock, swaggerProviderMock, _, swaggerImportServiceMock, _) = CreateService();
+        appRepoMock.Setup(r => r.GetSystemGroupAsync()).ReturnsAsync(SystemGroup());
+        swaggerProviderMock.Setup(p => p.GetSwagger("v1", null, null))
+            .Returns(DocumentWithPreRequestScript("/api/items", HttpMethod.Get, "getItems", "console.log('pre');"));
+
+        ImportDiff? capturedDiff = null;
+        swaggerImportServiceMock.Setup(s => s.ApplyDiffAsync(It.IsAny<ImportDiff>()))
+            .Callback<ImportDiff>(d => capturedDiff = d)
+            .Returns(Task.CompletedTask);
+
+        await service.RunAsync();
+
+        Assert.NotNull(capturedDiff);
+        Assert.Single(capturedDiff.NewEndpoints);
+        Assert.Equal("console.log('pre');", capturedDiff.NewEndpoints[0].PreRequestScript);
+    }
+
+    /// <summary>ExecuteAsync_WithPostRequestScript_SetsPostRequestScriptOnEndpoint</summary>
+    [Fact]
+    public async Task ExecuteAsync_WithPostRequestScript_SetsPostRequestScriptOnEndpoint()
+    {
+        var (service, appRepoMock, swaggerProviderMock, _, swaggerImportServiceMock, _) = CreateService();
+        appRepoMock.Setup(r => r.GetSystemGroupAsync()).ReturnsAsync(SystemGroup());
+        swaggerProviderMock.Setup(p => p.GetSwagger("v1", null, null))
+            .Returns(DocumentWithPostRequestScript("/api/items", HttpMethod.Post, "createItem", "console.log('post');"));
+
+        ImportDiff? capturedDiff = null;
+        swaggerImportServiceMock.Setup(s => s.ApplyDiffAsync(It.IsAny<ImportDiff>()))
+            .Callback<ImportDiff>(d => capturedDiff = d)
+            .Returns(Task.CompletedTask);
+
+        await service.RunAsync();
+
+        Assert.NotNull(capturedDiff);
+        Assert.Single(capturedDiff.NewEndpoints);
+        Assert.Equal("console.log('post');", capturedDiff.NewEndpoints[0].PostRequestScript);
     }
 }

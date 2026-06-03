@@ -5,28 +5,33 @@ using Schnittstellenzentrale.Components.Shared;
 using Schnittstellenzentrale.Core.Enums;
 using Schnittstellenzentrale.Core.Interfaces;
 using Schnittstellenzentrale.Core.Models;
+using Endpoint = Schnittstellenzentrale.Core.Models.Endpoint;
 
 namespace Schnittstellenzentrale.Tests.Components;
 
 /// <summary>bUnit-Tests für die <see cref="EndpointPage"/>-Komponente.</summary>
 public class EndpointPageTests : BunitContext
 {
-    private readonly Mock<IEndpointRepository> _repoMock = new();
+    private readonly Mock<IApplicationApiClient> _apiClientMock = new();
     private readonly Mock<IEndpointExecutionService> _executionMock = new();
     private readonly Mock<IStorageModeService> _storageMock = new();
     private readonly Mock<ISignalRNotificationService> _signalRMock = new();
     private readonly Mock<ICredentialService> _credentialMock = new();
+    private readonly Mock<IActiveEnvironmentService> _activeEnvironmentMock = new();
 
     /// <summary>Initialisiert die Test-Services und JS-Interop-Mocks.</summary>
     public EndpointPageTests()
     {
         _storageMock.Setup(s => s.CurrentMode).Returns(StorageMode.User);
+        _activeEnvironmentMock.Setup(s => s.ActiveVariables)
+            .Returns(new Dictionary<string, string>());
 
-        Services.AddSingleton(_repoMock.Object);
+        Services.AddSingleton(_apiClientMock.Object);
         Services.AddSingleton(_executionMock.Object);
         Services.AddSingleton(_storageMock.Object);
         Services.AddSingleton(_signalRMock.Object);
         Services.AddSingleton(_credentialMock.Object);
+        Services.AddSingleton(_activeEnvironmentMock.Object);
 
         var jsModule = JSInterop.SetupModule("./endpoint-page.js");
         jsModule.SetupVoid("registerSaveShortcut", _ => true);
@@ -68,7 +73,7 @@ public class EndpointPageTests : BunitContext
     {
         var endpoint = CreateEndpoint();
         const string responseBody = """{"status":"ok"}""";
-        _repoMock.Setup(r => r.GetEndpointByIdAsync(endpoint.Id)).ReturnsAsync(endpoint);
+        _apiClientMock.Setup(r => r.GetEndpointByIdAsync(endpoint.Id)).ReturnsAsync(endpoint);
         _executionMock
             .Setup(e => e.ExecuteAsync(It.IsAny<Core.Models.Endpoint>()))
             .ReturnsAsync(new EndpointExecutionResult
@@ -91,7 +96,7 @@ public class EndpointPageTests : BunitContext
     public void AnfrageErgebnis_StatusCodeWirdAngezeigt()
     {
         var endpoint = CreateEndpoint();
-        _repoMock.Setup(r => r.GetEndpointByIdAsync(endpoint.Id)).ReturnsAsync(endpoint);
+        _apiClientMock.Setup(r => r.GetEndpointByIdAsync(endpoint.Id)).ReturnsAsync(endpoint);
         _executionMock
             .Setup(e => e.ExecuteAsync(It.IsAny<Core.Models.Endpoint>()))
             .ReturnsAsync(new EndpointExecutionResult

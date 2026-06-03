@@ -1,0 +1,58 @@
+.import-dialog__empty {
+    font-size: 0.875rem;
+    color: var(--muted-foreground);
+    margin: 0;
+}
+
+.import-section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.import-section__title {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin: 0 0 0.375rem;
+}
+
+.import-section__title--new {
+    color: oklch(0.55 0.15 145);
+}
+
+.dark .import-section__title--new {
+    color: oklch(0.72 0.17 145);
+}
+
+.import-section__title--changed {
+    color: oklch(0.55 0.15 75);
+}
+
+.dark .import-section__title--changed {
+    color: oklch(0.72 0.17 75);
+}
+
+.import-section__title--removed {
+    color: var(--destructive);
+}
+
+.import-section__item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.2rem 0;
+    font-size: 0.85rem;
+    color: var(--foreground);
+    cursor: pointer;
+}
+
+.import-section__item input[type="checkbox"] {
+    flex-shrink: 0;
+    accent-color: var(--primary);
+    width: 0.9rem;
+    height: 0.9rem;
+    cursor: pointer;
+}
+

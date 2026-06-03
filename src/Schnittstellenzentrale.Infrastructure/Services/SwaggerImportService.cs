@@ -43,14 +43,14 @@ public class SwaggerImportService : ISwaggerImportService
         }
 
         await using var stream = fetchedStream;
-        var (document, parseError) = await ParseSwaggerDocumentAsync(stream);
+        var (document, parseError) = await ParseSwaggerDocumentAsync(stream, application.InterfaceUrl);
         if (document == null)
         {
             _logger.LogWarning("Swagger-Import Parsing-Fehler für Anwendung {ApplicationId}", application.Id);
             return parseError!;
         }
 
-        var (importedEndpoints, bearerTokens) = MapToEndpoints(document, application.Id);
+        var (importedEndpoints, bearerTokens) = SwaggerOperationHelper.MapDocumentToEndpoints(document, application.Id);
 
         var existingEndpoints = await _endpointRepository.GetEndpointsAsync(application.Id);
         return ImportDiffCalculator.Calculate(existingEndpoints, importedEndpoints).WithBearerTokens(bearerTokens);
@@ -62,10 +62,10 @@ public class SwaggerImportService : ISwaggerImportService
         return await client.GetStreamAsync(url);
     }
 
-    private static async Task<(Microsoft.OpenApi.OpenApiDocument? document, ImportDiff? error)> ParseSwaggerDocumentAsync(Stream stream)
+    private static async Task<(Microsoft.OpenApi.OpenApiDocument? document, ImportDiff? error)> ParseSwaggerDocumentAsync(Stream stream, string url)
     {
         var reader = new OpenApiJsonReader();
-        var result = await reader.ReadAsync(stream, null, new OpenApiReaderSettings(), default);
+        var result = await reader.ReadAsync(stream, new Uri(url), new OpenApiReaderSettings(), default);
         var diagnostics = result.Diagnostic;
 
         if (diagnostics?.Errors.Any() == true)
@@ -77,46 +77,20 @@ public class SwaggerImportService : ISwaggerImportService
         return (result.Document, null);
     }
 
-    private static (List<Core.Models.Endpoint> endpoints, Dictionary<string, string> bearerTokens) MapToEndpoints(
-        Microsoft.OpenApi.OpenApiDocument document, int applicationId)
-    {
-        var endpoints = new List<Core.Models.Endpoint>();
-        var bearerTokens = new Dictionary<string, string>();
-
-        foreach (var path in document.Paths)
-        {
-            foreach (var operation in path.Value.Operations ?? [])
-            {
-                var method = SwaggerOperationHelper.MapHttpMethod(operation.Key.ToString());
-                var endpoint = new Core.Models.Endpoint
-                {
-                    Name = operation.Value.OperationId ?? $"{operation.Key} {path.Key}",
-                    Method = method,
-                    RelativePath = path.Key,
-                    ApplicationId = applicationId,
-                    PreRequestScript = SwaggerOperationHelper.ReadExtensionString(operation.Value.Extensions, "x-sz-pre-request-script"),
-                    PostRequestScript = SwaggerOperationHelper.ReadExtensionString(operation.Value.Extensions, "x-sz-post-request-script")
-                };
-
-                var bearerToken = SwaggerOperationHelper.ReadExtensionString(operation.Value.Extensions, "x-sz-bearer-token");
-                if (!string.IsNullOrEmpty(bearerToken))
-                {
-                    endpoint.AuthenticationType = AuthenticationType.BearerToken;
-                    bearerTokens[EndpointKeyHelper.BuildKey(endpoint)] = bearerToken;
-                }
-
-                endpoints.Add(endpoint);
-            }
-        }
-
-        return (endpoints, bearerTokens);
-    }
-
     /// <inheritdoc/>
     public async Task ApplyDiffAsync(ImportDiff diff)
     {
+        Dictionary<(string Name, int? ParentGroupId), EndpointGroup>? groupLookup = null;
+
         foreach (var endpoint in diff.NewEndpoints)
         {
+            if (groupLookup == null)
+            {
+                var existingGroups = await _endpointRepository.GetEndpointGroupsAsync(endpoint.ApplicationId);
+                groupLookup = existingGroups.ToDictionary(g => (g.Name, g.ParentGroupId));
+            }
+            endpoint.EndpointGroupId = await EndpointGroupHelper.ResolveGroupIdAsync(
+                endpoint.RelativePath, endpoint.ApplicationId, _endpointRepository, groupLookup);
             await _endpointRepository.AddEndpointAsync(endpoint);
             SaveBearerTokenIfPresent(endpoint, diff);
         }

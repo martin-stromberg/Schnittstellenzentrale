@@ -15,11 +15,12 @@ public class SwaggerImportTests : PlaywrightTestBase
     public async Task ImportSwagger_ImportsEndpointsIntoTree()
     {
         await Page.GotoAsync(BaseUrl);
+        await Page.WaitForLoadStateAsync(LoadState.NetworkIdle);
 
         var groupChevron = Page.Locator(".collapsible-section .sz-tree-chevron-btn").First;
         await groupChevron.ClickAsync();
 
-        await Page.GetByRole(Microsoft.Playwright.AriaRole.Button, new() { Name = "Schnittstellenzentrale" }).First.ClickAsync();
+        await Page.Locator(".sz-tree-item-btn", new() { HasText = "Schnittstellenzentrale" }).First.ClickAsync();
 
         await Page.GetByRole(Microsoft.Playwright.AriaRole.Button, new() { Name = "Swagger-Import" }).ClickAsync();
 

@@ -10,6 +10,7 @@ using Schnittstellenzentrale.Core.Enums;
 using Schnittstellenzentrale.Core.Interfaces;
 using Schnittstellenzentrale.Core.Models;
 using Schnittstellenzentrale.Services;
+using Endpoint = Schnittstellenzentrale.Core.Models.Endpoint;
 using HttpMethod = System.Net.Http.HttpMethod;
 
 namespace Schnittstellenzentrale.Tests.Services;
@@ -370,6 +371,405 @@ public class ApplicationApiClientTests
             Times.Once(),
             ItExpr.Is<HttpRequestMessage>(r =>
                 r.RequestUri!.AbsolutePath == "/api/applications/42" &&
+                r.Method == HttpMethod.Delete),
+            ItExpr.IsAny<CancellationToken>());
+    }
+
+    /// <summary>GetEndpointGroupsAsync_SendsCorrectRequestAndReturnsMappedList</summary>
+    [Fact]
+    public async Task GetEndpointGroupsAsync_SendsCorrectRequestAndReturnsMappedList()
+    {
+        var authToken = Guid.NewGuid().ToString();
+        var newToken = Guid.NewGuid().ToString();
+        var groupList = new List<EndpointGroupResponse>
+        {
+            new() { Id = 1, Name = "Gruppe1", ApplicationId = 10 },
+            new() { Id = 2, Name = "Gruppe2", ApplicationId = 10 }
+        };
+        var responseJson = JsonSerializer.Serialize(groupList);
+
+        var (apiClient, handlerMock, _) = CreateClient(authToken, newToken, HttpStatusCode.OK, responseJson);
+
+        var result = await apiClient.GetEndpointGroupsAsync(10);
+
+        Assert.NotNull(result);
+        Assert.Equal(2, result.Count);
+        Assert.Equal("Gruppe1", result[0].Name);
+        Assert.Equal(10, result[0].ApplicationId);
+
+        handlerMock.Protected().Verify(
+            "SendAsync",
+            Times.Once(),
+            ItExpr.Is<HttpRequestMessage>(r =>
+                r.RequestUri!.AbsolutePath == "/api/endpoint-groups" &&
+                r.RequestUri.Query.Contains("applicationId=10") &&
+                r.Method == HttpMethod.Get &&
+                r.Headers.Contains("X-Storage-Mode")),
+            ItExpr.IsAny<CancellationToken>());
+    }
+
+    /// <summary>GetEndpointGroupByIdAsync_ReturnsNullOn404</summary>
+    [Fact]
+    public async Task GetEndpointGroupByIdAsync_ReturnsNullOn404()
+    {
+        var authToken = Guid.NewGuid().ToString();
+        var newToken = Guid.NewGuid().ToString();
+
+        var (apiClient, _, _) = CreateClient(authToken, newToken, HttpStatusCode.NotFound, "null");
+
+        var result = await apiClient.GetEndpointGroupByIdAsync(999);
+
+        Assert.Null(result);
+    }
+
+    /// <summary>AddEndpointGroupAsync_IssuesTokenAndSendsCorrectRequest_ReturnsResponse</summary>
+    [Fact]
+    public async Task AddEndpointGroupAsync_IssuesTokenAndSendsCorrectRequest_ReturnsResponse()
+    {
+        var authToken = Guid.NewGuid().ToString();
+        var newToken = Guid.NewGuid().ToString();
+        var groupResponse = new EndpointGroupResponse { Id = 5, Name = "TestGruppe", ApplicationId = 10 };
+        var responseJson = JsonSerializer.Serialize(groupResponse);
+
+        var (apiClient, handlerMock, tokenStoreMock) = CreateClient(authToken, newToken, HttpStatusCode.Created, responseJson);
+
+        var result = await apiClient.AddEndpointGroupAsync(new EndpointGroup { Name = "TestGruppe", ApplicationId = 10 });
+
+        Assert.NotNull(result);
+        Assert.Equal(5, result.Id);
+        Assert.Equal("TestGruppe", result.Name);
+        Assert.Equal(10, result.ApplicationId);
+
+        tokenStoreMock.Verify(s => s.CreateTokenAsync("testuser"), Times.Once());
+
+        handlerMock.Protected().Verify(
+            "SendAsync",
+            Times.Once(),
+            ItExpr.Is<HttpRequestMessage>(r =>
+                r.RequestUri!.AbsolutePath == "/api/endpoint-groups" &&
+                r.Method == HttpMethod.Post &&
+                r.Headers.Authorization != null &&
+                r.Headers.Authorization.Parameter == authToken &&
+                r.Headers.Contains("X-Storage-Mode")),
+            ItExpr.IsAny<CancellationToken>());
+    }
+
+    /// <summary>UpdateEndpointGroupAsync_SendsCorrectPutRequestAndReturnsMappedGroup</summary>
+    [Fact]
+    public async Task UpdateEndpointGroupAsync_SendsCorrectPutRequestAndReturnsMappedGroup()
+    {
+        var authToken = Guid.NewGuid().ToString();
+        var newToken = Guid.NewGuid().ToString();
+        var groupResponse = new EndpointGroupResponse { Id = 7, Name = "UmbenenntGruppe", ApplicationId = 10 };
+        var responseJson = JsonSerializer.Serialize(groupResponse);
+
+        var (apiClient, handlerMock, _) = CreateClient(authToken, newToken, HttpStatusCode.OK, responseJson);
+
+        var group = new EndpointGroup { Id = 7, Name = "UmbenenntGruppe", ApplicationId = 10 };
+        var result = await apiClient.UpdateEndpointGroupAsync(group);
+
+        Assert.NotNull(result);
+        Assert.Equal(7, result.Id);
+        Assert.Equal("UmbenenntGruppe", result.Name);
+
+        handlerMock.Protected().Verify(
+            "SendAsync",
+            Times.Once(),
+            ItExpr.Is<HttpRequestMessage>(r =>
+                r.RequestUri!.AbsolutePath == "/api/endpoint-groups/7" &&
+                r.Method == HttpMethod.Put &&
+                r.Headers.Contains("X-Storage-Mode")),
+            ItExpr.IsAny<CancellationToken>());
+    }
+
+    /// <summary>DeleteEndpointGroupAsync_SendsCorrectDeleteRequest</summary>
+    [Fact]
+    public async Task DeleteEndpointGroupAsync_SendsCorrectDeleteRequest()
+    {
+        var authToken = Guid.NewGuid().ToString();
+        var newToken = Guid.NewGuid().ToString();
+
+        var (apiClient, handlerMock, _) = CreateClient(authToken, newToken, HttpStatusCode.NoContent, "");
+
+        await apiClient.DeleteEndpointGroupAsync(3);
+
+        handlerMock.Protected().Verify(
+            "SendAsync",
+            Times.Once(),
+            ItExpr.Is<HttpRequestMessage>(r =>
+                r.RequestUri!.AbsolutePath == "/api/endpoint-groups/3" &&
+                r.Method == HttpMethod.Delete),
+            ItExpr.IsAny<CancellationToken>());
+    }
+
+    /// <summary>GetEndpointsAsync_SendsCorrectRequestAndReturnsMappedList</summary>
+    [Fact]
+    public async Task GetEndpointsAsync_SendsCorrectRequestAndReturnsMappedList()
+    {
+        var authToken = Guid.NewGuid().ToString();
+        var newToken = Guid.NewGuid().ToString();
+        var endpointList = new List<EndpointResponse>
+        {
+            new()
+            {
+                Id = 1,
+                Name = "Endpoint1",
+                ApplicationId = 10,
+                RelativePath = "/api/items",
+                Method = Core.Enums.HttpMethod.GET,
+                Headers = [new EndpointKeyValueResponse { Id = 1, Key = "Accept", Value = "application/json", EndpointId = 1 }],
+                QueryParameters = [new EndpointKeyValueResponse { Id = 1, Key = "page", Value = "1", EndpointId = 1 }]
+            }
+        };
+        var responseJson = JsonSerializer.Serialize(endpointList);
+
+        var (apiClient, handlerMock, _) = CreateClient(authToken, newToken, HttpStatusCode.OK, responseJson);
+
+        var result = await apiClient.GetEndpointsAsync(10);
+
+        Assert.NotNull(result);
+        Assert.Single(result);
+        Assert.Equal("Endpoint1", result[0].Name);
+        Assert.Single(result[0].Headers);
+        Assert.Equal("Accept", result[0].Headers.First().Key);
+        Assert.Single(result[0].QueryParameters);
+        Assert.Equal("page", result[0].QueryParameters.First().Key);
+
+        handlerMock.Protected().Verify(
+            "SendAsync",
+            Times.Once(),
+            ItExpr.Is<HttpRequestMessage>(r =>
+                r.RequestUri!.AbsolutePath == "/api/endpoints" &&
+                r.RequestUri.Query.Contains("applicationId=10") &&
+                r.Method == HttpMethod.Get &&
+                r.Headers.Contains("X-Storage-Mode")),
+            ItExpr.IsAny<CancellationToken>());
+    }
+
+    /// <summary>GetEndpointByIdAsync_ReturnsNullOn404</summary>
+    [Fact]
+    public async Task GetEndpointByIdAsync_ReturnsNullOn404()
+    {
+        var authToken = Guid.NewGuid().ToString();
+        var newToken = Guid.NewGuid().ToString();
+
+        var (apiClient, _, _) = CreateClient(authToken, newToken, HttpStatusCode.NotFound, "null");
+
+        var result = await apiClient.GetEndpointByIdAsync(999);
+
+        Assert.Null(result);
+    }
+
+    /// <summary>AddEndpointAsync_IssuesTokenAndSendsCorrectRequest_ReturnsResponse</summary>
+    [Fact]
+    public async Task AddEndpointAsync_IssuesTokenAndSendsCorrectRequest_ReturnsResponse()
+    {
+        var authToken = Guid.NewGuid().ToString();
+        var newToken = Guid.NewGuid().ToString();
+        var rowVersion = new byte[] { 1, 2, 3 };
+        var endpointResponse = new EndpointResponse
+        {
+            Id = 20,
+            Name = "TestEndpoint",
+            ApplicationId = 10,
+            RelativePath = "/api/items",
+            Method = Core.Enums.HttpMethod.POST,
+            AuthenticationType = AuthenticationType.Negotiate,
+            RowVersion = rowVersion
+        };
+        var responseJson = JsonSerializer.Serialize(endpointResponse);
+
+        var (apiClient, handlerMock, tokenStoreMock) = CreateClient(authToken, newToken, HttpStatusCode.Created, responseJson);
+
+        var result = await apiClient.AddEndpointAsync(new Endpoint
+        {
+            Name = "TestEndpoint",
+            ApplicationId = 10,
+            RelativePath = "/api/items",
+            Method = Core.Enums.HttpMethod.POST,
+            AuthenticationType = AuthenticationType.Negotiate
+        });
+
+        Assert.NotNull(result);
+        Assert.Equal(20, result.Id);
+        Assert.Equal("TestEndpoint", result.Name);
+        Assert.Equal(AuthenticationType.Negotiate, result.AuthenticationType);
+        Assert.Equal(rowVersion, result.RowVersion);
+
+        tokenStoreMock.Verify(s => s.CreateTokenAsync("testuser"), Times.Once());
+
+        handlerMock.Protected().Verify(
+            "SendAsync",
+            Times.Once(),
+            ItExpr.Is<HttpRequestMessage>(r =>
+                r.RequestUri!.AbsolutePath == "/api/endpoints" &&
+                r.Method == HttpMethod.Post &&
+                r.Headers.Authorization != null &&
+                r.Headers.Authorization.Parameter == authToken &&
+                r.Headers.Contains("X-Storage-Mode")),
+            ItExpr.IsAny<CancellationToken>());
+    }
+
+    /// <summary>UpdateEndpointAsync_SendsCorrectPutRequestAndReturnsMappedEndpoint</summary>
+    [Fact]
+    public async Task UpdateEndpointAsync_SendsCorrectPutRequestAndReturnsMappedEndpoint()
+    {
+        var authToken = Guid.NewGuid().ToString();
+        var newToken = Guid.NewGuid().ToString();
+        var rowVersion = new byte[] { 4, 5, 6 };
+        var endpointResponse = new EndpointResponse
+        {
+            Id = 15,
+            Name = "UpdatedEndpoint",
+            ApplicationId = 10,
+            RelativePath = "/api/items/15",
+            Method = Core.Enums.HttpMethod.PUT,
+            RowVersion = rowVersion
+        };
+        var responseJson = JsonSerializer.Serialize(endpointResponse);
+
+        var (apiClient, handlerMock, _) = CreateClient(authToken, newToken, HttpStatusCode.OK, responseJson);
+
+        var endpoint = new Endpoint
+        {
+            Id = 15,
+            Name = "UpdatedEndpoint",
+            ApplicationId = 10,
+            RelativePath = "/api/items/15",
+            Method = Core.Enums.HttpMethod.PUT,
+            RowVersion = rowVersion
+        };
+        var result = await apiClient.UpdateEndpointAsync(endpoint);
+
+        Assert.NotNull(result);
+        Assert.Equal(15, result.Id);
+        Assert.Equal("UpdatedEndpoint", result.Name);
+        Assert.Equal(rowVersion, result.RowVersion);
+
+        handlerMock.Protected().Verify(
+            "SendAsync",
+            Times.Once(),
+            ItExpr.Is<HttpRequestMessage>(r =>
+                r.RequestUri!.AbsolutePath == "/api/endpoints/15" &&
+                r.Method == HttpMethod.Put &&
+                r.Headers.Contains("X-Storage-Mode")),
+            ItExpr.IsAny<CancellationToken>());
+    }
+
+    /// <summary>DeleteEndpointAsync_SendsCorrectDeleteRequest</summary>
+    [Fact]
+    public async Task DeleteEndpointAsync_SendsCorrectDeleteRequest()
+    {
+        var authToken = Guid.NewGuid().ToString();
+        var newToken = Guid.NewGuid().ToString();
+
+        var (apiClient, handlerMock, _) = CreateClient(authToken, newToken, HttpStatusCode.NoContent, "");
+
+        await apiClient.DeleteEndpointAsync(99);
+
+        handlerMock.Protected().Verify(
+            "SendAsync",
+            Times.Once(),
+            ItExpr.Is<HttpRequestMessage>(r =>
+                r.RequestUri!.AbsolutePath == "/api/endpoints/99" &&
+                r.Method == HttpMethod.Delete),
+            ItExpr.IsAny<CancellationToken>());
+    }
+
+    /// <summary>AddHeaderAsync_SendsCorrectPostRequestAndReturnsMappedHeader</summary>
+    [Fact]
+    public async Task AddHeaderAsync_SendsCorrectPostRequestAndReturnsMappedHeader()
+    {
+        var authToken = Guid.NewGuid().ToString();
+        var newToken = Guid.NewGuid().ToString();
+        var headerResponse = new EndpointKeyValueResponse { Id = 11, Key = "Accept", Value = "application/json", EndpointId = 5 };
+        var responseJson = JsonSerializer.Serialize(headerResponse);
+
+        var (apiClient, handlerMock, _) = CreateClient(authToken, newToken, HttpStatusCode.Created, responseJson);
+
+        var result = await apiClient.AddHeaderAsync(new EndpointHeader { Key = "Accept", Value = "application/json", EndpointId = 5 });
+
+        Assert.NotNull(result);
+        Assert.Equal(11, result.Id);
+        Assert.Equal("Accept", result.Key);
+        Assert.Equal("application/json", result.Value);
+        Assert.Equal(5, result.EndpointId);
+
+        handlerMock.Protected().Verify(
+            "SendAsync",
+            Times.Once(),
+            ItExpr.Is<HttpRequestMessage>(r =>
+                r.RequestUri!.AbsolutePath == "/api/endpoints/headers" &&
+                r.Method == HttpMethod.Post &&
+                r.Headers.Contains("X-Storage-Mode")),
+            ItExpr.IsAny<CancellationToken>());
+    }
+
+    /// <summary>DeleteHeaderAsync_SendsCorrectDeleteRequest</summary>
+    [Fact]
+    public async Task DeleteHeaderAsync_SendsCorrectDeleteRequest()
+    {
+        var authToken = Guid.NewGuid().ToString();
+        var newToken = Guid.NewGuid().ToString();
+
+        var (apiClient, handlerMock, _) = CreateClient(authToken, newToken, HttpStatusCode.NoContent, "");
+
+        await apiClient.DeleteHeaderAsync(77);
+
+        handlerMock.Protected().Verify(
+            "SendAsync",
+            Times.Once(),
+            ItExpr.Is<HttpRequestMessage>(r =>
+                r.RequestUri!.AbsolutePath == "/api/endpoints/headers/77" &&
+                r.Method == HttpMethod.Delete),
+            ItExpr.IsAny<CancellationToken>());
+    }
+
+    /// <summary>AddQueryParameterAsync_SendsCorrectPostRequestAndReturnsMappedParameter</summary>
+    [Fact]
+    public async Task AddQueryParameterAsync_SendsCorrectPostRequestAndReturnsMappedParameter()
+    {
+        var authToken = Guid.NewGuid().ToString();
+        var newToken = Guid.NewGuid().ToString();
+        var paramResponse = new EndpointKeyValueResponse { Id = 22, Key = "page", Value = "1", EndpointId = 5 };
+        var responseJson = JsonSerializer.Serialize(paramResponse);
+
+        var (apiClient, handlerMock, _) = CreateClient(authToken, newToken, HttpStatusCode.Created, responseJson);
+
+        var result = await apiClient.AddQueryParameterAsync(new EndpointQueryParameter { Key = "page", Value = "1", EndpointId = 5 });
+
+        Assert.NotNull(result);
+        Assert.Equal(22, result.Id);
+        Assert.Equal("page", result.Key);
+        Assert.Equal("1", result.Value);
+        Assert.Equal(5, result.EndpointId);
+
+        handlerMock.Protected().Verify(
+            "SendAsync",
+            Times.Once(),
+            ItExpr.Is<HttpRequestMessage>(r =>
+                r.RequestUri!.AbsolutePath == "/api/endpoints/query-parameters" &&
+                r.Method == HttpMethod.Post &&
+                r.Headers.Contains("X-Storage-Mode")),
+            ItExpr.IsAny<CancellationToken>());
+    }
+
+    /// <summary>DeleteQueryParameterAsync_SendsCorrectDeleteRequest</summary>
+    [Fact]
+    public async Task DeleteQueryParameterAsync_SendsCorrectDeleteRequest()
+    {
+        var authToken = Guid.NewGuid().ToString();
+        var newToken = Guid.NewGuid().ToString();
+
+        var (apiClient, handlerMock, _) = CreateClient(authToken, newToken, HttpStatusCode.NoContent, "");
+
+        await apiClient.DeleteQueryParameterAsync(88);
+
+        handlerMock.Protected().Verify(
+            "SendAsync",
+            Times.Once(),
+            ItExpr.Is<HttpRequestMessage>(r =>
+                r.RequestUri!.AbsolutePath == "/api/endpoints/query-parameters/88" &&
                 r.Method == HttpMethod.Delete),
             ItExpr.IsAny<CancellationToken>());
     }

@@ -12,7 +12,8 @@ public class IconUploadTests : PlaywrightTestBase
 
     private async Task NavigateToCollectionContentAsync()
     {
-        await Page.GotoAsync(BaseUrl);
+        await Page.GotoAsync(BaseUrl); 
+        await Page.WaitForLoadStateAsync(LoadState.NetworkIdle);
         await Page.Locator(".sz-topbar-tab", new() { HasText = "Workspaces" }).ClickAsync();
         await Page.Locator(".sz-tree-node-text").First.ClickAsync();
     }

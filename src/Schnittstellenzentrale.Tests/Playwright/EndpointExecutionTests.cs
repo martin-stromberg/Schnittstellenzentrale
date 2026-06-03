@@ -24,6 +24,7 @@ public class EndpointExecutionTests : PlaywrightTestBase
     public async Task ExecuteEndpoint_ReturnsSuccessResponse()
     {
         await Page.GotoAsync(BaseUrl);
+        await Page.WaitForLoadStateAsync(LoadState.NetworkIdle);
         await ExpandSystemGroupAsync();
 
         var contextMenuToggle = SystemAppRow.Locator("[data-testid=\"context-menu-toggle\"]");
@@ -31,7 +32,7 @@ public class EndpointExecutionTests : PlaywrightTestBase
 
         await Page.GetByRole(Microsoft.Playwright.AriaRole.Button, new() { Name = "Endpunkt anlegen" }).ClickAsync();
 
-        await Page.GetByPlaceholder("Relativer Pfad").FillAsync("/api/application-groups");
+        await Page.GetByPlaceholder("Relativer Pfad").FillAsync("/app.css");
 
         await Page.GetByRole(Microsoft.Playwright.AriaRole.Button, new() { Name = "Anfrage senden" }).ClickAsync();
 
@@ -52,6 +53,7 @@ public class EndpointExecutionTests : PlaywrightTestBase
     public async Task UmgebungMitVariable_Aktivieren_EndpunktSendetAufgeloestUrl()
     {
         await Page.GotoAsync(BaseUrl);
+        await Page.WaitForLoadStateAsync(LoadState.NetworkIdle);
 
         // Umgebung mit Variable im Environments-Tab anlegen
         await Page.Locator(".sz-topbar-tab", new() { HasText = "Environments" }).ClickAsync();
@@ -66,7 +68,7 @@ public class EndpointExecutionTests : PlaywrightTestBase
         await Page.GetByRole(AriaRole.Button, new() { Name = "+ Variable hinzufügen" }).ClickAsync();
         var variableRows = Page.Locator(".environment-editor table tbody tr");
         await variableRows.First.Locator("input").First.FillAsync("pfad");
-        await variableRows.First.Locator("input").Nth(1).FillAsync("api/application-groups");
+        await variableRows.First.Locator("input").Nth(1).FillAsync("app.css");
         await Page.GetByRole(AriaRole.Button, new() { Name = "Speichern" }).ClickAsync();
 
         // Umgebung aktivieren und zu Workspaces wechseln
@@ -83,7 +85,7 @@ public class EndpointExecutionTests : PlaywrightTestBase
         await pathInput.BlurAsync();
 
         // Pfadfeld zeigt die aufgelöste URL an
-        await Assertions.Expect(pathInput).ToHaveValueAsync("/api/application-groups");
+        await Assertions.Expect(pathInput).ToHaveValueAsync("/app.css");
 
         // Anfrage senden und Antwort prüfen
         await Page.GetByRole(AriaRole.Button, new() { Name = "Anfrage senden" }).ClickAsync();
@@ -96,6 +98,37 @@ public class EndpointExecutionTests : PlaywrightTestBase
     }
 
     /// <summary>
+    /// Der automatisch registrierte POST /authenticate-Endpunkt kann im Baum ausgewählt und ausgeführt werden;
+    /// die Response liefert einen 2xx-Statuscode und einen Token.
+    /// </summary>
+    [Fact]
+    public async Task AuthenticateEndpunkt_Auswaehlen_GibtTokenZurueck()
+    {
+        await Page.GotoAsync(BaseUrl);
+        await Page.WaitForLoadStateAsync(LoadState.NetworkIdle);
+        await ExpandSystemGroupAsync();
+
+        // Schnittstellenzentrale-App aufklappen, um die Endpunktliste zu sehen
+        await SystemAppRow.Locator(".sz-tree-item-btn").ClickAsync();
+
+        // Auf den bereits registrierten Authenticate-Endpunkt klicken
+        var authenticateBtn = Page.Locator(".sz-tree-item-btn", new() { HasText = "POST /authenticate" });
+        await Assertions.Expect(authenticateBtn).ToBeVisibleAsync();
+        await authenticateBtn.ClickAsync();
+
+        await Page.GetByRole(AriaRole.Button, new() { Name = "Anfrage senden" }).ClickAsync();
+
+        var statusText = Page.Locator(".response-section strong").First;
+        await Assertions.Expect(statusText).ToBeVisibleAsync();
+        var statusCode = await statusText.TextContentAsync();
+        Assert.True(int.TryParse(statusCode?.Trim(), out var code) && code >= 200 && code <= 299,
+            $"Erwarteter 2xx-Statuscode, erhalten: '{statusCode}'");
+
+        var responseBody = await Page.Locator(".response-section").TextContentAsync();
+        Assert.Contains("token", responseBody, StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
     /// Eingabe eines Pfads mit Platzhalter und Query-String: Pfad wird bereinigt, Parameter werden korrekt
     /// als löschbare bzw. nicht löschbare Einträge angezeigt, und die gesendete URL enthält den aufgelösten Pfad mit Query-String.
     /// </summary>
@@ -103,6 +136,7 @@ public class EndpointExecutionTests : PlaywrightTestBase
     public async Task EndpunktMitPlatzhalterUndQueryString_ZeigtKorrekteEintraegeUndSendetAufgeloestUrl()
     {
         await Page.GotoAsync(BaseUrl);
+        await Page.WaitForLoadStateAsync(LoadState.NetworkIdle);
         await ExpandSystemGroupAsync();
 
         var contextMenuToggle = SystemAppRow.Locator("[data-testid=\"context-menu-toggle\"]");
@@ -131,12 +165,12 @@ public class EndpointExecutionTests : PlaywrightTestBase
         // Pfad-Platzhalter-Eintrag (id) erscheint zuerst (OrderByDescending IsPathParameter); kein Löschen-Button
         var idRow = queryParamRows.Nth(0);
         await Assertions.Expect(idRow.Locator("input").First).ToHaveValueAsync("id");
-        await Assertions.Expect(idRow.Locator(".btn-outline-danger")).ToHaveCountAsync(0);
+        await Assertions.Expect(idRow.Locator(".sz-btn-danger")).ToHaveCountAsync(0);
 
         // Regulärer Query-Parameter (filter) erscheint zweite; Löschen-Button vorhanden
         var filterRow = queryParamRows.Nth(1);
         await Assertions.Expect(filterRow.Locator("input").First).ToHaveValueAsync("filter");
-        await Assertions.Expect(filterRow.Locator(".btn-outline-danger")).ToHaveCountAsync(1);
+        await Assertions.Expect(filterRow.Locator(".sz-btn-danger")).ToHaveCountAsync(1);
 
         // Wert für den Platzhalter eingeben
         var idValueInput = idRow.Locator("input").Nth(1);

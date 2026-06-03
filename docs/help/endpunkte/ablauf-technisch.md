@@ -88,8 +88,17 @@ Beteiligte Komponenten:
 
 `EndpointPage.SaveAsync()` baut `_model.QueryParameters` aus `_queryParameters` auf: sowohl Einträge mit `IsPathParameter = true` als auch `false` werden als gleichartige `EndpointQueryParameter`-Objekte übernommen (kein `IsPathParameter`-Feld in der Datenbank). Anschließend delegiert `SaveAsync()` an `PersistAsync()`.
 
+`PersistAsync()` unterscheidet anhand von `_model.Id`:
+
+- Neuer Endpunkt (`Id == 0`): `IApplicationApiClient.AddEndpointAsync(_model)` wird aufgerufen. Das zurückgegebene `Endpoint`-Objekt enthält die vergebene `Id` und den neuen `RowVersion`-Wert, die in `_model` übernommen werden.
+- Bestehender Endpunkt: `IApplicationApiClient.UpdateEndpointAsync(_model)` wird aufgerufen. Der zurückgegebene `RowVersion`-Wert wird in `_model.RowVersion` übernommen.
+
+`ForceSaveAsync()` liest vor dem Speichern den aktuellen `RowVersion`-Wert über `IApplicationApiClient.GetEndpointByIdAsync(_model.Id)` und aktualisiert `_model.RowVersion`, bevor `UpdateEndpointAsync` aufgerufen wird.
+
 Beteiligte Komponenten:
-- `EndpointPage.SaveAsync()` — Persistierungslogik
+- `EndpointPage.SaveAsync()` / `PersistAsync()` — Persistierungslogik
+- `EndpointPage.ForceSaveAsync()` — liest `RowVersion` vor dem Speichern
+- `IApplicationApiClient.AddEndpointAsync` / `UpdateEndpointAsync` / `GetEndpointByIdAsync` — HTTP-Transport
 - `EndpointQueryParameter` — Datenbankmodell ohne `IsPathParameter`
 
 ---
@@ -98,7 +107,7 @@ Beteiligte Komponenten:
 
 ### 1. Auslöser
 
-`EndpointPage.SendRequestAsync()` ruft `ExecutionService.ExecuteAsync(refreshed)` auf.
+`EndpointPage.SendRequestAsync()` lädt zunächst den aktuellen Endpunkt per `IApplicationApiClient.GetEndpointByIdAsync(_model.Id)`, um sicherzustellen, dass Header, Query-Parameter und `RowVersion` aktuell sind. Anschließend ruft es `ExecutionService.ExecuteAsync(refreshed)` mit dem frisch geladenen Objekt auf.
 
 ### 2. Rekursionsschutz-Initialisierung
 
@@ -175,6 +184,22 @@ Beteiligte Komponenten:
 2. `context.EnvironmentService.ActiveEnvironment` ist `null`.
 3. Der In-Memory-Zustand wird via `SetActiveEnvironment` aktualisiert.
 4. Da `activeEnv == null`, werden weder `UpdateVariableAsync` noch `NotifyEnvironmentChangedAsync` aufgerufen.
+
+---
+
+## Ablauf: Header und Query-Parameter verwalten
+
+`EndpointPage` verwaltet Header und Query-Parameter über atomare API-Routen:
+
+- **Header hinzufügen** (`AddHeaderAsync`): `IApplicationApiClient.AddHeaderAsync(header)` → `POST /api/endpoints/headers` → gibt `EndpointHeader` mit vergebener `Id` zurück; wird in `_model.Headers` eingefügt.
+- **Header löschen** (`DeleteHeaderAsync`): `IApplicationApiClient.DeleteHeaderAsync(id)` → `DELETE /api/endpoints/headers/{id}` → Eintrag wird aus `_model.Headers` entfernt.
+- **Query-Parameter hinzufügen** (`AddQueryParameterAsync`): `IApplicationApiClient.AddQueryParameterAsync(parameter)` → `POST /api/endpoints/query-parameters` → gibt `EndpointQueryParameter` zurück.
+- **Query-Parameter löschen** (`DeleteQueryParameterAsync`): `IApplicationApiClient.DeleteQueryParameterAsync(id)` → `DELETE /api/endpoints/query-parameters/{id}`.
+
+Beteiligte Komponenten:
+- `EndpointPage.AddHeaderAsync()` / `DeleteHeaderAsync()` / `AddQueryParameterAsync()` / `DeleteQueryParameterAsync()`
+- `IApplicationApiClient` — HTTP-Transport
+- `RequestHeadersPanel` / `RequestQueryParamsPanel` — UI-Komponenten, die die jeweiligen `OnAdd`/`OnDelete`-Callbacks auslösen
 
 ---
 
@@ -324,7 +349,7 @@ flowchart TD
 
 ## Fehlerbehandlung
 
-- `SaveAsync()` fängt `DbUpdateConcurrencyException` und zeigt den `ConcurrencyWarningDialog`.
+- `PersistAsync()` fängt `DbUpdateConcurrencyException` und zeigt den `ConcurrencyWarningDialog`.
 - `ExecuteAsync()` fängt allgemeine Ausnahmen und gibt ein `EndpointExecutionResult` mit `Success = false` und `ErrorMessage` zurück.
 - Pre-Skript-Fehler (Syntaxfehler, Runtime-Exception, Timeout) verhindern den HTTP-Request; `ErrorMessage` enthält die Fehlerbeschreibung.
 - Post-Skript-Fehler hängen die Fehlermeldung an ein ansonsten vollständiges `EndpointExecutionResult` an.

@@ -36,9 +36,12 @@
 @code {
     [Parameter] public List<HeaderEntry> Headers { get; set; } = [];
     [Parameter] public EventCallback OnChanged { get; set; }
+    [Parameter] public EventCallback<HeaderEntry> OnHeaderAdded { get; set; }
+    [Parameter] public EventCallback<HeaderEntry> OnHeaderRemoved { get; set; }
 
     public class HeaderEntry
     {
+        public int Id { get; set; }
         public string Key { get; set; } = string.Empty;
         public string Value { get; set; } = string.Empty;
         public bool IsAutoContentType { get; set; }
@@ -62,13 +65,16 @@
 
     private async Task AddHeader()
     {
-        Headers.Add(new HeaderEntry());
+        var entry = new HeaderEntry();
+        Headers.Add(entry);
+        await OnHeaderAdded.InvokeAsync(entry);
         await OnChanged.InvokeAsync();
     }
 
     private async Task RemoveHeader(HeaderEntry entry)
     {
         Headers.Remove(entry);
+        await OnHeaderRemoved.InvokeAsync(entry);
         await OnChanged.InvokeAsync();
     }
 }
