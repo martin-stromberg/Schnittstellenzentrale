@@ -15,11 +15,7 @@
 3. Im IIS-Manager für die Site die **Windows-Authentifizierung aktivieren** und **Anonyme Authentifizierung deaktivieren**.
 4. `appsettings.json` im Veröffentlichungsverzeichnis anpassen (siehe Konfiguration unten).
 5. Sicherstellen, dass der Anwendungspool-Identität Schreibzugriff auf das Anwendungsverzeichnis hat (für SQLite-Datenbankdatei und Log-Verzeichnis `logs/`).
-6. Anwendung starten; EF-Core-Migrationen müssen vorab manuell angewendet werden (siehe Hinweis).
-
-> **Hinweis: Datenbankmigration**  
-> Die Anwendung wendet Migrationen nicht automatisch beim Start an. Migrationen müssen manuell ausgeführt werden:  
-> `dotnet ef database update --project Schnittstellenzentrale.Infrastructure --startup-project Schnittstellenzentrale`
+6. Anwendung starten — EF-Core-Migrationen werden automatisch beim Start angewendet (`Database.MigrateAsync`).
 
 ## Konfiguration
 
