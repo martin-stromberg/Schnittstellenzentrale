@@ -1,6 +1,7 @@
 @page "/impressum"
 @inject IStringLocalizer<SharedResources> L
 @inject IImpressumService ImpressumService
+@inject INavigationStateService NavigationStateService
 
 <PageTitle>@L["ImpressumPage_PageTitle"]</PageTitle>
 
@@ -22,6 +23,7 @@
 
     protected override async Task OnInitializedAsync()
     {
+        await NavigationStateService.SetAreaAsync(NavigationArea.Impressum);
         _isAvailable = ImpressumService.IsAvailable();
         if (_isAvailable)
         {
