@@ -93,12 +93,12 @@
     {
         if (string.IsNullOrWhiteSpace(_newName))
         {
-            _createError = "Name ist ein Pflichtfeld.";
+            _createError = L["EnvironmentsSidebar_Error_NameEmpty"];
             return;
         }
         if (_newName.Length > 200)
         {
-            _createError = "Name darf maximal 200 Zeichen lang sein.";
+            _createError = L["EnvironmentsSidebar_Error_NameTooLong"];
             return;
         }
         var owner = CurrentUserService.GetCurrentUserName();

@@ -1,6 +1,6 @@
 @inject IStringLocalizer<SharedResources> L
 
-<SzDialog Title="@($"Health-Check: {Application.Name}")" Small="true" OnClose="OnClose">
+<SzDialog Title="@string.Format(L["HealthCheckDialog_Title"], Application.Name)" Small="true" OnClose="OnClose">
     <ChildContent>
         @if (IsReachable == null)
         {

@@ -167,7 +167,7 @@
     private async Task OnGroupSaved(ApplicationGroup group)
     {
         _showGroupEditor = false;
-        ActivityLogService.Log(ActivityLogCategory.EntityCreated, "Sammlung angelegt.");
+        ActivityLogService.Log(ActivityLogCategory.EntityCreated, L["WorkspacesLayout_Log_CollectionCreated"]);
         _sidebar?.ExpandGroup(group.Id);
         await RefreshTreeAsync();
         var path = new List<object> { group };
@@ -178,7 +178,7 @@
     {
         _showApplicationEditor = false;
         _newApplicationDefaultGroupId = null;
-        ActivityLogService.Log(ActivityLogCategory.EntityCreated, "Anwendung angelegt.");
+        ActivityLogService.Log(ActivityLogCategory.EntityCreated, L["WorkspacesLayout_Log_ApplicationCreated"]);
         await RefreshTreeAsync();
         await SelectApplicationAsync(app);
     }
@@ -209,7 +209,7 @@
     private async Task OnGroupRenamed(ApplicationGroup group)
     {
         await ApplicationApiClient.UpdateGroupAsync(group);
-        ActivityLogService.Log(ActivityLogCategory.EntityModified, $"Sammlung umbenannt: {group.Name}");
+        ActivityLogService.Log(ActivityLogCategory.EntityModified, string.Format(L["WorkspacesLayout_Log_CollectionRenamed"], group.Name));
         _renameTargetGroup = null;
         await RefreshTreeAsync();
     }
@@ -270,7 +270,7 @@
         {
             var group = new EndpointGroup { Name = name, ApplicationId = application.Id };
             var saved = await EndpointRepository.AddEndpointGroupAsync(group);
-            ActivityLogService.Log(ActivityLogCategory.EntityCreated, $"Ordner angelegt: {saved.Name}");
+            ActivityLogService.Log(ActivityLogCategory.EntityCreated, string.Format(L["WorkspacesLayout_Log_FolderCreated"], saved.Name));
             if (StorageModeService.CurrentMode == StorageMode.Team)
                 await SignalRNotificationService.NotifyEndpointGroupChangedAsync(saved.Id, application.Id);
             await RefreshTreeAsync();
@@ -284,7 +284,7 @@
         {
             var endpoint = new Core.Models.Endpoint
             {
-                Name = "Neuer Endpunkt",
+                Name = L["WorkspacesLayout_DefaultEndpointName"],
                 Method = Core.Enums.HttpMethod.GET,
                 RelativePath = string.Empty,
                 BodyMode = BodyMode.None,
@@ -292,7 +292,7 @@
                 EndpointGroupId = args.Group?.Id
             };
             var saved = await EndpointRepository.AddEndpointAsync(endpoint);
-            ActivityLogService.Log(ActivityLogCategory.EntityCreated, $"Endpunkt angelegt: {saved.Name}");
+            ActivityLogService.Log(ActivityLogCategory.EntityCreated, string.Format(L["WorkspacesLayout_Log_EndpointCreated"], saved.Name));
             if (StorageModeService.CurrentMode == StorageMode.Team)
                 await SignalRNotificationService.NotifyEndpointChangedAsync(saved.Id, args.Application.Id);
             await RefreshTreeAsync();
@@ -323,7 +323,7 @@
         try
         {
             await EndpointRepository.UpdateEndpointGroupAsync(group);
-            ActivityLogService.Log(ActivityLogCategory.EntityModified, $"Ordner umbenannt: {group.Name}");
+            ActivityLogService.Log(ActivityLogCategory.EntityModified, string.Format(L["WorkspacesLayout_Log_FolderRenamed"], group.Name));
             if (StorageModeService.CurrentMode == StorageMode.Team)
                 await SignalRNotificationService.NotifyEndpointGroupChangedAsync(group.Id, group.ApplicationId);
             _renameTargetEndpointGroup = null;

@@ -1,6 +1,7 @@
 @inject IODataImportService ODataImportService
+@inject IStringLocalizer<SharedResources> L
 
-<ImportDialog Title="OData-Import-Vorschau" Diff="Diff" Application="Application" OnApply="ApplyAsync" OnClose="OnClose" />
+<ImportDialog Title="@L["ODataImportDialog_Title"]" Diff="Diff" Application="Application" OnApply="ApplyAsync" OnClose="OnClose" />
 
 @code {
     [Parameter] public ImportDiff Diff { get; set; } = null!;

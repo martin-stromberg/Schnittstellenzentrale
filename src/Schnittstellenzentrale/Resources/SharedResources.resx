@@ -570,6 +570,10 @@
   </data>
 
   <!-- HealthCheckDialog -->
+  <data name="HealthCheckDialog_Title" xml:space="preserve">
+    <value>Health-Check: {0}</value>
+    <comment>HealthCheckDialog: dialog title; {0} is the application name</comment>
+  </data>
   <data name="HealthCheckDialog_Warning_Cooldown" xml:space="preserve">
     <value>Health check was skipped (cooldown active).</value>
     <comment>HealthCheckDialog: warning shown when the health check was skipped due to cooldown</comment>
@@ -776,6 +780,34 @@
   </data>
 
   <!-- WorkspacesLayout -->
+  <data name="WorkspacesLayout_DefaultEndpointName" xml:space="preserve">
+    <value>New Endpoint</value>
+    <comment>WorkspacesLayout: default name assigned to a newly created endpoint before the user edits it</comment>
+  </data>
+  <data name="WorkspacesLayout_Log_CollectionCreated" xml:space="preserve">
+    <value>Collection created.</value>
+    <comment>WorkspacesLayout: activity log message shown after a new application group is successfully created</comment>
+  </data>
+  <data name="WorkspacesLayout_Log_ApplicationCreated" xml:space="preserve">
+    <value>Application created.</value>
+    <comment>WorkspacesLayout: activity log message shown after a new application is successfully created</comment>
+  </data>
+  <data name="WorkspacesLayout_Log_CollectionRenamed" xml:space="preserve">
+    <value>Collection renamed: {0}</value>
+    <comment>WorkspacesLayout: activity log message shown after an application group is renamed; {0} is the new name</comment>
+  </data>
+  <data name="WorkspacesLayout_Log_FolderCreated" xml:space="preserve">
+    <value>Folder created: {0}</value>
+    <comment>WorkspacesLayout: activity log message shown after a new endpoint group folder is created; {0} is the folder name</comment>
+  </data>
+  <data name="WorkspacesLayout_Log_EndpointCreated" xml:space="preserve">
+    <value>Endpoint created: {0}</value>
+    <comment>WorkspacesLayout: activity log message shown after a new endpoint is created; {0} is the endpoint name</comment>
+  </data>
+  <data name="WorkspacesLayout_Log_FolderRenamed" xml:space="preserve">
+    <value>Folder renamed: {0}</value>
+    <comment>WorkspacesLayout: activity log message shown after an endpoint group folder is renamed; {0} is the new name</comment>
+  </data>
   <data name="WorkspacesLayout_Error_DeleteGroup" xml:space="preserve">
     <value>Error deleting collection: {0}</value>
     <comment>WorkspacesLayout: error message shown when deleting an application group fails</comment>
@@ -813,7 +845,27 @@
     <comment>WorkspacesLayout: browser confirm() dialog text when deleting an endpoint (placeholder is endpoint name)</comment>
   </data>
 
+  <!-- ODataImportDialog -->
+  <data name="ODataImportDialog_Title" xml:space="preserve">
+    <value>OData Import Preview</value>
+    <comment>ODataImportDialog: title of the OData import preview dialog</comment>
+  </data>
+
+  <!-- SwaggerImportDialog -->
+  <data name="SwaggerImportDialog_Title" xml:space="preserve">
+    <value>Swagger Import Preview</value>
+    <comment>SwaggerImportDialog: title of the Swagger import preview dialog</comment>
+  </data>
+
   <!-- ApplicationGroupTree -->
+  <data name="ApplicationGroupTree_UngroupedSection" xml:space="preserve">
+    <value>Without Collection</value>
+    <comment>ApplicationGroupTree: label for the collapsible section that shows applications not assigned to any group</comment>
+  </data>
+  <data name="ApplicationGroupTree_Log_ApplicationMoved" xml:space="preserve">
+    <value>Application moved: {0} → {1}</value>
+    <comment>ApplicationGroupTree: activity log message when an application is drag-and-dropped to another group; {0} is the application name, {1} is the target group name</comment>
+  </data>
   <data name="ApplicationGroupTree_Error_LoadData" xml:space="preserve">
     <value>Error loading data: {0}</value>
     <comment>ApplicationGroupTree: error message shown when loading groups and applications fails</comment>
@@ -831,10 +883,174 @@
     <comment>ApplicationGroupTree: error message shown when drag-and-drop of an application fails</comment>
   </data>
 
+  <!-- ApplicationTopEndpointsTable -->
+  <data name="ApplicationTopEndpointsTable_SectionTitle" xml:space="preserve">
+    <value>Core Endpoints</value>
+    <comment>ApplicationTopEndpointsTable: heading above the top-endpoints table in the application content view</comment>
+  </data>
+  <data name="ApplicationTopEndpointsTable_Header_Method" xml:space="preserve">
+    <value>Method</value>
+    <comment>ApplicationTopEndpointsTable: column header for the HTTP method</comment>
+  </data>
+  <data name="ApplicationTopEndpointsTable_Header_Endpoint" xml:space="preserve">
+    <value>Endpoint</value>
+    <comment>ApplicationTopEndpointsTable: column header for the endpoint path</comment>
+  </data>
+  <data name="ApplicationTopEndpointsTable_Header_Calls" xml:space="preserve">
+    <value>Calls</value>
+    <comment>ApplicationTopEndpointsTable: column header for the call count</comment>
+  </data>
+  <data name="ApplicationTopEndpointsTable_Header_Action" xml:space="preserve">
+    <value>Action</value>
+    <comment>ApplicationTopEndpointsTable: column header for the action button</comment>
+  </data>
+  <data name="ApplicationTopEndpointsTable_Tooltip_Execute" xml:space="preserve">
+    <value>Execute</value>
+    <comment>ApplicationTopEndpointsTable: title attribute on the execute button in each row</comment>
+  </data>
+  <data name="ApplicationTopEndpointsTable_Empty" xml:space="preserve">
+    <value>No endpoints available.</value>
+    <comment>ApplicationTopEndpointsTable: empty state message shown when no endpoints exist for the application</comment>
+  </data>
+
+  <!-- ApplicationContentView -->
+  <data name="ApplicationContentView_Button_SwaggerImport" xml:space="preserve">
+    <value>Swagger Import</value>
+    <comment>ApplicationContentView: button label to open the Swagger import dialog</comment>
+  </data>
+  <data name="ApplicationContentView_Button_HealthCheck" xml:space="preserve">
+    <value>Health Check</value>
+    <comment>ApplicationContentView: button label to run a health check</comment>
+  </data>
+  <data name="ApplicationContentView_Label_Description" xml:space="preserve">
+    <value>Description</value>
+    <comment>ApplicationContentView: section label above the description text</comment>
+  </data>
+  <data name="ApplicationContentView_NoDescription" xml:space="preserve">
+    <value>No description available.</value>
+    <comment>ApplicationContentView: placeholder shown when no description is set</comment>
+  </data>
+  <data name="ApplicationContentView_Label_BaseUrl" xml:space="preserve">
+    <value>Base URL</value>
+    <comment>ApplicationContentView: label for the base URL info card</comment>
+  </data>
+  <data name="ApplicationContentView_Label_InterfaceUrl" xml:space="preserve">
+    <value>Swagger / OData URL</value>
+    <comment>ApplicationContentView: label for the interface/API URL info card</comment>
+  </data>
+  <data name="ApplicationContentView_Label_Kpi" xml:space="preserve">
+    <value>KPI</value>
+    <comment>ApplicationContentView: section label above the KPI card</comment>
+  </data>
+  <data name="ApplicationContentView_Label_EndpointCount" xml:space="preserve">
+    <value>Number of Endpoints</value>
+    <comment>ApplicationContentView: KPI row label for the endpoint count</comment>
+  </data>
+
+  <!-- CollectionContentView -->
+  <data name="CollectionContentView_Button_NewApplication" xml:space="preserve">
+    <value>+ New Application</value>
+    <comment>CollectionContentView: button to create a new application in this collection</comment>
+  </data>
+  <data name="CollectionContentView_Label_Kpi" xml:space="preserve">
+    <value>KPI</value>
+    <comment>CollectionContentView: section label above the KPI card</comment>
+  </data>
+  <data name="CollectionContentView_Label_ApplicationCount" xml:space="preserve">
+    <value>Number of Applications</value>
+    <comment>CollectionContentView: KPI row label for the application count</comment>
+  </data>
+  <data name="CollectionContentView_Label_EndpointCount" xml:space="preserve">
+    <value>Number of Endpoints</value>
+    <comment>CollectionContentView: KPI row label for the endpoint count</comment>
+  </data>
+  <data name="CollectionContentView_Header_Method" xml:space="preserve">
+    <value>Method</value>
+    <comment>CollectionContentView: table column header for the HTTP method</comment>
+  </data>
+  <data name="CollectionContentView_Header_Endpoint" xml:space="preserve">
+    <value>Endpoint</value>
+    <comment>CollectionContentView: table column header for the endpoint path</comment>
+  </data>
+  <data name="CollectionContentView_Header_Description" xml:space="preserve">
+    <value>Description</value>
+    <comment>CollectionContentView: table column header for the endpoint description</comment>
+  </data>
+  <data name="CollectionContentView_Header_Action" xml:space="preserve">
+    <value>Action</value>
+    <comment>CollectionContentView: table column header for the action buttons</comment>
+  </data>
+  <data name="CollectionContentView_Tooltip_Execute" xml:space="preserve">
+    <value>Execute</value>
+    <comment>CollectionContentView: title attribute on the execute action button</comment>
+  </data>
+  <data name="CollectionContentView_Label_CoreEndpoints" xml:space="preserve">
+    <value>Core Endpoints</value>
+    <comment>CollectionContentView: section heading above the core endpoints table</comment>
+  </data>
+  <data name="CollectionContentView_Empty" xml:space="preserve">
+    <value>No endpoints available.</value>
+    <comment>CollectionContentView: empty state message when the endpoint list is empty</comment>
+  </data>
+
+  <!-- FolderContentView -->
+  <data name="FolderContentView_SectionTitle" xml:space="preserve">
+    <value>Endpoints in »{0}«</value>
+    <comment>FolderContentView: section heading showing the endpoint group name (placeholder is the name)</comment>
+  </data>
+  <data name="FolderContentView_Empty" xml:space="preserve">
+    <value>No endpoints in this folder.</value>
+    <comment>FolderContentView: empty state message shown when the folder contains no endpoints</comment>
+  </data>
+  <data name="FolderContentView_Header_Method" xml:space="preserve">
+    <value>Method</value>
+    <comment>FolderContentView: table column header for the HTTP method</comment>
+  </data>
+  <data name="FolderContentView_Header_Endpoint" xml:space="preserve">
+    <value>Endpoint</value>
+    <comment>FolderContentView: table column header for the endpoint path</comment>
+  </data>
+  <data name="FolderContentView_Header_Description" xml:space="preserve">
+    <value>Description</value>
+    <comment>FolderContentView: table column header for the endpoint description</comment>
+  </data>
+  <data name="FolderContentView_Header_Action" xml:space="preserve">
+    <value>Action</value>
+    <comment>FolderContentView: table column header for the action buttons</comment>
+  </data>
+  <data name="FolderContentView_Tooltip_Execute" xml:space="preserve">
+    <value>Execute</value>
+    <comment>FolderContentView: title attribute on the execute action button</comment>
+  </data>
+
   <!-- ApplicationCard -->
   <data name="ApplicationCard_Error_LoadApplication" xml:space="preserve">
     <value>Error loading application: {0}</value>
     <comment>ApplicationCard: error message shown when loading an application fails</comment>
+  </data>
+  <data name="ApplicationCard_Button_SwaggerImport" xml:space="preserve">
+    <value>Swagger Import</value>
+    <comment>ApplicationCard: button label to open the Swagger import dialog</comment>
+  </data>
+  <data name="ApplicationCard_Button_ODataImport" xml:space="preserve">
+    <value>OData Import</value>
+    <comment>ApplicationCard: button label to open the OData import dialog</comment>
+  </data>
+  <data name="ApplicationCard_Button_HealthCheck" xml:space="preserve">
+    <value>Health Check</value>
+    <comment>ApplicationCard: button label to run a health check</comment>
+  </data>
+  <data name="ApplicationCard_Label_BaseUrl" xml:space="preserve">
+    <value>Base URL:</value>
+    <comment>ApplicationCard: label before the base URL value</comment>
+  </data>
+  <data name="ApplicationCard_Label_MetadataUrl" xml:space="preserve">
+    <value>Metadata URL:</value>
+    <comment>ApplicationCard: label before the OData metadata URL value</comment>
+  </data>
+  <data name="ApplicationCard_Label_SwaggerUrl" xml:space="preserve">
+    <value>Swagger URL:</value>
+    <comment>ApplicationCard: label before the Swagger/REST interface URL value</comment>
   </data>
 
   <!-- EnvironmentContentView -->
@@ -842,14 +1058,62 @@
     <value>Loading environment…</value>
     <comment>EnvironmentContentView: loading indicator shown while the environment data is being fetched</comment>
   </data>
+  <data name="EnvironmentContentView_CancelButton" xml:space="preserve">
+    <value>Cancel</value>
+    <comment>EnvironmentContentView: button to cancel editing the description</comment>
+  </data>
+  <data name="EnvironmentContentView_Placeholder_Description" xml:space="preserve">
+    <value>Add description…</value>
+    <comment>EnvironmentContentView: placeholder shown in the description area when no description is set</comment>
+  </data>
+  <data name="EnvironmentContentView_Label_Variables" xml:space="preserve">
+    <value>Variables</value>
+    <comment>EnvironmentContentView: section label for the variables stat card</comment>
+  </data>
+  <data name="EnvironmentContentView_Error_NameEmpty" xml:space="preserve">
+    <value>Name must not be empty.</value>
+    <comment>EnvironmentContentView: inline validation error when the environment name is blank</comment>
+  </data>
+  <data name="EnvironmentContentView_Error_NameTooLong" xml:space="preserve">
+    <value>Name must not exceed 200 characters.</value>
+    <comment>EnvironmentContentView: inline validation error when the environment name exceeds 200 characters</comment>
+  </data>
 
   <!-- ContentHeader -->
+  <data name="ContentHeader_IconAlt" xml:space="preserve">
+    <value>Icon</value>
+    <comment>ContentHeader: alt attribute of the icon image element</comment>
+  </data>
   <data name="ContentHeader_Tooltip_UploadIcon" xml:space="preserve">
     <value>Upload icon</value>
     <comment>ContentHeader: title attribute of the icon upload button</comment>
   </data>
+  <data name="ContentHeader_Placeholder_Subtitle" xml:space="preserve">
+    <value>Add subtitle</value>
+    <comment>ContentHeader: placeholder shown in the subtitle area when no subtitle is set and not in read-only mode</comment>
+  </data>
+  <data name="ContentHeader_Error_NameEmpty" xml:space="preserve">
+    <value>Name must not be empty.</value>
+    <comment>ContentHeader: inline validation error when the name field is blank</comment>
+  </data>
+  <data name="ContentHeader_Error_InvalidFileType" xml:space="preserve">
+    <value>Only PNG and JPEG files are allowed.</value>
+    <comment>ContentHeader: upload error when the selected file type is not PNG or JPEG</comment>
+  </data>
+  <data name="ContentHeader_Error_FileTooLarge" xml:space="preserve">
+    <value>File is too large (max. {0} KB).</value>
+    <comment>ContentHeader: upload error when the selected file exceeds the maximum allowed size</comment>
+  </data>
 
   <!-- EnvironmentsSidebar error messages -->
+  <data name="EnvironmentsSidebar_Error_NameEmpty" xml:space="preserve">
+    <value>Name is required.</value>
+    <comment>EnvironmentsSidebar: inline validation error when the new environment name is blank</comment>
+  </data>
+  <data name="EnvironmentsSidebar_Error_NameTooLong" xml:space="preserve">
+    <value>Name must not exceed 200 characters.</value>
+    <comment>EnvironmentsSidebar: inline validation error when the new environment name exceeds 200 characters</comment>
+  </data>
   <data name="EnvironmentsSidebar_Error_Load" xml:space="preserve">
     <value>Error loading environments: {0}</value>
     <comment>EnvironmentsSidebar: error message shown when loading the environment list fails</comment>
@@ -857,6 +1121,28 @@
   <data name="EnvironmentsSidebar_Error_Delete" xml:space="preserve">
     <value>Error deleting environment: {0}</value>
     <comment>EnvironmentsSidebar: error message shown when deleting an environment fails</comment>
+  </data>
+
+  <!-- ActivityLogPanel -->
+  <data name="ActivityLogPanel_Title" xml:space="preserve">
+    <value>Log</value>
+    <comment>ActivityLogPanel: title text shown in the panel toolbar</comment>
+  </data>
+  <data name="ActivityLogPanel_Tooltip_ClearLog" xml:space="preserve">
+    <value>Clear log</value>
+    <comment>ActivityLogPanel: tooltip on the clear-log button in the toolbar</comment>
+  </data>
+  <data name="ActivityLogPanel_Tooltip_Overlay" xml:space="preserve">
+    <value>Overlay</value>
+    <comment>ActivityLogPanel: tooltip on the display-mode toggle button when the panel is currently docked</comment>
+  </data>
+  <data name="ActivityLogPanel_Tooltip_Docked" xml:space="preserve">
+    <value>Docked</value>
+    <comment>ActivityLogPanel: tooltip on the display-mode toggle button when the panel is currently in overlay mode</comment>
+  </data>
+  <data name="ActivityLogPanel_Details" xml:space="preserve">
+    <value>Details</value>
+    <comment>ActivityLogPanel: text of the &lt;summary&gt; element inside the collapsible details block of a log entry</comment>
   </data>
 
   <!-- RequestAuthPanel -->

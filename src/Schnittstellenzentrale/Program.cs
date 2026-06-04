@@ -48,6 +48,8 @@ public partial class Program {
             .AddNegotiate();
         builder.Services.AddAuthorization();
 
+        builder.Services.AddLocalization();
+
         builder.Services.AddControllers()
             .AddDataAnnotationsLocalization(options =>
                 options.DataAnnotationLocalizerProvider = (type, factory) =>

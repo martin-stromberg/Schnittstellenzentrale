@@ -570,6 +570,10 @@
   </data>
 
   <!-- HealthCheckDialog -->
+  <data name="HealthCheckDialog_Title" xml:space="preserve">
+    <value>Health-Check: {0}</value>
+    <comment>HealthCheckDialog: Dialogtitel; {0} ist der Anwendungsname</comment>
+  </data>
   <data name="HealthCheckDialog_Warning_Cooldown" xml:space="preserve">
     <value>Health-Check wurde übersprungen (Cooldown aktiv).</value>
     <comment>HealthCheckDialog: Warnung wenn der Health-Check wegen Cooldown übersprungen wurde</comment>
@@ -776,6 +780,34 @@
   </data>
 
   <!-- WorkspacesLayout -->
+  <data name="WorkspacesLayout_DefaultEndpointName" xml:space="preserve">
+    <value>Neuer Endpunkt</value>
+    <comment>WorkspacesLayout: Standardname für einen neu angelegten Endpunkt vor der Bearbeitung durch den Benutzer</comment>
+  </data>
+  <data name="WorkspacesLayout_Log_CollectionCreated" xml:space="preserve">
+    <value>Sammlung angelegt.</value>
+    <comment>WorkspacesLayout: Aktivitätsprotokoll-Meldung nach dem erfolgreichen Anlegen einer Anwendungsgruppe</comment>
+  </data>
+  <data name="WorkspacesLayout_Log_ApplicationCreated" xml:space="preserve">
+    <value>Anwendung angelegt.</value>
+    <comment>WorkspacesLayout: Aktivitätsprotokoll-Meldung nach dem erfolgreichen Anlegen einer Anwendung</comment>
+  </data>
+  <data name="WorkspacesLayout_Log_CollectionRenamed" xml:space="preserve">
+    <value>Sammlung umbenannt: {0}</value>
+    <comment>WorkspacesLayout: Aktivitätsprotokoll-Meldung nach dem Umbenennen einer Anwendungsgruppe; {0} ist der neue Name</comment>
+  </data>
+  <data name="WorkspacesLayout_Log_FolderCreated" xml:space="preserve">
+    <value>Ordner angelegt: {0}</value>
+    <comment>WorkspacesLayout: Aktivitätsprotokoll-Meldung nach dem Anlegen einer Endpunktgruppe; {0} ist der Ordnername</comment>
+  </data>
+  <data name="WorkspacesLayout_Log_EndpointCreated" xml:space="preserve">
+    <value>Endpunkt angelegt: {0}</value>
+    <comment>WorkspacesLayout: Aktivitätsprotokoll-Meldung nach dem Anlegen eines Endpunkts; {0} ist der Endpunktname</comment>
+  </data>
+  <data name="WorkspacesLayout_Log_FolderRenamed" xml:space="preserve">
+    <value>Ordner umbenannt: {0}</value>
+    <comment>WorkspacesLayout: Aktivitätsprotokoll-Meldung nach dem Umbenennen einer Endpunktgruppe; {0} ist der neue Name</comment>
+  </data>
   <data name="WorkspacesLayout_Error_DeleteGroup" xml:space="preserve">
     <value>Fehler beim Löschen der Sammlung: {0}</value>
     <comment>WorkspacesLayout: Fehlermeldung wenn das Löschen einer Anwendungsgruppe fehlschlägt</comment>
@@ -813,7 +845,27 @@
     <comment>WorkspacesLayout: Browser-confirm()-Dialogtext beim Löschen eines Endpunkts (Platzhalter ist der Endpunktname)</comment>
   </data>
 
+  <!-- ODataImportDialog -->
+  <data name="ODataImportDialog_Title" xml:space="preserve">
+    <value>OData-Import-Vorschau</value>
+    <comment>ODataImportDialog: Titel des OData-Import-Vorschau-Dialogs</comment>
+  </data>
+
+  <!-- SwaggerImportDialog -->
+  <data name="SwaggerImportDialog_Title" xml:space="preserve">
+    <value>Swagger-Import-Vorschau</value>
+    <comment>SwaggerImportDialog: Titel des Swagger-Import-Vorschau-Dialogs</comment>
+  </data>
+
   <!-- ApplicationGroupTree -->
+  <data name="ApplicationGroupTree_UngroupedSection" xml:space="preserve">
+    <value>Ohne Sammlung</value>
+    <comment>ApplicationGroupTree: Bezeichnung des aufklappbaren Abschnitts für Anwendungen ohne Gruppe</comment>
+  </data>
+  <data name="ApplicationGroupTree_Log_ApplicationMoved" xml:space="preserve">
+    <value>Anwendung verschoben: {0} → {1}</value>
+    <comment>ApplicationGroupTree: Aktivitätsprotokoll-Meldung wenn eine Anwendung per Drag-and-Drop in eine andere Gruppe verschoben wird; {0} ist der Anwendungsname, {1} ist der Name der Zielgruppe</comment>
+  </data>
   <data name="ApplicationGroupTree_Error_LoadData" xml:space="preserve">
     <value>Fehler beim Laden der Daten: {0}</value>
     <comment>ApplicationGroupTree: Fehlermeldung wenn das Laden von Gruppen und Anwendungen fehlschlägt</comment>
@@ -831,10 +883,174 @@
     <comment>ApplicationGroupTree: Fehlermeldung wenn das Drag-and-Drop einer Anwendung fehlschlägt</comment>
   </data>
 
+  <!-- ApplicationTopEndpointsTable -->
+  <data name="ApplicationTopEndpointsTable_SectionTitle" xml:space="preserve">
+    <value>Core-Endpunkte</value>
+    <comment>ApplicationTopEndpointsTable: Überschrift über der Top-Endpunkte-Tabelle in der Anwendungsansicht</comment>
+  </data>
+  <data name="ApplicationTopEndpointsTable_Header_Method" xml:space="preserve">
+    <value>Methode</value>
+    <comment>ApplicationTopEndpointsTable: Spaltenüberschrift für die HTTP-Methode</comment>
+  </data>
+  <data name="ApplicationTopEndpointsTable_Header_Endpoint" xml:space="preserve">
+    <value>Endpunkt</value>
+    <comment>ApplicationTopEndpointsTable: Spaltenüberschrift für den Endpunktpfad</comment>
+  </data>
+  <data name="ApplicationTopEndpointsTable_Header_Calls" xml:space="preserve">
+    <value>Aufrufe</value>
+    <comment>ApplicationTopEndpointsTable: Spaltenüberschrift für die Aufrufanzahl</comment>
+  </data>
+  <data name="ApplicationTopEndpointsTable_Header_Action" xml:space="preserve">
+    <value>Aktion</value>
+    <comment>ApplicationTopEndpointsTable: Spaltenüberschrift für die Aktionsschaltfläche</comment>
+  </data>
+  <data name="ApplicationTopEndpointsTable_Tooltip_Execute" xml:space="preserve">
+    <value>Ausführen</value>
+    <comment>ApplicationTopEndpointsTable: title-Attribut des Ausführen-Buttons in jeder Zeile</comment>
+  </data>
+  <data name="ApplicationTopEndpointsTable_Empty" xml:space="preserve">
+    <value>Keine Endpunkte vorhanden.</value>
+    <comment>ApplicationTopEndpointsTable: Leerzustand-Meldung wenn keine Endpunkte für die Anwendung vorhanden sind</comment>
+  </data>
+
+  <!-- ApplicationContentView -->
+  <data name="ApplicationContentView_Button_SwaggerImport" xml:space="preserve">
+    <value>Swagger-Import</value>
+    <comment>ApplicationContentView: Button-Beschriftung für den Swagger-Import-Dialog</comment>
+  </data>
+  <data name="ApplicationContentView_Button_HealthCheck" xml:space="preserve">
+    <value>Health-Check</value>
+    <comment>ApplicationContentView: Button-Beschriftung für den Health-Check</comment>
+  </data>
+  <data name="ApplicationContentView_Label_Description" xml:space="preserve">
+    <value>Beschreibung</value>
+    <comment>ApplicationContentView: Abschnittsbezeichnung über dem Beschreibungstext</comment>
+  </data>
+  <data name="ApplicationContentView_NoDescription" xml:space="preserve">
+    <value>Keine Beschreibung vorhanden.</value>
+    <comment>ApplicationContentView: Platzhalter wenn keine Beschreibung gesetzt ist</comment>
+  </data>
+  <data name="ApplicationContentView_Label_BaseUrl" xml:space="preserve">
+    <value>Basis-URL</value>
+    <comment>ApplicationContentView: Bezeichnung für die Basis-URL-Infokarte</comment>
+  </data>
+  <data name="ApplicationContentView_Label_InterfaceUrl" xml:space="preserve">
+    <value>Swagger / OData URL</value>
+    <comment>ApplicationContentView: Bezeichnung für die Schnittstellen-URL-Infokarte</comment>
+  </data>
+  <data name="ApplicationContentView_Label_Kpi" xml:space="preserve">
+    <value>KPI</value>
+    <comment>ApplicationContentView: Abschnittsbezeichnung über der KPI-Karte</comment>
+  </data>
+  <data name="ApplicationContentView_Label_EndpointCount" xml:space="preserve">
+    <value>Anzahl Endpunkte</value>
+    <comment>ApplicationContentView: KPI-Zeilenbeschriftung für die Endpunktanzahl</comment>
+  </data>
+
+  <!-- CollectionContentView -->
+  <data name="CollectionContentView_Button_NewApplication" xml:space="preserve">
+    <value>+ Neue Anwendung</value>
+    <comment>CollectionContentView: Button zum Erstellen einer neuen Anwendung in dieser Sammlung</comment>
+  </data>
+  <data name="CollectionContentView_Label_Kpi" xml:space="preserve">
+    <value>KPI</value>
+    <comment>CollectionContentView: Abschnittsbezeichnung über der KPI-Karte</comment>
+  </data>
+  <data name="CollectionContentView_Label_ApplicationCount" xml:space="preserve">
+    <value>Anzahl Anwendungen</value>
+    <comment>CollectionContentView: KPI-Zeilenbeschriftung für die Anwendungsanzahl</comment>
+  </data>
+  <data name="CollectionContentView_Label_EndpointCount" xml:space="preserve">
+    <value>Anzahl Endpunkte</value>
+    <comment>CollectionContentView: KPI-Zeilenbeschriftung für die Endpunktanzahl</comment>
+  </data>
+  <data name="CollectionContentView_Header_Method" xml:space="preserve">
+    <value>Methode</value>
+    <comment>CollectionContentView: Tabellenspaltenüberschrift für die HTTP-Methode</comment>
+  </data>
+  <data name="CollectionContentView_Header_Endpoint" xml:space="preserve">
+    <value>Endpunkt</value>
+    <comment>CollectionContentView: Tabellenspaltenüberschrift für den Endpunktpfad</comment>
+  </data>
+  <data name="CollectionContentView_Header_Description" xml:space="preserve">
+    <value>Beschreibung</value>
+    <comment>CollectionContentView: Tabellenspaltenüberschrift für die Endpunktbeschreibung</comment>
+  </data>
+  <data name="CollectionContentView_Header_Action" xml:space="preserve">
+    <value>Aktion</value>
+    <comment>CollectionContentView: Tabellenspaltenüberschrift für die Aktionsbuttons</comment>
+  </data>
+  <data name="CollectionContentView_Tooltip_Execute" xml:space="preserve">
+    <value>Ausführen</value>
+    <comment>CollectionContentView: title-Attribut des Ausführen-Buttons</comment>
+  </data>
+  <data name="CollectionContentView_Label_CoreEndpoints" xml:space="preserve">
+    <value>Core-Endpunkte</value>
+    <comment>CollectionContentView: Abschnittsüberschrift über der Core-Endpunkte-Tabelle</comment>
+  </data>
+  <data name="CollectionContentView_Empty" xml:space="preserve">
+    <value>Keine Endpunkte vorhanden.</value>
+    <comment>CollectionContentView: Leerzustand-Meldung wenn keine Endpunkte vorhanden sind</comment>
+  </data>
+
+  <!-- FolderContentView -->
+  <data name="FolderContentView_SectionTitle" xml:space="preserve">
+    <value>Endpunkte in »{0}«</value>
+    <comment>FolderContentView: Abschnittsüberschrift mit dem Endpunktgruppen-Namen</comment>
+  </data>
+  <data name="FolderContentView_Empty" xml:space="preserve">
+    <value>Keine Endpunkte in diesem Ordner.</value>
+    <comment>FolderContentView: Leerzustand-Meldung wenn der Ordner keine Endpunkte enthält</comment>
+  </data>
+  <data name="FolderContentView_Header_Method" xml:space="preserve">
+    <value>Methode</value>
+    <comment>FolderContentView: Tabellenspaltenüberschrift für die HTTP-Methode</comment>
+  </data>
+  <data name="FolderContentView_Header_Endpoint" xml:space="preserve">
+    <value>Endpunkt</value>
+    <comment>FolderContentView: Tabellenspaltenüberschrift für den Endpunktpfad</comment>
+  </data>
+  <data name="FolderContentView_Header_Description" xml:space="preserve">
+    <value>Beschreibung</value>
+    <comment>FolderContentView: Tabellenspaltenüberschrift für die Endpunktbeschreibung</comment>
+  </data>
+  <data name="FolderContentView_Header_Action" xml:space="preserve">
+    <value>Aktion</value>
+    <comment>FolderContentView: Tabellenspaltenüberschrift für die Aktionsbuttons</comment>
+  </data>
+  <data name="FolderContentView_Tooltip_Execute" xml:space="preserve">
+    <value>Ausführen</value>
+    <comment>FolderContentView: title-Attribut des Ausführen-Buttons</comment>
+  </data>
+
   <!-- ApplicationCard -->
   <data name="ApplicationCard_Error_LoadApplication" xml:space="preserve">
     <value>Fehler beim Laden der Anwendung: {0}</value>
     <comment>ApplicationCard: Fehlermeldung wenn das Laden einer Anwendung fehlschlägt</comment>
+  </data>
+  <data name="ApplicationCard_Button_SwaggerImport" xml:space="preserve">
+    <value>Swagger-Import</value>
+    <comment>ApplicationCard: Button-Beschriftung für den Swagger-Import-Dialog</comment>
+  </data>
+  <data name="ApplicationCard_Button_ODataImport" xml:space="preserve">
+    <value>OData-Import</value>
+    <comment>ApplicationCard: Button-Beschriftung für den OData-Import-Dialog</comment>
+  </data>
+  <data name="ApplicationCard_Button_HealthCheck" xml:space="preserve">
+    <value>Health-Check</value>
+    <comment>ApplicationCard: Button-Beschriftung für den Health-Check</comment>
+  </data>
+  <data name="ApplicationCard_Label_BaseUrl" xml:space="preserve">
+    <value>Basis-URL:</value>
+    <comment>ApplicationCard: Beschriftung vor der Basis-URL</comment>
+  </data>
+  <data name="ApplicationCard_Label_MetadataUrl" xml:space="preserve">
+    <value>Metadaten-URL:</value>
+    <comment>ApplicationCard: Beschriftung vor der OData-Metadaten-URL</comment>
+  </data>
+  <data name="ApplicationCard_Label_SwaggerUrl" xml:space="preserve">
+    <value>Swagger-URL:</value>
+    <comment>ApplicationCard: Beschriftung vor der Swagger/REST-Schnittstellen-URL</comment>
   </data>
 
   <!-- EnvironmentContentView -->
@@ -842,14 +1058,62 @@
     <value>Umgebung wird geladen…</value>
     <comment>EnvironmentContentView: Ladeanzeige während die Umgebungsdaten abgerufen werden</comment>
   </data>
+  <data name="EnvironmentContentView_CancelButton" xml:space="preserve">
+    <value>Abbrechen</value>
+    <comment>EnvironmentContentView: Button zum Abbrechen der Beschreibungsbearbeitung</comment>
+  </data>
+  <data name="EnvironmentContentView_Placeholder_Description" xml:space="preserve">
+    <value>Beschreibung hinzufügen…</value>
+    <comment>EnvironmentContentView: Platzhalter im Beschreibungsbereich wenn keine Beschreibung gesetzt ist</comment>
+  </data>
+  <data name="EnvironmentContentView_Label_Variables" xml:space="preserve">
+    <value>Variablen</value>
+    <comment>EnvironmentContentView: Abschnittsbezeichnung für die Variablen-Stat-Karte</comment>
+  </data>
+  <data name="EnvironmentContentView_Error_NameEmpty" xml:space="preserve">
+    <value>Name darf nicht leer sein.</value>
+    <comment>EnvironmentContentView: Inline-Validierungsfehler wenn der Umgebungsname leer ist</comment>
+  </data>
+  <data name="EnvironmentContentView_Error_NameTooLong" xml:space="preserve">
+    <value>Name darf maximal 200 Zeichen lang sein.</value>
+    <comment>EnvironmentContentView: Inline-Validierungsfehler wenn der Umgebungsname zu lang ist</comment>
+  </data>
 
   <!-- ContentHeader -->
+  <data name="ContentHeader_IconAlt" xml:space="preserve">
+    <value>Symbol</value>
+    <comment>ContentHeader: alt-Attribut des Icon-Bildelements</comment>
+  </data>
   <data name="ContentHeader_Tooltip_UploadIcon" xml:space="preserve">
     <value>Icon hochladen</value>
     <comment>ContentHeader: title-Attribut des Icon-Upload-Buttons</comment>
   </data>
+  <data name="ContentHeader_Placeholder_Subtitle" xml:space="preserve">
+    <value>Untertitel hinzufügen</value>
+    <comment>ContentHeader: Platzhalter im Untertitelbereich wenn kein Untertitel gesetzt ist</comment>
+  </data>
+  <data name="ContentHeader_Error_NameEmpty" xml:space="preserve">
+    <value>Name darf nicht leer sein.</value>
+    <comment>ContentHeader: Inline-Validierungsfehler wenn das Namensfeld leer ist</comment>
+  </data>
+  <data name="ContentHeader_Error_InvalidFileType" xml:space="preserve">
+    <value>Nur PNG- und JPEG-Dateien sind erlaubt.</value>
+    <comment>ContentHeader: Upload-Fehler wenn der Dateityp nicht PNG oder JPEG ist</comment>
+  </data>
+  <data name="ContentHeader_Error_FileTooLarge" xml:space="preserve">
+    <value>Datei ist zu groß (max. {0} KB).</value>
+    <comment>ContentHeader: Upload-Fehler wenn die Datei die maximale Größe überschreitet</comment>
+  </data>
 
   <!-- EnvironmentsSidebar Fehlermeldungen -->
+  <data name="EnvironmentsSidebar_Error_NameEmpty" xml:space="preserve">
+    <value>Name ist ein Pflichtfeld.</value>
+    <comment>EnvironmentsSidebar: Inline-Validierungsfehler wenn der Name der neuen Umgebung leer ist</comment>
+  </data>
+  <data name="EnvironmentsSidebar_Error_NameTooLong" xml:space="preserve">
+    <value>Name darf maximal 200 Zeichen lang sein.</value>
+    <comment>EnvironmentsSidebar: Inline-Validierungsfehler wenn der Name der neuen Umgebung zu lang ist</comment>
+  </data>
   <data name="EnvironmentsSidebar_Error_Load" xml:space="preserve">
     <value>Fehler beim Laden der Umgebungen: {0}</value>
     <comment>EnvironmentsSidebar: Fehlermeldung wenn das Laden der Umgebungsliste fehlschlägt</comment>
@@ -857,6 +1121,28 @@
   <data name="EnvironmentsSidebar_Error_Delete" xml:space="preserve">
     <value>Fehler beim Löschen der Umgebung: {0}</value>
     <comment>EnvironmentsSidebar: Fehlermeldung wenn das Löschen einer Umgebung fehlschlägt</comment>
+  </data>
+
+  <!-- ActivityLogPanel -->
+  <data name="ActivityLogPanel_Title" xml:space="preserve">
+    <value>Protokoll</value>
+    <comment>ActivityLogPanel: Titeltext in der Panel-Toolbar</comment>
+  </data>
+  <data name="ActivityLogPanel_Tooltip_ClearLog" xml:space="preserve">
+    <value>Protokoll leeren</value>
+    <comment>ActivityLogPanel: Tooltip des Protokoll-leeren-Buttons in der Toolbar</comment>
+  </data>
+  <data name="ActivityLogPanel_Tooltip_Overlay" xml:space="preserve">
+    <value>Overlay</value>
+    <comment>ActivityLogPanel: Tooltip des Anzeigemodus-Umschalters wenn das Panel angedockt ist</comment>
+  </data>
+  <data name="ActivityLogPanel_Tooltip_Docked" xml:space="preserve">
+    <value>Angedockt</value>
+    <comment>ActivityLogPanel: Tooltip des Anzeigemodus-Umschalters wenn das Panel im Overlay-Modus ist</comment>
+  </data>
+  <data name="ActivityLogPanel_Details" xml:space="preserve">
+    <value>Details</value>
+    <comment>ActivityLogPanel: Text des &lt;summary&gt;-Elements im aufklappbaren Details-Block eines Protokolleintrags</comment>
   </data>
 
   <!-- RequestAuthPanel -->

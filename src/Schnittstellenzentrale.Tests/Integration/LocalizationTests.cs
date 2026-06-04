@@ -25,7 +25,7 @@ public class LocalizationTests : IClassFixture<ControllerTestFactory>
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var content = await response.Content.ReadAsStringAsync();
-        Assert.Contains("Neu laden", content);
+        Assert.Contains("Ein unbehandelter Fehler ist aufgetreten.", content);
     }
 
     /// <summary>GET-Request mit Accept-Language: en liefert englischen UI-Text.</summary>
@@ -39,7 +39,7 @@ public class LocalizationTests : IClassFixture<ControllerTestFactory>
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var content = await response.Content.ReadAsStringAsync();
-        Assert.Contains("Reload", content);
+        Assert.Contains("An unhandled error has occurred.", content);
     }
 
     /// <summary>GET-Request ohne Accept-Language-Header fällt auf Englisch zurück.</summary>
@@ -52,7 +52,7 @@ public class LocalizationTests : IClassFixture<ControllerTestFactory>
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var content = await response.Content.ReadAsStringAsync();
-        Assert.Contains("Reload", content);
+        Assert.Contains("An unhandled error has occurred.", content);
     }
 
     /// <summary>GET-Request mit unbekanntem Accept-Language-Header fällt auf Englisch zurück.</summary>
@@ -66,6 +66,6 @@ public class LocalizationTests : IClassFixture<ControllerTestFactory>
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var content = await response.Content.ReadAsStringAsync();
-        Assert.Contains("Reload", content);
+        Assert.Contains("An unhandled error has occurred.", content);
     }
 }

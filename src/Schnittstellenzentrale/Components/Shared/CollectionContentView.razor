@@ -1,6 +1,7 @@
 @inject IApplicationGroupService ApplicationGroupService
 @inject IApplicationRepository ApplicationRepository
 @inject IEndpointRepository EndpointRepository
+@inject IStringLocalizer<SharedResources> L
 
 <div class="sz-content-view">
     <section class="sz-hero">
@@ -18,7 +19,7 @@
                                OnIconChanged="OnIconChanged" />
             </div>
             <div class="sz-hero-right">
-                <button type="button" class="sz-btn sz-btn-outline sz-btn-sm" @onclick="RequestCreateApplication">+ Neue Anwendung</button>
+                <button type="button" class="sz-btn sz-btn-outline sz-btn-sm" @onclick="RequestCreateApplication">@L["CollectionContentView_Button_NewApplication"]</button>
             </div>
         </div>
     </section>
@@ -26,15 +27,15 @@
     <div class="sz-dashboard">
         <div class="sz-dashboard-grid">
             <div class="sz-dashboard-col-aside">
-                <span class="sz-section-label">KPI</span>
+                <span class="sz-section-label">@L["CollectionContentView_Label_Kpi"]</span>
                 <div class="sz-kpi-card">
                     <div class="sz-kpi-row">
-                        <span class="sz-kpi-label">Anzahl Anwendungen</span>
+                        <span class="sz-kpi-label">@L["CollectionContentView_Label_ApplicationCount"]</span>
                         <span class="sz-kpi-value">@_applicationCount</span>
                     </div>
                     <div class="sz-kpi-divider"></div>
                     <div class="sz-kpi-row">
-                        <span class="sz-kpi-label">Anzahl Endpunkte</span>
+                        <span class="sz-kpi-label">@L["CollectionContentView_Label_EndpointCount"]</span>
                         <span class="sz-kpi-value">@_endpointCount</span>
                     </div>
                 </div>
@@ -43,16 +44,16 @@
 
         <div class="sz-endpoints-section">
             <div class="sz-endpoints-header">
-                <span class="sz-section-label">Core Endpoints</span>
+                <span class="sz-section-label">@L["CollectionContentView_Label_CoreEndpoints"]</span>
             </div>
             <div class="sz-table-wrapper">
                 <table class="sz-table">
                     <thead>
                         <tr>
-                            <th>Methode</th>
-                            <th>Endpunkt</th>
-                            <th>Beschreibung</th>
-                            <th>Aktion</th>
+                            <th>@L["CollectionContentView_Header_Method"]</th>
+                            <th>@L["CollectionContentView_Header_Endpoint"]</th>
+                            <th>@L["CollectionContentView_Header_Description"]</th>
+                            <th>@L["CollectionContentView_Header_Action"]</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -65,14 +66,14 @@
                                 <td><span class="sz-endpoint-path">@ep.RelativePath</span></td>
                                 <td><span class="sz-endpoint-desc">@ep.Name</span></td>
                                 <td>
-                                    <button type="button" class="sz-table-action-btn" title="Ausführen">&#9654;</button>
+                                    <button type="button" class="sz-table-action-btn" title="@L["CollectionContentView_Tooltip_Execute"]">&#9654;</button>
                                 </td>
                             </tr>
                         }
                         @if (_endpoints.Count == 0)
                         {
                             <tr>
-                                <td colspan="4" class="sz-endpoint-desc">Keine Endpunkte vorhanden.</td>
+                                <td colspan="4" class="sz-endpoint-desc">@L["CollectionContentView_Empty"]</td>
                             </tr>
                         }
                     </tbody>

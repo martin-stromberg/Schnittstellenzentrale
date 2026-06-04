@@ -44,7 +44,7 @@
             <div class="@(_dropTargetIsUngrouped ? "drag-over" : "")"
                  @ondragenter="OnDragEnterUngrouped"
                  @ondragleave="OnDragLeaveUngrouped">
-                <CollapsibleSection Title="Ohne Sammlung" IconClass="sz-icon sz-icon-layers" IsDropTarget="true" OnDrop="() => OnDrop(null)" InitiallyExpanded="true">
+                <CollapsibleSection Title="@L["ApplicationGroupTree_UngroupedSection"]" IconClass="sz-icon sz-icon-layers" IsDropTarget="true" OnDrop="() => OnDrop(null)" InitiallyExpanded="true">
                     <ChildContent>
                         @foreach (var app in _ungroupedApplications)
                         {
@@ -423,8 +423,8 @@
             await ApplicationApiClient.UpdateApplicationAsync(_draggedApplication);
             var targetGroup = targetGroupId.HasValue
                 ? _groups?.FirstOrDefault(g => g.Id == targetGroupId.Value)?.Name ?? targetGroupId.Value.ToString()
-                : "Ohne Sammlung";
-            ActivityLogService.Log(ActivityLogCategory.EntityMoved, $"Anwendung verschoben: {appName} → {targetGroup}");
+                : L["ApplicationGroupTree_UngroupedSection"];
+            ActivityLogService.Log(ActivityLogCategory.EntityMoved, string.Format(L["ApplicationGroupTree_Log_ApplicationMoved"], appName, targetGroup));
             ResetDragState();
             await LoadDataAsync();
         }

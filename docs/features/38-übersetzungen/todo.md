@@ -19,6 +19,7 @@ Branch: `38-übersetzungen`
 | [x] | 8a | Folgeaufgaben dokumentieren (bei Schleifenabbruch) | `continue.md` |
 | [x] | 9 | Dokumentation erstellen (Unteragent) | `docs/help/` |
 | [x] | 9b | README aktualisieren (Unteragent) | `README.md` |
-| [ ] | 10 | Nacharbeiten abschließen (offene Punkte aus `continue.md`) | `continue-done.md` |
+| [x] | 10 | Nacharbeiten abschließen (offene Punkte aus `continue.md`) | `continue-done.md` |
+| [ ] | 11 | Nacharbeiten abschließen (offene Punkte aus zweiter `continue.md`) | `continue-done.md` |
 | [ ] | – | Feature-Verzeichnis löschen | – |
 | [ ] | – | Commit durchführen | – |
