@@ -1,3 +1,4 @@
+using System.Globalization;
 using Microsoft.Extensions.Options;
 using Schnittstellenzentrale.Infrastructure.Services;
 
@@ -39,7 +40,16 @@ public class ImpressumServiceTests : IDisposable
 
         var service = CreateService(path);
 
-        Assert.True(service.IsAvailable());
+        var originalCulture = CultureInfo.CurrentUICulture;
+        CultureInfo.CurrentUICulture = CultureInfo.InvariantCulture;
+        try
+        {
+            Assert.True(service.IsAvailable());
+        }
+        finally
+        {
+            CultureInfo.CurrentUICulture = originalCulture;
+        }
     }
 
     /// <summary>IsAvailable_DateiFehlt_GibtFalseZurueck</summary>
@@ -63,9 +73,18 @@ public class ImpressumServiceTests : IDisposable
         File.WriteAllText(path, "# Titel");
 
         var service = CreateService(path);
-        var html = await service.GetContentAsHtmlAsync();
 
-        Assert.Contains("<h1>Titel</h1>", html);
+        var originalCulture = CultureInfo.CurrentUICulture;
+        CultureInfo.CurrentUICulture = CultureInfo.InvariantCulture;
+        try
+        {
+            var html = await service.GetContentAsHtmlAsync();
+            Assert.Contains("<h1>Titel</h1>", html);
+        }
+        finally
+        {
+            CultureInfo.CurrentUICulture = originalCulture;
+        }
     }
 
     /// <summary>GetContentAsHtmlAsync_DateiFehlt_WirftException</summary>
@@ -76,8 +95,17 @@ public class ImpressumServiceTests : IDisposable
 
         var service = CreateService(path);
 
-        await Assert.ThrowsAsync<FileNotFoundException>(
-            () => service.GetContentAsHtmlAsync());
+        var originalCulture = CultureInfo.CurrentUICulture;
+        CultureInfo.CurrentUICulture = CultureInfo.InvariantCulture;
+        try
+        {
+            await Assert.ThrowsAsync<FileNotFoundException>(
+                () => service.GetContentAsHtmlAsync());
+        }
+        finally
+        {
+            CultureInfo.CurrentUICulture = originalCulture;
+        }
     }
 
     // --- Pfadauflösung ---
@@ -92,6 +120,8 @@ public class ImpressumServiceTests : IDisposable
         // Datei existiert nicht — IsAvailable() gibt false zurück, aber der aufgelöste
         // Pfad kann über das Verhalten von IsAvailable() indirekt geprüft werden:
         // Legen wir die Datei am erwarteten Ort an, muss IsAvailable() true liefern.
+        var originalCulture = CultureInfo.CurrentUICulture;
+        CultureInfo.CurrentUICulture = CultureInfo.InvariantCulture;
         try
         {
             File.WriteAllText(expectedPath, "test");
@@ -99,6 +129,7 @@ public class ImpressumServiceTests : IDisposable
         }
         finally
         {
+            CultureInfo.CurrentUICulture = originalCulture;
             if (File.Exists(expectedPath))
                 File.Delete(expectedPath);
         }
@@ -113,6 +144,8 @@ public class ImpressumServiceTests : IDisposable
 
         var service = CreateService(relativePath);
 
+        var originalCulture = CultureInfo.CurrentUICulture;
+        CultureInfo.CurrentUICulture = CultureInfo.InvariantCulture;
         try
         {
             File.WriteAllText(expectedPath, "test");
@@ -120,6 +153,7 @@ public class ImpressumServiceTests : IDisposable
         }
         finally
         {
+            CultureInfo.CurrentUICulture = originalCulture;
             if (File.Exists(expectedPath))
                 File.Delete(expectedPath);
         }
@@ -135,5 +169,187 @@ public class ImpressumServiceTests : IDisposable
         var service = CreateService(absolutePath);
 
         Assert.True(service.IsAvailable());
+    }
+
+    // --- Sprachspezifische Dateiauflösung ---
+
+    /// <summary>IsAvailable_SprachspezifischeDateiVorhanden_GibtTrueZurueck</summary>
+    [Fact]
+    public void IsAvailable_SprachspezifischeDateiVorhanden_GibtTrueZurueck()
+    {
+        var fallbackPath = Path.Combine(_tempDir, "impressum.md");
+        var languagePath = Path.Combine(_tempDir, "impressum.de.md");
+        File.WriteAllText(fallbackPath, "# Fallback");
+        File.WriteAllText(languagePath, "# Deutsch");
+
+        var service = CreateService(fallbackPath);
+
+        var originalCulture = CultureInfo.CurrentUICulture;
+        CultureInfo.CurrentUICulture = new CultureInfo("de");
+        try
+        {
+            Assert.True(service.IsAvailable());
+        }
+        finally
+        {
+            CultureInfo.CurrentUICulture = originalCulture;
+        }
+    }
+
+    /// <summary>IsAvailable_SprachspezifischeDateiFehlt_FallbackVorhanden_GibtTrueZurueck</summary>
+    [Fact]
+    public void IsAvailable_SprachspezifischeDateiFehlt_FallbackVorhanden_GibtTrueZurueck()
+    {
+        var fallbackPath = Path.Combine(_tempDir, "impressum.md");
+        File.WriteAllText(fallbackPath, "# Fallback");
+
+        var service = CreateService(fallbackPath);
+
+        var originalCulture = CultureInfo.CurrentUICulture;
+        CultureInfo.CurrentUICulture = new CultureInfo("fr");
+        try
+        {
+            Assert.True(service.IsAvailable());
+        }
+        finally
+        {
+            CultureInfo.CurrentUICulture = originalCulture;
+        }
+    }
+
+    /// <summary>IsAvailable_BeideVariantenFehlen_GibtFalseZurueck</summary>
+    [Fact]
+    public void IsAvailable_BeideVariantenFehlen_GibtFalseZurueck()
+    {
+        var path = Path.Combine(_tempDir, "impressum.md");
+
+        var service = CreateService(path);
+
+        var originalCulture = CultureInfo.CurrentUICulture;
+        CultureInfo.CurrentUICulture = new CultureInfo("de");
+        try
+        {
+            Assert.False(service.IsAvailable());
+        }
+        finally
+        {
+            CultureInfo.CurrentUICulture = originalCulture;
+        }
+    }
+
+    /// <summary>IsAvailable_NeutralesSprachkuerzel_VerwendetFallback</summary>
+    [Fact]
+    public void IsAvailable_NeutralesSprachkuerzel_VerwendetFallback()
+    {
+        var fallbackPath = Path.Combine(_tempDir, "impressum.md");
+        File.WriteAllText(fallbackPath, "# Fallback");
+
+        var service = CreateService(fallbackPath);
+
+        var originalCulture = CultureInfo.CurrentUICulture;
+        CultureInfo.CurrentUICulture = CultureInfo.InvariantCulture;
+        try
+        {
+            Assert.True(service.IsAvailable());
+        }
+        finally
+        {
+            CultureInfo.CurrentUICulture = originalCulture;
+        }
+    }
+
+    /// <summary>GetContentAsHtmlAsync_SprachspezifischeDateiVorhanden_LiestSprachspezifischeDatei</summary>
+    [Fact]
+    public async Task GetContentAsHtmlAsync_SprachspezifischeDateiVorhanden_LiestSprachspezifischeDatei()
+    {
+        var fallbackPath = Path.Combine(_tempDir, "impressum.md");
+        var languagePath = Path.Combine(_tempDir, "impressum.de.md");
+        File.WriteAllText(fallbackPath, "# Fallback-Inhalt");
+        File.WriteAllText(languagePath, "# Deutscher Inhalt");
+
+        var service = CreateService(fallbackPath);
+
+        var originalCulture = CultureInfo.CurrentUICulture;
+        CultureInfo.CurrentUICulture = new CultureInfo("de");
+        try
+        {
+            var html = await service.GetContentAsHtmlAsync();
+            Assert.Contains("Deutscher Inhalt", html);
+            Assert.DoesNotContain("Fallback-Inhalt", html);
+        }
+        finally
+        {
+            CultureInfo.CurrentUICulture = originalCulture;
+        }
+    }
+
+    /// <summary>GetContentAsHtmlAsync_SprachspezifischeDateiFehlt_LiestFallbackDatei</summary>
+    [Fact]
+    public async Task GetContentAsHtmlAsync_SprachspezifischeDateiFehlt_LiestFallbackDatei()
+    {
+        var fallbackPath = Path.Combine(_tempDir, "impressum.md");
+        File.WriteAllText(fallbackPath, "# Fallback-Inhalt");
+
+        var service = CreateService(fallbackPath);
+
+        var originalCulture = CultureInfo.CurrentUICulture;
+        CultureInfo.CurrentUICulture = new CultureInfo("fr");
+        try
+        {
+            var html = await service.GetContentAsHtmlAsync();
+            Assert.Contains("Fallback-Inhalt", html);
+        }
+        finally
+        {
+            CultureInfo.CurrentUICulture = originalCulture;
+        }
+    }
+
+    /// <summary>ResolvePath_SprachspezifischeDateiVorhanden_GibtSprachspezifischenPfadZurueck</summary>
+    [Fact]
+    public async Task ResolvePath_SprachspezifischeDateiVorhanden_GibtSprachspezifischenPfadZurueck()
+    {
+        var fallbackPath = Path.Combine(_tempDir, "impressum.md");
+        var languagePath = Path.Combine(_tempDir, "impressum.de.md");
+        File.WriteAllText(fallbackPath, "# Fallback");
+        File.WriteAllText(languagePath, "# Deutsch");
+
+        var service = CreateService(fallbackPath);
+
+        var originalCulture = CultureInfo.CurrentUICulture;
+        CultureInfo.CurrentUICulture = new CultureInfo("de");
+        try
+        {
+            Assert.True(service.IsAvailable());
+            var html = await service.GetContentAsHtmlAsync();
+            Assert.Contains("Deutsch", html);
+        }
+        finally
+        {
+            CultureInfo.CurrentUICulture = originalCulture;
+        }
+    }
+
+    /// <summary>ResolvePath_SprachspezifischeDateiFehlt_GibtFallbackPfadZurueck</summary>
+    [Fact]
+    public async Task ResolvePath_SprachspezifischeDateiFehlt_GibtFallbackPfadZurueck()
+    {
+        var fallbackPath = Path.Combine(_tempDir, "impressum.md");
+        File.WriteAllText(fallbackPath, "# Fallback");
+
+        var service = CreateService(fallbackPath);
+
+        var originalCulture = CultureInfo.CurrentUICulture;
+        CultureInfo.CurrentUICulture = new CultureInfo("de");
+        try
+        {
+            Assert.True(service.IsAvailable());
+            var html = await service.GetContentAsHtmlAsync();
+            Assert.Contains("Fallback", html);
+        }
+        finally
+        {
+            CultureInfo.CurrentUICulture = originalCulture;
+        }
     }
 }

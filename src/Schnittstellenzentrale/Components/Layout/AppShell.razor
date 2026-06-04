@@ -9,6 +9,7 @@
 @inject INavigationStateService NavigationStateService
 @inject IStringLocalizer<SharedResources> L
 @using Microsoft.AspNetCore.SignalR.Client
+@using Schnittstellenzentrale.Components.Pages
 @implements IAsyncDisposable
 
 <div class="sz-app-shell">
@@ -46,6 +47,7 @@
     private TopBar? _topBar;
     private EnvironmentManagementOverlay? _environmentManagementOverlay;
     private HubConnection? _hubConnection;
+    private NavigationArea _previousArea = NavigationArea.Workspaces;
 
     protected override void OnInitialized()
     {
@@ -65,13 +67,16 @@
     private void SyncAreaFromUrl(string url)
     {
         var path = new Uri(url).AbsolutePath;
-        if (path.Equals("/impressum", StringComparison.OrdinalIgnoreCase))
+        if (path.Equals(ImpressumPage.Route, StringComparison.OrdinalIgnoreCase))
         {
-            _ = NavigationStateService.SetAreaAsync(NavigationArea.Impressum);
+            _previousArea = NavigationStateService.CurrentArea == NavigationArea.Impressum
+                ? _previousArea
+                : NavigationStateService.CurrentArea;
+            _ = InvokeAsync(() => NavigationStateService.SetAreaAsync(NavigationArea.Impressum));
         }
         else if (NavigationStateService.CurrentArea == NavigationArea.Impressum)
         {
-            _ = NavigationStateService.SetAreaAsync(NavigationArea.Workspaces);
+            _ = InvokeAsync(() => NavigationStateService.SetAreaAsync(_previousArea));
         }
     }
 
