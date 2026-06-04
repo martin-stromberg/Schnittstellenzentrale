@@ -53,6 +53,26 @@
         ThemeService.OnThemeChanged += OnStateChanged;
         ActiveEnvironmentService.OnActiveEnvironmentChanged += OnStateChanged;
         NavigationStateService.OnAreaChanged += OnStateChanged;
+        NavigationManager.LocationChanged += OnLocationChanged;
+        SyncAreaFromUrl(NavigationManager.Uri);
+    }
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        SyncAreaFromUrl(e.Location);
+    }
+
+    private void SyncAreaFromUrl(string url)
+    {
+        var path = new Uri(url).AbsolutePath;
+        if (path.Equals("/impressum", StringComparison.OrdinalIgnoreCase))
+        {
+            _ = NavigationStateService.SetAreaAsync(NavigationArea.Impressum);
+        }
+        else if (NavigationStateService.CurrentArea == NavigationArea.Impressum)
+        {
+            _ = NavigationStateService.SetAreaAsync(NavigationArea.Workspaces);
+        }
     }
 
     private void OnStorageModeChanged()
@@ -181,6 +201,7 @@
         ThemeService.OnThemeChanged -= OnStateChanged;
         ActiveEnvironmentService.OnActiveEnvironmentChanged -= OnStateChanged;
         NavigationStateService.OnAreaChanged -= OnStateChanged;
+        NavigationManager.LocationChanged -= OnLocationChanged;
 
         if (_hubConnection != null)
         {
