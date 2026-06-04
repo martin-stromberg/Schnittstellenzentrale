@@ -49,7 +49,7 @@ public class PlaywrightServer : IAsyncLifetime
     protected virtual Task OnAfterStartAsync() => Task.CompletedTask;
 
     /// <inheritdoc/>
-    public async Task InitializeAsync()
+    public virtual async Task InitializeAsync()
     {
         // Eindeutiger Name verhindert Kollisionen zwischen parallelen Test-Collections.
         // Die Anchor-Verbindung bleibt offen, damit SQLite die In-Memory-DB nicht verwirft.
@@ -140,7 +140,7 @@ public class PlaywrightServer : IAsyncLifetime
     }
 
     /// <inheritdoc/>
-    public async Task DisposeAsync()
+    public virtual async Task DisposeAsync()
     {
         if (_app is not null)
         {

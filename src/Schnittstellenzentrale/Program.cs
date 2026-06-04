@@ -121,6 +121,8 @@ public partial class Program {
 
         builder.Services.Configure<UploadSettings>(builder.Configuration.GetSection("Upload"));
         builder.Services.Configure<HistorySettings>(builder.Configuration.GetSection("History"));
+        builder.Services.Configure<ImpressumSettings>(builder.Configuration.GetSection("Impressum"));
+        builder.Services.AddSingleton<IImpressumService, ImpressumService>();
 
         builder.Services.AddShadcnBlazor();
 

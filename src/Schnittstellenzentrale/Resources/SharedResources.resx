@@ -1189,6 +1189,20 @@
     <comment>Error page: warning inside the development-mode section advising against enabling Development in production</comment>
   </data>
 
+  <!-- ImpressumPage -->
+  <data name="ImpressumPage_PageTitle" xml:space="preserve">
+    <value>Imprint</value>
+    <comment>ImpressumPage: browser tab title (PageTitle element)</comment>
+  </data>
+  <data name="ImpressumPage_Heading" xml:space="preserve">
+    <value>Imprint</value>
+    <comment>ImpressumPage: main h1 heading on the imprint page</comment>
+  </data>
+  <data name="ImpressumPage_NotAvailable" xml:space="preserve">
+    <value>No imprint available.</value>
+    <comment>ImpressumPage: text shown when the imprint file does not exist</comment>
+  </data>
+
   <!-- HelpPage -->
   <data name="HelpPage_PageTitle" xml:space="preserve">
     <value>Help – Schnittstellenzentrale</value>
