@@ -2,7 +2,7 @@
 
 <SzDialog Title="@L["ConfirmDeleteGroupDialog_Title"]" Small="true">
     <ChildContent>
-        <p class="sz-dialog__text">@L["ConfirmDeleteGroupDialog_Message"] <strong>@Group.Name</strong> @L["ConfirmDeleteGroupDialog_MessageSuffix"]</p>
+        <p class="sz-dialog__text">@string.Format(L["ConfirmDeleteGroupDialog_Message"], Group.Name)</p>
         <p class="sz-dialog__text">@L["ConfirmDeleteGroupDialog_ApplicationCount"] <strong>@Group.Applications.Count</strong> @L["ConfirmDeleteGroupDialog_ApplicationCountSuffix"]</p>
     </ChildContent>
     <Footer>

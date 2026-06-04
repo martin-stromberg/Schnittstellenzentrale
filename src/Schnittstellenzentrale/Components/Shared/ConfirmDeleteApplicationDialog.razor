@@ -2,7 +2,7 @@
 
 <SzDialog Title="@L["ConfirmDeleteApplicationDialog_Title"]" Small="true">
     <ChildContent>
-        <p class="sz-dialog__text">@L["ConfirmDeleteApplicationDialog_Message"] <strong>@Application.Name</strong> @L["ConfirmDeleteApplicationDialog_MessageSuffix"]</p>
+        <p class="sz-dialog__text">@string.Format(L["ConfirmDeleteApplicationDialog_Message"], Application.Name)</p>
     </ChildContent>
     <Footer>
         <button type="button" class="sz-btn sz-btn-destructive" @onclick="Confirmed">@L["ConfirmDeleteApplicationDialog_DeleteButton"]</button>

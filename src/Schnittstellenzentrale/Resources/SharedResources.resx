@@ -273,12 +273,8 @@
     <comment>ConfirmDeleteGroupDialog: dialog title when confirming deletion of an application group</comment>
   </data>
   <data name="ConfirmDeleteGroupDialog_Message" xml:space="preserve">
-    <value>Really delete collection</value>
-    <comment>ConfirmDeleteGroupDialog: start of confirmation message (followed by group name)</comment>
-  </data>
-  <data name="ConfirmDeleteGroupDialog_MessageSuffix" xml:space="preserve">
-    <value>really delete?</value>
-    <comment>ConfirmDeleteGroupDialog: suffix after the group name in the confirmation message</comment>
+    <value>Really delete collection {0}?</value>
+    <comment>ConfirmDeleteGroupDialog: confirmation message; {0} is the collection name</comment>
   </data>
   <data name="ConfirmDeleteGroupDialog_ApplicationCount" xml:space="preserve">
     <value>The collection contains</value>
@@ -307,12 +303,8 @@
     <comment>ConfirmDeleteApplicationDialog: dialog title when confirming deletion of an application</comment>
   </data>
   <data name="ConfirmDeleteApplicationDialog_Message" xml:space="preserve">
-    <value>Really delete application</value>
-    <comment>ConfirmDeleteApplicationDialog: start of confirmation message (followed by application name)</comment>
-  </data>
-  <data name="ConfirmDeleteApplicationDialog_MessageSuffix" xml:space="preserve">
-    <value>really delete?</value>
-    <comment>ConfirmDeleteApplicationDialog: suffix after the application name in the confirmation message</comment>
+    <value>Really delete application {0}?</value>
+    <comment>ConfirmDeleteApplicationDialog: confirmation message; {0} is the application name</comment>
   </data>
   <data name="ConfirmDeleteApplicationDialog_DeleteButton" xml:space="preserve">
     <value>Delete</value>
@@ -329,12 +321,8 @@
     <comment>ConfirmDeleteEndpointGroupDialog: dialog title when confirming deletion of an endpoint group folder</comment>
   </data>
   <data name="ConfirmDeleteEndpointGroupDialog_Message" xml:space="preserve">
-    <value>Really delete folder</value>
-    <comment>ConfirmDeleteEndpointGroupDialog: start of confirmation message (followed by folder name)</comment>
-  </data>
-  <data name="ConfirmDeleteEndpointGroupDialog_MessageSuffix" xml:space="preserve">
-    <value>really delete?</value>
-    <comment>ConfirmDeleteEndpointGroupDialog: suffix after the folder name in the confirmation message</comment>
+    <value>Really delete folder {0}?</value>
+    <comment>ConfirmDeleteEndpointGroupDialog: confirmation message; {0} is the folder name</comment>
   </data>
   <data name="ConfirmDeleteEndpointGroupDialog_Warning" xml:space="preserve">
     <value>The folder contains</value>

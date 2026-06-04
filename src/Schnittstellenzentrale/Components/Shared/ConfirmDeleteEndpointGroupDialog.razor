@@ -2,7 +2,7 @@
 
 <SzDialog Title="@L["ConfirmDeleteEndpointGroupDialog_Title"]" Small="true">
     <ChildContent>
-        <p class="sz-dialog__text">@L["ConfirmDeleteEndpointGroupDialog_Message"] <strong>@Group.Name</strong> @L["ConfirmDeleteEndpointGroupDialog_MessageSuffix"]</p>
+        <p class="sz-dialog__text">@string.Format(L["ConfirmDeleteEndpointGroupDialog_Message"], Group.Name)</p>
         @if (EndpointCount > 0)
         {
             <div class="sz-alert sz-alert--warning">

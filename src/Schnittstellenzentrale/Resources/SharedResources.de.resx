@@ -273,12 +273,8 @@
     <comment>ConfirmDeleteGroupDialog: Dialogtitel beim Bestätigen des Löschens einer Anwendungsgruppe</comment>
   </data>
   <data name="ConfirmDeleteGroupDialog_Message" xml:space="preserve">
-    <value>Sammlung</value>
-    <comment>ConfirmDeleteGroupDialog: Beginn der Bestätigungsnachricht (gefolgt vom Gruppennamen)</comment>
-  </data>
-  <data name="ConfirmDeleteGroupDialog_MessageSuffix" xml:space="preserve">
-    <value>wirklich löschen?</value>
-    <comment>ConfirmDeleteGroupDialog: Suffix nach dem Gruppennamen in der Bestätigungsnachricht</comment>
+    <value>Sammlung {0} wirklich löschen?</value>
+    <comment>ConfirmDeleteGroupDialog: Bestätigungsnachricht; {0} ist der Sammlungsname</comment>
   </data>
   <data name="ConfirmDeleteGroupDialog_ApplicationCount" xml:space="preserve">
     <value>Die Sammlung enthält</value>
@@ -307,12 +303,8 @@
     <comment>ConfirmDeleteApplicationDialog: Dialogtitel beim Bestätigen des Löschens einer Anwendung</comment>
   </data>
   <data name="ConfirmDeleteApplicationDialog_Message" xml:space="preserve">
-    <value>Anwendung</value>
-    <comment>ConfirmDeleteApplicationDialog: Beginn der Bestätigungsnachricht (gefolgt vom Anwendungsnamen)</comment>
-  </data>
-  <data name="ConfirmDeleteApplicationDialog_MessageSuffix" xml:space="preserve">
-    <value>wirklich löschen?</value>
-    <comment>ConfirmDeleteApplicationDialog: Suffix nach dem Anwendungsnamen in der Bestätigungsnachricht</comment>
+    <value>Anwendung {0} wirklich löschen?</value>
+    <comment>ConfirmDeleteApplicationDialog: Bestätigungsnachricht; {0} ist der Anwendungsname</comment>
   </data>
   <data name="ConfirmDeleteApplicationDialog_DeleteButton" xml:space="preserve">
     <value>Löschen</value>
@@ -329,12 +321,8 @@
     <comment>ConfirmDeleteEndpointGroupDialog: Dialogtitel beim Bestätigen des Löschens eines Endpunktgruppen-Ordners</comment>
   </data>
   <data name="ConfirmDeleteEndpointGroupDialog_Message" xml:space="preserve">
-    <value>Ordner</value>
-    <comment>ConfirmDeleteEndpointGroupDialog: Beginn der Bestätigungsnachricht (gefolgt vom Ordnernamen)</comment>
-  </data>
-  <data name="ConfirmDeleteEndpointGroupDialog_MessageSuffix" xml:space="preserve">
-    <value>wirklich löschen?</value>
-    <comment>ConfirmDeleteEndpointGroupDialog: Suffix nach dem Ordnernamen in der Bestätigungsnachricht</comment>
+    <value>Ordner {0} wirklich löschen?</value>
+    <comment>ConfirmDeleteEndpointGroupDialog: Bestätigungsnachricht; {0} ist der Ordnername</comment>
   </data>
   <data name="ConfirmDeleteEndpointGroupDialog_Warning" xml:space="preserve">
     <value>Der Ordner enthält</value>

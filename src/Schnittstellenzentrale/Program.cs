@@ -141,16 +141,16 @@ public partial class Program {
         if (!app.Environment.EnvironmentName.Equals("Playwright", StringComparison.OrdinalIgnoreCase))
             app.UseHttpsRedirection();
 
-        app.UseSwagger();
-        app.UseSwaggerUI();
-        app.UseAuthentication();
-        app.UseAuthorization();
-
         var localizationOptions = new RequestLocalizationOptions()
             .SetDefaultCulture("en")
             .AddSupportedCultures("en", "de")
             .AddSupportedUICultures("en", "de");
         app.UseRequestLocalization(localizationOptions);
+
+        app.UseSwagger();
+        app.UseSwaggerUI();
+        app.UseAuthentication();
+        app.UseAuthorization();
 
         app.UseAntiforgery();
 
