@@ -1,6 +1,7 @@
 @inject ISwaggerImportService SwaggerImportService
+@inject IStringLocalizer<SharedResources> L
 
-<ImportDialog Title="Swagger-Import-Vorschau" Diff="Diff" Application="Application" OnApply="ApplyAsync" OnClose="OnClose" />
+<ImportDialog Title="@L["SwaggerImportDialog_Title"]" Diff="Diff" Application="Application" OnApply="ApplyAsync" OnClose="OnClose" />
 
 @code {
     [Parameter] public ImportDiff Diff { get; set; } = null!;

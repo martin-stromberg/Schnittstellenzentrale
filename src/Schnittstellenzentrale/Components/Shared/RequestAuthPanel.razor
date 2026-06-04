@@ -1,9 +1,10 @@
 @inject ICredentialService CredentialService
+@inject IStringLocalizer<SharedResources> L
 @using Schnittstellenzentrale.Core.Helpers
 
 <div class="sz-auth-panel">
     <div class="sz-form-group">
-        <label class="sz-form-label">Authentifizierungstyp</label>
+        <label class="sz-form-label">@L["RequestAuthPanel_Label_AuthType"]</label>
         <select class="sz-form-select" value="@AuthenticationType" @onchange="OnAuthTypeChanged">
             @foreach (var authType in Enum.GetValues<AuthenticationType>())
             {
@@ -15,17 +16,17 @@
     @if (AuthenticationType == AuthenticationType.Basic)
     {
         <div class="sz-form-group">
-            <label class="sz-form-label">Benutzername:Passwort</label>
-            <input type="text" class="sz-input" value="@_credentialValue" @oninput="OnCredentialChanged" placeholder="benutzer:passwort" />
-            <span class="sz-form-hint">Wird im Windows Credential Manager gespeichert.</span>
+            <label class="sz-form-label">@L["RequestAuthPanel_Label_BasicCredentials"]</label>
+            <input type="text" class="sz-input" value="@_credentialValue" @oninput="OnCredentialChanged" placeholder="@L["RequestAuthPanel_Placeholder_BasicCredentials"]" />
+            <span class="sz-form-hint">@L["RequestAuthPanel_Hint_CredentialStorage"]</span>
         </div>
     }
     else if (AuthenticationType == AuthenticationType.BearerToken)
     {
         <div class="sz-form-group">
-            <label class="sz-form-label">Bearer-Token</label>
-            <input type="text" class="sz-input" value="@_credentialValue" @oninput="OnCredentialChanged" placeholder="Token" />
-            <span class="sz-form-hint">Wird im Windows Credential Manager gespeichert.</span>
+            <label class="sz-form-label">@L["RequestAuthPanel_Label_BearerToken"]</label>
+            <input type="text" class="sz-input" value="@_credentialValue" @oninput="OnCredentialChanged" placeholder="@L["RequestAuthPanel_Placeholder_BearerToken"]" />
+            <span class="sz-form-hint">@L["RequestAuthPanel_Hint_CredentialStorage"]</span>
         </div>
     }
 </div>

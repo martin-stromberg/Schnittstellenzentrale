@@ -1,4 +1,5 @@
 @inject IApplicationApiClient ApplicationApiClient
+@inject IStringLocalizer<SharedResources> L
 
 <div class="sz-content-view">
     <section class="sz-hero">
@@ -13,8 +14,8 @@
                         <span class="sz-icon-placeholder">&#128218;</span>
                     </div>
                     <div class="sz-content-header-text">
-                        <span class="sz-content-title">Neue Sammlung</span>
-                        <span class="sz-content-subtitle">Sammlung anlegen</span>
+                        <span class="sz-content-title">@L["ApplicationGroupEditor_TitleNew"]</span>
+                        <span class="sz-content-subtitle">@L["ApplicationGroupEditor_SubtitleNew"]</span>
                     </div>
                 </div>
             </div>
@@ -26,7 +27,7 @@
             <DataAnnotationsValidator />
 
             <div class="sz-form-group">
-                <label class="sz-form-label" for="group-name">Name</label>
+                <label class="sz-form-label" for="group-name">@L["ApplicationGroupEditor_Label_Name"]</label>
                 <InputText id="group-name" class="sz-input" @bind-Value="_model.Name" />
                 <ValidationMessage For="() => _model.Name" />
             </div>
@@ -37,8 +38,8 @@
             }
 
             <div class="sz-editor-actions">
-                <button type="submit" class="sz-btn-primary">Speichern</button>
-                <button type="button" class="sz-btn-secondary" @onclick="Cancel">Abbrechen</button>
+                <button type="submit" class="sz-btn-primary">@L["ApplicationGroupEditor_SaveButton"]</button>
+                <button type="button" class="sz-btn-secondary" @onclick="Cancel">@L["ApplicationGroupEditor_CancelButton"]</button>
             </div>
         </EditForm>
     </div>
@@ -62,7 +63,7 @@
         }
         catch (Exception ex)
         {
-            _errorMessage = $"Speichern fehlgeschlagen: {ex.Message}";
+            _errorMessage = string.Format(L["ApplicationGroupEditor_Error_Save"], ex.Message);
         }
     }
 

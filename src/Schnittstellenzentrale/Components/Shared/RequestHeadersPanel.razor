@@ -1,9 +1,11 @@
+@inject IStringLocalizer<SharedResources> L
+
 <div class="sz-panel-table-wrapper">
     <table class="sz-table">
         <thead>
             <tr>
-                <th>Name</th>
-                <th>Wert</th>
+                <th>@L["RequestHeadersPanel_ColName"]</th>
+                <th>@L["RequestHeadersPanel_ColValue"]</th>
                 <th></th>
             </tr>
         </thead>
@@ -29,7 +31,7 @@
         </tbody>
     </table>
     <div class="sz-panel-table-footer">
-        <button type="button" class="sz-links-add-btn" @onclick="AddHeader">+ Header</button>
+        <button type="button" class="sz-links-add-btn" @onclick="AddHeader">@L["RequestHeadersPanel_AddButton"]</button>
     </div>
 </div>
 

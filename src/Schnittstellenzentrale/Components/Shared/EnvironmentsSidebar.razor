@@ -2,11 +2,12 @@
 @inject IStorageModeService StorageModeService
 @inject ICurrentUserService CurrentUserService
 @inject IActiveEnvironmentService ActiveEnvironmentService
+@inject IStringLocalizer<SharedResources> L
 @implements IDisposable
 
 <div class="sz-environments-sidebar">
     <div class="sz-sidebar-topbar">
-        <button type="button" class="sz-btn-primary" @onclick="StartCreate">+ Neue Umgebung</button>
+        <button type="button" class="sz-btn-primary" @onclick="StartCreate">@L["EnvironmentsSidebar_NewButton"]</button>
     </div>
 
     @if (!string.IsNullOrEmpty(_errorMessage))
@@ -21,7 +22,7 @@
                 <button type="button" class="sz-env-list-btn" @onclick="() => SelectEnvironment(env.Id)">
                     @env.Name
                 </button>
-                <button type="button" class="sz-btn-icon" title="Löschen" @onclick="() => DeleteAsync(env)">&#128465;</button>
+                <button type="button" class="sz-btn-icon" title="@L["EnvironmentsSidebar_Tooltip_Delete"]" @onclick="() => DeleteAsync(env)">&#128465;</button>
             </li>
         }
     </ul>
@@ -29,13 +30,13 @@
     @if (_creating)
     {
         <div class="sz-env-create-form">
-            <input class="sz-input" @bind="_newName" placeholder="Name der Umgebung" />
+            <input class="sz-input" @bind="_newName" placeholder="@L["EnvironmentsSidebar_Placeholder_Name"]" />
             @if (!string.IsNullOrEmpty(_createError))
             {
                 <span class="sz-inplace-error">@_createError</span>
             }
-            <button type="button" class="sz-btn-primary" @onclick="ConfirmCreateAsync">Anlegen</button>
-            <button type="button" class="sz-btn-secondary" @onclick="CancelCreate">Abbrechen</button>
+            <button type="button" class="sz-btn-primary" @onclick="ConfirmCreateAsync">@L["EnvironmentsSidebar_CreateButton"]</button>
+            <button type="button" class="sz-btn-secondary" @onclick="CancelCreate">@L["EnvironmentsSidebar_CancelButton"]</button>
         </div>
     }
 </div>
@@ -65,7 +66,7 @@
         }
         catch (Exception ex)
         {
-            _errorMessage = $"Fehler beim Laden der Umgebungen: {ex.Message}";
+            _errorMessage = string.Format(L["EnvironmentsSidebar_Error_Load"], ex.Message);
         }
     }
 
@@ -92,12 +93,12 @@
     {
         if (string.IsNullOrWhiteSpace(_newName))
         {
-            _createError = "Name ist ein Pflichtfeld.";
+            _createError = L["EnvironmentsSidebar_Error_NameEmpty"];
             return;
         }
         if (_newName.Length > 200)
         {
-            _createError = "Name darf maximal 200 Zeichen lang sein.";
+            _createError = L["EnvironmentsSidebar_Error_NameTooLong"];
             return;
         }
         var owner = CurrentUserService.GetCurrentUserName();
@@ -126,7 +127,7 @@
         }
         catch (Exception ex)
         {
-            _errorMessage = $"Fehler beim Löschen der Umgebung: {ex.Message}";
+            _errorMessage = string.Format(L["EnvironmentsSidebar_Error_Delete"], ex.Message);
         }
     }
 

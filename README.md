@@ -19,6 +19,7 @@ Blazor Server-Anwendung zur zentralen Verwaltung lokaler Webservice-Endpunkte. S
 - **Echtzeit-Synchronisation** – SignalR-basiertes Broadcasting von Änderungen an alle verbundenen Sitzungen
 - **Icons und Links** – Sammlungen und Anwendungen können mit Icon (PNG/JPEG) und URL-Links versehen werden
 - **Health-Check** – Erreichbarkeit einer Anwendungs-URL prüfen (mit konfigurierbarem Cooldown)
+- **Mehrsprachigkeit** – Benutzeroberfläche auf Deutsch und Englisch; Sprachauswahl automatisch über den `Accept-Language`-Header des Browsers (Englisch ist Standard und Fallback)
 
 ## Voraussetzungen
 

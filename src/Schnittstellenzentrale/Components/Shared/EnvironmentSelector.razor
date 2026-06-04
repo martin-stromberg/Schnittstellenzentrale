@@ -3,10 +3,11 @@
 @inject IStorageModeService StorageModeService
 @inject ICurrentUserService CurrentUserService
 @inject IJSRuntime JSRuntime
+@inject IStringLocalizer<SharedResources> L
 @implements IDisposable
 
 <select class="form-select w-auto" value="@_selectedId" @onchange="OnSelectionChanged">
-    <option value="">— Keine Umgebung —</option>
+    <option value="">@L["EnvironmentSelector_NoEnvironmentOption"]</option>
     @foreach (var env in _environments)
     {
         <option value="@env.Id">@env.Name</option>

@@ -1,9 +1,11 @@
-<SzDialog Title="Ordner umbenennen" Small="true" OnClose="Cancel">
+@inject IStringLocalizer<SharedResources> L
+
+<SzDialog Title="@L["RenameEndpointGroupDialog_Title"]" Small="true" OnClose="Cancel">
     <ChildContent>
         <EditForm Model="_model" OnValidSubmit="SaveAsync">
             <DataAnnotationsValidator />
             <div class="sz-form-group">
-                <label class="sz-form-label">Name</label>
+                <label class="sz-form-label">@L["RenameEndpointGroupDialog_Label_Name"]</label>
                 <InputText class="sz-input" @bind-Value="_model.Name" />
             </div>
             @if (!string.IsNullOrEmpty(_errorMessage))
@@ -11,8 +13,8 @@
                 <div class="sz-alert sz-alert--destructive">@_errorMessage</div>
             }
             <div class="sz-dialog__actions">
-                <button type="submit" class="sz-btn sz-btn-primary" disabled="@(string.IsNullOrWhiteSpace(_model.Name))">Speichern</button>
-                <button type="button" class="sz-btn sz-btn-outline" @onclick="Cancel">Abbrechen</button>
+                <button type="submit" class="sz-btn sz-btn-primary" disabled="@(string.IsNullOrWhiteSpace(_model.Name))">@L["RenameEndpointGroupDialog_SaveButton"]</button>
+                <button type="button" class="sz-btn sz-btn-outline" @onclick="Cancel">@L["RenameEndpointGroupDialog_CancelButton"]</button>
             </div>
         </EditForm>
     </ChildContent>
@@ -42,7 +44,7 @@
         _errorMessage = null;
         if (string.IsNullOrWhiteSpace(_model.Name))
         {
-            _errorMessage = "Der Name darf nicht leer sein.";
+            _errorMessage = L["RenameEndpointGroupDialog_Error_NameEmpty"];
             return;
         }
         try
@@ -51,7 +53,7 @@
         }
         catch (Exception ex)
         {
-            _errorMessage = $"Speichern fehlgeschlagen: {ex.Message}";
+            _errorMessage = string.Format(L["RenameEndpointGroupDialog_Error_Save"], ex.Message);
         }
     }
 

@@ -54,6 +54,7 @@ public class MainLayoutTests : BunitContext
         Services.AddSingleton<ILogger<AppShell>>(NullLogger<AppShell>.Instance);
         Services.AddSingleton(Options.Create(new UploadSettings()));
         Services.AddSingleton(Options.Create(new HistorySettings()));
+        Services.AddSingleton(TestMockFactory.CreateFakeLocalizer());
 
         JSInterop.Setup<string?>("localStorage.getItem", _ => true).SetResult(null);
         JSInterop.SetupVoid("localStorage.removeItem", _ => true).SetVoidResult();

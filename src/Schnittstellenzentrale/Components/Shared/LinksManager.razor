@@ -1,27 +1,28 @@
 @using Microsoft.EntityFrameworkCore
 @inject IApplicationLinkService ApplicationLinkService
+@inject IStringLocalizer<SharedResources> L
 
 <div class="sz-links-section">
     <div class="sz-links-header">
-        <span class="sz-section-label">Verwaltbare Links</span>
+        <span class="sz-section-label">@L["LinksManager_Section_Label"]</span>
         @if (!_addingNew)
         {
-            <button type="button" class="sz-links-add-btn" @onclick="StartAdd">+ Link hinzufügen</button>
+            <button type="button" class="sz-links-add-btn" @onclick="StartAdd">@L["LinksManager_AddButton"]</button>
         }
     </div>
 
     @if (_addingNew)
     {
         <div class="sz-link-edit-row">
-            <input class="sz-input" @bind="_newUrl" placeholder="URL (https://...)" />
-            <input class="sz-input" @bind="_newLabel" placeholder="Beschriftung (optional, max. 200 Zeichen)" />
+            <input class="sz-input" @bind="_newUrl" placeholder="@L["LinksManager_Placeholder_Url"]" />
+            <input class="sz-input" @bind="_newLabel" placeholder="@L["LinksManager_Placeholder_Label_New"]" />
             @if (!string.IsNullOrEmpty(_linkError))
             {
                 <span class="sz-inplace-error">@_linkError</span>
             }
             <div class="sz-link-edit-actions">
-                <button type="button" class="sz-btn-primary" @onclick="SaveNewAsync">Speichern</button>
-                <button type="button" class="sz-btn-secondary" @onclick="CancelNew">Abbrechen</button>
+                <button type="button" class="sz-btn-primary" @onclick="SaveNewAsync">@L["LinksManager_SaveButton"]</button>
+                <button type="button" class="sz-btn-secondary" @onclick="CancelNew">@L["LinksManager_CancelButton"]</button>
             </div>
         </div>
     }
@@ -35,15 +36,15 @@
             @if (_editingLinkId == link.Id)
             {
                 <div class="sz-link-edit-row">
-                    <input class="sz-input" @bind="_editUrl" placeholder="URL (https://...)" />
-                    <input class="sz-input" @bind="_editLabel" placeholder="Beschriftung (optional)" />
+                    <input class="sz-input" @bind="_editUrl" placeholder="@L["LinksManager_Placeholder_Url"]" />
+                    <input class="sz-input" @bind="_editLabel" placeholder="@L["LinksManager_Placeholder_Label_Edit"]" />
                     @if (!string.IsNullOrEmpty(_linkError))
                     {
                         <span class="sz-inplace-error">@_linkError</span>
                     }
                     <div class="sz-link-edit-actions">
-                        <button type="button" class="sz-btn-primary" @onclick="SaveEditAsync">Speichern</button>
-                        <button type="button" class="sz-btn-secondary" @onclick="CancelEdit">Abbrechen</button>
+                        <button type="button" class="sz-btn-primary" @onclick="SaveEditAsync">@L["LinksManager_SaveButton"]</button>
+                        <button type="button" class="sz-btn-secondary" @onclick="CancelEdit">@L["LinksManager_CancelButton"]</button>
                     </div>
                 </div>
             }
@@ -55,9 +56,9 @@
                         <a class="sz-link-anchor" href="@link.Url" target="_blank" rel="noopener">
                             @(string.IsNullOrEmpty(link.Label) ? link.Url : link.Label)
                         </a>
-                        <button type="button" class="sz-btn-icon" title="Bearbeiten" @onclick="() => StartEdit(link)">&#9998;</button>
+                        <button type="button" class="sz-btn-icon" title="@L["LinksManager_EditTitle"]" @onclick="() => StartEdit(link)">&#9998;</button>
                     </div>
-                    <button type="button" class="sz-link-delete-btn" title="Löschen" @onclick="() => DeleteLinkAsync(link.Id)">&#128465;</button>
+                    <button type="button" class="sz-link-delete-btn" title="@L["LinksManager_DeleteTitle"]" @onclick="() => DeleteLinkAsync(link.Id)">&#128465;</button>
                 </div>
                 @if (!isLast)
                 {
@@ -108,7 +109,7 @@
         }
         if (_newLabel.Length > 200)
         {
-            _linkError = "Beschriftung darf maximal 200 Zeichen lang sein.";
+            _linkError = L["LinksManager_Error_LabelTooLong"];
             return;
         }
         var link = new ApplicationLink { ApplicationId = ApplicationId, Url = _newUrl, Label = string.IsNullOrEmpty(_newLabel) ? null : _newLabel };
@@ -141,7 +142,7 @@
         }
         if (_editLabel.Length > 200)
         {
-            _linkError = "Beschriftung darf maximal 200 Zeichen lang sein.";
+            _linkError = L["LinksManager_Error_LabelTooLong"];
             return;
         }
         var existing = _links.FirstOrDefault(l => l.Id == _editingLinkId);
@@ -159,7 +160,7 @@
         }
         catch (DbUpdateConcurrencyException)
         {
-            _linkError = "Der Link wurde zwischenzeitlich von jemand anderem geändert. Bitte lade die Seite neu.";
+            _linkError = L["LinksManager_Error_ConcurrencyConflict"];
             return;
         }
         _editingLinkId = null;
@@ -175,22 +176,22 @@
 
     private const int MaxUrlLength = 2048;
 
-    private static bool ValidateUrl(string url, out string error)
+    private bool ValidateUrl(string url, out string error)
     {
         if (string.IsNullOrWhiteSpace(url))
         {
-            error = "URL ist ein Pflichtfeld.";
+            error = L["LinksManager_Error_UrlRequired"];
             return false;
         }
         if (!url.StartsWith("http://", StringComparison.OrdinalIgnoreCase) &&
             !url.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
         {
-            error = "URL muss mit http:// oder https:// beginnen.";
+            error = L["LinksManager_Error_UrlInvalid"];
             return false;
         }
         if (url.Length > MaxUrlLength)
         {
-            error = $"URL darf maximal {MaxUrlLength} Zeichen lang sein.";
+            error = string.Format(L["LinksManager_Error_UrlTooLong"], MaxUrlLength);
             return false;
         }
         error = string.Empty;

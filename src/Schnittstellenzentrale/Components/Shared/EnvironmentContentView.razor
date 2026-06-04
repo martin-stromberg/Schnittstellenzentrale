@@ -1,10 +1,11 @@
 @inject ISystemEnvironmentRepository SystemEnvironmentRepository
 @inject IActiveEnvironmentService ActiveEnvironmentService
+@inject IStringLocalizer<SharedResources> L
 
 @if (_environment == null)
 {
     <div class="sz-env-content">
-        <p class="sz-env-loading">Umgebung wird geladen…</p>
+        <p class="sz-env-loading">@L["EnvironmentContentView_Loading"]</p>
     </div>
 }
 else
@@ -30,12 +31,12 @@ else
                 @if (_editingDescription)
                 {
                     <textarea class="sz-env-desc-input" @bind="_descriptionInput" @onblur="SaveDescriptionAsync"></textarea>
-                    <button type="button" class="sz-btn-secondary sz-btn-sm" @onclick="CancelDescriptionEdit">Abbrechen</button>
+                    <button type="button" class="sz-btn-secondary sz-btn-sm" @onclick="CancelDescriptionEdit">@L["EnvironmentContentView_CancelButton"]</button>
                 }
                 else
                 {
                     <p class="sz-env-subtitle sz-editable" @onclick="StartEditDescription">
-                        @(string.IsNullOrEmpty(_environment.Description) ? "Beschreibung hinzufügen…" : _environment.Description)
+                        @(string.IsNullOrEmpty(_environment.Description) ? L["EnvironmentContentView_Placeholder_Description"] : _environment.Description)
                         <span class="sz-edit-icon">&#9998;</span>
                     </p>
                 }
@@ -45,7 +46,7 @@ else
         <div class="sz-env-stats-row">
             <div class="sz-env-stat-card">
                 <div class="sz-env-stat-header">
-                    <span class="sz-section-label">Variablen</span>
+                    <span class="sz-section-label">@L["EnvironmentContentView_Label_Variables"]</span>
                     <span class="sz-icon sz-icon-environment"></span>
                 </div>
                 <p class="sz-env-stat-value">@_environment.Variables.Count</p>
@@ -94,12 +95,12 @@ else
         if (_savingName) return;
         if (string.IsNullOrWhiteSpace(_nameInput))
         {
-            _nameError = "Name darf nicht leer sein.";
+            _nameError = L["EnvironmentContentView_Error_NameEmpty"];
             return;
         }
         if (_nameInput.Length > 200)
         {
-            _nameError = "Name darf maximal 200 Zeichen lang sein.";
+            _nameError = L["EnvironmentContentView_Error_NameTooLong"];
             return;
         }
         if (_environment == null) return;

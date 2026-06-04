@@ -5,6 +5,7 @@
 @inject IStorageModeService StorageModeService
 @inject ISignalRNotificationService SignalRNotificationService
 @inject IActiveEnvironmentService ActiveEnvironmentService
+@inject IStringLocalizer<SharedResources> L
 @using Microsoft.EntityFrameworkCore
 @using System.Text.RegularExpressions
 @using Schnittstellenzentrale.Core.Helpers
@@ -13,12 +14,12 @@
 <div class="sz-endpoint-page">
     <div class="sz-endpoint-header">
         <div class="sz-endpoint-name-row">
-            <input class="sz-endpoint-name-input" value="@_model.Name" @oninput="OnNameChanged" placeholder="Endpunktname" />
+            <input class="sz-endpoint-name-input" value="@_model.Name" @oninput="OnNameChanged" placeholder="@L["EndpointPage_Placeholder_Name"]" />
             @if (_isDirty)
             {
-                <span class="sz-endpoint-dirty-badge">geändert</span>
+                <span class="sz-endpoint-dirty-badge">@L["EndpointPage_DirtyBadge"]</span>
             }
-            <button class="sz-btn-primary" @onclick="SaveAsync" disabled="@(string.IsNullOrWhiteSpace(_model.Name))">Speichern</button>
+            <button class="sz-btn-primary" @onclick="SaveAsync" disabled="@(string.IsNullOrWhiteSpace(_model.Name))">@L["EndpointPage_SaveButton"]</button>
         </div>
 
         @if (!string.IsNullOrEmpty(_errorMessage))
@@ -28,7 +29,7 @@
 
         @if (string.IsNullOrWhiteSpace(_model.Name))
         {
-            <div class="sz-endpoint-warning">Der Name darf nicht leer sein.</div>
+            <div class="sz-endpoint-warning">@L["EndpointPage_Error_NameEmpty"]</div>
         }
 
         <div class="sz-endpoint-address-row">
@@ -38,18 +39,18 @@
                     <option value="@method">@method</option>
                 }
             </select>
-            <input class="sz-input sz-endpoint-path-input" placeholder="Relativer Pfad" value="@ResolveDisplayUrl()" @oninput="OnPathChanged" @onblur="OnPathBlur" />
-            <button class="sz-btn-primary sz-btn-send" @onclick="SendRequestAsync">Anfrage senden</button>
+            <input class="sz-input sz-endpoint-path-input" placeholder="@L["EndpointPage_Placeholder_Path"]" value="@ResolveDisplayUrl()" @oninput="OnPathChanged" @onblur="OnPathBlur" />
+            <button class="sz-btn-primary sz-btn-send" @onclick="SendRequestAsync">@L["EndpointPage_SendButton"]</button>
         </div>
     </div>
 
     <div class="sz-endpoint-tabs-bar">
-        <button class="sz-endpoint-tab @(_activeRequestTab == "auth" ? "sz-endpoint-tab--active" : "")" @onclick='() => _activeRequestTab = "auth"'>Autorisierung</button>
-        <button class="sz-endpoint-tab @(_activeRequestTab == "headers" ? "sz-endpoint-tab--active" : "")" @onclick='() => _activeRequestTab = "headers"'>Headers</button>
-        <button class="sz-endpoint-tab @(_activeRequestTab == "query" ? "sz-endpoint-tab--active" : "")" @onclick='() => _activeRequestTab = "query"'>Query-Parameter</button>
-        <button class="sz-endpoint-tab @(_activeRequestTab == "body" ? "sz-endpoint-tab--active" : "")" @onclick='() => _activeRequestTab = "body"'>Body</button>
-        <button class="sz-endpoint-tab @(_activeRequestTab == "pre-script" ? "sz-endpoint-tab--active" : "")" @onclick='() => _activeRequestTab = "pre-script"'>Pre-Request-Skript</button>
-        <button class="sz-endpoint-tab @(_activeRequestTab == "post-script" ? "sz-endpoint-tab--active" : "")" @onclick='() => _activeRequestTab = "post-script"'>Post-Request-Skript</button>
+        <button class="sz-endpoint-tab @(_activeRequestTab == "auth" ? "sz-endpoint-tab--active" : "")" @onclick='() => _activeRequestTab = "auth"'>@L["EndpointPage_Tab_Auth"]</button>
+        <button class="sz-endpoint-tab @(_activeRequestTab == "headers" ? "sz-endpoint-tab--active" : "")" @onclick='() => _activeRequestTab = "headers"'>@L["EndpointPage_Tab_Headers"]</button>
+        <button class="sz-endpoint-tab @(_activeRequestTab == "query" ? "sz-endpoint-tab--active" : "")" @onclick='() => _activeRequestTab = "query"'>@L["EndpointPage_Tab_Query"]</button>
+        <button class="sz-endpoint-tab @(_activeRequestTab == "body" ? "sz-endpoint-tab--active" : "")" @onclick='() => _activeRequestTab = "body"'>@L["EndpointPage_Tab_Body"]</button>
+        <button class="sz-endpoint-tab @(_activeRequestTab == "pre-script" ? "sz-endpoint-tab--active" : "")" @onclick='() => _activeRequestTab = "pre-script"'>@L["EndpointPage_Tab_PreScript"]</button>
+        <button class="sz-endpoint-tab @(_activeRequestTab == "post-script" ? "sz-endpoint-tab--active" : "")" @onclick='() => _activeRequestTab = "post-script"'>@L["EndpointPage_Tab_PostScript"]</button>
     </div>
 
     <div class="sz-endpoint-tab-content">
@@ -94,16 +95,16 @@
     {
         <div class="sz-endpoint-response response-section">
             <div class="sz-endpoint-response-header">
-                <span class="sz-section-label">Antwort</span>
+                <span class="sz-section-label">@L["EndpointPage_Response_Label"]</span>
                 <div class="sz-endpoint-response-meta">
-                    <span>Status: <strong>@_result.StatusCode</strong></span>
+                    <span>@L["EndpointPage_Response_Status"] <strong>@_result.StatusCode</strong></span>
                     @if (_result.DurationMs.HasValue)
                     {
-                        <span>Dauer: <strong>@_result.DurationMs ms</strong></span>
+                        <span>@L["EndpointPage_Response_Duration"] <strong>@_result.DurationMs ms</strong></span>
                     }
                     @if (_result.ResponseSizeBytes.HasValue)
                     {
-                        <span>Größe: <strong>@_result.ResponseSizeBytes Bytes</strong></span>
+                        <span>@L["EndpointPage_Response_Size"] <strong>@_result.ResponseSizeBytes @L["EndpointPage_Response_SizeSuffix"]</strong></span>
                     }
                 </div>
             </div>
@@ -112,8 +113,8 @@
                 <div class="sz-error">@_result.ErrorMessage</div>
             }
             <div class="sz-endpoint-tabs-bar">
-                <button class="sz-endpoint-tab @(_activeResponseTab == "body" ? "sz-endpoint-tab--active" : "")" @onclick='() => _activeResponseTab = "body"'>Body</button>
-                <button class="sz-endpoint-tab @(_activeResponseTab == "headers" ? "sz-endpoint-tab--active" : "")" @onclick='() => _activeResponseTab = "headers"'>Headers</button>
+                <button class="sz-endpoint-tab @(_activeResponseTab == "body" ? "sz-endpoint-tab--active" : "")" @onclick='() => _activeResponseTab = "body"'>@L["EndpointPage_Response_Tab_Body"]</button>
+                <button class="sz-endpoint-tab @(_activeResponseTab == "headers" ? "sz-endpoint-tab--active" : "")" @onclick='() => _activeResponseTab = "headers"'>@L["EndpointPage_Response_Tab_Headers"]</button>
             </div>
             <div class="sz-endpoint-tab-content">
                 @if (_activeResponseTab == "body")
@@ -346,7 +347,7 @@
     {
         if (!_isDirty)
             return;
-        var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", "Es gibt ungespeicherte Änderungen. Trotzdem verlassen?");
+        var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", L["EndpointPage_Confirm_UnsavedChanges"].Value);
         if (!confirmed)
             context.PreventNavigation();
     }
@@ -371,7 +372,7 @@
         }
         catch (Exception ex)
         {
-            _errorMessage = $"Speichern fehlgeschlagen: {ex.Message}";
+            _errorMessage = string.Format(L["EndpointPage_Error_Save"], ex.Message);
         }
     }
 
@@ -393,7 +394,7 @@
         }
         catch (Exception ex)
         {
-            _errorMessage = $"Speichern fehlgeschlagen: {ex.Message}";
+            _errorMessage = string.Format(L["EndpointPage_Error_Save"], ex.Message);
         }
     }
 
@@ -483,7 +484,7 @@
         var refreshed = await ApplicationApiClient.GetEndpointByIdAsync(_model.Id);
         if (refreshed == null)
         {
-            _errorMessage = "Endpunkt konnte nicht geladen werden.";
+            _errorMessage = L["EndpointPage_Error_LoadFailed"];
             return;
         }
 

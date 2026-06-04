@@ -1,5 +1,6 @@
 @inject IJSRuntime JSRuntime
 @inject IOptions<UploadSettings> UploadOptions
+@inject IStringLocalizer<SharedResources> L
 @using Microsoft.Extensions.Options
 @using Schnittstellenzentrale.Infrastructure.Services
 @implements IAsyncDisposable
@@ -8,7 +9,7 @@
     <div class="sz-content-header-icon">
         @if (_iconDataUrl != null)
         {
-            <img src="@_iconDataUrl" alt="Icon" class="sz-icon-image" />
+            <img src="@_iconDataUrl" alt="@L["ContentHeader_IconAlt"]" class="sz-icon-image" />
         }
         else
         {
@@ -16,7 +17,7 @@
         }
         @if (!ReadOnly)
         {
-            <button type="button" class="sz-icon-upload-btn" title="Icon hochladen" @onclick="TriggerFileInput">&#8679;</button>
+            <button type="button" class="sz-icon-upload-btn" title="@L["ContentHeader_Tooltip_UploadIcon"]" @onclick="TriggerFileInput">&#8679;</button>
             <InputFile @ref="_inputFile" id="@_fileInputId" OnChange="OnFileSelected" accept="image/png,image/jpeg" class="sz-hidden-file-input" style="display:none" />
         }
     </div>
@@ -45,7 +46,7 @@
         else
         {
             <span class="sz-content-subtitle @(!ReadOnly ? "sz-editable" : "")" @onclick="StartEditSubtitle">
-                @(string.IsNullOrEmpty(Subtitle) ? (ReadOnly ? "" : "Untertitel hinzufügen") : Subtitle)
+                @(string.IsNullOrEmpty(Subtitle) ? (ReadOnly ? "" : L["ContentHeader_Placeholder_Subtitle"]) : Subtitle)
                 @if (!ReadOnly) { <span class="sz-edit-icon">&#9998;</span> }
             </span>
         }
@@ -132,7 +133,7 @@
         if (_cancelledName) { _cancelledName = false; return; }
         if (string.IsNullOrWhiteSpace(_nameInput))
         {
-            _nameError = "Name darf nicht leer sein.";
+            _nameError = L["ContentHeader_Error_NameEmpty"];
             return;
         }
         _savingName = true;
@@ -198,12 +199,12 @@
 
         if (file.ContentType != "image/png" && file.ContentType != "image/jpeg")
         {
-            _uploadError = "Nur PNG- und JPEG-Dateien sind erlaubt.";
+            _uploadError = L["ContentHeader_Error_InvalidFileType"];
             return;
         }
         if (file.Size > maxSize)
         {
-            _uploadError = $"Datei ist zu groß (max. {maxSize / 1024} KB).";
+            _uploadError = string.Format(L["ContentHeader_Error_FileTooLarge"], maxSize / 1024);
             return;
         }
 

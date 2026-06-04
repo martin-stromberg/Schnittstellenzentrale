@@ -1,17 +1,18 @@
 @inject ISystemEnvironmentRepository EnvironmentRepository
 @inject IStorageModeService StorageModeService
 @inject ICurrentUserService CurrentUserService
+@inject IStringLocalizer<SharedResources> L
 
 <div class="sz-endpoints-section environment-editor">
     <div class="sz-endpoints-header">
-        <span class="sz-section-label">Variablen</span>
+        <span class="sz-section-label">@L["EnvironmentEditor_Section_Variables"]</span>
     </div>
     <div class="sz-table-wrapper">
         <table class="sz-table">
             <thead>
                 <tr>
-                    <th>Name</th>
-                    <th>Wert</th>
+                    <th>@L["EnvironmentEditor_Header_Name"]</th>
+                    <th>@L["EnvironmentEditor_Header_Value"]</th>
                     <th></th>
                     <th></th>
                 </tr>
@@ -33,7 +34,7 @@
                         </td>
                         <td>
                             <button type="button" class="sz-btn-icon"
-                                    title="@(variable.IsValueMasked ? "Wert anzeigen" : "Wert maskieren")"
+                                    title="@(variable.IsValueMasked ? L["EnvironmentEditor_Tooltip_ShowValue"].Value : L["EnvironmentEditor_Tooltip_MaskValue"].Value)"
                                     @onclick="() => variable.IsValueMasked = !variable.IsValueMasked">
                                 @if (variable.IsValueMasked)
                                 {
@@ -56,7 +57,7 @@
                 @if (_variables.Count == 0)
                 {
                     <tr>
-                        <td colspan="4" class="sz-endpoint-desc">Keine Variablen definiert.</td>
+                        <td colspan="4" class="sz-endpoint-desc">@L["EnvironmentEditor_EmptyState"]</td>
                     </tr>
                 }
             </tbody>
@@ -64,7 +65,7 @@
     </div>
     <div>
         <button type="button" class="sz-btn sz-btn-outline sz-btn-sm" @onclick="AddVariable">
-            + Variable hinzufügen
+            @L["EnvironmentEditor_AddButton"]
         </button>
         @if (!string.IsNullOrEmpty(_variableError))
         {
@@ -79,8 +80,8 @@
 }
 
 <div class="sz-editor-actions">
-    <button type="button" class="sz-btn sz-btn-primary" @onclick="SaveAsync">Speichern</button>
-    <button type="button" class="sz-btn sz-btn-secondary" @onclick="Cancel">Abbrechen</button>
+    <button type="button" class="sz-btn sz-btn-primary" @onclick="SaveAsync">@L["EnvironmentEditor_SaveButton"]</button>
+    <button type="button" class="sz-btn sz-btn-secondary" @onclick="Cancel">@L["EnvironmentEditor_CancelButton"]</button>
 </div>
 
 @code {
@@ -134,27 +135,27 @@
     {
         if (string.IsNullOrWhiteSpace(_name))
         {
-            _nameError = "Name darf nicht leer sein.";
+            _nameError = L["EnvironmentEditor_Error_NameEmpty"];
             return false;
         }
 
         if (_name.Length > 200)
         {
-            _nameError = "Name darf maximal 200 Zeichen lang sein.";
+            _nameError = L["EnvironmentEditor_Error_NameTooLong"];
             return false;
         }
 
         var longNamedVariable = _variables.FirstOrDefault(v => v.Name.Length > 200);
         if (longNamedVariable != null)
         {
-            _variableError = $"Variablenname '{longNamedVariable.Name[..20]}…' überschreitet 200 Zeichen.";
+            _variableError = string.Format(L["EnvironmentEditor_Error_VarNameTooLong"], longNamedVariable.Name[..20]);
             return false;
         }
 
         var longValuedVariable = _variables.FirstOrDefault(v => v.Value.Length > 4000);
         if (longValuedVariable != null)
         {
-            _variableError = $"Variablenwert von '{longValuedVariable.Name}' überschreitet 4000 Zeichen.";
+            _variableError = string.Format(L["EnvironmentEditor_Error_VarValueTooLong"], longValuedVariable.Name);
             return false;
         }
 
@@ -164,14 +165,14 @@
             .FirstOrDefault(g => g.Count() > 1);
         if (duplicateVariable != null)
         {
-            _variableError = $"Variablenname '{duplicateVariable.Key}' ist mehrfach vorhanden.";
+            _variableError = string.Format(L["EnvironmentEditor_Error_VarNameDuplicate"], duplicateVariable.Key);
             return false;
         }
 
         var emptyNamedVariable = _variables.FirstOrDefault(v => string.IsNullOrWhiteSpace(v.Name));
         if (emptyNamedVariable != null)
         {
-            _variableError = "Variablenname darf nicht leer sein.";
+            _variableError = L["EnvironmentEditor_Error_VarNameEmpty"];
             return false;
         }
 
@@ -196,7 +197,7 @@
             e.Id != (ExistingEnvironment?.Id ?? 0));
         if (duplicate != null)
         {
-            _nameError = "Eine Umgebung mit diesem Namen existiert bereits.";
+            _nameError = L["EnvironmentEditor_Error_DuplicateEnvironment"];
             return;
         }
 
@@ -231,7 +232,7 @@
         }
         catch (Exception ex)
         {
-            _errorMessage = $"Speichern fehlgeschlagen: {ex.Message}";
+            _errorMessage = string.Format(L["EnvironmentEditor_Error_Save"], ex.Message);
         }
     }
 

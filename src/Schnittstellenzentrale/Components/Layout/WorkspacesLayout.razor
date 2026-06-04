@@ -5,6 +5,7 @@
 @inject ISignalRNotificationService SignalRNotificationService
 @inject IActivityLogService ActivityLogService
 @inject IJSRuntime JSRuntime
+@inject IStringLocalizer<SharedResources> L
 @implements IDisposable
 
 <div class="sz-workspaces-layout">
@@ -166,7 +167,7 @@
     private async Task OnGroupSaved(ApplicationGroup group)
     {
         _showGroupEditor = false;
-        ActivityLogService.Log(ActivityLogCategory.EntityCreated, "Sammlung angelegt.");
+        ActivityLogService.Log(ActivityLogCategory.EntityCreated, L["WorkspacesLayout_Log_CollectionCreated"]);
         _sidebar?.ExpandGroup(group.Id);
         await RefreshTreeAsync();
         var path = new List<object> { group };
@@ -177,7 +178,7 @@
     {
         _showApplicationEditor = false;
         _newApplicationDefaultGroupId = null;
-        ActivityLogService.Log(ActivityLogCategory.EntityCreated, "Anwendung angelegt.");
+        ActivityLogService.Log(ActivityLogCategory.EntityCreated, L["WorkspacesLayout_Log_ApplicationCreated"]);
         await RefreshTreeAsync();
         await SelectApplicationAsync(app);
     }
@@ -208,7 +209,7 @@
     private async Task OnGroupRenamed(ApplicationGroup group)
     {
         await ApplicationApiClient.UpdateGroupAsync(group);
-        ActivityLogService.Log(ActivityLogCategory.EntityModified, $"Sammlung umbenannt: {group.Name}");
+        ActivityLogService.Log(ActivityLogCategory.EntityModified, string.Format(L["WorkspacesLayout_Log_CollectionRenamed"], group.Name));
         _renameTargetGroup = null;
         await RefreshTreeAsync();
     }
@@ -226,7 +227,7 @@
             await NavigationStateService.SetWorkspaceSelectionAsync(null);
             await RefreshTreeAsync();
         }
-        catch (Exception ex) { _errorMessage = $"Fehler beim Löschen der Sammlung: {ex.Message}"; }
+        catch (Exception ex) { _errorMessage = string.Format(L["WorkspacesLayout_Error_DeleteGroup"], ex.Message); }
     }
 
     private async Task OnDeleteGroupConfirmedGroupOnly(ApplicationGroup group)
@@ -243,7 +244,7 @@
             await NavigationStateService.SetWorkspaceSelectionAsync(null);
             await RefreshTreeAsync();
         }
-        catch (Exception ex) { _errorMessage = $"Fehler beim Löschen der Sammlung: {ex.Message}"; }
+        catch (Exception ex) { _errorMessage = string.Format(L["WorkspacesLayout_Error_DeleteGroup"], ex.Message); }
     }
 
     private async Task OnDeleteApplicationConfirmed(Application application)
@@ -255,7 +256,7 @@
             await NavigationStateService.SetWorkspaceSelectionAsync(null);
             await RefreshTreeAsync();
         }
-        catch (Exception ex) { _errorMessage = $"Fehler beim Löschen der Anwendung: {ex.Message}"; }
+        catch (Exception ex) { _errorMessage = string.Format(L["WorkspacesLayout_Error_DeleteApplication"], ex.Message); }
     }
 
     private void HandleCreateEndpointGroupRequested(Application app) { CloseAllPanels(); _createEndpointGroupApplication = app; }
@@ -269,12 +270,12 @@
         {
             var group = new EndpointGroup { Name = name, ApplicationId = application.Id };
             var saved = await EndpointRepository.AddEndpointGroupAsync(group);
-            ActivityLogService.Log(ActivityLogCategory.EntityCreated, $"Ordner angelegt: {saved.Name}");
+            ActivityLogService.Log(ActivityLogCategory.EntityCreated, string.Format(L["WorkspacesLayout_Log_FolderCreated"], saved.Name));
             if (StorageModeService.CurrentMode == StorageMode.Team)
                 await SignalRNotificationService.NotifyEndpointGroupChangedAsync(saved.Id, application.Id);
             await RefreshTreeAsync();
         }
-        catch (Exception ex) { _errorMessage = $"Fehler beim Anlegen des Ordners: {ex.Message}"; }
+        catch (Exception ex) { _errorMessage = string.Format(L["WorkspacesLayout_Error_CreateFolder"], ex.Message); }
     }
 
     private async Task HandleCreateEndpointRequested((Application Application, EndpointGroup? Group) args)
@@ -283,7 +284,7 @@
         {
             var endpoint = new Core.Models.Endpoint
             {
-                Name = "Neuer Endpunkt",
+                Name = L["WorkspacesLayout_DefaultEndpointName"],
                 Method = Core.Enums.HttpMethod.GET,
                 RelativePath = string.Empty,
                 BodyMode = BodyMode.None,
@@ -291,7 +292,7 @@
                 EndpointGroupId = args.Group?.Id
             };
             var saved = await EndpointRepository.AddEndpointAsync(endpoint);
-            ActivityLogService.Log(ActivityLogCategory.EntityCreated, $"Endpunkt angelegt: {saved.Name}");
+            ActivityLogService.Log(ActivityLogCategory.EntityCreated, string.Format(L["WorkspacesLayout_Log_EndpointCreated"], saved.Name));
             if (StorageModeService.CurrentMode == StorageMode.Team)
                 await SignalRNotificationService.NotifyEndpointChangedAsync(saved.Id, args.Application.Id);
             await RefreshTreeAsync();
@@ -312,7 +313,7 @@
                 await NavigationStateService.SetWorkspaceSelectionAsync(new WorkspaceSelection(loaded, path));
             }
         }
-        catch (Exception ex) { _errorMessage = $"Fehler beim Anlegen des Endpunkts: {ex.Message}"; }
+        catch (Exception ex) { _errorMessage = string.Format(L["WorkspacesLayout_Error_CreateEndpoint"], ex.Message); }
     }
 
     private void HandleRenameEndpointGroupRequested(EndpointGroup group) { CloseAllPanels(); _renameTargetEndpointGroup = group; }
@@ -322,13 +323,13 @@
         try
         {
             await EndpointRepository.UpdateEndpointGroupAsync(group);
-            ActivityLogService.Log(ActivityLogCategory.EntityModified, $"Ordner umbenannt: {group.Name}");
+            ActivityLogService.Log(ActivityLogCategory.EntityModified, string.Format(L["WorkspacesLayout_Log_FolderRenamed"], group.Name));
             if (StorageModeService.CurrentMode == StorageMode.Team)
                 await SignalRNotificationService.NotifyEndpointGroupChangedAsync(group.Id, group.ApplicationId);
             _renameTargetEndpointGroup = null;
             await RefreshTreeAsync();
         }
-        catch (Exception ex) { _errorMessage = $"Fehler beim Umbenennen des Ordners: {ex.Message}"; }
+        catch (Exception ex) { _errorMessage = string.Format(L["WorkspacesLayout_Error_RenameFolder"], ex.Message); }
     }
 
     private async Task HandleDeleteEndpointGroupRequested(EndpointGroup group)
@@ -341,7 +342,7 @@
             _deleteTargetEndpointCount = CountEndpointsRecursive(group.Id, _deleteTargetEndpoints, _deleteTargetAllGroups);
             _deleteTargetEndpointGroup = group;
         }
-        catch (Exception ex) { _errorMessage = $"Fehler beim Vorbereiten der Löschung: {ex.Message}"; }
+        catch (Exception ex) { _errorMessage = string.Format(L["WorkspacesLayout_Error_PrepareDelete"], ex.Message); }
     }
 
     private static int CountEndpointsRecursive(int groupId, IList<Core.Models.Endpoint> endpoints, IList<EndpointGroup> allGroups)
@@ -381,14 +382,14 @@
                 await SignalRNotificationService.NotifyEndpointGroupChangedAsync(group.Id, applicationId);
             await RefreshTreeAsync();
         }
-        catch (Exception ex) { _errorMessage = $"Fehler beim Löschen des Ordners: {ex.Message}"; }
+        catch (Exception ex) { _errorMessage = string.Format(L["WorkspacesLayout_Error_DeleteFolder"], ex.Message); }
     }
 
     private async Task HandleDeleteEndpointRequested(Core.Models.Endpoint endpoint)
     {
         try
         {
-            var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", $"Endpunkt \"{endpoint.Name}\" wirklich löschen?");
+            var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", string.Format(L["WorkspacesLayout_Confirm_DeleteEndpoint"], endpoint.Name));
             if (!confirmed) return;
             await EndpointRepository.DeleteEndpointAsync(endpoint.Id);
             var current = NavigationStateService.CurrentSelection?.SelectedItem as Core.Models.Endpoint;
@@ -398,7 +399,7 @@
                 await SignalRNotificationService.NotifyEndpointChangedAsync(endpoint.Id, endpoint.ApplicationId);
             await RefreshTreeAsync();
         }
-        catch (Exception ex) { _errorMessage = $"Fehler beim Löschen des Endpunkts: {ex.Message}"; }
+        catch (Exception ex) { _errorMessage = string.Format(L["WorkspacesLayout_Error_DeleteEndpoint"], ex.Message); }
     }
 
     private Task OnEndpointSaved(Core.Models.Endpoint endpoint) => RefreshTreeAsync();

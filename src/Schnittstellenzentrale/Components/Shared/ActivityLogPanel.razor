@@ -1,5 +1,6 @@
 @inject IActivityLogService ActivityLogService
 @inject IJSRuntime JSRuntime
+@inject IStringLocalizer<SharedResources> L
 @implements IAsyncDisposable
 
 @if (_displayMode == "overlay")
@@ -125,12 +126,12 @@ else
     private RenderFragment RenderPanelContent() => __builder =>
     {
         <div class="activity-log-panel__toolbar">
-            <span class="activity-log-panel__title">Protokoll</span>
-            <button type="button" class="sz-btn-icon" title="@(_displayMode == "dock" ? "Overlay" : "Angedockt")"
+            <span class="activity-log-panel__title">@L["ActivityLogPanel_Title"]</span>
+            <button type="button" class="sz-btn-icon" title="@(_displayMode == "dock" ? L["ActivityLogPanel_Tooltip_Overlay"] : L["ActivityLogPanel_Tooltip_Docked"])"
                     @onclick="ToggleDisplayMode">
                 @(_displayMode == "dock" ? "⧉" : "⬜")
             </button>
-            <button type="button" class="sz-btn-icon" title="Protokoll leeren"
+            <button type="button" class="sz-btn-icon" title="@L["ActivityLogPanel_Tooltip_ClearLog"]"
                     @onclick="ClearLog">
                 &#128465;
             </button>
@@ -145,7 +146,7 @@ else
                     @if (!string.IsNullOrEmpty(entry.Details))
                     {
                         <details class="activity-log-entry__details">
-                            <summary>Details</summary>
+                            <summary>@L["ActivityLogPanel_Details"]</summary>
                             <pre>@entry.Details</pre>
                         </details>
                     }

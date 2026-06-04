@@ -1,32 +1,33 @@
 @inject IHistoryService HistoryService
 @inject IOptions<HistorySettings> HistoryOptions
+@inject IStringLocalizer<SharedResources> L
 @using Microsoft.Extensions.Options
 @using Schnittstellenzentrale.Infrastructure.Services
 @using Schnittstellenzentrale.Core.Helpers
 
 <div class="sz-history-content">
     <div class="sz-history-page-header">
-        <h1 class="sz-history-page-title">Historie der Anfragen</h1>
-        <p class="sz-history-page-subtitle">Überwachen und analysieren Sie alle ausgeführten API-Calls.</p>
+        <h1 class="sz-history-page-title">@L["HistoryContentView_PageTitle"]</h1>
+        <p class="sz-history-page-subtitle">@L["HistoryContentView_PageSubtitle"]</p>
     </div>
 
     <div class="sz-history-filter-bar">
         <div class="sz-history-filter-row">
             <div class="sz-history-filter-field">
-                <label class="sz-history-filter-label">Von</label>
+                <label class="sz-history-filter-label">@L["HistoryContentView_FilterFrom"]</label>
                 <input type="datetime-local" class="sz-input sz-history-filter-input" @bind="_filterFrom" @bind:event="onchange" />
             </div>
             <div class="sz-history-filter-field">
-                <label class="sz-history-filter-label">Bis</label>
+                <label class="sz-history-filter-label">@L["HistoryContentView_FilterTo"]</label>
                 <input type="datetime-local" class="sz-input sz-history-filter-input" @bind="_filterTo" @bind:event="onchange" />
             </div>
             <div class="sz-history-filter-actions">
                 <button type="button" class="sz-btn sz-btn-outline sz-btn-sm" @onclick="FilterAsync">
                     <span class="sz-icon sz-icon-history"></span>
-                    Filtern
+                    @L["HistoryContentView_FilterButton"]
                 </button>
                 <button type="button" class="sz-btn sz-btn-outline sz-btn-sm" @onclick="ResetFilterAsync">
-                    Zurücksetzen
+                    @L["HistoryContentView_ResetButton"]
                 </button>
             </div>
         </div>
@@ -36,7 +37,7 @@
     {
         <div class="sz-history-empty">
             <span class="sz-icon sz-icon-history sz-history-empty-icon"></span>
-            <p>Keine Einträge vorhanden.</p>
+            <p>@L["HistoryContentView_Empty"]</p>
         </div>
     }
     else
@@ -45,11 +46,11 @@
             <table class="sz-table">
                 <thead>
                     <tr>
-                        <th>Zeitpunkt</th>
-                        <th>Anwendung</th>
-                        <th>Endpunkt</th>
-                        <th>Status</th>
-                        <th>Dauer</th>
+                        <th>@L["HistoryContentView_ColTime"]</th>
+                        <th>@L["HistoryContentView_ColApplication"]</th>
+                        <th>@L["HistoryContentView_ColEndpoint"]</th>
+                        <th>@L["HistoryContentView_ColStatus"]</th>
+                        <th>@L["HistoryContentView_ColDuration"]</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -87,11 +88,11 @@
 
             <div class="sz-history-pagination-footer">
                 <div class="sz-history-pagination-info">
-                    <span>Zeige <strong>@((_page - 1) * HistoryOptions.Value.DefaultPageSize + 1)–@(Math.Min(_page * HistoryOptions.Value.DefaultPageSize, _totalCount))</strong> von <strong>@_totalCount</strong> Einträgen</span>
+                    <span>@L["HistoryContentView_PaginationShowing"] <strong>@((_page - 1) * HistoryOptions.Value.DefaultPageSize + 1)–@(Math.Min(_page * HistoryOptions.Value.DefaultPageSize, _totalCount))</strong> @L["HistoryContentView_PaginationOf"] <strong>@_totalCount</strong> @L["HistoryContentView_PaginationEntries"]</span>
                 </div>
                 <div class="sz-pagination">
                     <button type="button" class="sz-btn sz-btn-outline sz-btn-sm sz-history-page-btn" @onclick="PrevPageAsync" disabled="@(_page <= 1)">&#8592;</button>
-                    <span class="sz-history-page-info">Seite @_page von @_totalPages</span>
+                    <span class="sz-history-page-info">@string.Format(L["HistoryContentView_PageInfo"], _page, _totalPages)</span>
                     <button type="button" class="sz-btn sz-btn-outline sz-btn-sm sz-history-page-btn" @onclick="NextPageAsync" disabled="@(_page >= _totalPages)">&#8594;</button>
                 </div>
             </div>
@@ -101,16 +102,16 @@
             <div class="sz-history-info-card sz-history-info-card--primary">
                 <div class="sz-history-info-card-header">
                     <span class="sz-icon sz-icon-history"></span>
-                    <h3 class="sz-history-info-card-title">Einträge</h3>
+                    <h3 class="sz-history-info-card-title">@L["HistoryContentView_CardEntriesTitle"]</h3>
                 </div>
-                <p class="sz-history-info-card-text">Insgesamt <strong>@_totalCount</strong> Aufrufe in der Historie. Die neuesten Einträge werden zuerst angezeigt.</p>
+                <p class="sz-history-info-card-text">@L["HistoryContentView_CardEntriesText_Pre"] <strong>@_totalCount</strong> @L["HistoryContentView_CardEntriesText_Post"]</p>
             </div>
             <div class="sz-history-info-card sz-history-info-card--secondary">
                 <div class="sz-history-info-card-header">
                     <span class="sz-icon sz-icon-environment"></span>
-                    <h3 class="sz-history-info-card-title">Aufbewahrung</h3>
+                    <h3 class="sz-history-info-card-title">@L["HistoryContentView_CardRetentionTitle"]</h3>
                 </div>
-                <p class="sz-history-info-card-text">Einträge werden dauerhaft gespeichert.</p>
+                <p class="sz-history-info-card-text">@L["HistoryContentView_CardRetentionText"]</p>
             </div>
         </div>
     }

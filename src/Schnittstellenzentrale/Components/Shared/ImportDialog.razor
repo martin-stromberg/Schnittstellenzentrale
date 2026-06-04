@@ -1,15 +1,16 @@
 @using Microsoft.EntityFrameworkCore
+@inject IStringLocalizer<SharedResources> L
 
 <SzDialog Title="@Title" OnClose="OnClose">
     <ChildContent>
         @if (!Diff.NewEndpoints.Any() && !Diff.ChangedEndpoints.Any() && !Diff.RemovedEndpoints.Any())
         {
-            <p class="import-dialog__empty">Keine Änderungen gefunden.</p>
+            <p class="import-dialog__empty">@L["ImportDialog_Empty"]</p>
         }
         @if (Diff.NewEndpoints.Any())
         {
             <div class="import-section">
-                <p class="import-section__title import-section__title--new">Neue Endpunkte (@Diff.NewEndpoints.Count)</p>
+                <p class="import-section__title import-section__title--new">@L["ImportDialog_NewEndpoints"] (@Diff.NewEndpoints.Count)</p>
                 @foreach (var ep in Diff.NewEndpoints)
                 {
                     <label class="import-section__item">
@@ -23,7 +24,7 @@
         @if (Diff.ChangedEndpoints.Any())
         {
             <div class="import-section">
-                <p class="import-section__title import-section__title--changed">Geänderte Endpunkte (@Diff.ChangedEndpoints.Count)</p>
+                <p class="import-section__title import-section__title--changed">@L["ImportDialog_ChangedEndpoints"] (@Diff.ChangedEndpoints.Count)</p>
                 @foreach (var ep in Diff.ChangedEndpoints)
                 {
                     <label class="import-section__item">
@@ -37,7 +38,7 @@
         @if (Diff.RemovedEndpoints.Any())
         {
             <div class="import-section">
-                <p class="import-section__title import-section__title--removed">Entfernte Endpunkte (@Diff.RemovedEndpoints.Count)</p>
+                <p class="import-section__title import-section__title--removed">@L["ImportDialog_RemovedEndpoints"] (@Diff.RemovedEndpoints.Count)</p>
                 @foreach (var ep in Diff.RemovedEndpoints)
                 {
                     <label class="import-section__item">
@@ -54,8 +55,8 @@
         }
     </ChildContent>
     <Footer>
-        <button type="button" class="sz-btn sz-btn-primary" @onclick="ApplyAsync">Übernehmen</button>
-        <button type="button" class="sz-btn sz-btn-outline" @onclick="OnClose">Abbrechen</button>
+        <button type="button" class="sz-btn sz-btn-primary" @onclick="ApplyAsync">@L["ImportDialog_ApplyButton"]</button>
+        <button type="button" class="sz-btn sz-btn-outline" @onclick="OnClose">@L["ImportDialog_CancelButton"]</button>
     </Footer>
 </SzDialog>
 
@@ -109,11 +110,11 @@
         }
         catch (DbUpdateConcurrencyException)
         {
-            _errorMessage = "Übernahme fehlgeschlagen: Ein anderer Benutzer hat die Daten gleichzeitig geändert. Bitte laden Sie die Seite neu.";
+            _errorMessage = L["ImportDialog_Error_Concurrency"];
         }
         catch (Exception ex)
         {
-            _errorMessage = $"Übernahme fehlgeschlagen: {ex.Message}";
+            _errorMessage = string.Format(L["ImportDialog_Error_Apply"], ex.Message);
         }
     }
 }

@@ -2,6 +2,7 @@
 @inject ISwaggerImportService SwaggerImportService
 @inject IHealthCheckService HealthCheckService
 @inject IApplicationApiClient ApplicationApiClient
+@inject IStringLocalizer<SharedResources> L
 
 <div class="sz-content-view">
     <section class="sz-hero">
@@ -27,9 +28,9 @@
             <div class="sz-hero-right">
                 @if (Application.InterfaceType == Core.Enums.InterfaceType.Rest && !string.IsNullOrEmpty(Application.InterfaceUrl))
                 {
-                    <button type="button" class="sz-btn sz-btn-outline sz-btn-sm" @onclick="OpenSwaggerImportAsync">Swagger-Import</button>
+                    <button type="button" class="sz-btn sz-btn-outline sz-btn-sm" @onclick="OpenSwaggerImportAsync">@L["ApplicationContentView_Button_SwaggerImport"]</button>
                 }
-                <button type="button" class="sz-btn sz-btn-outline sz-btn-sm" @onclick="RunHealthCheckAsync">Health-Check</button>
+                <button type="button" class="sz-btn sz-btn-outline sz-btn-sm" @onclick="RunHealthCheckAsync">@L["ApplicationContentView_Button_HealthCheck"]</button>
             </div>
         </div>
     </section>
@@ -47,19 +48,19 @@
         <div class="sz-dashboard-grid">
             <div class="sz-dashboard-col-main">
                 <div class="sz-info-block">
-                    <span class="sz-section-label">Beschreibung</span>
+                    <span class="sz-section-label">@L["ApplicationContentView_Label_Description"]</span>
                     <p class="sz-info-description">
-                        @(string.IsNullOrEmpty(Application.Description) ? "Keine Beschreibung vorhanden." : Application.Description)
+                        @(string.IsNullOrEmpty(Application.Description) ? L["ApplicationContentView_NoDescription"] : Application.Description)
                     </p>
                     <div class="sz-info-url-grid">
                         <div class="sz-info-url-card">
-                            <div class="sz-info-url-label">Basis-URL</div>
+                            <div class="sz-info-url-label">@L["ApplicationContentView_Label_BaseUrl"]</div>
                             <div class="sz-info-url-value">@Application.BaseUrl</div>
                         </div>
                         @if (!string.IsNullOrEmpty(Application.InterfaceUrl))
                         {
                             <div class="sz-info-url-card">
-                                <div class="sz-info-url-label">Swagger / OData URL</div>
+                                <div class="sz-info-url-label">@L["ApplicationContentView_Label_InterfaceUrl"]</div>
                                 <a class="sz-info-url-value sz-info-url-value--link" href="@Application.InterfaceUrl" target="_blank" rel="noopener">
                                     @Application.InterfaceUrl
                                 </a>
@@ -69,10 +70,10 @@
                 </div>
             </div>
             <div class="sz-dashboard-col-aside">
-                <span class="sz-section-label">KPI</span>
+                <span class="sz-section-label">@L["ApplicationContentView_Label_Kpi"]</span>
                 <div class="sz-kpi-card">
                     <div class="sz-kpi-row">
-                        <span class="sz-kpi-label">Anzahl Endpunkte</span>
+                        <span class="sz-kpi-label">@L["ApplicationContentView_Label_EndpointCount"]</span>
                         <span class="sz-kpi-value">@_endpointCount</span>
                     </div>
                 </div>

@@ -1,10 +1,12 @@
-<SzDialog Title="Schreibkonflikt erkannt" Small="true">
+@inject IStringLocalizer<SharedResources> L
+
+<SzDialog Title="@L["ConcurrencyWarningDialog_Title"]" Small="true">
     <ChildContent>
-        <p class="sz-dialog__text">Die Daten wurden zwischenzeitlich von einem anderen Benutzer geändert. Möchten Sie Ihre Änderungen trotzdem speichern und die anderen Änderungen überschreiben?</p>
+        <p class="sz-dialog__text">@L["ConcurrencyWarningDialog_Message"]</p>
     </ChildContent>
     <Footer>
-        <button type="button" class="sz-btn sz-btn-destructive" @onclick="OnForceSave">Überschreiben</button>
-        <button type="button" class="sz-btn sz-btn-outline" @onclick="OnCancel">Abbrechen</button>
+        <button type="button" class="sz-btn sz-btn-destructive" @onclick="OnForceSave">@L["ConcurrencyWarningDialog_OverwriteButton"]</button>
+        <button type="button" class="sz-btn sz-btn-outline" @onclick="OnCancel">@L["ConcurrencyWarningDialog_CancelButton"]</button>
     </Footer>
 </SzDialog>
 

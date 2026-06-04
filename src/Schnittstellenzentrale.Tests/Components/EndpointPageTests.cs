@@ -5,6 +5,7 @@ using Schnittstellenzentrale.Components.Shared;
 using Schnittstellenzentrale.Core.Enums;
 using Schnittstellenzentrale.Core.Interfaces;
 using Schnittstellenzentrale.Core.Models;
+using Schnittstellenzentrale.Tests.Helpers;
 using Endpoint = Schnittstellenzentrale.Core.Models.Endpoint;
 
 namespace Schnittstellenzentrale.Tests.Components;
@@ -32,6 +33,7 @@ public class EndpointPageTests : BunitContext
         Services.AddSingleton(_signalRMock.Object);
         Services.AddSingleton(_credentialMock.Object);
         Services.AddSingleton(_activeEnvironmentMock.Object);
+        Services.AddSingleton(TestMockFactory.CreateFakeLocalizer());
 
         var jsModule = JSInterop.SetupModule("./endpoint-page.js");
         jsModule.SetupVoid("registerSaveShortcut", _ => true);
@@ -121,7 +123,7 @@ public class EndpointPageTests : BunitContext
 
         var cut = Render<EndpointPage>(p => p.Add(x => x.Endpoint, endpoint));
         cut.FindAll("button.sz-endpoint-tab")
-            .First(b => b.TextContent.Trim() == "Body")
+            .First(b => b.TextContent.Trim() == "EndpointPage_Tab_Body")
             .Click();
 
         Assert.Equal(body, cut.Find("textarea").GetAttribute("value"));
@@ -135,7 +137,7 @@ public class EndpointPageTests : BunitContext
 
         var cut = Render<EndpointPage>(p => p.Add(x => x.Endpoint, endpoint));
         cut.FindAll("button.sz-endpoint-tab")
-            .First(b => b.TextContent.Trim() == "Query-Parameter")
+            .First(b => b.TextContent.Trim() == "EndpointPage_Tab_Query")
             .Click();
 
         var rows = cut.FindAll(".sz-panel-table-wrapper tbody tr");
@@ -156,7 +158,7 @@ public class EndpointPageTests : BunitContext
 
         var cut = Render<EndpointPage>(p => p.Add(x => x.Endpoint, endpoint));
         cut.FindAll("button.sz-endpoint-tab")
-            .First(b => b.TextContent.Trim() == "Query-Parameter")
+            .First(b => b.TextContent.Trim() == "EndpointPage_Tab_Query")
             .Click();
 
         // Wert für den Platzhalter eingeben (Change löst @onchange aus)
@@ -165,7 +167,7 @@ public class EndpointPageTests : BunitContext
         valueInput.Change("42");
 
         // Pfadfeld blur — SyncPathParameters wird erneut aufgerufen, Pfad unverändert
-        var pathInput = cut.Find("input[placeholder='Relativer Pfad']");
+        var pathInput = cut.Find("input[placeholder='EndpointPage_Placeholder_Path']");
         pathInput.Blur();
 
         // Wert muss noch vorhanden sein
@@ -190,7 +192,7 @@ public class EndpointPageTests : BunitContext
 
         var cut = Render<EndpointPage>(p => p.Add(x => x.Endpoint, endpoint));
         cut.FindAll("button.sz-endpoint-tab")
-            .First(b => b.TextContent.Trim() == "Query-Parameter")
+            .First(b => b.TextContent.Trim() == "EndpointPage_Tab_Query")
             .Click();
 
         // Es darf nur einen einzigen Eintrag für "id" geben
@@ -213,10 +215,10 @@ public class EndpointPageTests : BunitContext
 
         var cut = Render<EndpointPage>(p => p.Add(x => x.Endpoint, endpoint));
         cut.FindAll("button.sz-endpoint-tab")
-            .First(b => b.TextContent.Trim() == "Query-Parameter")
+            .First(b => b.TextContent.Trim() == "EndpointPage_Tab_Query")
             .Click();
 
-        var pathInput = cut.Find("input[placeholder='Relativer Pfad']");
+        var pathInput = cut.Find("input[placeholder='EndpointPage_Placeholder_Path']");
         pathInput.Input("/api/{neuerId}/data");
         pathInput.Blur();
 
@@ -240,7 +242,7 @@ public class EndpointPageTests : BunitContext
 
         var cut = Render<EndpointPage>(p => p.Add(x => x.Endpoint, endpoint));
         cut.FindAll("button.sz-endpoint-tab")
-            .First(b => b.TextContent.Trim() == "Query-Parameter")
+            .First(b => b.TextContent.Trim() == "EndpointPage_Tab_Query")
             .Click();
 
         // Query-Parameter wurden als löschbare Einträge extrahiert
@@ -252,7 +254,7 @@ public class EndpointPageTests : BunitContext
 
         // Der Pfad wird intern bereinigt — ResolveDisplayUrl() hängt die Parameter als Query-String an,
         // daher zeigt das Pfadfeld die rekonstruierte URL; der Pfad-Anteil selbst enthält kein '?'
-        var pathInput = cut.Find("input[placeholder='Relativer Pfad']");
+        var pathInput = cut.Find("input[placeholder='EndpointPage_Placeholder_Path']");
         var displayValue = pathInput.GetAttribute("value") ?? string.Empty;
         var pathPart = displayValue.Contains('?') ? displayValue[..displayValue.IndexOf('?')] : displayValue;
         Assert.Equal("/api/items", pathPart);
@@ -266,7 +268,7 @@ public class EndpointPageTests : BunitContext
 
         var cut = Render<EndpointPage>(p => p.Add(x => x.Endpoint, endpoint));
 
-        var tab = cut.FindAll("button.sz-endpoint-tab").FirstOrDefault(b => b.TextContent.Trim() == "Pre-Request-Skript");
+        var tab = cut.FindAll("button.sz-endpoint-tab").FirstOrDefault(b => b.TextContent.Trim() == "EndpointPage_Tab_PreScript");
         Assert.NotNull(tab);
     }
 
@@ -278,7 +280,7 @@ public class EndpointPageTests : BunitContext
 
         var cut = Render<EndpointPage>(p => p.Add(x => x.Endpoint, endpoint));
 
-        var tab = cut.FindAll("button.sz-endpoint-tab").FirstOrDefault(b => b.TextContent.Trim() == "Post-Request-Skript");
+        var tab = cut.FindAll("button.sz-endpoint-tab").FirstOrDefault(b => b.TextContent.Trim() == "EndpointPage_Tab_PostScript");
         Assert.NotNull(tab);
     }
 
@@ -290,7 +292,7 @@ public class EndpointPageTests : BunitContext
 
         var cut = Render<EndpointPage>(p => p.Add(x => x.Endpoint, endpoint));
         cut.FindAll("button.sz-endpoint-tab")
-            .First(b => b.TextContent.Trim() == "Pre-Request-Skript")
+            .First(b => b.TextContent.Trim() == "EndpointPage_Tab_PreScript")
             .Click();
 
         cut.Find("textarea").Input("sz.environment.set('x', '1');");
@@ -306,7 +308,7 @@ public class EndpointPageTests : BunitContext
 
         var cut = Render<EndpointPage>(p => p.Add(x => x.Endpoint, endpoint));
         cut.FindAll("button.sz-endpoint-tab")
-            .First(b => b.TextContent.Trim() == "Post-Request-Skript")
+            .First(b => b.TextContent.Trim() == "EndpointPage_Tab_PostScript")
             .Click();
 
         cut.Find("textarea").Input("sz.environment.set('x', '1');");
@@ -328,11 +330,11 @@ public class EndpointPageTests : BunitContext
         var cut = Render<EndpointPage>(p => p.Add(x => x.Endpoint, endpoint));
 
         // Vor der Werteingabe: Platzhalter bleibt im Pfadfeld sichtbar (leer → {id} beibehalten)
-        var pathInput = cut.Find("input[placeholder='Relativer Pfad']");
+        var pathInput = cut.Find("input[placeholder='EndpointPage_Placeholder_Path']");
         Assert.Contains("{id}", pathInput.GetAttribute("value") ?? string.Empty);
 
         cut.FindAll("button.sz-endpoint-tab")
-            .First(b => b.TextContent.Trim() == "Query-Parameter")
+            .First(b => b.TextContent.Trim() == "EndpointPage_Tab_Query")
             .Click();
 
         // Wert für den Platzhalter eingeben (Change löst @onchange aus)
@@ -342,7 +344,7 @@ public class EndpointPageTests : BunitContext
         idValueInput.Change("42");
 
         // Pfadfeld zeigt die aufgelöste URL (Platzhalter ersetzt, Query-Parameter angehängt)
-        pathInput = cut.Find("input[placeholder='Relativer Pfad']");
+        pathInput = cut.Find("input[placeholder='EndpointPage_Placeholder_Path']");
         var displayValue = pathInput.GetAttribute("value") ?? string.Empty;
 
         Assert.Contains("42", displayValue);

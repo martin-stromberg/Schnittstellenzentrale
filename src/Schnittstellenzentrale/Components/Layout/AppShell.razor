@@ -7,6 +7,7 @@
 @inject NavigationManager NavigationManager
 @inject ILogger<AppShell> Logger
 @inject INavigationStateService NavigationStateService
+@inject IStringLocalizer<SharedResources> L
 @using Microsoft.AspNetCore.SignalR.Client
 @implements IAsyncDisposable
 
@@ -32,8 +33,8 @@
     OnEnvironmentsChanged="OnEnvironmentChanged" />
 
 <div id="blazor-error-ui" data-nosnippet>
-    Ein unbehandelter Fehler ist aufgetreten.
-    <a href="." class="reload">Neu laden</a>
+    @L["AppShell_ErrorMessage"]
+    <a href="." class="reload">@L["AppShell_ReloadLink"]</a>
     <span class="dismiss">&#x2715;</span>
 </div>
 

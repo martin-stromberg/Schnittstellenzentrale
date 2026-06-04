@@ -1,12 +1,20 @@
 using Bunit;
+using Microsoft.Extensions.DependencyInjection;
 using Schnittstellenzentrale.Components.Shared;
 using Schnittstellenzentrale.Core.Models;
+using Schnittstellenzentrale.Tests.Helpers;
 
 namespace Schnittstellenzentrale.Tests.Components;
 
 /// <summary>bUnit-Tests für die <see cref="EndpointGroupContextMenu"/>-Komponente.</summary>
 public class EndpointGroupContextMenuTests : BunitContext
 {
+    /// <summary>Registriert den FakeStringLocalizer für IStringLocalizer&lt;SharedResources&gt;.</summary>
+    public EndpointGroupContextMenuTests()
+    {
+        Services.AddSingleton(TestMockFactory.CreateFakeLocalizer());
+    }
+
     private static EndpointGroup CreateGroup() => new()
     {
         Id = 7,
@@ -27,7 +35,7 @@ public class EndpointGroupContextMenuTests : BunitContext
 
         cut.Find(".context-menu-toggle").Click();
         cut.FindAll("button.context-menu-item")
-            .First(b => b.TextContent.Contains("Endpunkt anlegen"))
+            .First(b => b.TextContent.Contains("EndpointGroupContextMenu_CreateEndpointButton"))
             .Click();
 
         Assert.Equal(group, received);
@@ -46,7 +54,7 @@ public class EndpointGroupContextMenuTests : BunitContext
 
         cut.Find(".context-menu-toggle").Click();
         cut.FindAll("button.context-menu-item")
-            .First(b => b.TextContent.Contains("Ordner umbenennen"))
+            .First(b => b.TextContent.Contains("EndpointGroupContextMenu_RenameButton"))
             .Click();
 
         Assert.Equal(group, received);
@@ -65,7 +73,7 @@ public class EndpointGroupContextMenuTests : BunitContext
 
         cut.Find(".context-menu-toggle").Click();
         cut.FindAll("button.context-menu-item")
-            .First(b => b.TextContent.Contains("Ordner löschen"))
+            .First(b => b.TextContent.Contains("EndpointGroupContextMenu_DeleteButton"))
             .Click();
 
         Assert.Equal(group, received);

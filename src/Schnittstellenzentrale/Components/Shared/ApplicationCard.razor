@@ -2,6 +2,7 @@
 @inject ISwaggerImportService SwaggerImportService
 @inject IODataImportService ODataImportService
 @inject IHealthCheckService HealthCheckService
+@inject IStringLocalizer<SharedResources> L
 
 @if (!string.IsNullOrEmpty(_errorMessage))
 {
@@ -16,23 +17,23 @@
             <div class="btn-group">
                 @if (_application.InterfaceType == Core.Enums.InterfaceType.Rest)
                 {
-                    <button class="btn btn-sm btn-outline-primary" @onclick="OpenSwaggerImport">Swagger-Import</button>
+                    <button class="btn btn-sm btn-outline-primary" @onclick="OpenSwaggerImport">@L["ApplicationCard_Button_SwaggerImport"]</button>
                 }
                 @if (_application.InterfaceType == Core.Enums.InterfaceType.OData)
                 {
-                    <button class="btn btn-sm btn-outline-secondary" @onclick="OpenODataImport">OData-Import</button>
+                    <button class="btn btn-sm btn-outline-secondary" @onclick="OpenODataImport">@L["ApplicationCard_Button_ODataImport"]</button>
                 }
-                <button class="btn btn-sm btn-outline-info" @onclick="RunHealthCheck">Health-Check</button>
+                <button class="btn btn-sm btn-outline-info" @onclick="RunHealthCheck">@L["ApplicationCard_Button_HealthCheck"]</button>
             </div>
         </div>
         <div class="card-body">
             <p>@_application.Description</p>
-            <p><strong>Basis-URL:</strong> @_application.BaseUrl</p>
+            <p><strong>@L["ApplicationCard_Label_BaseUrl"]</strong> @_application.BaseUrl</p>
             @if (!string.IsNullOrEmpty(_application.InterfaceUrl))
             {
                 <p>
                     <strong>
-                        @(_application.InterfaceType == Core.Enums.InterfaceType.OData ? "Metadaten-URL:" : "Swagger-URL:")
+                        @(_application.InterfaceType == Core.Enums.InterfaceType.OData ? L["ApplicationCard_Label_MetadataUrl"] : L["ApplicationCard_Label_SwaggerUrl"])
                     </strong>
                     @_application.InterfaceUrl
                 </p>
@@ -78,7 +79,7 @@
         }
         catch (Exception ex)
         {
-            _errorMessage = $"Fehler beim Laden der Anwendung: {ex.Message}";
+            _errorMessage = string.Format(L["ApplicationCard_Error_LoadApplication"], ex.Message);
         }
     }
 

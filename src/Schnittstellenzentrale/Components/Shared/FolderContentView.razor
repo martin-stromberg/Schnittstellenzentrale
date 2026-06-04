@@ -1,19 +1,20 @@
 @inject IApplicationApiClient ApplicationApiClient
+@inject IStringLocalizer<SharedResources> L
 
 <div class="sz-content-view">
     <div class="sz-dashboard">
         <div class="sz-endpoints-section">
             <div class="sz-endpoints-header">
-                <span class="sz-section-label">Endpunkte in »@EndpointGroup.Name«</span>
+                <span class="sz-section-label">@string.Format(L["FolderContentView_SectionTitle"], EndpointGroup.Name)</span>
             </div>
             <div class="sz-table-wrapper">
                 <table class="sz-table">
                     <thead>
                         <tr>
-                            <th>Methode</th>
-                            <th>Endpunkt</th>
-                            <th>Beschreibung</th>
-                            <th>Aktion</th>
+                            <th>@L["FolderContentView_Header_Method"]</th>
+                            <th>@L["FolderContentView_Header_Endpoint"]</th>
+                            <th>@L["FolderContentView_Header_Description"]</th>
+                            <th>@L["FolderContentView_Header_Action"]</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -26,14 +27,14 @@
                                 <td><span class="sz-endpoint-path">@ep.RelativePath</span></td>
                                 <td><span class="sz-endpoint-desc">@ep.Name</span></td>
                                 <td>
-                                    <button type="button" class="sz-table-action-btn" title="Ausführen">&#9654;</button>
+                                    <button type="button" class="sz-table-action-btn" title="@L["FolderContentView_Tooltip_Execute"]">&#9654;</button>
                                 </td>
                             </tr>
                         }
                         @if (_endpoints.Count == 0)
                         {
                             <tr>
-                                <td colspan="4" class="sz-endpoint-desc">Keine Endpunkte in diesem Ordner.</td>
+                                <td colspan="4" class="sz-endpoint-desc">@L["FolderContentView_Empty"]</td>
                             </tr>
                         }
                     </tbody>
