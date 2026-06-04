@@ -1,9 +1,11 @@
+@inject IStringLocalizer<SharedResources> L
+
 <div class="sz-panel-table-wrapper request-query-params-panel">
     <table class="sz-table">
         <thead>
             <tr>
-                <th>Name</th>
-                <th>Wert</th>
+                <th>@L["RequestQueryParamsPanel_ColName"]</th>
+                <th>@L["RequestQueryParamsPanel_ColValue"]</th>
                 <th></th>
             </tr>
         </thead>
@@ -28,7 +30,7 @@
         </tbody>
     </table>
     <div class="sz-panel-table-footer">
-        <button type="button" class="sz-links-add-btn" @onclick="AddParam">+ Parameter</button>
+        <button type="button" class="sz-links-add-btn" @onclick="AddParam">@L["RequestQueryParamsPanel_AddButton"]</button>
     </div>
 </div>
 

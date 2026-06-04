@@ -56,9 +56,9 @@
                         <a class="sz-link-anchor" href="@link.Url" target="_blank" rel="noopener">
                             @(string.IsNullOrEmpty(link.Label) ? link.Url : link.Label)
                         </a>
-                        <button type="button" class="sz-btn-icon" title="Bearbeiten" @onclick="() => StartEdit(link)">&#9998;</button>
+                        <button type="button" class="sz-btn-icon" title="@L["LinksManager_EditTitle"]" @onclick="() => StartEdit(link)">&#9998;</button>
                     </div>
-                    <button type="button" class="sz-link-delete-btn" title="Löschen" @onclick="() => DeleteLinkAsync(link.Id)">&#128465;</button>
+                    <button type="button" class="sz-link-delete-btn" title="@L["LinksManager_DeleteTitle"]" @onclick="() => DeleteLinkAsync(link.Id)">&#128465;</button>
                 </div>
                 @if (!isLast)
                 {
@@ -109,7 +109,7 @@
         }
         if (_newLabel.Length > 200)
         {
-            _linkError = "Beschriftung darf maximal 200 Zeichen lang sein.";
+            _linkError = L["LinksManager_Error_LabelTooLong"];
             return;
         }
         var link = new ApplicationLink { ApplicationId = ApplicationId, Url = _newUrl, Label = string.IsNullOrEmpty(_newLabel) ? null : _newLabel };
@@ -142,7 +142,7 @@
         }
         if (_editLabel.Length > 200)
         {
-            _linkError = "Beschriftung darf maximal 200 Zeichen lang sein.";
+            _linkError = L["LinksManager_Error_LabelTooLong"];
             return;
         }
         var existing = _links.FirstOrDefault(l => l.Id == _editingLinkId);
@@ -160,7 +160,7 @@
         }
         catch (DbUpdateConcurrencyException)
         {
-            _linkError = "Der Link wurde zwischenzeitlich von jemand anderem geändert. Bitte lade die Seite neu.";
+            _linkError = L["LinksManager_Error_ConcurrencyConflict"];
             return;
         }
         _editingLinkId = null;
@@ -176,22 +176,22 @@
 
     private const int MaxUrlLength = 2048;
 
-    private static bool ValidateUrl(string url, out string error)
+    private bool ValidateUrl(string url, out string error)
     {
         if (string.IsNullOrWhiteSpace(url))
         {
-            error = "URL ist ein Pflichtfeld.";
+            error = L["LinksManager_Error_UrlRequired"];
             return false;
         }
         if (!url.StartsWith("http://", StringComparison.OrdinalIgnoreCase) &&
             !url.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
         {
-            error = "URL muss mit http:// oder https:// beginnen.";
+            error = L["LinksManager_Error_UrlInvalid"];
             return false;
         }
         if (url.Length > MaxUrlLength)
         {
-            error = $"URL darf maximal {MaxUrlLength} Zeichen lang sein.";
+            error = string.Format(L["LinksManager_Error_UrlTooLong"], MaxUrlLength);
             return false;
         }
         error = string.Empty;

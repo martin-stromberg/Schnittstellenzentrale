@@ -1,6 +1,7 @@
 @inject IThemeService ThemeService
+@inject IStringLocalizer<SharedResources> L
 
-<button class="btn btn-link px-0" title="Theme wechseln" @onclick="ToggleTheme">
+<button class="btn btn-link px-0" title="@L["ThemeToggle_Title"]" @onclick="ToggleTheme">
     @if (ThemeService.CurrentScheme == ColorScheme.Dark)
     {
         <span>&#9728;</span>

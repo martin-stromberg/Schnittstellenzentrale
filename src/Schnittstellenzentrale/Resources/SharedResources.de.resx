@@ -1170,4 +1170,194 @@
     <value>Token</value>
     <comment>RequestAuthPanel: Platzhalter im Bearer-Token-Eingabefeld</comment>
   </data>
+
+  <!-- NavMenu -->
+  <data name="NavMenu_ToggleTitle" xml:space="preserve">
+    <value>Navigationsmenü</value>
+    <comment>NavMenu: title-Attribut der Checkbox, die das mobile Navigationsmenü ein-/ausblendet</comment>
+  </data>
+
+  <!-- ThemeToggle -->
+  <data name="ThemeToggle_Title" xml:space="preserve">
+    <value>Theme wechseln</value>
+    <comment>ThemeToggle: title-Attribut des Buttons zum Wechsel zwischen Hell- und Dunkel-Theme</comment>
+  </data>
+
+  <!-- Error -->
+  <data name="Error_Message" xml:space="preserve">
+    <value>Bei der Verarbeitung Ihrer Anfrage ist ein Fehler aufgetreten.</value>
+    <comment>Fehlerseite: benutzerorientierte Fehlermeldung unterhalb der Überschrift</comment>
+  </data>
+  <data name="Error_RequestId" xml:space="preserve">
+    <value>Anfragen-ID:</value>
+    <comment>Fehlerseite: Beschriftung vor der technischen Anfragen-ID</comment>
+  </data>
+  <data name="Error_DevelopmentModeTitle" xml:space="preserve">
+    <value>Entwicklungsmodus</value>
+    <comment>Fehlerseite: Überschrift des Entwicklungshinweis-Abschnitts</comment>
+  </data>
+  <data name="Error_DevelopmentNotForProduction" xml:space="preserve">
+    <value>Die Entwicklungsumgebung sollte für bereitgestellte Anwendungen nicht aktiviert werden.</value>
+    <comment>Fehlerseite: Warnung im Entwicklungshinweis-Abschnitt gegen den Produktionseinsatz</comment>
+  </data>
+
+  <!-- HelpPage -->
+  <data name="HelpPage_PageTitle" xml:space="preserve">
+    <value>Hilfe – Schnittstellenzentrale</value>
+    <comment>HelpPage: Browser-Tab-Titel (PageTitle-Element)</comment>
+  </data>
+  <data name="HelpPage_Heading" xml:space="preserve">
+    <value>Hilfe</value>
+    <comment>HelpPage: h1-Hauptüberschrift der Hilfeseite</comment>
+  </data>
+
+  <!-- HistoryContentView -->
+  <data name="HistoryContentView_PageTitle" xml:space="preserve">
+    <value>Historie der Anfragen</value>
+    <comment>HistoryContentView: h1-Seitenüberschrift</comment>
+  </data>
+  <data name="HistoryContentView_PageSubtitle" xml:space="preserve">
+    <value>Überwachen und analysieren Sie alle ausgeführten API-Calls.</value>
+    <comment>HistoryContentView: Untertitel-Absatz unterhalb der Seitenüberschrift</comment>
+  </data>
+  <data name="HistoryContentView_FilterFrom" xml:space="preserve">
+    <value>Von</value>
+    <comment>HistoryContentView: Beschriftung des Datumsfilter-Startfelds</comment>
+  </data>
+  <data name="HistoryContentView_FilterTo" xml:space="preserve">
+    <value>Bis</value>
+    <comment>HistoryContentView: Beschriftung des Datumsfilter-Endfelds</comment>
+  </data>
+  <data name="HistoryContentView_FilterButton" xml:space="preserve">
+    <value>Filtern</value>
+    <comment>HistoryContentView: Beschriftung des Anwenden-Buttons</comment>
+  </data>
+  <data name="HistoryContentView_ResetButton" xml:space="preserve">
+    <value>Zurücksetzen</value>
+    <comment>HistoryContentView: Beschriftung des Filter-Zurücksetzen-Buttons</comment>
+  </data>
+  <data name="HistoryContentView_Empty" xml:space="preserve">
+    <value>Keine Einträge vorhanden.</value>
+    <comment>HistoryContentView: Meldung wenn die Historieliste leer ist</comment>
+  </data>
+  <data name="HistoryContentView_ColTime" xml:space="preserve">
+    <value>Zeitpunkt</value>
+    <comment>HistoryContentView: Tabellenspaltenüberschrift für den Anfragezeitpunkt</comment>
+  </data>
+  <data name="HistoryContentView_ColApplication" xml:space="preserve">
+    <value>Anwendung</value>
+    <comment>HistoryContentView: Tabellenspaltenüberschrift für den Anwendungsnamen</comment>
+  </data>
+  <data name="HistoryContentView_ColEndpoint" xml:space="preserve">
+    <value>Endpunkt</value>
+    <comment>HistoryContentView: Tabellenspaltenüberschrift für den Endpunktpfad</comment>
+  </data>
+  <data name="HistoryContentView_ColStatus" xml:space="preserve">
+    <value>Status</value>
+    <comment>HistoryContentView: Tabellenspaltenüberschrift für den HTTP-Statuscode</comment>
+  </data>
+  <data name="HistoryContentView_ColDuration" xml:space="preserve">
+    <value>Dauer</value>
+    <comment>HistoryContentView: Tabellenspaltenüberschrift für die Anfragedauer in ms</comment>
+  </data>
+  <data name="HistoryContentView_PaginationShowing" xml:space="preserve">
+    <value>Zeige</value>
+    <comment>HistoryContentView: erstes Wort der Paginierungsanzeige „Zeige X–Y von Z Einträgen"</comment>
+  </data>
+  <data name="HistoryContentView_PaginationOf" xml:space="preserve">
+    <value>von</value>
+    <comment>HistoryContentView: Verbindungswort in der Paginierungsanzeige „Zeige X–Y von Z Einträgen"</comment>
+  </data>
+  <data name="HistoryContentView_PaginationEntries" xml:space="preserve">
+    <value>Einträgen</value>
+    <comment>HistoryContentView: abschließendes Wort in der Paginierungsanzeige „Zeige X–Y von Z Einträgen"</comment>
+  </data>
+  <data name="HistoryContentView_PageInfo" xml:space="preserve">
+    <value>Seite {0} von {1}</value>
+    <comment>HistoryContentView: aktuelle Seitenangabe; {0} = aktuelle Seite, {1} = Gesamtseitenzahl</comment>
+  </data>
+  <data name="HistoryContentView_CardEntriesTitle" xml:space="preserve">
+    <value>Einträge</value>
+    <comment>HistoryContentView: Titel der Info-Karte mit der Gesamtanzahl der Einträge</comment>
+  </data>
+  <data name="HistoryContentView_CardEntriesText_Pre" xml:space="preserve">
+    <value>Insgesamt</value>
+    <comment>HistoryContentView: Text vor der fett hervorgehobenen Eintragsanzahl in der Info-Karte</comment>
+  </data>
+  <data name="HistoryContentView_CardEntriesText_Post" xml:space="preserve">
+    <value>Aufrufe in der Historie. Die neuesten Einträge werden zuerst angezeigt.</value>
+    <comment>HistoryContentView: Text nach der fett hervorgehobenen Eintragsanzahl in der Info-Karte</comment>
+  </data>
+  <data name="HistoryContentView_CardRetentionTitle" xml:space="preserve">
+    <value>Aufbewahrung</value>
+    <comment>HistoryContentView: Titel der Info-Karte zur Aufbewahrungsrichtlinie</comment>
+  </data>
+  <data name="HistoryContentView_CardRetentionText" xml:space="preserve">
+    <value>Einträge werden dauerhaft gespeichert.</value>
+    <comment>HistoryContentView: Text der Aufbewahrungs-Info-Karte</comment>
+  </data>
+
+  <!-- LinksManager -->
+  <data name="LinksManager_EditTitle" xml:space="preserve">
+    <value>Bearbeiten</value>
+    <comment>LinksManager: title-Attribut des Bearbeiten-Icon-Buttons</comment>
+  </data>
+  <data name="LinksManager_DeleteTitle" xml:space="preserve">
+    <value>Löschen</value>
+    <comment>LinksManager: title-Attribut des Löschen-Icon-Buttons</comment>
+  </data>
+  <data name="LinksManager_Error_LabelTooLong" xml:space="preserve">
+    <value>Beschriftung darf maximal 200 Zeichen lang sein.</value>
+    <comment>LinksManager: Validierungsfehler wenn die Link-Beschriftung 200 Zeichen überschreitet</comment>
+  </data>
+  <data name="LinksManager_Error_UrlRequired" xml:space="preserve">
+    <value>URL ist ein Pflichtfeld.</value>
+    <comment>LinksManager: Validierungsfehler wenn das URL-Feld leer ist</comment>
+  </data>
+  <data name="LinksManager_Error_UrlInvalid" xml:space="preserve">
+    <value>URL muss mit http:// oder https:// beginnen.</value>
+    <comment>LinksManager: Validierungsfehler wenn die URL kein http:// oder https:// Präfix hat</comment>
+  </data>
+  <data name="LinksManager_Error_UrlTooLong" xml:space="preserve">
+    <value>URL darf maximal {0} Zeichen lang sein.</value>
+    <comment>LinksManager: Validierungsfehler wenn die URL die Maximallänge überschreitet; {0} = Maximallänge</comment>
+  </data>
+  <data name="LinksManager_Error_ConcurrencyConflict" xml:space="preserve">
+    <value>Der Link wurde zwischenzeitlich von jemand anderem geändert. Bitte lade die Seite neu.</value>
+    <comment>LinksManager: Fehler bei einem konkurrierenden Speicherzugriff</comment>
+  </data>
+
+  <!-- RequestHeadersPanel -->
+  <data name="RequestHeadersPanel_ColName" xml:space="preserve">
+    <value>Name</value>
+    <comment>RequestHeadersPanel: Spaltenüberschrift für das Header-Name-Eingabefeld</comment>
+  </data>
+  <data name="RequestHeadersPanel_ColValue" xml:space="preserve">
+    <value>Wert</value>
+    <comment>RequestHeadersPanel: Spaltenüberschrift für das Header-Wert-Eingabefeld</comment>
+  </data>
+  <data name="RequestHeadersPanel_AddButton" xml:space="preserve">
+    <value>+ Header</value>
+    <comment>RequestHeadersPanel: Beschriftung des Buttons zum Hinzufügen einer neuen Header-Zeile</comment>
+  </data>
+
+  <!-- RequestQueryParamsPanel -->
+  <data name="RequestQueryParamsPanel_ColName" xml:space="preserve">
+    <value>Name</value>
+    <comment>RequestQueryParamsPanel: Spaltenüberschrift für das Query-Parameter-Name-Eingabefeld</comment>
+  </data>
+  <data name="RequestQueryParamsPanel_ColValue" xml:space="preserve">
+    <value>Wert</value>
+    <comment>RequestQueryParamsPanel: Spaltenüberschrift für das Query-Parameter-Wert-Eingabefeld</comment>
+  </data>
+  <data name="RequestQueryParamsPanel_AddButton" xml:space="preserve">
+    <value>+ Parameter</value>
+    <comment>RequestQueryParamsPanel: Beschriftung des Buttons zum Hinzufügen einer neuen Query-Parameter-Zeile</comment>
+  </data>
+
+  <!-- SzDialog -->
+  <data name="SzDialog_CloseTitle" xml:space="preserve">
+    <value>Schließen</value>
+    <comment>SzDialog: title-Attribut des Schließen-Buttons (×) im Dialog-Header</comment>
+  </data>
 </root>

@@ -1,10 +1,12 @@
+@inject IStringLocalizer<SharedResources> L
+
 <div class="sz-overlay">
     <div class="sz-dialog @(Small ? "sz-dialog--sm" : string.Empty)">
         <div class="sz-dialog__header">
             <span class="sz-dialog__title">@Title</span>
             @if (OnClose.HasDelegate)
             {
-                <button type="button" class="sz-btn-icon" @onclick="OnClose" title="Schließen">&#x2715;</button>
+                <button type="button" class="sz-btn-icon" @onclick="OnClose" title="@L["SzDialog_CloseTitle"]">&#x2715;</button>
             }
         </div>
         <div class="sz-dialog__body">

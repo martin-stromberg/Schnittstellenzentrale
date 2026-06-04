@@ -1170,4 +1170,194 @@
     <value>Token</value>
     <comment>RequestAuthPanel: placeholder in the bearer token input</comment>
   </data>
+
+  <!-- NavMenu -->
+  <data name="NavMenu_ToggleTitle" xml:space="preserve">
+    <value>Navigation menu</value>
+    <comment>NavMenu: title attribute on the checkbox that toggles the mobile navigation menu</comment>
+  </data>
+
+  <!-- ThemeToggle -->
+  <data name="ThemeToggle_Title" xml:space="preserve">
+    <value>Toggle theme</value>
+    <comment>ThemeToggle: title attribute on the button that switches between light and dark theme</comment>
+  </data>
+
+  <!-- Error -->
+  <data name="Error_Message" xml:space="preserve">
+    <value>An error occurred while processing your request.</value>
+    <comment>Error page: main user-facing error message shown below the heading</comment>
+  </data>
+  <data name="Error_RequestId" xml:space="preserve">
+    <value>Request ID:</value>
+    <comment>Error page: label preceding the technical request ID shown to the user</comment>
+  </data>
+  <data name="Error_DevelopmentModeTitle" xml:space="preserve">
+    <value>Development Mode</value>
+    <comment>Error page: heading for the development-mode hint section</comment>
+  </data>
+  <data name="Error_DevelopmentNotForProduction" xml:space="preserve">
+    <value>The Development environment shouldn't be enabled for deployed applications.</value>
+    <comment>Error page: warning inside the development-mode section advising against enabling Development in production</comment>
+  </data>
+
+  <!-- HelpPage -->
+  <data name="HelpPage_PageTitle" xml:space="preserve">
+    <value>Help – Schnittstellenzentrale</value>
+    <comment>HelpPage: browser tab title (PageTitle element)</comment>
+  </data>
+  <data name="HelpPage_Heading" xml:space="preserve">
+    <value>Help</value>
+    <comment>HelpPage: main h1 heading on the help page</comment>
+  </data>
+
+  <!-- HistoryContentView -->
+  <data name="HistoryContentView_PageTitle" xml:space="preserve">
+    <value>Request History</value>
+    <comment>HistoryContentView: h1 page title</comment>
+  </data>
+  <data name="HistoryContentView_PageSubtitle" xml:space="preserve">
+    <value>Monitor and analyze all executed API calls.</value>
+    <comment>HistoryContentView: subtitle paragraph below the page title</comment>
+  </data>
+  <data name="HistoryContentView_FilterFrom" xml:space="preserve">
+    <value>From</value>
+    <comment>HistoryContentView: label for the date-range start filter input</comment>
+  </data>
+  <data name="HistoryContentView_FilterTo" xml:space="preserve">
+    <value>To</value>
+    <comment>HistoryContentView: label for the date-range end filter input</comment>
+  </data>
+  <data name="HistoryContentView_FilterButton" xml:space="preserve">
+    <value>Filter</value>
+    <comment>HistoryContentView: label on the apply-filter button</comment>
+  </data>
+  <data name="HistoryContentView_ResetButton" xml:space="preserve">
+    <value>Reset</value>
+    <comment>HistoryContentView: label on the reset-filter button</comment>
+  </data>
+  <data name="HistoryContentView_Empty" xml:space="preserve">
+    <value>No entries available.</value>
+    <comment>HistoryContentView: message shown when the history list is empty</comment>
+  </data>
+  <data name="HistoryContentView_ColTime" xml:space="preserve">
+    <value>Time</value>
+    <comment>HistoryContentView: table column header for the request timestamp</comment>
+  </data>
+  <data name="HistoryContentView_ColApplication" xml:space="preserve">
+    <value>Application</value>
+    <comment>HistoryContentView: table column header for the application name</comment>
+  </data>
+  <data name="HistoryContentView_ColEndpoint" xml:space="preserve">
+    <value>Endpoint</value>
+    <comment>HistoryContentView: table column header for the endpoint path</comment>
+  </data>
+  <data name="HistoryContentView_ColStatus" xml:space="preserve">
+    <value>Status</value>
+    <comment>HistoryContentView: table column header for the HTTP status code</comment>
+  </data>
+  <data name="HistoryContentView_ColDuration" xml:space="preserve">
+    <value>Duration</value>
+    <comment>HistoryContentView: table column header for the request duration in ms</comment>
+  </data>
+  <data name="HistoryContentView_PaginationShowing" xml:space="preserve">
+    <value>Showing</value>
+    <comment>HistoryContentView: first word of the pagination summary "Showing X–Y of Z entries"</comment>
+  </data>
+  <data name="HistoryContentView_PaginationOf" xml:space="preserve">
+    <value>of</value>
+    <comment>HistoryContentView: connector word in the pagination summary "Showing X–Y of Z entries"</comment>
+  </data>
+  <data name="HistoryContentView_PaginationEntries" xml:space="preserve">
+    <value>entries</value>
+    <comment>HistoryContentView: trailing word in the pagination summary "Showing X–Y of Z entries"</comment>
+  </data>
+  <data name="HistoryContentView_PageInfo" xml:space="preserve">
+    <value>Page {0} of {1}</value>
+    <comment>HistoryContentView: current-page indicator; {0} = current page, {1} = total pages</comment>
+  </data>
+  <data name="HistoryContentView_CardEntriesTitle" xml:space="preserve">
+    <value>Entries</value>
+    <comment>HistoryContentView: title of the info card showing total entry count</comment>
+  </data>
+  <data name="HistoryContentView_CardEntriesText_Pre" xml:space="preserve">
+    <value>A total of</value>
+    <comment>HistoryContentView: text before the bold entry count in the entries info card ("A total of {n} calls…")</comment>
+  </data>
+  <data name="HistoryContentView_CardEntriesText_Post" xml:space="preserve">
+    <value>calls in history. The latest entries are shown first.</value>
+    <comment>HistoryContentView: text after the bold entry count in the entries info card</comment>
+  </data>
+  <data name="HistoryContentView_CardRetentionTitle" xml:space="preserve">
+    <value>Retention</value>
+    <comment>HistoryContentView: title of the info card describing entry retention policy</comment>
+  </data>
+  <data name="HistoryContentView_CardRetentionText" xml:space="preserve">
+    <value>Entries are stored permanently.</value>
+    <comment>HistoryContentView: body text of the retention info card</comment>
+  </data>
+
+  <!-- LinksManager -->
+  <data name="LinksManager_EditTitle" xml:space="preserve">
+    <value>Edit</value>
+    <comment>LinksManager: title attribute on the edit-link icon button</comment>
+  </data>
+  <data name="LinksManager_DeleteTitle" xml:space="preserve">
+    <value>Delete</value>
+    <comment>LinksManager: title attribute on the delete-link icon button</comment>
+  </data>
+  <data name="LinksManager_Error_LabelTooLong" xml:space="preserve">
+    <value>Label may be at most 200 characters long.</value>
+    <comment>LinksManager: validation error when the link label exceeds 200 characters</comment>
+  </data>
+  <data name="LinksManager_Error_UrlRequired" xml:space="preserve">
+    <value>URL is required.</value>
+    <comment>LinksManager: validation error when the URL field is empty</comment>
+  </data>
+  <data name="LinksManager_Error_UrlInvalid" xml:space="preserve">
+    <value>URL must start with http:// or https://.</value>
+    <comment>LinksManager: validation error when the URL does not start with http:// or https://</comment>
+  </data>
+  <data name="LinksManager_Error_UrlTooLong" xml:space="preserve">
+    <value>URL may be at most {0} characters long.</value>
+    <comment>LinksManager: validation error when the URL exceeds the maximum length; {0} = max length</comment>
+  </data>
+  <data name="LinksManager_Error_ConcurrencyConflict" xml:space="preserve">
+    <value>The link was changed by someone else in the meantime. Please reload the page.</value>
+    <comment>LinksManager: error shown when a concurrent update conflict is detected on save</comment>
+  </data>
+
+  <!-- RequestHeadersPanel -->
+  <data name="RequestHeadersPanel_ColName" xml:space="preserve">
+    <value>Name</value>
+    <comment>RequestHeadersPanel: column header for the header name input</comment>
+  </data>
+  <data name="RequestHeadersPanel_ColValue" xml:space="preserve">
+    <value>Value</value>
+    <comment>RequestHeadersPanel: column header for the header value input</comment>
+  </data>
+  <data name="RequestHeadersPanel_AddButton" xml:space="preserve">
+    <value>+ Header</value>
+    <comment>RequestHeadersPanel: button label to add a new request header row</comment>
+  </data>
+
+  <!-- RequestQueryParamsPanel -->
+  <data name="RequestQueryParamsPanel_ColName" xml:space="preserve">
+    <value>Name</value>
+    <comment>RequestQueryParamsPanel: column header for the query parameter name input</comment>
+  </data>
+  <data name="RequestQueryParamsPanel_ColValue" xml:space="preserve">
+    <value>Value</value>
+    <comment>RequestQueryParamsPanel: column header for the query parameter value input</comment>
+  </data>
+  <data name="RequestQueryParamsPanel_AddButton" xml:space="preserve">
+    <value>+ Parameter</value>
+    <comment>RequestQueryParamsPanel: button label to add a new query parameter row</comment>
+  </data>
+
+  <!-- SzDialog -->
+  <data name="SzDialog_CloseTitle" xml:space="preserve">
+    <value>Close</value>
+    <comment>SzDialog: title attribute on the close (×) button in the dialog header</comment>
+  </data>
 </root>

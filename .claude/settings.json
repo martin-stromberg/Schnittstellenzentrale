@@ -136,6 +136,11 @@
             "type": "command",
             "statusMessage": "Checking sz-* CSS class definitions...",
             "command": "pwsh -NoProfile -Command \"Set-Location (git rev-parse --show-toplevel); python .claude/hooks/check_css_classes.py\""
+          },
+          {
+            "type": "command",
+            "statusMessage": "Checking Razor localization...",
+            "command": "pwsh -NoProfile -Command \"Set-Location (git rev-parse --show-toplevel); python .claude/hooks/check_razor_l10n.py\""
           }
         ]
       }
