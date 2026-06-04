@@ -1,24 +1,26 @@
+@inject IStringLocalizer<SharedResources> L
+
 <SzDialog Title="@($"Health-Check: {Application.Name}")" Small="true" OnClose="OnClose">
     <ChildContent>
         @if (IsReachable == null)
         {
-            <div class="sz-alert sz-alert--warning">Health-Check wurde übersprungen (Cooldown aktiv).</div>
+            <div class="sz-alert sz-alert--warning">@L["HealthCheckDialog_Warning_Cooldown"]</div>
         }
         else if (IsReachable == true)
         {
-            <div class="sz-alert sz-alert--success">Die Anwendung ist erreichbar.</div>
+            <div class="sz-alert sz-alert--success">@L["HealthCheckDialog_Success_Reachable"]</div>
         }
         else
         {
-            <div class="sz-alert sz-alert--destructive">Die Anwendung ist nicht erreichbar.</div>
+            <div class="sz-alert sz-alert--destructive">@L["HealthCheckDialog_Error_NotReachable"]</div>
         }
     </ChildContent>
     <Footer>
         @if (IsReachable == false)
         {
-            <button type="button" class="sz-btn sz-btn-destructive" @onclick="OnRemove">Anwendung entfernen</button>
+            <button type="button" class="sz-btn sz-btn-destructive" @onclick="OnRemove">@L["HealthCheckDialog_RemoveButton"]</button>
         }
-        <button type="button" class="sz-btn sz-btn-outline" @onclick="OnClose">Schließen</button>
+        <button type="button" class="sz-btn sz-btn-outline" @onclick="OnClose">@L["HealthCheckDialog_CloseButton"]</button>
     </Footer>
 </SzDialog>
 

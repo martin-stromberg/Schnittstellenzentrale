@@ -1,12 +1,14 @@
-<SzDialog Title="Sammlung löschen" Small="true">
+@inject IStringLocalizer<SharedResources> L
+
+<SzDialog Title="@L["ConfirmDeleteGroupDialog_Title"]" Small="true">
     <ChildContent>
-        <p class="sz-dialog__text">Sammlung <strong>@Group.Name</strong> wirklich löschen?</p>
-        <p class="sz-dialog__text">Die Sammlung enthält <strong>@Group.Applications.Count</strong> Anwendung(en).</p>
+        <p class="sz-dialog__text">@L["ConfirmDeleteGroupDialog_Message"] <strong>@Group.Name</strong> @L["ConfirmDeleteGroupDialog_MessageSuffix"]</p>
+        <p class="sz-dialog__text">@L["ConfirmDeleteGroupDialog_ApplicationCount"] <strong>@Group.Applications.Count</strong> @L["ConfirmDeleteGroupDialog_ApplicationCountSuffix"]</p>
     </ChildContent>
     <Footer>
-        <button type="button" class="sz-btn sz-btn-destructive" @onclick="DeleteAllConfirmed">Mitlöschen</button>
-        <button type="button" class="sz-btn sz-btn-outline sz-btn-danger" @onclick="DeleteGroupOnlyConfirmed">Nur Sammlung löschen</button>
-        <button type="button" class="sz-btn sz-btn-outline" @onclick="Cancelled">Abbrechen</button>
+        <button type="button" class="sz-btn sz-btn-destructive" @onclick="DeleteAllConfirmed">@L["ConfirmDeleteGroupDialog_DeleteAllButton"]</button>
+        <button type="button" class="sz-btn sz-btn-outline sz-btn-danger" @onclick="DeleteGroupOnlyConfirmed">@L["ConfirmDeleteGroupDialog_DeleteGroupOnlyButton"]</button>
+        <button type="button" class="sz-btn sz-btn-outline" @onclick="Cancelled">@L["ConfirmDeleteGroupDialog_CancelButton"]</button>
     </Footer>
 </SzDialog>
 

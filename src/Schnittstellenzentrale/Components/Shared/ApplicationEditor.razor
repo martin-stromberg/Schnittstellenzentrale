@@ -2,6 +2,7 @@
 @inject IApplicationApiClient ApplicationApiClient
 @inject IStorageModeService StorageModeService
 @inject ICurrentUserService CurrentUserService
+@inject IStringLocalizer<SharedResources> L
 
 <div class="sz-content-view">
     <section class="sz-hero">
@@ -16,8 +17,8 @@
                         <span class="sz-icon-placeholder">&#128187;</span>
                     </div>
                     <div class="sz-content-header-text">
-                        <span class="sz-content-title">@(_isEditMode ? _model.Name : "Neue Anwendung")</span>
-                        <span class="sz-content-subtitle">@(_isEditMode ? "Anwendung bearbeiten" : "Anwendung anlegen")</span>
+                        <span class="sz-content-title">@(_isEditMode ? _model.Name : L["ApplicationEditor_TitleNew"].Value)</span>
+                        <span class="sz-content-subtitle">@(_isEditMode ? L["ApplicationEditor_SubtitleEdit"].Value : L["ApplicationEditor_SubtitleNew"].Value)</span>
                     </div>
                 </div>
             </div>
@@ -29,24 +30,24 @@
             <DataAnnotationsValidator />
 
             <div class="sz-form-group">
-                <label class="sz-form-label" for="app-name">Name</label>
+                <label class="sz-form-label" for="app-name">@L["ApplicationEditor_Label_Name"]</label>
                 <InputText id="app-name" class="sz-input" @bind-Value="_model.Name" />
                 <ValidationMessage For="() => _model.Name" />
             </div>
 
             <div class="sz-form-group">
-                <label class="sz-form-label" for="app-base-url">Basis-URL</label>
+                <label class="sz-form-label" for="app-base-url">@L["ApplicationEditor_Label_BaseUrl"]</label>
                 <InputText id="app-base-url" class="sz-input" @bind-Value="_model.BaseUrl" />
                 <ValidationMessage For="() => _model.BaseUrl" />
             </div>
 
             <div class="sz-form-group">
-                <label class="sz-form-label" for="app-description">Beschreibung</label>
+                <label class="sz-form-label" for="app-description">@L["ApplicationEditor_Label_Description"]</label>
                 <InputText id="app-description" class="sz-input" @bind-Value="_model.Description" />
             </div>
 
             <div class="sz-form-group">
-                <label class="sz-form-label" for="app-interface-url">Schnittstellen-URL</label>
+                <label class="sz-form-label" for="app-interface-url">@L["ApplicationEditor_Label_InterfaceUrl"]</label>
                 <input id="app-interface-url" type="text" class="sz-input" value="@_model.InterfaceUrl" @oninput="OnInterfaceUrlChanged" />
                 @if (!string.IsNullOrEmpty(_model.InterfaceUrl))
                 {
@@ -54,13 +55,13 @@
                         @switch (_model.InterfaceType)
                         {
                             case InterfaceType.Rest:
-                                <span>REST (Swagger/OpenAPI)</span>
+                                <span>@L["ApplicationEditor_Hint_Rest"]</span>
                                 break;
                             case InterfaceType.OData:
-                                <span>OData</span>
+                                <span>@L["ApplicationEditor_Hint_OData"]</span>
                                 break;
                             default:
-                                <span>Typ nicht erkannt</span>
+                                <span>@L["ApplicationEditor_Hint_UnknownType"]</span>
                                 break;
                         }
                     </span>
@@ -68,9 +69,9 @@
             </div>
 
             <div class="sz-form-group">
-                <label class="sz-form-label" for="app-group">Sammlung</label>
+                <label class="sz-form-label" for="app-group">@L["ApplicationEditor_Label_Collection"]</label>
                 <InputSelect id="app-group" class="sz-form-select" @bind-Value="_model.ApplicationGroupId">
-                    <option value="">Ohne Sammlung</option>
+                    <option value="">@L["ApplicationEditor_Option_NoCollection"]</option>
                     @foreach (var group in _groups)
                     {
                         <option value="@group.Id">@group.Name</option>
@@ -84,8 +85,8 @@
             }
 
             <div class="sz-editor-actions">
-                <button type="submit" class="sz-btn-primary">Speichern</button>
-                <button type="button" class="sz-btn-secondary" @onclick="Cancel">Abbrechen</button>
+                <button type="submit" class="sz-btn-primary">@L["ApplicationEditor_SaveButton"]</button>
+                <button type="button" class="sz-btn-secondary" @onclick="Cancel">@L["ApplicationEditor_CancelButton"]</button>
             </div>
         </EditForm>
     </div>
@@ -110,7 +111,7 @@
         }
         catch (Exception ex)
         {
-            _errorMessage = $"Fehler beim Laden der Gruppen: {ex.Message}";
+            _errorMessage = string.Format(L["ApplicationEditor_Error_LoadGroups"], ex.Message);
         }
 
         if (ExistingApplication != null)
@@ -153,7 +154,7 @@
         }
         catch (Exception ex)
         {
-            _errorMessage = $"Speichern fehlgeschlagen: {ex.Message}";
+            _errorMessage = string.Format(L["ApplicationEditor_Error_Save"], ex.Message);
         }
     }
 

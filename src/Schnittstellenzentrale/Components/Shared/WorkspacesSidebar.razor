@@ -3,11 +3,12 @@
 @inject IApplicationApiClient ApplicationApiClient
 @inject IStorageModeService StorageModeService
 @inject ICurrentUserService CurrentUserService
+@inject IStringLocalizer<SharedResources> L
 
 <div class="sz-workspaces-sidebar">
     <div class="sz-sidebar-topbar">
-        <button type="button" class="sz-btn-primary" @onclick="OnCreateCollectionRequested">+ Neue Sammlung</button>
-        <button type="button" class="sz-btn-secondary" @onclick="OnCreateApplicationRequested">+ Neue Anwendung</button>
+        <button type="button" class="sz-btn-primary" @onclick="OnCreateCollectionRequested">@L["WorkspacesSidebar_NewCollectionButton"]</button>
+        <button type="button" class="sz-btn-secondary" @onclick="OnCreateApplicationRequested">@L["WorkspacesSidebar_NewApplicationButton"]</button>
     </div>
     <ApplicationGroupTree @ref="_tree"
         OnApplicationSelected="OnApplicationSelected"
@@ -28,7 +29,7 @@
         OnEndpointGroupSelected="OnEndpointGroupSelected" />
     <div class="sz-sidebar-footer">
         <p class="sz-sidebar-footer-copyright">@_copyrightInfo</p>
-        <a href="/impressum" class="sz-sidebar-footer-link">Impressum</a>
+        <a href="/impressum" class="sz-sidebar-footer-link">@L["WorkspacesSidebar_ImpressumLink"]</a>
     </div>
 </div>
 

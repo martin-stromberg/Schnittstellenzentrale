@@ -1,7 +1,9 @@
+using Microsoft.Extensions.Localization;
 using Moq;
 using Schnittstellenzentrale.Core.Enums;
 using Schnittstellenzentrale.Core.Interfaces;
 using Schnittstellenzentrale.Core.Models;
+using Schnittstellenzentrale.Resources;
 
 namespace Schnittstellenzentrale.Tests.Helpers;
 
@@ -22,4 +24,15 @@ public static class TestMockFactory
         Mode = StorageMode.Team,
         Variables = []
     };
+
+    /// <summary>Erstellt einen <see cref="IStringLocalizer{SharedResources}"/>, der jeden Schlüssel unverändert als Wert zurückgibt.</summary>
+    public static IStringLocalizer<SharedResources> CreateFakeLocalizer()
+    {
+        var mock = new Mock<IStringLocalizer<SharedResources>>();
+        mock.Setup(l => l[It.IsAny<string>()])
+            .Returns<string>(key => new LocalizedString(key, key));
+        mock.Setup(l => l[It.IsAny<string>(), It.IsAny<object[]>()])
+            .Returns<string, object[]>((key, args) => new LocalizedString(key, string.Format(key, args)));
+        return mock.Object;
+    }
 }

@@ -31,6 +31,7 @@ public class EnvironmentSelectorTests : BunitContext
         Services.AddSingleton(_activeEnvMock.Object);
         Services.AddSingleton(_storageMock.Object);
         Services.AddSingleton(_currentUserMock.Object);
+        Services.AddSingleton(TestMockFactory.CreateFakeLocalizer());
 
         JSInterop.SetupVoid("localStorage.removeItem", _ => true).SetVoidResult();
         JSInterop.SetupVoid("localStorage.setItem", _ => true).SetVoidResult();

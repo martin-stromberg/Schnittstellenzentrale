@@ -2,6 +2,7 @@
 @inject IStorageModeService StorageModeService
 @inject ICurrentUserService CurrentUserService
 @inject ISignalRNotificationService SignalRNotificationService
+@inject IStringLocalizer<SharedResources> L
 
 @if (_isVisible)
 {
@@ -9,7 +10,7 @@
         <div class="modal-dialog modal-dialog-centered modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Systemumgebungen verwalten</h5>
+                    <h5 class="modal-title">@L["EnvironmentManagementOverlay_Title"]</h5>
                     <button type="button" class="btn-close" @onclick="Close"></button>
                 </div>
                 <div class="modal-body">
@@ -23,25 +24,25 @@
                     else if (_confirmDeleteEnvironment != null)
                     {
                         <div class="alert alert-warning">
-                            <p>Umgebung '<strong>@_confirmDeleteEnvironment.Name</strong>' wirklich löschen?</p>
+                            <p>@L["EnvironmentManagementOverlay_ConfirmDelete"]<strong>@_confirmDeleteEnvironment.Name</strong>@L["EnvironmentManagementOverlay_ConfirmDeleteSuffix"]</p>
                             @if (!string.IsNullOrEmpty(_deleteError))
                             {
                                 <div class="alert alert-danger mt-2">@_deleteError</div>
                             }
                             <div class="d-flex gap-2">
-                                <button type="button" class="btn btn-danger" @onclick="ConfirmDeleteAsync">Löschen</button>
-                                <button type="button" class="btn btn-secondary" @onclick="CancelDelete">Abbrechen</button>
+                                <button type="button" class="btn btn-danger" @onclick="ConfirmDeleteAsync">@L["EnvironmentManagementOverlay_DeleteButton"]</button>
+                                <button type="button" class="btn btn-secondary" @onclick="CancelDelete">@L["EnvironmentManagementOverlay_CancelButton"]</button>
                             </div>
                         </div>
                     }
                     else
                     {
                         <div class="mb-3">
-                            <button type="button" class="btn btn-primary" @onclick="StartCreate">Neu</button>
+                            <button type="button" class="btn btn-primary" @onclick="StartCreate">@L["EnvironmentManagementOverlay_NewButton"]</button>
                         </div>
                         @if (_environments.Count == 0)
                         {
-                            <p class="text-muted">Keine Umgebungen vorhanden.</p>
+                            <p class="text-muted">@L["EnvironmentManagementOverlay_EmptyState"]</p>
                         }
                         else
                         {
@@ -53,11 +54,11 @@
                                         <div class="d-flex gap-2">
                                             <button type="button" class="btn btn-sm btn-outline-primary"
                                                     @onclick="() => StartEdit(env)">
-                                                Bearbeiten
+                                                @L["EnvironmentManagementOverlay_EditButton"]
                                             </button>
                                             <button type="button" class="btn btn-sm btn-outline-danger"
                                                     @onclick="() => StartDelete(env)">
-                                                Löschen
+                                                @L["EnvironmentManagementOverlay_ListDeleteButton"]
                                             </button>
                                         </div>
                                     </li>
@@ -138,7 +139,7 @@
         }
         catch (Exception ex)
         {
-            _deleteError = $"Löschen fehlgeschlagen: {ex.Message}";
+            _deleteError = string.Format(L["EnvironmentManagementOverlay_Error_Delete"], ex.Message);
         }
     }
 

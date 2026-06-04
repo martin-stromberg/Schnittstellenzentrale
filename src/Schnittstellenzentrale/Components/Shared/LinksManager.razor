@@ -1,27 +1,28 @@
 @using Microsoft.EntityFrameworkCore
 @inject IApplicationLinkService ApplicationLinkService
+@inject IStringLocalizer<SharedResources> L
 
 <div class="sz-links-section">
     <div class="sz-links-header">
-        <span class="sz-section-label">Verwaltbare Links</span>
+        <span class="sz-section-label">@L["LinksManager_Section_Label"]</span>
         @if (!_addingNew)
         {
-            <button type="button" class="sz-links-add-btn" @onclick="StartAdd">+ Link hinzufügen</button>
+            <button type="button" class="sz-links-add-btn" @onclick="StartAdd">@L["LinksManager_AddButton"]</button>
         }
     </div>
 
     @if (_addingNew)
     {
         <div class="sz-link-edit-row">
-            <input class="sz-input" @bind="_newUrl" placeholder="URL (https://...)" />
-            <input class="sz-input" @bind="_newLabel" placeholder="Beschriftung (optional, max. 200 Zeichen)" />
+            <input class="sz-input" @bind="_newUrl" placeholder="@L["LinksManager_Placeholder_Url"]" />
+            <input class="sz-input" @bind="_newLabel" placeholder="@L["LinksManager_Placeholder_Label_New"]" />
             @if (!string.IsNullOrEmpty(_linkError))
             {
                 <span class="sz-inplace-error">@_linkError</span>
             }
             <div class="sz-link-edit-actions">
-                <button type="button" class="sz-btn-primary" @onclick="SaveNewAsync">Speichern</button>
-                <button type="button" class="sz-btn-secondary" @onclick="CancelNew">Abbrechen</button>
+                <button type="button" class="sz-btn-primary" @onclick="SaveNewAsync">@L["LinksManager_SaveButton"]</button>
+                <button type="button" class="sz-btn-secondary" @onclick="CancelNew">@L["LinksManager_CancelButton"]</button>
             </div>
         </div>
     }
@@ -35,15 +36,15 @@
             @if (_editingLinkId == link.Id)
             {
                 <div class="sz-link-edit-row">
-                    <input class="sz-input" @bind="_editUrl" placeholder="URL (https://...)" />
-                    <input class="sz-input" @bind="_editLabel" placeholder="Beschriftung (optional)" />
+                    <input class="sz-input" @bind="_editUrl" placeholder="@L["LinksManager_Placeholder_Url"]" />
+                    <input class="sz-input" @bind="_editLabel" placeholder="@L["LinksManager_Placeholder_Label_Edit"]" />
                     @if (!string.IsNullOrEmpty(_linkError))
                     {
                         <span class="sz-inplace-error">@_linkError</span>
                     }
                     <div class="sz-link-edit-actions">
-                        <button type="button" class="sz-btn-primary" @onclick="SaveEditAsync">Speichern</button>
-                        <button type="button" class="sz-btn-secondary" @onclick="CancelEdit">Abbrechen</button>
+                        <button type="button" class="sz-btn-primary" @onclick="SaveEditAsync">@L["LinksManager_SaveButton"]</button>
+                        <button type="button" class="sz-btn-secondary" @onclick="CancelEdit">@L["LinksManager_CancelButton"]</button>
                     </div>
                 </div>
             }

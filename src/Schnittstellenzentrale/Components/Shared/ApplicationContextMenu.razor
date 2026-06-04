@@ -1,3 +1,5 @@
+@inject IStringLocalizer<SharedResources> L
+
 <div class="context-menu-container @(_isOpen ? "menu-open" : "")">
     <button type="button" class="btn btn-link btn-sm context-menu-toggle" data-testid="context-menu-toggle" @onclick="ToggleMenu">⚙️</button>
     @if (_isOpen)
@@ -5,22 +7,22 @@
         <div class="context-menu-overlay" @onclick="() => _isOpen = false"></div>
         <div class="context-menu-dropdown">
             <button type="button" class="context-menu-item" @onclick="EditRequested" disabled="@(Application.IsSystem)">
-                <i class="bi bi-pencil"></i> Bearbeiten
+                <i class="bi bi-pencil"></i> @L["ApplicationContextMenu_EditButton"]
             </button>
             <button type="button" class="context-menu-item" @onclick="CreateEndpointGroupRequested">
-                <i class="bi bi-folder-plus"></i> Ordner anlegen
+                <i class="bi bi-folder-plus"></i> @L["ApplicationContextMenu_CreateFolderButton"]
             </button>
             <button type="button" class="context-menu-item" @onclick="CreateEndpointRequested">
-                <i class="bi bi-lightning"></i> Endpunkt anlegen
+                <i class="bi bi-lightning"></i> @L["ApplicationContextMenu_CreateEndpointButton"]
             </button>
             @if (Application.ApplicationGroupId.HasValue)
             {
                 <button type="button" class="context-menu-item" @onclick="RemoveFromGroupRequested">
-                    <i class="bi bi-folder-minus"></i> Aus Sammlung entfernen
+                    <i class="bi bi-folder-minus"></i> @L["ApplicationContextMenu_RemoveFromCollectionButton"]
                 </button>
             }
             <button type="button" class="context-menu-item context-menu-item--danger" @onclick="DeleteRequested" disabled="@(Application.IsSystem)">
-                <i class="bi bi-trash3"></i> Löschen
+                <i class="bi bi-trash3"></i> @L["ApplicationContextMenu_DeleteButton"]
             </button>
         </div>
     }

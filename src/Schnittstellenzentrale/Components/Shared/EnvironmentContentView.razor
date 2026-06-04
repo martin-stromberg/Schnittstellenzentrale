@@ -1,10 +1,11 @@
 @inject ISystemEnvironmentRepository SystemEnvironmentRepository
 @inject IActiveEnvironmentService ActiveEnvironmentService
+@inject IStringLocalizer<SharedResources> L
 
 @if (_environment == null)
 {
     <div class="sz-env-content">
-        <p class="sz-env-loading">Umgebung wird geladen…</p>
+        <p class="sz-env-loading">@L["EnvironmentContentView_Loading"]</p>
     </div>
 }
 else

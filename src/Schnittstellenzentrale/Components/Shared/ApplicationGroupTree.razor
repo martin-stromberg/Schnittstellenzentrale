@@ -5,6 +5,7 @@
 @inject IJSRuntime JSRuntime
 @inject ILogger<ApplicationGroupTree> Logger
 @inject IActivityLogService ActivityLogService
+@inject IStringLocalizer<SharedResources> L
 @using Microsoft.AspNetCore.SignalR
 @using Microsoft.AspNetCore.SignalR.Client
 @implements IAsyncDisposable
@@ -191,7 +192,7 @@
         }
         catch (Exception ex)
         {
-            _errorMessage = $"Fehler beim Laden der Daten: {ex.Message}";
+            _errorMessage = string.Format(L["ApplicationGroupTree_Error_LoadData"], ex.Message);
         }
     }
 
@@ -206,7 +207,7 @@
         {
             // Fehler werden hier bewusst geschluckt: LoadDataAsync ruft diese Methode für jede Anwendung auf.
             // Ein Fehler bei einer einzelnen Anwendung darf die Initialisierung der übrigen nicht abbrechen.
-            _errorMessage = $"Fehler beim Laden der Endpunkte: {ex.Message}";
+            _errorMessage = string.Format(L["ApplicationGroupTree_Error_LoadEndpoints"], ex.Message);
         }
     }
 
@@ -247,7 +248,7 @@
             }
             catch (Exception ex)
             {
-                _errorMessage = $"Fehler beim Laden der Daten: {ex.Message}";
+                _errorMessage = string.Format(L["ApplicationGroupTree_Error_LoadData"], ex.Message);
                 StateHasChanged();
             }
         });
@@ -359,7 +360,7 @@
         }
         catch (Exception ex)
         {
-            _errorMessage = $"Fehler beim Entfernen aus der Sammlung: {ex.Message}";
+            _errorMessage = string.Format(L["ApplicationGroupTree_Error_RemoveFromGroup"], ex.Message);
             StateHasChanged();
         }
     }
@@ -432,7 +433,7 @@
             if (_draggedApplication != null)
                 _draggedApplication.ApplicationGroupId = previousGroupId;
             ResetDragState();
-            _errorMessage = $"Fehler beim Verschieben der Anwendung: {ex.Message}";
+            _errorMessage = string.Format(L["ApplicationGroupTree_Error_MoveApplication"], ex.Message);
         }
     }
 

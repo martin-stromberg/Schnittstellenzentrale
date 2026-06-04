@@ -2,6 +2,7 @@
 @inject ISwaggerImportService SwaggerImportService
 @inject IODataImportService ODataImportService
 @inject IHealthCheckService HealthCheckService
+@inject IStringLocalizer<SharedResources> L
 
 @if (!string.IsNullOrEmpty(_errorMessage))
 {
@@ -78,7 +79,7 @@
         }
         catch (Exception ex)
         {
-            _errorMessage = $"Fehler beim Laden der Anwendung: {ex.Message}";
+            _errorMessage = string.Format(L["ApplicationCard_Error_LoadApplication"], ex.Message);
         }
     }
 

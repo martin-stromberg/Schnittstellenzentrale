@@ -1,10 +1,12 @@
-<SzDialog Title="Anwendung löschen" Small="true">
+@inject IStringLocalizer<SharedResources> L
+
+<SzDialog Title="@L["ConfirmDeleteApplicationDialog_Title"]" Small="true">
     <ChildContent>
-        <p class="sz-dialog__text">Anwendung <strong>@Application.Name</strong> wirklich löschen?</p>
+        <p class="sz-dialog__text">@L["ConfirmDeleteApplicationDialog_Message"] <strong>@Application.Name</strong> @L["ConfirmDeleteApplicationDialog_MessageSuffix"]</p>
     </ChildContent>
     <Footer>
-        <button type="button" class="sz-btn sz-btn-destructive" @onclick="Confirmed">Löschen</button>
-        <button type="button" class="sz-btn sz-btn-outline" @onclick="Cancelled">Abbrechen</button>
+        <button type="button" class="sz-btn sz-btn-destructive" @onclick="Confirmed">@L["ConfirmDeleteApplicationDialog_DeleteButton"]</button>
+        <button type="button" class="sz-btn sz-btn-outline" @onclick="Cancelled">@L["ConfirmDeleteApplicationDialog_CancelButton"]</button>
     </Footer>
 </SzDialog>
 

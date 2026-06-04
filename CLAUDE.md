@@ -25,3 +25,16 @@ Explizite Ausnahme: `SystemEndpointSyncService` verwendet `IEndpointRepository` 
 ## Testanforderungen für API-Clients
 
 Für jeden API-Client und jeden neuen Controller sind sowohl Unit-Tests mit gemocktem `HttpMessageHandler` als auch Integrationstests mit `WebApplicationFactory` bereitzustellen.
+
+## Lokalisierung (resx-Konvention)
+
+Pro Projekt wird genau ein resx-Paket angelegt — keine komponentenindividuellen resx-Dateien:
+
+- Hauptprojekt: `src/Schnittstellenzentrale/Resources/SharedResources.cs` + `SharedResources.resx` (EN Fallback) + `SharedResources.de.resx` (DE)
+- Core-Projekt: `src/Schnittstellenzentrale.Core/Resources/CoreResources.cs` + `CoreResources.resx` + `CoreResources.de.resx`
+
+Schlüsselschema: `{KomponentenName}_{Rolle}` (Beispiele: `ApplicationEditor_SaveButton`, `ConfirmDeleteGroupDialog_Title`)
+
+Jeder Schlüssel erhält einen ausgefüllten `Comment`-Eintrag in der resx, der den UI-Kontext beschreibt.
+
+Einbindung in Razor-Komponenten: `@inject IStringLocalizer<SharedResources> L` — der `@using Microsoft.Extensions.Localization`-Eintrag ist global in `_Imports.razor` registriert.

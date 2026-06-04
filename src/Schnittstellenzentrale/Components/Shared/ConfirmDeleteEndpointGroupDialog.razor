@@ -1,16 +1,18 @@
-<SzDialog Title="Ordner löschen" Small="true">
+@inject IStringLocalizer<SharedResources> L
+
+<SzDialog Title="@L["ConfirmDeleteEndpointGroupDialog_Title"]" Small="true">
     <ChildContent>
-        <p class="sz-dialog__text">Ordner <strong>@Group.Name</strong> wirklich löschen?</p>
+        <p class="sz-dialog__text">@L["ConfirmDeleteEndpointGroupDialog_Message"] <strong>@Group.Name</strong> @L["ConfirmDeleteEndpointGroupDialog_MessageSuffix"]</p>
         @if (EndpointCount > 0)
         {
             <div class="sz-alert sz-alert--warning">
-                Der Ordner enthält <strong>@EndpointCount</strong> Endpunkt(e). Beim Löschen des Ordners werden alle enthaltenen Endpunkte ebenfalls gelöscht.
+                @L["ConfirmDeleteEndpointGroupDialog_Warning"] <strong>@EndpointCount</strong> @L["ConfirmDeleteEndpointGroupDialog_WarningSuffix"]
             </div>
         }
     </ChildContent>
     <Footer>
-        <button type="button" class="sz-btn sz-btn-destructive" @onclick="Confirmed">Löschen</button>
-        <button type="button" class="sz-btn sz-btn-outline" @onclick="Cancelled">Abbrechen</button>
+        <button type="button" class="sz-btn sz-btn-destructive" @onclick="Confirmed">@L["ConfirmDeleteEndpointGroupDialog_DeleteButton"]</button>
+        <button type="button" class="sz-btn sz-btn-outline" @onclick="Cancelled">@L["ConfirmDeleteEndpointGroupDialog_CancelButton"]</button>
     </Footer>
 </SzDialog>
 

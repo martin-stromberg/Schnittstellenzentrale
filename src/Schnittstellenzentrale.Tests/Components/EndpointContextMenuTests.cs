@@ -1,12 +1,20 @@
 using Bunit;
+using Microsoft.Extensions.DependencyInjection;
 using Schnittstellenzentrale.Components.Shared;
 using Schnittstellenzentrale.Core.Models;
+using Schnittstellenzentrale.Tests.Helpers;
 
 namespace Schnittstellenzentrale.Tests.Components;
 
 /// <summary>bUnit-Tests für die <see cref="EndpointContextMenu"/>-Komponente.</summary>
 public class EndpointContextMenuTests : BunitContext
 {
+    /// <summary>Registriert den FakeStringLocalizer für IStringLocalizer&lt;SharedResources&gt;.</summary>
+    public EndpointContextMenuTests()
+    {
+        Services.AddSingleton(TestMockFactory.CreateFakeLocalizer());
+    }
+
     private static Core.Models.Endpoint CreateEndpoint() => new()
     {
         Id = 42,
@@ -27,7 +35,7 @@ public class EndpointContextMenuTests : BunitContext
 
         cut.Find(".context-menu-toggle").Click();
         cut.FindAll("button.context-menu-item")
-            .First(b => b.TextContent.Contains("Endpunkt löschen"))
+            .First(b => b.TextContent.Contains("EndpointContextMenu_DeleteButton"))
             .Click();
 
         Assert.Equal(endpoint, received);

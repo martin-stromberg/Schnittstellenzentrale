@@ -8,6 +8,7 @@ using Schnittstellenzentrale.Hubs;
 using Schnittstellenzentrale.Infrastructure.Data;
 using Schnittstellenzentrale.Infrastructure.Repositories;
 using Schnittstellenzentrale.Infrastructure.Services;
+using Schnittstellenzentrale.Resources;
 using Schnittstellenzentrale.Services;
 using Microsoft.EntityFrameworkCore;
 using ShadcnBlazor;
@@ -47,7 +48,10 @@ public partial class Program {
             .AddNegotiate();
         builder.Services.AddAuthorization();
 
-        builder.Services.AddControllers();
+        builder.Services.AddControllers()
+            .AddDataAnnotationsLocalization(options =>
+                options.DataAnnotationLocalizerProvider = (type, factory) =>
+                    factory.Create(typeof(SharedResources)));
 
         builder.Services.AddSwaggerGen(c =>
         {
@@ -139,6 +143,13 @@ public partial class Program {
         app.UseSwaggerUI();
         app.UseAuthentication();
         app.UseAuthorization();
+
+        var localizationOptions = new RequestLocalizationOptions()
+            .SetDefaultCulture("en")
+            .AddSupportedCultures("en", "de")
+            .AddSupportedUICultures("en", "de");
+        app.UseRequestLocalization(localizationOptions);
+
         app.UseAntiforgery();
 
         if (app.Environment.EnvironmentName.Equals("Playwright", StringComparison.OrdinalIgnoreCase))

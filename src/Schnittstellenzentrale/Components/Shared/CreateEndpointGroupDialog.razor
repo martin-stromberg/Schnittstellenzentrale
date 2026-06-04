@@ -1,8 +1,10 @@
-<SzDialog Title="Ordner anlegen" Small="true" OnClose="Cancel">
+@inject IStringLocalizer<SharedResources> L
+
+<SzDialog Title="@L["CreateEndpointGroupDialog_Title"]" Small="true" OnClose="Cancel">
     <ChildContent>
         <EditForm Model="_model" OnValidSubmit="SaveAsync">
             <div class="sz-form-group">
-                <label class="sz-form-label" for="endpoint-group-name">Name</label>
+                <label class="sz-form-label" for="endpoint-group-name">@L["CreateEndpointGroupDialog_Label_Name"]</label>
                 <InputText id="endpoint-group-name" class="sz-input" @bind-Value="_model.Name" />
             </div>
             @if (!string.IsNullOrEmpty(_errorMessage))
@@ -10,8 +12,8 @@
                 <div class="sz-alert sz-alert--destructive">@_errorMessage</div>
             }
             <div class="sz-dialog__actions">
-                <button type="submit" class="sz-btn sz-btn-primary" disabled="@(string.IsNullOrWhiteSpace(_model.Name))">Anlegen</button>
-                <button type="button" class="sz-btn sz-btn-outline" @onclick="Cancel">Abbrechen</button>
+                <button type="submit" class="sz-btn sz-btn-primary" disabled="@(string.IsNullOrWhiteSpace(_model.Name))">@L["CreateEndpointGroupDialog_CreateButton"]</button>
+                <button type="button" class="sz-btn sz-btn-outline" @onclick="Cancel">@L["CreateEndpointGroupDialog_CancelButton"]</button>
             </div>
         </EditForm>
     </ChildContent>
@@ -35,7 +37,7 @@
         _errorMessage = null;
         if (string.IsNullOrWhiteSpace(_model.Name))
         {
-            _errorMessage = "Der Name darf nicht leer sein.";
+            _errorMessage = L["CreateEndpointGroupDialog_Error_NameEmpty"];
             return;
         }
         try
@@ -44,7 +46,7 @@
         }
         catch (Exception ex)
         {
-            _errorMessage = $"Anlegen fehlgeschlagen: {ex.Message}";
+            _errorMessage = string.Format(L["CreateEndpointGroupDialog_Error_Create"], ex.Message);
         }
     }
 

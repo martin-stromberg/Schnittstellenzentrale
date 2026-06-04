@@ -1,5 +1,6 @@
 @inject IJSRuntime JSRuntime
 @inject IOptions<UploadSettings> UploadOptions
+@inject IStringLocalizer<SharedResources> L
 @using Microsoft.Extensions.Options
 @using Schnittstellenzentrale.Infrastructure.Services
 @implements IAsyncDisposable
@@ -16,7 +17,7 @@
         }
         @if (!ReadOnly)
         {
-            <button type="button" class="sz-icon-upload-btn" title="Icon hochladen" @onclick="TriggerFileInput">&#8679;</button>
+            <button type="button" class="sz-icon-upload-btn" title="@L["ContentHeader_Tooltip_UploadIcon"]" @onclick="TriggerFileInput">&#8679;</button>
             <InputFile @ref="_inputFile" id="@_fileInputId" OnChange="OnFileSelected" accept="image/png,image/jpeg" class="sz-hidden-file-input" style="display:none" />
         }
     </div>

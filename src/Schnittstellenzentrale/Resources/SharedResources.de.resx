@@ -1,0 +1,887 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+
+  <!-- DataAnnotations Standardschlüssel auf Deutsch -->
+  <data name="The field {0} is required." xml:space="preserve">
+    <value>Das Feld {0} ist ein Pflichtfeld.</value>
+    <comment>DataAnnotations [Required] Standardfehlermeldung auf Deutsch</comment>
+  </data>
+  <data name="The field {0} must be a string or array type with a maximum length of '{1}'." xml:space="preserve">
+    <value>Das Feld {0} darf maximal {1} Zeichen lang sein.</value>
+    <comment>DataAnnotations [MaxLength] Standardfehlermeldung auf Deutsch</comment>
+  </data>
+  <data name="The field {0} must be between {1} and {2}." xml:space="preserve">
+    <value>Das Feld {0} muss zwischen {1} und {2} liegen.</value>
+    <comment>DataAnnotations [Range] Standardfehlermeldung auf Deutsch</comment>
+  </data>
+
+  <!-- AppShell -->
+  <data name="AppShell_ErrorMessage" xml:space="preserve">
+    <value>Ein unbehandelter Fehler ist aufgetreten.</value>
+    <comment>AppShell: Text im blazor-error-ui-Div bei einem unbehandelten Fehler</comment>
+  </data>
+  <data name="AppShell_ReloadLink" xml:space="preserve">
+    <value>Neu laden</value>
+    <comment>AppShell: Linktext im blazor-error-ui zum Neuladen der Seite</comment>
+  </data>
+
+  <!-- TopBar -->
+  <data name="TopBar_ModeLabel" xml:space="preserve">
+    <value>Modus:</value>
+    <comment>TopBar: Beschriftung vor dem Modus-Selektor</comment>
+  </data>
+  <data name="TopBar_ModeTeam" xml:space="preserve">
+    <value>Team</value>
+    <comment>TopBar: Modus-Option für geteilte Team-Daten</comment>
+  </data>
+  <data name="TopBar_ModeUser" xml:space="preserve">
+    <value>Benutzer</value>
+    <comment>TopBar: Modus-Option für benutzerspezifische Daten</comment>
+  </data>
+  <data name="TopBar_TabWorkspaces" xml:space="preserve">
+    <value>Workspaces</value>
+    <comment>TopBar: Navigationstab für den Workspaces-Bereich</comment>
+  </data>
+  <data name="TopBar_TabEnvironments" xml:space="preserve">
+    <value>Environments</value>
+    <comment>TopBar: Navigationstab für den Environments-Bereich</comment>
+  </data>
+  <data name="TopBar_TabHistory" xml:space="preserve">
+    <value>History</value>
+    <comment>TopBar: Navigationstab für den History-Bereich</comment>
+  </data>
+  <data name="TopBar_Tooltip_Settings" xml:space="preserve">
+    <value>Einstellungen</value>
+    <comment>TopBar: title-Attribut des Einstellungen-Icon-Links</comment>
+  </data>
+  <data name="TopBar_Tooltip_Help" xml:space="preserve">
+    <value>Hilfe</value>
+    <comment>TopBar: title-Attribut des Hilfe-Icon-Links</comment>
+  </data>
+
+  <!-- EmptyContentView -->
+  <data name="EmptyContentView_Hint" xml:space="preserve">
+    <value>Wählen Sie eine Sammlung oder Anwendung aus.</value>
+    <comment>EmptyContentView: Hinweistext wenn nichts im Workspace ausgewählt ist</comment>
+  </data>
+
+  <!-- ApplicationEditor -->
+  <data name="ApplicationEditor_TitleNew" xml:space="preserve">
+    <value>Neue Anwendung</value>
+    <comment>ApplicationEditor: Titel im Hero beim Erstellen einer neuen Anwendung</comment>
+  </data>
+  <data name="ApplicationEditor_SubtitleEdit" xml:space="preserve">
+    <value>Anwendung bearbeiten</value>
+    <comment>ApplicationEditor: Untertitel im Hero beim Bearbeiten einer Anwendung</comment>
+  </data>
+  <data name="ApplicationEditor_SubtitleNew" xml:space="preserve">
+    <value>Anwendung anlegen</value>
+    <comment>ApplicationEditor: Untertitel im Hero beim Erstellen einer neuen Anwendung</comment>
+  </data>
+  <data name="ApplicationEditor_Label_Name" xml:space="preserve">
+    <value>Name</value>
+    <comment>ApplicationEditor: Beschriftung des Namenseingabefelds</comment>
+  </data>
+  <data name="ApplicationEditor_Label_BaseUrl" xml:space="preserve">
+    <value>Basis-URL</value>
+    <comment>ApplicationEditor: Beschriftung des Basis-URL-Eingabefelds</comment>
+  </data>
+  <data name="ApplicationEditor_Label_Description" xml:space="preserve">
+    <value>Beschreibung</value>
+    <comment>ApplicationEditor: Beschriftung des Beschreibungsfelds</comment>
+  </data>
+  <data name="ApplicationEditor_Label_InterfaceUrl" xml:space="preserve">
+    <value>Schnittstellen-URL</value>
+    <comment>ApplicationEditor: Beschriftung des Schnittstellen-URL-Eingabefelds</comment>
+  </data>
+  <data name="ApplicationEditor_Hint_Rest" xml:space="preserve">
+    <value>REST (Swagger/OpenAPI)</value>
+    <comment>ApplicationEditor: Hinweis wenn die Schnittstellen-URL als REST erkannt wird</comment>
+  </data>
+  <data name="ApplicationEditor_Hint_OData" xml:space="preserve">
+    <value>OData</value>
+    <comment>ApplicationEditor: Hinweis wenn die Schnittstellen-URL als OData erkannt wird</comment>
+  </data>
+  <data name="ApplicationEditor_Hint_UnknownType" xml:space="preserve">
+    <value>Typ nicht erkannt</value>
+    <comment>ApplicationEditor: Hinweis wenn der Typ der Schnittstellen-URL nicht erkannt wird</comment>
+  </data>
+  <data name="ApplicationEditor_Label_Collection" xml:space="preserve">
+    <value>Sammlung</value>
+    <comment>ApplicationEditor: Beschriftung des Sammlungs-Selektors</comment>
+  </data>
+  <data name="ApplicationEditor_Option_NoCollection" xml:space="preserve">
+    <value>Ohne Sammlung</value>
+    <comment>ApplicationEditor: Option im Sammlungs-Selektor für keine Gruppenzuweisung</comment>
+  </data>
+  <data name="ApplicationEditor_SaveButton" xml:space="preserve">
+    <value>Speichern</value>
+    <comment>ApplicationEditor: Primärer Speichern-Button</comment>
+  </data>
+  <data name="ApplicationEditor_CancelButton" xml:space="preserve">
+    <value>Abbrechen</value>
+    <comment>ApplicationEditor: Button zum Abbrechen</comment>
+  </data>
+  <data name="ApplicationEditor_Error_LoadGroups" xml:space="preserve">
+    <value>Fehler beim Laden der Gruppen: {0}</value>
+    <comment>ApplicationEditor: Fehlermeldung wenn das Laden der Gruppen fehlschlägt</comment>
+  </data>
+  <data name="ApplicationEditor_Error_Save" xml:space="preserve">
+    <value>Speichern fehlgeschlagen: {0}</value>
+    <comment>ApplicationEditor: Fehlermeldung wenn das Speichern fehlschlägt</comment>
+  </data>
+
+  <!-- ApplicationGroupEditor -->
+  <data name="ApplicationGroupEditor_TitleNew" xml:space="preserve">
+    <value>Neue Sammlung</value>
+    <comment>ApplicationGroupEditor: Titel im Hero beim Erstellen einer neuen Sammlung</comment>
+  </data>
+  <data name="ApplicationGroupEditor_SubtitleNew" xml:space="preserve">
+    <value>Sammlung anlegen</value>
+    <comment>ApplicationGroupEditor: Untertitel im Hero beim Erstellen einer neuen Sammlung</comment>
+  </data>
+  <data name="ApplicationGroupEditor_Label_Name" xml:space="preserve">
+    <value>Name</value>
+    <comment>ApplicationGroupEditor: Beschriftung des Namenseingabefelds</comment>
+  </data>
+  <data name="ApplicationGroupEditor_SaveButton" xml:space="preserve">
+    <value>Speichern</value>
+    <comment>ApplicationGroupEditor: Primärer Speichern-Button</comment>
+  </data>
+  <data name="ApplicationGroupEditor_CancelButton" xml:space="preserve">
+    <value>Abbrechen</value>
+    <comment>ApplicationGroupEditor: Button zum Abbrechen</comment>
+  </data>
+  <data name="ApplicationGroupEditor_Error_Save" xml:space="preserve">
+    <value>Speichern fehlgeschlagen: {0}</value>
+    <comment>ApplicationGroupEditor: Fehlermeldung wenn das Speichern fehlschlägt</comment>
+  </data>
+
+  <!-- ApplicationGroupContextMenu -->
+  <data name="ApplicationGroupContextMenu_RenameButton" xml:space="preserve">
+    <value>Umbenennen</value>
+    <comment>ApplicationGroupContextMenu: Kontextmenü-Eintrag zum Umbenennen einer Sammlung</comment>
+  </data>
+  <data name="ApplicationGroupContextMenu_DeleteButton" xml:space="preserve">
+    <value>Löschen</value>
+    <comment>ApplicationGroupContextMenu: Kontextmenü-Eintrag zum Löschen einer Sammlung</comment>
+  </data>
+
+  <!-- ApplicationContextMenu -->
+  <data name="ApplicationContextMenu_EditButton" xml:space="preserve">
+    <value>Bearbeiten</value>
+    <comment>ApplicationContextMenu: Kontextmenü-Eintrag zum Bearbeiten der Anwendung</comment>
+  </data>
+  <data name="ApplicationContextMenu_CreateFolderButton" xml:space="preserve">
+    <value>Ordner anlegen</value>
+    <comment>ApplicationContextMenu: Kontextmenü-Eintrag zum Erstellen einer Endpunktgruppe</comment>
+  </data>
+  <data name="ApplicationContextMenu_CreateEndpointButton" xml:space="preserve">
+    <value>Endpunkt anlegen</value>
+    <comment>ApplicationContextMenu: Kontextmenü-Eintrag zum Erstellen eines neuen Endpunkts</comment>
+  </data>
+  <data name="ApplicationContextMenu_RemoveFromCollectionButton" xml:space="preserve">
+    <value>Aus Sammlung entfernen</value>
+    <comment>ApplicationContextMenu: Kontextmenü-Eintrag zum Entfernen der Anwendung aus der Gruppe</comment>
+  </data>
+  <data name="ApplicationContextMenu_DeleteButton" xml:space="preserve">
+    <value>Löschen</value>
+    <comment>ApplicationContextMenu: Kontextmenü-Eintrag zum Löschen der Anwendung</comment>
+  </data>
+
+  <!-- EndpointContextMenu -->
+  <data name="EndpointContextMenu_DeleteButton" xml:space="preserve">
+    <value>Endpunkt löschen</value>
+    <comment>EndpointContextMenu: Kontextmenü-Eintrag zum Löschen eines Endpunkts</comment>
+  </data>
+
+  <!-- EndpointGroupContextMenu -->
+  <data name="EndpointGroupContextMenu_CreateEndpointButton" xml:space="preserve">
+    <value>Endpunkt anlegen</value>
+    <comment>EndpointGroupContextMenu: Kontextmenü-Eintrag zum Erstellen eines Endpunkts in diesem Ordner</comment>
+  </data>
+  <data name="EndpointGroupContextMenu_RenameButton" xml:space="preserve">
+    <value>Ordner umbenennen</value>
+    <comment>EndpointGroupContextMenu: Kontextmenü-Eintrag zum Umbenennen des Ordners</comment>
+  </data>
+  <data name="EndpointGroupContextMenu_DeleteButton" xml:space="preserve">
+    <value>Ordner löschen</value>
+    <comment>EndpointGroupContextMenu: Kontextmenü-Eintrag zum Löschen des Ordners</comment>
+  </data>
+
+  <!-- ConfirmDeleteGroupDialog -->
+  <data name="ConfirmDeleteGroupDialog_Title" xml:space="preserve">
+    <value>Sammlung löschen</value>
+    <comment>ConfirmDeleteGroupDialog: Dialogtitel beim Bestätigen des Löschens einer Anwendungsgruppe</comment>
+  </data>
+  <data name="ConfirmDeleteGroupDialog_Message" xml:space="preserve">
+    <value>Sammlung</value>
+    <comment>ConfirmDeleteGroupDialog: Beginn der Bestätigungsnachricht (gefolgt vom Gruppennamen)</comment>
+  </data>
+  <data name="ConfirmDeleteGroupDialog_MessageSuffix" xml:space="preserve">
+    <value>wirklich löschen?</value>
+    <comment>ConfirmDeleteGroupDialog: Suffix nach dem Gruppennamen in der Bestätigungsnachricht</comment>
+  </data>
+  <data name="ConfirmDeleteGroupDialog_ApplicationCount" xml:space="preserve">
+    <value>Die Sammlung enthält</value>
+    <comment>ConfirmDeleteGroupDialog: Beginn der Meldung über enthaltene Anwendungen</comment>
+  </data>
+  <data name="ConfirmDeleteGroupDialog_ApplicationCountSuffix" xml:space="preserve">
+    <value>Anwendung(en).</value>
+    <comment>ConfirmDeleteGroupDialog: Suffix nach der Anwendungsanzahl</comment>
+  </data>
+  <data name="ConfirmDeleteGroupDialog_DeleteAllButton" xml:space="preserve">
+    <value>Mitlöschen</value>
+    <comment>ConfirmDeleteGroupDialog: Button zum Löschen der Gruppe und aller enthaltenen Anwendungen</comment>
+  </data>
+  <data name="ConfirmDeleteGroupDialog_DeleteGroupOnlyButton" xml:space="preserve">
+    <value>Nur Sammlung löschen</value>
+    <comment>ConfirmDeleteGroupDialog: Button zum Löschen nur der Gruppe ohne die Anwendungen</comment>
+  </data>
+  <data name="ConfirmDeleteGroupDialog_CancelButton" xml:space="preserve">
+    <value>Abbrechen</value>
+    <comment>ConfirmDeleteGroupDialog: Button zum Abbrechen des Löschvorgangs</comment>
+  </data>
+
+  <!-- ConfirmDeleteApplicationDialog -->
+  <data name="ConfirmDeleteApplicationDialog_Title" xml:space="preserve">
+    <value>Anwendung löschen</value>
+    <comment>ConfirmDeleteApplicationDialog: Dialogtitel beim Bestätigen des Löschens einer Anwendung</comment>
+  </data>
+  <data name="ConfirmDeleteApplicationDialog_Message" xml:space="preserve">
+    <value>Anwendung</value>
+    <comment>ConfirmDeleteApplicationDialog: Beginn der Bestätigungsnachricht (gefolgt vom Anwendungsnamen)</comment>
+  </data>
+  <data name="ConfirmDeleteApplicationDialog_MessageSuffix" xml:space="preserve">
+    <value>wirklich löschen?</value>
+    <comment>ConfirmDeleteApplicationDialog: Suffix nach dem Anwendungsnamen in der Bestätigungsnachricht</comment>
+  </data>
+  <data name="ConfirmDeleteApplicationDialog_DeleteButton" xml:space="preserve">
+    <value>Löschen</value>
+    <comment>ConfirmDeleteApplicationDialog: Button zum Bestätigen des Löschens</comment>
+  </data>
+  <data name="ConfirmDeleteApplicationDialog_CancelButton" xml:space="preserve">
+    <value>Abbrechen</value>
+    <comment>ConfirmDeleteApplicationDialog: Button zum Abbrechen des Löschvorgangs</comment>
+  </data>
+
+  <!-- ConfirmDeleteEndpointGroupDialog -->
+  <data name="ConfirmDeleteEndpointGroupDialog_Title" xml:space="preserve">
+    <value>Ordner löschen</value>
+    <comment>ConfirmDeleteEndpointGroupDialog: Dialogtitel beim Bestätigen des Löschens eines Endpunktgruppen-Ordners</comment>
+  </data>
+  <data name="ConfirmDeleteEndpointGroupDialog_Message" xml:space="preserve">
+    <value>Ordner</value>
+    <comment>ConfirmDeleteEndpointGroupDialog: Beginn der Bestätigungsnachricht (gefolgt vom Ordnernamen)</comment>
+  </data>
+  <data name="ConfirmDeleteEndpointGroupDialog_MessageSuffix" xml:space="preserve">
+    <value>wirklich löschen?</value>
+    <comment>ConfirmDeleteEndpointGroupDialog: Suffix nach dem Ordnernamen in der Bestätigungsnachricht</comment>
+  </data>
+  <data name="ConfirmDeleteEndpointGroupDialog_Warning" xml:space="preserve">
+    <value>Der Ordner enthält</value>
+    <comment>ConfirmDeleteEndpointGroupDialog: Beginn der Warnung über enthaltene Endpunkte</comment>
+  </data>
+  <data name="ConfirmDeleteEndpointGroupDialog_WarningSuffix" xml:space="preserve">
+    <value>Endpunkt(e). Beim Löschen des Ordners werden alle enthaltenen Endpunkte ebenfalls gelöscht.</value>
+    <comment>ConfirmDeleteEndpointGroupDialog: Suffix der Warnung über enthaltene Endpunkte</comment>
+  </data>
+  <data name="ConfirmDeleteEndpointGroupDialog_DeleteButton" xml:space="preserve">
+    <value>Löschen</value>
+    <comment>ConfirmDeleteEndpointGroupDialog: Button zum Bestätigen des Löschens</comment>
+  </data>
+  <data name="ConfirmDeleteEndpointGroupDialog_CancelButton" xml:space="preserve">
+    <value>Abbrechen</value>
+    <comment>ConfirmDeleteEndpointGroupDialog: Button zum Abbrechen des Löschvorgangs</comment>
+  </data>
+
+  <!-- RenameGroupDialog -->
+  <data name="RenameGroupDialog_Title" xml:space="preserve">
+    <value>Sammlung umbenennen</value>
+    <comment>RenameGroupDialog: Dialogtitel beim Umbenennen einer Anwendungsgruppe</comment>
+  </data>
+  <data name="RenameGroupDialog_Label_Name" xml:space="preserve">
+    <value>Name</value>
+    <comment>RenameGroupDialog: Beschriftung des Namenseingabefelds</comment>
+  </data>
+  <data name="RenameGroupDialog_SaveButton" xml:space="preserve">
+    <value>Speichern</value>
+    <comment>RenameGroupDialog: Button zum Speichern des neuen Namens</comment>
+  </data>
+  <data name="RenameGroupDialog_CancelButton" xml:space="preserve">
+    <value>Abbrechen</value>
+    <comment>RenameGroupDialog: Button zum Abbrechen des Umbenennens</comment>
+  </data>
+  <data name="RenameGroupDialog_Error_Save" xml:space="preserve">
+    <value>Speichern fehlgeschlagen: {0}</value>
+    <comment>RenameGroupDialog: Fehlermeldung wenn das Speichern fehlschlägt</comment>
+  </data>
+
+  <!-- RenameEndpointGroupDialog -->
+  <data name="RenameEndpointGroupDialog_Title" xml:space="preserve">
+    <value>Ordner umbenennen</value>
+    <comment>RenameEndpointGroupDialog: Dialogtitel beim Umbenennen eines Endpunktgruppen-Ordners</comment>
+  </data>
+  <data name="RenameEndpointGroupDialog_Label_Name" xml:space="preserve">
+    <value>Name</value>
+    <comment>RenameEndpointGroupDialog: Beschriftung des Namenseingabefelds</comment>
+  </data>
+  <data name="RenameEndpointGroupDialog_SaveButton" xml:space="preserve">
+    <value>Speichern</value>
+    <comment>RenameEndpointGroupDialog: Button zum Speichern des neuen Namens</comment>
+  </data>
+  <data name="RenameEndpointGroupDialog_CancelButton" xml:space="preserve">
+    <value>Abbrechen</value>
+    <comment>RenameEndpointGroupDialog: Button zum Abbrechen des Umbenennens</comment>
+  </data>
+  <data name="RenameEndpointGroupDialog_Error_NameEmpty" xml:space="preserve">
+    <value>Der Name darf nicht leer sein.</value>
+    <comment>RenameEndpointGroupDialog: Inline-Validierungsfehler wenn der Name leer ist</comment>
+  </data>
+  <data name="RenameEndpointGroupDialog_Error_Save" xml:space="preserve">
+    <value>Speichern fehlgeschlagen: {0}</value>
+    <comment>RenameEndpointGroupDialog: Fehlermeldung wenn das Speichern fehlschlägt</comment>
+  </data>
+
+  <!-- CreateEndpointGroupDialog -->
+  <data name="CreateEndpointGroupDialog_Title" xml:space="preserve">
+    <value>Ordner anlegen</value>
+    <comment>CreateEndpointGroupDialog: Dialogtitel beim Erstellen eines neuen Endpunktgruppen-Ordners</comment>
+  </data>
+  <data name="CreateEndpointGroupDialog_Label_Name" xml:space="preserve">
+    <value>Name</value>
+    <comment>CreateEndpointGroupDialog: Beschriftung des Namenseingabefelds</comment>
+  </data>
+  <data name="CreateEndpointGroupDialog_CreateButton" xml:space="preserve">
+    <value>Anlegen</value>
+    <comment>CreateEndpointGroupDialog: Button zum Erstellen des neuen Ordners</comment>
+  </data>
+  <data name="CreateEndpointGroupDialog_CancelButton" xml:space="preserve">
+    <value>Abbrechen</value>
+    <comment>CreateEndpointGroupDialog: Button zum Abbrechen</comment>
+  </data>
+  <data name="CreateEndpointGroupDialog_Error_NameEmpty" xml:space="preserve">
+    <value>Der Name darf nicht leer sein.</value>
+    <comment>CreateEndpointGroupDialog: Inline-Validierungsfehler wenn der Name leer ist</comment>
+  </data>
+  <data name="CreateEndpointGroupDialog_Error_Create" xml:space="preserve">
+    <value>Anlegen fehlgeschlagen: {0}</value>
+    <comment>CreateEndpointGroupDialog: Fehlermeldung wenn das Anlegen fehlschlägt</comment>
+  </data>
+
+  <!-- ConcurrencyWarningDialog -->
+  <data name="ConcurrencyWarningDialog_Title" xml:space="preserve">
+    <value>Schreibkonflikt erkannt</value>
+    <comment>ConcurrencyWarningDialog: Dialogtitel bei einem gleichzeitigen Schreibzugriff</comment>
+  </data>
+  <data name="ConcurrencyWarningDialog_Message" xml:space="preserve">
+    <value>Die Daten wurden zwischenzeitlich von einem anderen Benutzer geändert. Möchten Sie Ihre Änderungen trotzdem speichern und die anderen Änderungen überschreiben?</value>
+    <comment>ConcurrencyWarningDialog: Nachricht die den Schreibkonflikt erklärt</comment>
+  </data>
+  <data name="ConcurrencyWarningDialog_OverwriteButton" xml:space="preserve">
+    <value>Überschreiben</value>
+    <comment>ConcurrencyWarningDialog: Button zum erzwungenen Speichern und Überschreiben</comment>
+  </data>
+  <data name="ConcurrencyWarningDialog_CancelButton" xml:space="preserve">
+    <value>Abbrechen</value>
+    <comment>ConcurrencyWarningDialog: Button zum Abbrechen ohne zu speichern</comment>
+  </data>
+
+  <!-- EndpointPage -->
+  <data name="EndpointPage_DirtyBadge" xml:space="preserve">
+    <value>geändert</value>
+    <comment>EndpointPage: Badge der angezeigt wird wenn es ungespeicherte Änderungen gibt</comment>
+  </data>
+  <data name="EndpointPage_SaveButton" xml:space="preserve">
+    <value>Speichern</value>
+    <comment>EndpointPage: Button zum Speichern des Endpunkts</comment>
+  </data>
+  <data name="EndpointPage_SendButton" xml:space="preserve">
+    <value>Anfrage senden</value>
+    <comment>EndpointPage: Button zum Ausführen der HTTP-Anfrage</comment>
+  </data>
+  <data name="EndpointPage_Error_NameEmpty" xml:space="preserve">
+    <value>Der Name darf nicht leer sein.</value>
+    <comment>EndpointPage: Inline-Warnung wenn das Namensfeld leer ist</comment>
+  </data>
+  <data name="EndpointPage_Placeholder_Name" xml:space="preserve">
+    <value>Endpunktname</value>
+    <comment>EndpointPage: Platzhaltertext für das Namenseingabefeld</comment>
+  </data>
+  <data name="EndpointPage_Placeholder_Path" xml:space="preserve">
+    <value>Relativer Pfad</value>
+    <comment>EndpointPage: Platzhaltertext für das Pfadeingabefeld</comment>
+  </data>
+  <data name="EndpointPage_Tab_Auth" xml:space="preserve">
+    <value>Autorisierung</value>
+    <comment>EndpointPage: Request-Tab-Beschriftung für den Autorisierungsbereich</comment>
+  </data>
+  <data name="EndpointPage_Tab_Headers" xml:space="preserve">
+    <value>Headers</value>
+    <comment>EndpointPage: Request-Tab-Beschriftung für den Header-Bereich</comment>
+  </data>
+  <data name="EndpointPage_Tab_Query" xml:space="preserve">
+    <value>Query-Parameter</value>
+    <comment>EndpointPage: Request-Tab-Beschriftung für den Query-Parameter-Bereich</comment>
+  </data>
+  <data name="EndpointPage_Tab_Body" xml:space="preserve">
+    <value>Body</value>
+    <comment>EndpointPage: Request-Tab-Beschriftung für den Body-Bereich</comment>
+  </data>
+  <data name="EndpointPage_Tab_PreScript" xml:space="preserve">
+    <value>Pre-Request-Skript</value>
+    <comment>EndpointPage: Request-Tab-Beschriftung für das Pre-Request-Skript</comment>
+  </data>
+  <data name="EndpointPage_Tab_PostScript" xml:space="preserve">
+    <value>Post-Request-Skript</value>
+    <comment>EndpointPage: Request-Tab-Beschriftung für das Post-Request-Skript</comment>
+  </data>
+  <data name="EndpointPage_Response_Label" xml:space="preserve">
+    <value>Antwort</value>
+    <comment>EndpointPage: Abschnittsbezeichnung für den Antwortbereich</comment>
+  </data>
+  <data name="EndpointPage_Response_Status" xml:space="preserve">
+    <value>Status:</value>
+    <comment>EndpointPage: Bezeichnung vor dem HTTP-Statuscode in der Antwort-Metazeile</comment>
+  </data>
+  <data name="EndpointPage_Response_Duration" xml:space="preserve">
+    <value>Dauer:</value>
+    <comment>EndpointPage: Bezeichnung vor der Anfragedauer in der Antwort-Metazeile</comment>
+  </data>
+  <data name="EndpointPage_Response_Size" xml:space="preserve">
+    <value>Größe:</value>
+    <comment>EndpointPage: Bezeichnung vor der Antwortgröße in der Antwort-Metazeile</comment>
+  </data>
+  <data name="EndpointPage_Response_SizeSuffix" xml:space="preserve">
+    <value>Bytes</value>
+    <comment>EndpointPage: Einheit nach dem Antwortgrößen-Wert</comment>
+  </data>
+  <data name="EndpointPage_Response_Tab_Body" xml:space="preserve">
+    <value>Body</value>
+    <comment>EndpointPage: Antwort-Tab-Beschriftung für den Antwort-Body</comment>
+  </data>
+  <data name="EndpointPage_Response_Tab_Headers" xml:space="preserve">
+    <value>Headers</value>
+    <comment>EndpointPage: Antwort-Tab-Beschriftung für die Antwort-Header</comment>
+  </data>
+  <data name="EndpointPage_Confirm_UnsavedChanges" xml:space="preserve">
+    <value>Es gibt ungespeicherte Änderungen. Trotzdem verlassen?</value>
+    <comment>EndpointPage: Browser-confirm()-Dialogtext beim Verlassen mit ungespeicherten Änderungen</comment>
+  </data>
+  <data name="EndpointPage_Error_LoadFailed" xml:space="preserve">
+    <value>Endpunkt konnte nicht geladen werden.</value>
+    <comment>EndpointPage: Fehlermeldung wenn der Endpunkt nicht geladen werden kann</comment>
+  </data>
+  <data name="EndpointPage_Error_Save" xml:space="preserve">
+    <value>Speichern fehlgeschlagen: {0}</value>
+    <comment>EndpointPage: Fehlermeldung wenn das Speichern fehlschlägt</comment>
+  </data>
+
+  <!-- ImportDialog -->
+  <data name="ImportDialog_Empty" xml:space="preserve">
+    <value>Keine Änderungen gefunden.</value>
+    <comment>ImportDialog: Meldung wenn der Import-Diff keine Änderungen enthält</comment>
+  </data>
+  <data name="ImportDialog_NewEndpoints" xml:space="preserve">
+    <value>Neue Endpunkte</value>
+    <comment>ImportDialog: Abschnittstitel für neue Endpunkte im Diff</comment>
+  </data>
+  <data name="ImportDialog_ChangedEndpoints" xml:space="preserve">
+    <value>Geänderte Endpunkte</value>
+    <comment>ImportDialog: Abschnittstitel für geänderte Endpunkte im Diff</comment>
+  </data>
+  <data name="ImportDialog_RemovedEndpoints" xml:space="preserve">
+    <value>Entfernte Endpunkte</value>
+    <comment>ImportDialog: Abschnittstitel für entfernte Endpunkte im Diff</comment>
+  </data>
+  <data name="ImportDialog_ApplyButton" xml:space="preserve">
+    <value>Übernehmen</value>
+    <comment>ImportDialog: Button zum Übernehmen der ausgewählten Importänderungen</comment>
+  </data>
+  <data name="ImportDialog_CancelButton" xml:space="preserve">
+    <value>Abbrechen</value>
+    <comment>ImportDialog: Button zum Abbrechen des Imports</comment>
+  </data>
+  <data name="ImportDialog_Error_Concurrency" xml:space="preserve">
+    <value>Übernahme fehlgeschlagen: Ein anderer Benutzer hat die Daten gleichzeitig geändert. Bitte laden Sie die Seite neu.</value>
+    <comment>ImportDialog: Fehlermeldung bei gleichzeitiger Änderung durch einen anderen Benutzer</comment>
+  </data>
+  <data name="ImportDialog_Error_Apply" xml:space="preserve">
+    <value>Übernahme fehlgeschlagen: {0}</value>
+    <comment>ImportDialog: Fehlermeldung wenn die Übernahme fehlschlägt</comment>
+  </data>
+
+  <!-- HealthCheckDialog -->
+  <data name="HealthCheckDialog_Warning_Cooldown" xml:space="preserve">
+    <value>Health-Check wurde übersprungen (Cooldown aktiv).</value>
+    <comment>HealthCheckDialog: Warnung wenn der Health-Check wegen Cooldown übersprungen wurde</comment>
+  </data>
+  <data name="HealthCheckDialog_Success_Reachable" xml:space="preserve">
+    <value>Die Anwendung ist erreichbar.</value>
+    <comment>HealthCheckDialog: Erfolgsmeldung wenn die Anwendung erreichbar ist</comment>
+  </data>
+  <data name="HealthCheckDialog_Error_NotReachable" xml:space="preserve">
+    <value>Die Anwendung ist nicht erreichbar.</value>
+    <comment>HealthCheckDialog: Fehlermeldung wenn die Anwendung nicht erreichbar ist</comment>
+  </data>
+  <data name="HealthCheckDialog_RemoveButton" xml:space="preserve">
+    <value>Anwendung entfernen</value>
+    <comment>HealthCheckDialog: Button der bei Nicht-Erreichbarkeit angezeigt wird</comment>
+  </data>
+  <data name="HealthCheckDialog_CloseButton" xml:space="preserve">
+    <value>Schließen</value>
+    <comment>HealthCheckDialog: Button zum Schließen des Dialogs</comment>
+  </data>
+
+  <!-- EnvironmentEditor -->
+  <data name="EnvironmentEditor_Section_Variables" xml:space="preserve">
+    <value>Variablen</value>
+    <comment>EnvironmentEditor: Abschnittsbezeichnung über der Variablentabelle</comment>
+  </data>
+  <data name="EnvironmentEditor_Header_Name" xml:space="preserve">
+    <value>Name</value>
+    <comment>EnvironmentEditor: Spaltenüberschrift für die Variablennamen-Spalte</comment>
+  </data>
+  <data name="EnvironmentEditor_Header_Value" xml:space="preserve">
+    <value>Wert</value>
+    <comment>EnvironmentEditor: Spaltenüberschrift für die Variablenwert-Spalte</comment>
+  </data>
+  <data name="EnvironmentEditor_EmptyState" xml:space="preserve">
+    <value>Keine Variablen definiert.</value>
+    <comment>EnvironmentEditor: Leerzustand-Meldung wenn keine Variablen vorhanden sind</comment>
+  </data>
+  <data name="EnvironmentEditor_Tooltip_ShowValue" xml:space="preserve">
+    <value>Wert anzeigen</value>
+    <comment>EnvironmentEditor: Tooltip des Toggle-Buttons wenn der Wert maskiert ist</comment>
+  </data>
+  <data name="EnvironmentEditor_Tooltip_MaskValue" xml:space="preserve">
+    <value>Wert maskieren</value>
+    <comment>EnvironmentEditor: Tooltip des Toggle-Buttons wenn der Wert sichtbar ist</comment>
+  </data>
+  <data name="EnvironmentEditor_AddButton" xml:space="preserve">
+    <value>+ Variable hinzufügen</value>
+    <comment>EnvironmentEditor: Button zum Hinzufügen einer neuen Variable</comment>
+  </data>
+  <data name="EnvironmentEditor_SaveButton" xml:space="preserve">
+    <value>Speichern</value>
+    <comment>EnvironmentEditor: Button zum Speichern der Umgebung</comment>
+  </data>
+  <data name="EnvironmentEditor_CancelButton" xml:space="preserve">
+    <value>Abbrechen</value>
+    <comment>EnvironmentEditor: Button zum Abbrechen der Bearbeitung</comment>
+  </data>
+  <data name="EnvironmentEditor_Error_NameEmpty" xml:space="preserve">
+    <value>Name darf nicht leer sein.</value>
+    <comment>EnvironmentEditor: Inline-Validierungsfehler wenn der Umgebungsname leer ist</comment>
+  </data>
+  <data name="EnvironmentEditor_Error_NameTooLong" xml:space="preserve">
+    <value>Name darf maximal 200 Zeichen lang sein.</value>
+    <comment>EnvironmentEditor: Inline-Validierungsfehler wenn der Umgebungsname zu lang ist</comment>
+  </data>
+  <data name="EnvironmentEditor_Error_VarNameTooLong" xml:space="preserve">
+    <value>Variablenname '{0}…' überschreitet 200 Zeichen.</value>
+    <comment>EnvironmentEditor: Inline-Validierungsfehler wenn ein Variablenname zu lang ist</comment>
+  </data>
+  <data name="EnvironmentEditor_Error_VarValueTooLong" xml:space="preserve">
+    <value>Variablenwert von '{0}' überschreitet 4000 Zeichen.</value>
+    <comment>EnvironmentEditor: Inline-Validierungsfehler wenn ein Variablenwert zu lang ist</comment>
+  </data>
+  <data name="EnvironmentEditor_Error_VarNameDuplicate" xml:space="preserve">
+    <value>Variablenname '{0}' ist mehrfach vorhanden.</value>
+    <comment>EnvironmentEditor: Inline-Validierungsfehler wenn ein Variablenname mehrfach verwendet wird</comment>
+  </data>
+  <data name="EnvironmentEditor_Error_VarNameEmpty" xml:space="preserve">
+    <value>Variablenname darf nicht leer sein.</value>
+    <comment>EnvironmentEditor: Inline-Validierungsfehler wenn ein Variablenname leer ist</comment>
+  </data>
+  <data name="EnvironmentEditor_Error_DuplicateEnvironment" xml:space="preserve">
+    <value>Eine Umgebung mit diesem Namen existiert bereits.</value>
+    <comment>EnvironmentEditor: Fehler wenn eine Umgebung mit diesem Namen bereits existiert</comment>
+  </data>
+  <data name="EnvironmentEditor_Error_Save" xml:space="preserve">
+    <value>Speichern fehlgeschlagen: {0}</value>
+    <comment>EnvironmentEditor: Fehlermeldung wenn das Speichern fehlschlägt</comment>
+  </data>
+
+  <!-- EnvironmentManagementOverlay -->
+  <data name="EnvironmentManagementOverlay_Title" xml:space="preserve">
+    <value>Systemumgebungen verwalten</value>
+    <comment>EnvironmentManagementOverlay: Titel im Modal-Header</comment>
+  </data>
+  <data name="EnvironmentManagementOverlay_ConfirmDelete" xml:space="preserve">
+    <value>Umgebung '</value>
+    <comment>EnvironmentManagementOverlay: Beginn der Bestätigungsnachricht vor dem Umgebungsnamen</comment>
+  </data>
+  <data name="EnvironmentManagementOverlay_ConfirmDeleteSuffix" xml:space="preserve">
+    <value>' wirklich löschen?</value>
+    <comment>EnvironmentManagementOverlay: Suffix nach dem Umgebungsnamen in der Löschbestätigung</comment>
+  </data>
+  <data name="EnvironmentManagementOverlay_DeleteButton" xml:space="preserve">
+    <value>Löschen</value>
+    <comment>EnvironmentManagementOverlay: Button zum Bestätigen des Löschens in der Bestätigungsansicht</comment>
+  </data>
+  <data name="EnvironmentManagementOverlay_CancelButton" xml:space="preserve">
+    <value>Abbrechen</value>
+    <comment>EnvironmentManagementOverlay: Button zum Abbrechen des Löschens</comment>
+  </data>
+  <data name="EnvironmentManagementOverlay_NewButton" xml:space="preserve">
+    <value>Neu</value>
+    <comment>EnvironmentManagementOverlay: Button zum Erstellen einer neuen Umgebung</comment>
+  </data>
+  <data name="EnvironmentManagementOverlay_EditButton" xml:space="preserve">
+    <value>Bearbeiten</value>
+    <comment>EnvironmentManagementOverlay: Button in der Umgebungsliste zum Bearbeiten</comment>
+  </data>
+  <data name="EnvironmentManagementOverlay_ListDeleteButton" xml:space="preserve">
+    <value>Löschen</value>
+    <comment>EnvironmentManagementOverlay: Button in der Umgebungsliste zum Löschen</comment>
+  </data>
+  <data name="EnvironmentManagementOverlay_EmptyState" xml:space="preserve">
+    <value>Keine Umgebungen vorhanden.</value>
+    <comment>EnvironmentManagementOverlay: Leerzustand-Meldung wenn keine Umgebungen vorhanden sind</comment>
+  </data>
+  <data name="EnvironmentManagementOverlay_Error_Delete" xml:space="preserve">
+    <value>Löschen fehlgeschlagen: {0}</value>
+    <comment>EnvironmentManagementOverlay: Fehlermeldung wenn das Löschen fehlschlägt</comment>
+  </data>
+
+  <!-- EnvironmentSelector -->
+  <data name="EnvironmentSelector_NoEnvironmentOption" xml:space="preserve">
+    <value>— Keine Umgebung —</value>
+    <comment>EnvironmentSelector: Platzhalter-Option im Dropdown wenn keine Umgebung ausgewählt ist</comment>
+  </data>
+
+  <!-- EnvironmentsSidebar -->
+  <data name="EnvironmentsSidebar_NewButton" xml:space="preserve">
+    <value>+ Neue Umgebung</value>
+    <comment>EnvironmentsSidebar: Button zum Erstellen einer neuen Umgebung</comment>
+  </data>
+  <data name="EnvironmentsSidebar_Tooltip_Delete" xml:space="preserve">
+    <value>Löschen</value>
+    <comment>EnvironmentsSidebar: Tooltip des Löschen-Buttons neben jedem Umgebungseintrag</comment>
+  </data>
+  <data name="EnvironmentsSidebar_Placeholder_Name" xml:space="preserve">
+    <value>Name der Umgebung</value>
+    <comment>EnvironmentsSidebar: Platzhalter im Namenseingabefeld für neue Umgebungen</comment>
+  </data>
+  <data name="EnvironmentsSidebar_CreateButton" xml:space="preserve">
+    <value>Anlegen</value>
+    <comment>EnvironmentsSidebar: Button zum Bestätigen der neuen Umgebung</comment>
+  </data>
+  <data name="EnvironmentsSidebar_CancelButton" xml:space="preserve">
+    <value>Abbrechen</value>
+    <comment>EnvironmentsSidebar: Button zum Abbrechen der Erstellung</comment>
+  </data>
+
+  <!-- WorkspacesSidebar -->
+  <data name="WorkspacesSidebar_NewCollectionButton" xml:space="preserve">
+    <value>+ Neue Sammlung</value>
+    <comment>WorkspacesSidebar: Button zum Erstellen einer neuen Anwendungsgruppe</comment>
+  </data>
+  <data name="WorkspacesSidebar_NewApplicationButton" xml:space="preserve">
+    <value>+ Neue Anwendung</value>
+    <comment>WorkspacesSidebar: Button zum Erstellen einer neuen Anwendung</comment>
+  </data>
+  <data name="WorkspacesSidebar_ImpressumLink" xml:space="preserve">
+    <value>Impressum</value>
+    <comment>WorkspacesSidebar: Footer-Link zur Impressum-Seite</comment>
+  </data>
+
+  <!-- LinksManager -->
+  <data name="LinksManager_Section_Label" xml:space="preserve">
+    <value>Verwaltbare Links</value>
+    <comment>LinksManager: Abschnittsbezeichnung über der Link-Liste</comment>
+  </data>
+  <data name="LinksManager_AddButton" xml:space="preserve">
+    <value>+ Link hinzufügen</value>
+    <comment>LinksManager: Button zum Hinzufügen eines neuen Links</comment>
+  </data>
+  <data name="LinksManager_Placeholder_Url" xml:space="preserve">
+    <value>URL (https://...)</value>
+    <comment>LinksManager: Platzhalter im URL-Eingabefeld</comment>
+  </data>
+  <data name="LinksManager_Placeholder_Label_New" xml:space="preserve">
+    <value>Beschriftung (optional, max. 200 Zeichen)</value>
+    <comment>LinksManager: Platzhalter im Beschriftungsfeld beim Hinzufügen</comment>
+  </data>
+  <data name="LinksManager_Placeholder_Label_Edit" xml:space="preserve">
+    <value>Beschriftung (optional)</value>
+    <comment>LinksManager: Platzhalter im Beschriftungsfeld beim Bearbeiten</comment>
+  </data>
+  <data name="LinksManager_SaveButton" xml:space="preserve">
+    <value>Speichern</value>
+    <comment>LinksManager: Button zum Speichern eines neuen oder bearbeiteten Links</comment>
+  </data>
+  <data name="LinksManager_CancelButton" xml:space="preserve">
+    <value>Abbrechen</value>
+    <comment>LinksManager: Button zum Abbrechen des Hinzufügens oder Bearbeitens</comment>
+  </data>
+
+  <!-- WorkspacesLayout -->
+  <data name="WorkspacesLayout_Error_DeleteGroup" xml:space="preserve">
+    <value>Fehler beim Löschen der Sammlung: {0}</value>
+    <comment>WorkspacesLayout: Fehlermeldung wenn das Löschen einer Anwendungsgruppe fehlschlägt</comment>
+  </data>
+  <data name="WorkspacesLayout_Error_DeleteApplication" xml:space="preserve">
+    <value>Fehler beim Löschen der Anwendung: {0}</value>
+    <comment>WorkspacesLayout: Fehlermeldung wenn das Löschen einer Anwendung fehlschlägt</comment>
+  </data>
+  <data name="WorkspacesLayout_Error_CreateFolder" xml:space="preserve">
+    <value>Fehler beim Anlegen des Ordners: {0}</value>
+    <comment>WorkspacesLayout: Fehlermeldung wenn das Anlegen einer Endpunktgruppe fehlschlägt</comment>
+  </data>
+  <data name="WorkspacesLayout_Error_CreateEndpoint" xml:space="preserve">
+    <value>Fehler beim Anlegen des Endpunkts: {0}</value>
+    <comment>WorkspacesLayout: Fehlermeldung wenn das Anlegen eines Endpunkts fehlschlägt</comment>
+  </data>
+  <data name="WorkspacesLayout_Error_RenameFolder" xml:space="preserve">
+    <value>Fehler beim Umbenennen des Ordners: {0}</value>
+    <comment>WorkspacesLayout: Fehlermeldung wenn das Umbenennen einer Endpunktgruppe fehlschlägt</comment>
+  </data>
+  <data name="WorkspacesLayout_Error_PrepareDelete" xml:space="preserve">
+    <value>Fehler beim Vorbereiten der Löschung: {0}</value>
+    <comment>WorkspacesLayout: Fehlermeldung wenn die Vorbereitung der Endpunktgruppen-Löschung fehlschlägt</comment>
+  </data>
+  <data name="WorkspacesLayout_Error_DeleteFolder" xml:space="preserve">
+    <value>Fehler beim Löschen des Ordners: {0}</value>
+    <comment>WorkspacesLayout: Fehlermeldung wenn das Löschen einer Endpunktgruppe fehlschlägt</comment>
+  </data>
+  <data name="WorkspacesLayout_Error_DeleteEndpoint" xml:space="preserve">
+    <value>Fehler beim Löschen des Endpunkts: {0}</value>
+    <comment>WorkspacesLayout: Fehlermeldung wenn das Löschen eines Endpunkts fehlschlägt</comment>
+  </data>
+  <data name="WorkspacesLayout_Confirm_DeleteEndpoint" xml:space="preserve">
+    <value>Endpunkt "{0}" wirklich löschen?</value>
+    <comment>WorkspacesLayout: Browser-confirm()-Dialogtext beim Löschen eines Endpunkts (Platzhalter ist der Endpunktname)</comment>
+  </data>
+
+  <!-- ApplicationGroupTree -->
+  <data name="ApplicationGroupTree_Error_LoadData" xml:space="preserve">
+    <value>Fehler beim Laden der Daten: {0}</value>
+    <comment>ApplicationGroupTree: Fehlermeldung wenn das Laden von Gruppen und Anwendungen fehlschlägt</comment>
+  </data>
+  <data name="ApplicationGroupTree_Error_LoadEndpoints" xml:space="preserve">
+    <value>Fehler beim Laden der Endpunkte: {0}</value>
+    <comment>ApplicationGroupTree: Fehlermeldung wenn das Laden der Endpunktdaten für eine Anwendung fehlschlägt</comment>
+  </data>
+  <data name="ApplicationGroupTree_Error_RemoveFromGroup" xml:space="preserve">
+    <value>Fehler beim Entfernen aus der Sammlung: {0}</value>
+    <comment>ApplicationGroupTree: Fehlermeldung wenn das Entfernen einer Anwendung aus der Gruppe fehlschlägt</comment>
+  </data>
+  <data name="ApplicationGroupTree_Error_MoveApplication" xml:space="preserve">
+    <value>Fehler beim Verschieben der Anwendung: {0}</value>
+    <comment>ApplicationGroupTree: Fehlermeldung wenn das Drag-and-Drop einer Anwendung fehlschlägt</comment>
+  </data>
+
+  <!-- ApplicationCard -->
+  <data name="ApplicationCard_Error_LoadApplication" xml:space="preserve">
+    <value>Fehler beim Laden der Anwendung: {0}</value>
+    <comment>ApplicationCard: Fehlermeldung wenn das Laden einer Anwendung fehlschlägt</comment>
+  </data>
+
+  <!-- EnvironmentContentView -->
+  <data name="EnvironmentContentView_Loading" xml:space="preserve">
+    <value>Umgebung wird geladen…</value>
+    <comment>EnvironmentContentView: Ladeanzeige während die Umgebungsdaten abgerufen werden</comment>
+  </data>
+
+  <!-- ContentHeader -->
+  <data name="ContentHeader_Tooltip_UploadIcon" xml:space="preserve">
+    <value>Icon hochladen</value>
+    <comment>ContentHeader: title-Attribut des Icon-Upload-Buttons</comment>
+  </data>
+
+  <!-- EnvironmentsSidebar Fehlermeldungen -->
+  <data name="EnvironmentsSidebar_Error_Load" xml:space="preserve">
+    <value>Fehler beim Laden der Umgebungen: {0}</value>
+    <comment>EnvironmentsSidebar: Fehlermeldung wenn das Laden der Umgebungsliste fehlschlägt</comment>
+  </data>
+  <data name="EnvironmentsSidebar_Error_Delete" xml:space="preserve">
+    <value>Fehler beim Löschen der Umgebung: {0}</value>
+    <comment>EnvironmentsSidebar: Fehlermeldung wenn das Löschen einer Umgebung fehlschlägt</comment>
+  </data>
+
+  <!-- RequestAuthPanel -->
+  <data name="RequestAuthPanel_Label_AuthType" xml:space="preserve">
+    <value>Authentifizierungstyp</value>
+    <comment>RequestAuthPanel: Beschriftung des Authentifizierungstyp-Selektors</comment>
+  </data>
+  <data name="RequestAuthPanel_Label_BasicCredentials" xml:space="preserve">
+    <value>Benutzername:Passwort</value>
+    <comment>RequestAuthPanel: Beschriftung des Basic-Auth-Eingabefelds</comment>
+  </data>
+  <data name="RequestAuthPanel_Label_BearerToken" xml:space="preserve">
+    <value>Bearer-Token</value>
+    <comment>RequestAuthPanel: Beschriftung des Bearer-Token-Eingabefelds</comment>
+  </data>
+  <data name="RequestAuthPanel_Hint_CredentialStorage" xml:space="preserve">
+    <value>Wird im Windows Credential Manager gespeichert.</value>
+    <comment>RequestAuthPanel: Hinweis unter den Auth-Eingabefeldern</comment>
+  </data>
+  <data name="RequestAuthPanel_Placeholder_BasicCredentials" xml:space="preserve">
+    <value>benutzer:passwort</value>
+    <comment>RequestAuthPanel: Platzhalter im Basic-Auth-Eingabefeld</comment>
+  </data>
+  <data name="RequestAuthPanel_Placeholder_BearerToken" xml:space="preserve">
+    <value>Token</value>
+    <comment>RequestAuthPanel: Platzhalter im Bearer-Token-Eingabefeld</comment>
+  </data>
+</root>

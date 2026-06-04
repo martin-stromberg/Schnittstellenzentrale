@@ -1,12 +1,20 @@
 using Bunit;
+using Microsoft.Extensions.DependencyInjection;
 using Schnittstellenzentrale.Components.Shared;
 using Schnittstellenzentrale.Core.Models;
+using Schnittstellenzentrale.Tests.Helpers;
 
 namespace Schnittstellenzentrale.Tests.Components;
 
 /// <summary>bUnit-Tests für die <see cref="ApplicationContextMenu"/>-Komponente.</summary>
 public class ApplicationContextMenuTests : BunitContext
 {
+    /// <summary>Registriert den FakeStringLocalizer für IStringLocalizer&lt;SharedResources&gt;.</summary>
+    public ApplicationContextMenuTests()
+    {
+        Services.AddSingleton(TestMockFactory.CreateFakeLocalizer());
+    }
+
     private static Application InGroup() =>
         new() { Id = 1, Name = "TestApp", BaseUrl = "http://app", ApplicationGroupId = 5 };
 
@@ -27,7 +35,7 @@ public class ApplicationContextMenuTests : BunitContext
 
         Assert.Contains(
             cut.FindAll("button.context-menu-item"),
-            b => b.TextContent.Contains("Aus Sammlung entfernen"));
+            b => b.TextContent.Contains("ApplicationContextMenu_RemoveFromCollectionButton"));
     }
 
     /// <summary>Der Menüeintrag „Aus Sammlung entfernen" ist nicht sichtbar, wenn die Anwendung keiner Gruppe zugeordnet ist.</summary>
@@ -41,7 +49,7 @@ public class ApplicationContextMenuTests : BunitContext
 
         Assert.DoesNotContain(
             cut.FindAll("button.context-menu-item"),
-            b => b.TextContent.Contains("Aus Sammlung entfernen"));
+            b => b.TextContent.Contains("ApplicationContextMenu_RemoveFromCollectionButton"));
     }
 
     /// <summary>Klick auf „Aus Sammlung entfernen" löst den Callback aus und schließt das Menü.</summary>
@@ -57,7 +65,7 @@ public class ApplicationContextMenuTests : BunitContext
 
         cut.Find(".context-menu-toggle").Click();
         cut.FindAll("button.context-menu-item")
-            .First(b => b.TextContent.Contains("Aus Sammlung entfernen"))
+            .First(b => b.TextContent.Contains("ApplicationContextMenu_RemoveFromCollectionButton"))
             .Click();
 
         Assert.Equal(application, received);
@@ -74,7 +82,7 @@ public class ApplicationContextMenuTests : BunitContext
         cut.Find(".context-menu-toggle").Click();
 
         var bearbeitenButton = cut.FindAll("button.context-menu-item")
-            .First(b => b.TextContent.Contains("Bearbeiten"));
+            .First(b => b.TextContent.Contains("ApplicationContextMenu_EditButton"));
 
         Assert.True(bearbeitenButton.HasAttribute("disabled"));
     }
@@ -89,7 +97,7 @@ public class ApplicationContextMenuTests : BunitContext
         cut.Find(".context-menu-toggle").Click();
 
         var löschenButton = cut.FindAll("button.context-menu-item")
-            .First(b => b.TextContent.Contains("Löschen"));
+            .First(b => b.TextContent.Contains("ApplicationContextMenu_DeleteButton"));
 
         Assert.True(löschenButton.HasAttribute("disabled"));
     }

@@ -2,6 +2,7 @@
 @inject IStorageModeService StorageModeService
 @inject ICurrentUserService CurrentUserService
 @inject IActiveEnvironmentService ActiveEnvironmentService
+@inject IStringLocalizer<SharedResources> L
 @implements IDisposable
 
 <div class="sz-topbar">
@@ -11,33 +12,33 @@
         <button type="button"
                 class="sz-topbar-tab @(NavigationStateService.CurrentArea == NavigationArea.Workspaces ? "active" : "")"
                 @onclick="() => SetAreaAsync(NavigationArea.Workspaces)">
-            Workspaces
+            @L["TopBar_TabWorkspaces"]
         </button>
         <button type="button"
                 class="sz-topbar-tab @(NavigationStateService.CurrentArea == NavigationArea.Environments ? "active" : "")"
                 @onclick="() => SetAreaAsync(NavigationArea.Environments)">
-            Environments
+            @L["TopBar_TabEnvironments"]
         </button>
         <button type="button"
                 class="sz-topbar-tab @(NavigationStateService.CurrentArea == NavigationArea.History ? "active" : "")"
                 @onclick="() => SetAreaAsync(NavigationArea.History)">
-            History
+            @L["TopBar_TabHistory"]
         </button>
     </nav>
 
     <div class="sz-topbar-actions">
-        <label class="sz-topbar-label">Modus:</label>
+        <label class="sz-topbar-label">@L["TopBar_ModeLabel"]</label>
         <select class="sz-topbar-select" value="@StorageModeService.CurrentMode" @onchange="OnStorageModeChanged">
-            <option value="@StorageMode.Team">Team</option>
-            <option value="@StorageMode.User">Benutzer</option>
+            <option value="@StorageMode.Team">@L["TopBar_ModeTeam"]</option>
+            <option value="@StorageMode.User">@L["TopBar_ModeUser"]</option>
         </select>
 
         <EnvironmentSelector @ref="_environmentSelector" OnEnvironmentSelectedByUser="OnEnvironmentSelectedByUser" />
 
         <ThemeToggle />
 
-        <a href="/settings" class="sz-topbar-icon-btn" title="Einstellungen">&#9881;</a>
-        <a href="/help" class="sz-topbar-icon-btn" title="Hilfe">&#63;</a>
+        <a href="/settings" class="sz-topbar-icon-btn" title="@L["TopBar_Tooltip_Settings"]">&#9881;</a>
+        <a href="/help" class="sz-topbar-icon-btn" title="@L["TopBar_Tooltip_Help"]">&#63;</a>
 
         <span class="sz-topbar-profile" title="@_userName">@_initials</span>
     </div>
