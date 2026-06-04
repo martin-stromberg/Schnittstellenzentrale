@@ -126,3 +126,7 @@ npx playwright show-trace playwright-traces/ApplicationCrudTests.zip
 ```
 
 Abgedeckte E2E-Szenarien: Startseite, Anwendungs-CRUD, Endpunkt-Ausführung, Swagger-Import, Health-Check, Speichermoduswechsel, SignalR-Echtzeitsynchronisation.
+
+## Lizenz
+
+Dieses Projekt steht unter der [MIT-Lizenz](LICENSE). Hinweise zu Betreiberpflichten (Impressum, Datenschutz, gesetzliche Anforderungen) finden sich in [LEGAL.md](LEGAL.md).
