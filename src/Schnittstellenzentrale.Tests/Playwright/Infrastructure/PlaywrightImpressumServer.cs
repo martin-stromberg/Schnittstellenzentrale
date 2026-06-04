@@ -34,9 +34,14 @@ public class PlaywrightImpressumServer : PlaywrightServer
     /// <inheritdoc/>
     public override async Task DisposeAsync()
     {
-        await base.DisposeAsync();
-
-        if (_impressumFilePath != null && File.Exists(_impressumFilePath))
-            File.Delete(_impressumFilePath);
+        try
+        {
+            await base.DisposeAsync();
+        }
+        finally
+        {
+            if (_impressumFilePath != null && File.Exists(_impressumFilePath))
+                File.Delete(_impressumFilePath);
+        }
     }
 }

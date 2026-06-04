@@ -30,7 +30,7 @@
         OnEndpointGroupSelected="OnEndpointGroupSelected" />
     <div class="sz-sidebar-footer">
         <p class="sz-sidebar-footer-copyright">@_copyrightInfo</p>
-        @if (ImpressumService.IsAvailable())
+        @if (_impressumAvailable)
         {
             <a href="/impressum" class="sz-sidebar-footer-link">@L["WorkspacesSidebar_ImpressumLink"]</a>
         }
@@ -53,10 +53,13 @@
     internal ApplicationGroupTree? _tree;
     private string _owner = string.Empty;
     private string _copyrightInfo = "";
+    private bool _impressumAvailable;
+
     protected override void OnInitialized()
     {
         _owner = CurrentUserService.GetCurrentUserName();
         _copyrightInfo = $"{Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyCopyrightAttribute>()?.Copyright}";
+        _impressumAvailable = ImpressumService.IsAvailable();
     }
 
     internal async Task RefreshTreeAsync()
