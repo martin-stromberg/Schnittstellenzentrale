@@ -29,4 +29,5 @@ public interface IApplicationApiClient
     Task DeleteHeaderAsync(int id);
     Task<EndpointQueryParameter> AddQueryParameterAsync(EndpointQueryParameter parameter);
     Task DeleteQueryParameterAsync(int id);
+    Task<SystemEnvironment?> GetEnvironmentByIdAsync(int id);
 }

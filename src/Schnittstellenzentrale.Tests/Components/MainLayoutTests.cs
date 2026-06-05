@@ -23,6 +23,7 @@ public class MainLayoutTests : BunitContext
     private readonly Mock<IThemeService> _themeMock = new();
     private readonly Mock<IActiveEnvironmentService> _activeEnvMock = new();
     private readonly Mock<ISystemEnvironmentRepository> _envRepoMock = new();
+    private readonly Mock<IApplicationApiClient> _apiClientMock = new();
     private readonly Mock<ICurrentUserService> _currentUserMock = new();
     private readonly Mock<ISignalRNotificationService> _signalRMock = new();
     private readonly Mock<IActivityLogService> _activityLogMock = new();
@@ -37,6 +38,9 @@ public class MainLayoutTests : BunitContext
         _envRepoMock
             .Setup(r => r.GetEnvironmentsAsync(It.IsAny<StorageMode>(), It.IsAny<string?>()))
             .ReturnsAsync([]);
+        _apiClientMock
+            .Setup(c => c.GetEnvironmentByIdAsync(It.IsAny<int>()))
+            .ReturnsAsync((SystemEnvironment?)null);
         _currentUserMock.Setup(s => s.GetCurrentUserName()).Returns("DOMAIN\\testuser");
         _activityLogMock.Setup(s => s.Entries).Returns([]);
         _navigationStateMock.Setup(s => s.CurrentArea).Returns(NavigationArea.Workspaces);
@@ -47,6 +51,7 @@ public class MainLayoutTests : BunitContext
         Services.AddSingleton(_themeMock.Object);
         Services.AddSingleton(_activeEnvMock.Object);
         Services.AddSingleton(_envRepoMock.Object);
+        Services.AddSingleton(_apiClientMock.Object);
         Services.AddSingleton(_currentUserMock.Object);
         Services.AddSingleton(_signalRMock.Object);
         Services.AddSingleton(_activityLogMock.Object);
@@ -125,14 +130,14 @@ public class MainLayoutTests : BunitContext
         Assert.Null(exception);
     }
 
-    /// <summary>SetActiveEnvironment wird mit der aus der DB geladenen Umgebung aufgerufen, wenn eine ID im localStorage liegt.</summary>
+    /// <summary>SetActiveEnvironment wird mit der aus dem API geladenen Umgebung aufgerufen, wenn eine ID im localStorage liegt.</summary>
     [Fact]
     public async Task Wiederherstellen_GespeicherteIdVorhanden_SetzAktiveUmgebung()
     {
         var env = TestMockFactory.CreateEnv(42, "Dev");
         var key = LocalStorageKeys.SelectedEnvironmentId(StorageMode.Team);
         JSInterop.Setup<string?>("localStorage.getItem", inv => inv.Arguments.ElementAt(0) is string s && s == key).SetResult("42");
-        _envRepoMock.Setup(r => r.GetByIdAsync(42)).ReturnsAsync(env);
+        _apiClientMock.Setup(c => c.GetEnvironmentByIdAsync(42)).ReturnsAsync(env);
 
         var cut = Render<AppShell>(p => p.Add(x => x.Body, (RenderFragment)(_ => { })));
         await cut.InvokeAsync(() => { });
@@ -140,13 +145,13 @@ public class MainLayoutTests : BunitContext
         _activeEnvMock.Verify(s => s.SetActiveEnvironment(env), Times.Once);
     }
 
-    /// <summary>SetActiveEnvironment(null) und localStorage.removeItem werden aufgerufen, wenn die gespeicherte ID nicht mehr in der DB existiert.</summary>
+    /// <summary>SetActiveEnvironment(null) und localStorage.removeItem werden aufgerufen, wenn die gespeicherte ID nicht mehr via API zurückkommt.</summary>
     [Fact]
     public async Task Wiederherstellen_UmgebungNichtMehrInDb_BereinigTLocalStorage()
     {
         var key = LocalStorageKeys.SelectedEnvironmentId(StorageMode.Team);
         JSInterop.Setup<string?>("localStorage.getItem", inv => inv.Arguments.ElementAt(0) is string s && s == key).SetResult("99");
-        _envRepoMock.Setup(r => r.GetByIdAsync(99)).ReturnsAsync((SystemEnvironment?)null);
+        _apiClientMock.Setup(c => c.GetEnvironmentByIdAsync(99)).ReturnsAsync((SystemEnvironment?)null);
 
         var cut = Render<AppShell>(p => p.Add(x => x.Body, (RenderFragment)(_ => { })));
         await cut.InvokeAsync(() => { });

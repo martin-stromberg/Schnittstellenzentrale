@@ -40,6 +40,7 @@ public class StorageModeService : IStorageModeService
         if (stored != null && Enum.TryParse<StorageMode>(stored, ignoreCase: true, out var parsed))
         {
             CurrentMode = parsed;
+            OnModeChanged?.Invoke();
         }
     }
 

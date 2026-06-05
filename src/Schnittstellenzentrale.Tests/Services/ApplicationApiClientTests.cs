@@ -773,4 +773,62 @@ public class ApplicationApiClientTests
                 r.Method == HttpMethod.Delete),
             ItExpr.IsAny<CancellationToken>());
     }
+
+    /// <summary>GetEnvironmentByIdAsync_ReturnsEnvironment_WhenFound</summary>
+    [Fact]
+    public async Task GetEnvironmentByIdAsync_ReturnsEnvironment_WhenFound()
+    {
+        var authToken = Guid.NewGuid().ToString();
+        var newToken = Guid.NewGuid().ToString();
+        var responseBody = new SystemEnvironmentResponse
+        {
+            Id = 7,
+            Name = "Produktion",
+            Mode = 0,
+            Owner = null,
+            Description = "Produktionsumgebung",
+            Variables = [new EnvironmentVariableResponse { Id = 1, Name = "KEY", Value = "val", IsValueMasked = false }]
+        };
+        var json = JsonSerializer.Serialize(responseBody);
+
+        var (apiClient, handlerMock, _) = CreateClient(authToken, newToken, HttpStatusCode.OK, json);
+
+        var result = await apiClient.GetEnvironmentByIdAsync(7);
+
+        Assert.NotNull(result);
+        Assert.Equal(7, result.Id);
+        Assert.Equal("Produktion", result.Name);
+        Assert.Single(result.Variables);
+        Assert.Equal("KEY", result.Variables.First().Name);
+
+        handlerMock.Protected().Verify(
+            "SendAsync",
+            Times.Once(),
+            ItExpr.Is<HttpRequestMessage>(r =>
+                r.RequestUri!.AbsolutePath == "/api/system-environments/7" &&
+                r.Method == HttpMethod.Get),
+            ItExpr.IsAny<CancellationToken>());
+    }
+
+    /// <summary>GetEnvironmentByIdAsync_ReturnsNull_WhenNotFound</summary>
+    [Fact]
+    public async Task GetEnvironmentByIdAsync_ReturnsNull_WhenNotFound()
+    {
+        var authToken = Guid.NewGuid().ToString();
+        var newToken = Guid.NewGuid().ToString();
+
+        var (apiClient, handlerMock, _) = CreateClient(authToken, newToken, HttpStatusCode.NotFound, "");
+
+        var result = await apiClient.GetEnvironmentByIdAsync(999);
+
+        Assert.Null(result);
+
+        handlerMock.Protected().Verify(
+            "SendAsync",
+            Times.Once(),
+            ItExpr.Is<HttpRequestMessage>(r =>
+                r.RequestUri!.AbsolutePath == "/api/system-environments/999" &&
+                r.Method == HttpMethod.Get),
+            ItExpr.IsAny<CancellationToken>());
+    }
 }

@@ -77,6 +77,32 @@ public class StorageModeServiceTests
             Times.Once);
     }
 
+    /// <summary>InitializeAsync löst OnModeChanged aus, wenn ein gültiger Wert gespeichert ist.</summary>
+    [Fact]
+    public async Task InitializeAsync_FiresOnModeChanged_WhenStoredValueIsValid()
+    {
+        var (service, _, _) = CreateService(storedValue: "User");
+        var fired = false;
+        service.OnModeChanged += () => fired = true;
+
+        await service.InitializeAsync();
+
+        Assert.True(fired);
+    }
+
+    /// <summary>InitializeAsync löst OnModeChanged nicht aus, wenn kein Wert gespeichert ist.</summary>
+    [Fact]
+    public async Task InitializeAsync_DoesNotFireOnModeChanged_WhenNoStoredValue()
+    {
+        var (service, _, _) = CreateService(storedValue: null);
+        var fired = false;
+        service.OnModeChanged += () => fired = true;
+
+        await service.InitializeAsync();
+
+        Assert.False(fired);
+    }
+
     /// <summary>SetMode löst OnModeChanged aus.</summary>
     [Fact]
     public void SetMode_FiresOnModeChanged()

@@ -21,6 +21,7 @@ public class AppShellTests : BunitContext
     private readonly Mock<IThemeService> _themeMock = new();
     private readonly Mock<IActiveEnvironmentService> _activeEnvMock = new();
     private readonly Mock<ISystemEnvironmentRepository> _envRepoMock = new();
+    private readonly Mock<IApplicationApiClient> _apiClientMock = new();
     private readonly Mock<ICurrentUserService> _currentUserMock = new();
     private readonly Mock<ISignalRNotificationService> _signalRMock = new();
     private readonly Mock<IActivityLogService> _activityLogMock = new();
@@ -36,6 +37,9 @@ public class AppShellTests : BunitContext
         _envRepoMock
             .Setup(r => r.GetEnvironmentsAsync(It.IsAny<StorageMode>(), It.IsAny<string?>()))
             .ReturnsAsync([]);
+        _apiClientMock
+            .Setup(c => c.GetEnvironmentByIdAsync(It.IsAny<int>()))
+            .ReturnsAsync((SystemEnvironment?)null);
         _currentUserMock.Setup(s => s.GetCurrentUserName()).Returns("DOMAIN\\testuser");
         _activityLogMock.Setup(s => s.Entries).Returns([]);
         _navigationStateMock.Setup(s => s.CurrentArea).Returns(NavigationArea.Workspaces);
@@ -46,6 +50,7 @@ public class AppShellTests : BunitContext
         Services.AddSingleton(_themeMock.Object);
         Services.AddSingleton(_activeEnvMock.Object);
         Services.AddSingleton(_envRepoMock.Object);
+        Services.AddSingleton(_apiClientMock.Object);
         Services.AddSingleton(_currentUserMock.Object);
         Services.AddSingleton(_signalRMock.Object);
         Services.AddSingleton(_activityLogMock.Object);

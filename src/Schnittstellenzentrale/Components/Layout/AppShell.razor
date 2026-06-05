@@ -2,7 +2,7 @@
 @inject IStorageModeService StorageModeService
 @inject IThemeService ThemeService
 @inject IActiveEnvironmentService ActiveEnvironmentService
-@inject ISystemEnvironmentRepository SystemEnvironmentRepository
+@inject IApplicationApiClient ApplicationApiClient
 @inject IJSRuntime JSRuntime
 @inject NavigationManager NavigationManager
 @inject ILogger<AppShell> Logger
@@ -96,6 +96,8 @@
             await ThemeService.InitializeAsync();
             await StorageModeService.InitializeAsync();
             await RestoreEnvironmentFromLocalStorageAsync(StorageModeService.CurrentMode);
+            if (_topBar != null)
+                await _topBar.RefreshEnvironmentSelectorAsync();
             await InvokeAsync(StateHasChanged);
             _ = ConnectHubAsync();
         }
@@ -145,7 +147,7 @@
             return;
         }
 
-        var environment = await SystemEnvironmentRepository.GetByIdAsync(id);
+        var environment = await ApplicationApiClient.GetEnvironmentByIdAsync(id);
         if (environment != null)
         {
             ActiveEnvironmentService.SetActiveEnvironment(environment);
@@ -163,7 +165,7 @@
 
         if (activeId.HasValue)
         {
-            var updated = await SystemEnvironmentRepository.GetByIdAsync(activeId.Value);
+            var updated = await ApplicationApiClient.GetEnvironmentByIdAsync(activeId.Value);
             if (updated == null)
             {
                 var key = LocalStorageKeys.SelectedEnvironmentId(mode);

@@ -1,6 +1,8 @@
 using System.Net;
 using System.Net.Http.Json;
+using Microsoft.Extensions.DependencyInjection;
 using Schnittstellenzentrale.Core.Contracts;
+using Schnittstellenzentrale.Core.Interfaces;
 using Schnittstellenzentrale.Tests.Helpers;
 using HttpMethod = System.Net.Http.HttpMethod;
 
@@ -629,5 +631,43 @@ public class ApplicationApiClientIntegrationTests : IClassFixture<ControllerTest
         var deleteResponse = await client.SendAsync(BuildRequest(HttpMethod.Delete, $"/api/endpoints/query-parameters/{createdQP!.Id}", token));
 
         Assert.Equal(HttpStatusCode.NoContent, deleteResponse.StatusCode);
+    }
+
+    // ─── SystemEnvironments ─────────────────────────────────────────────────────
+
+    /// <summary>GetSystemEnvironmentById_WithValidToken_Returns200WithBody</summary>
+    [Fact]
+    public async Task GetSystemEnvironmentById_WithValidToken_Returns200WithBody()
+    {
+        using var scope = _factory.Services.CreateScope();
+        var repo = scope.ServiceProvider.GetRequiredService<ISystemEnvironmentRepository>();
+        var env = await repo.AddAsync(new Schnittstellenzentrale.Core.Models.SystemEnvironment
+        {
+            Name = "IntegrationEnv",
+            Mode = Schnittstellenzentrale.Core.Enums.StorageMode.Team
+        });
+
+        var client = _factory.CreateClient();
+        var token = await _factory.ObtainTokenAsync(client);
+
+        var response = await client.SendAsync(BuildRequest(HttpMethod.Get, $"/api/system-environments/{env.Id}", token));
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<SystemEnvironmentResponse>();
+        Assert.NotNull(body);
+        Assert.Equal(env.Id, body.Id);
+        Assert.Equal("IntegrationEnv", body.Name);
+    }
+
+    /// <summary>GetSystemEnvironmentById_WithNonExistentId_Returns404</summary>
+    [Fact]
+    public async Task GetSystemEnvironmentById_WithNonExistentId_Returns404()
+    {
+        var client = _factory.CreateClient();
+        var token = await _factory.ObtainTokenAsync(client);
+
+        var response = await client.SendAsync(BuildRequest(HttpMethod.Get, "/api/system-environments/999999", token));
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 }

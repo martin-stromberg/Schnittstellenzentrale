@@ -387,6 +387,16 @@ public class ApplicationApiClient : IApplicationApiClient
             t => BuildDeleteRequest($"{baseUrl}/api/endpoints/query-parameters/{id}", storageMode, t));
     }
 
+    /// <inheritdoc/>
+    public async Task<SystemEnvironment?> GetEnvironmentByIdAsync(int id)
+    {
+        var baseUrl = GetBaseUrl();
+        var response = await SendWithTokenNullableAsync<SystemEnvironmentResponse>(
+            t => BuildGetRequest($"{baseUrl}/api/system-environments/{id}", null, null, t));
+
+        return response == null ? null : MapToSystemEnvironment(response);
+    }
+
     private async Task<TResponse> SendWithTokenAsync<TResponse>(Func<string, HttpRequestMessage> buildRequest)
     {
         var response = await ExecuteWithTokenAsync(buildRequest);
@@ -587,5 +597,21 @@ public class ApplicationApiClient : IApplicationApiClient
         PostRequestScript = response.PostRequestScript,
         Headers = response.Headers.Select(MapToEndpointHeader).ToList(),
         QueryParameters = response.QueryParameters.Select(MapToEndpointQueryParameter).ToList()
+    };
+
+    private static SystemEnvironment MapToSystemEnvironment(SystemEnvironmentResponse response) => new()
+    {
+        Id = response.Id,
+        Name = response.Name,
+        Mode = (StorageMode)response.Mode,
+        Owner = response.Owner,
+        Description = response.Description,
+        Variables = response.Variables.Select(v => new EnvironmentVariable
+        {
+            Id = v.Id,
+            Name = v.Name,
+            Value = v.Value,
+            IsValueMasked = v.IsValueMasked
+        }).ToList()
     };
 }
