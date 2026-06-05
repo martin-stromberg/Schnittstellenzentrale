@@ -54,7 +54,7 @@ public abstract class ApiControllerBase : ControllerBase
             return null;
 
         var storageMode = ParseStorageMode();
-        var owner = Request.Headers["X-Owner"].ToString();
+        var owner = Uri.EscapeDataString(Request.Headers["X-Owner"].ToString());
         return new RequestContext(newToken, storageMode, owner);
     }
 

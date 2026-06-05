@@ -168,10 +168,32 @@ public class EndpointsController : ApiControllerBase
 
         var saved = await _endpointRepository.UpdateEndpointAsync(endpoint);
 
-        if (context.StorageMode == StorageMode.Team)
-            await _signalRNotificationService.NotifyEndpointChangedAsync(saved.Id, saved.ApplicationId);
+        foreach (var h in existing.Headers)
+            await _endpointRepository.DeleteHeaderAsync(h.Id);
+        foreach (var h in request.Headers)
+            await _endpointRepository.AddHeaderAsync(new EndpointHeader
+            {
+                Key = h.Key,
+                Value = h.Value,
+                EndpointId = id
+            });
 
-        return Ok(MapToResponse(saved));
+        foreach (var p in existing.QueryParameters)
+            await _endpointRepository.DeleteQueryParameterAsync(p.Id);
+        foreach (var p in request.QueryParameters)
+            await _endpointRepository.AddQueryParameterAsync(new EndpointQueryParameter
+            {
+                Key = p.Key,
+                Value = p.Value,
+                EndpointId = id
+            });
+
+        var updated = await _endpointRepository.GetEndpointByIdAsync(id);
+
+        if (context.StorageMode == StorageMode.Team)
+            await _signalRNotificationService.NotifyEndpointChangedAsync(updated.Id, updated.ApplicationId);
+
+        return Ok(MapToResponse(updated!));
     }
 
     /// <summary>
