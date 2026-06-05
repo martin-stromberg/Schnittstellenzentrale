@@ -12,6 +12,7 @@ using Schnittstellenzentrale.Resources;
 using Schnittstellenzentrale.Services;
 using Microsoft.EntityFrameworkCore;
 using ShadcnBlazor;
+using Microsoft.AspNetCore.DataProtection;
 
 
 /// <summary>Einstiegspunkt der Anwendung (für Integrationstests als partielle Klasse zugänglich).</summary>
@@ -44,8 +45,14 @@ public partial class Program {
 
         builder.Host.UseSerilog();
 
-        builder.Services.AddAuthentication(Microsoft.AspNetCore.Authentication.Negotiate.NegotiateDefaults.AuthenticationScheme)
-            .AddNegotiate();
+        // Windows-Authentifizierung nur verwenden, wenn die Anwendung in einem IIS-App-Pool läuft (z.B. bei Azure App Service),
+        // andernfalls könnte es zu Problemen mit der Authentifizierung kommen,
+        // wenn die Anwendung direkt mit Kestrel gehostet wird (z.B. bei lokalen Tests oder in Docker-Containern).
+        if (Environment.GetEnvironmentVariable("APP_POOL_ID") != null)
+            builder.Services.AddAuthentication("Windows");
+        else
+            builder.Services.AddAuthentication(Microsoft.AspNetCore.Authentication.Negotiate.NegotiateDefaults.AuthenticationScheme)
+                .AddNegotiate();
         builder.Services.AddAuthorization();
 
         builder.Services.AddLocalization();
@@ -126,12 +133,22 @@ public partial class Program {
 
         builder.Services.AddShadcnBlazor();
 
+        var keyPath = builder.Configuration["DataProtection:KeyPath"]
+            ?? Path.Combine(builder.Environment.ContentRootPath, "DataProtectionKeys");
+        builder.Services.AddDataProtection()
+            .PersistKeysToFileSystem(new DirectoryInfo(keyPath))
+            .SetApplicationName("Schnittstellenzentrale");
+
         configureServices?.Invoke(builder.Services);
 
         var app = builder.Build();
 
         await EnsureDatabaseInitializedAsync(app.Services);
         await SystemEntryInitializer.InitializeAsync(app.Services, builder.Configuration);
+
+        var pathBase = app.Configuration["PathBase"];
+        if (!string.IsNullOrEmpty(pathBase))
+            app.UsePathBase(pathBase);
 
         if (!app.Environment.IsDevelopment())
         {

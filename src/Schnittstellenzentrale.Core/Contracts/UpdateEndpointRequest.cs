@@ -21,4 +21,6 @@ public class UpdateEndpointRequest
     public string? PreRequestScript { get; set; }
     public string? PostRequestScript { get; set; }
     public byte[] RowVersion { get; set; } = [];
+    public IList<UpdateEndpointKeyValueItem> Headers { get; set; } = [];
+    public IList<UpdateEndpointKeyValueItem> QueryParameters { get; set; } = [];
 }
