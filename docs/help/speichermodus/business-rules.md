@@ -62,6 +62,54 @@
 
 ---
 
+## OnModeChanged wird bei Initialisierung ausgelöst, wenn ein gültiger Wert vorliegt
+
+**Beschreibung:** `InitializeAsync()` löst `OnModeChanged` aus, wenn der gespeicherte Wert ein gültiger `StorageMode`-Enum-Wert ist. Damit rendert sich `TopBar` nach der Initialisierung neu und zeigt den wiederhergestellten Modus in der Auswahlbox an.
+
+**Bedingungen:**
+- `localStorage` enthält einen Wert für `storageMode`
+- Der Wert kann mit `Enum.TryParse<StorageMode>(ignoreCase: true)` erfolgreich geparst werden
+
+**Verhalten:**
+- `CurrentMode` wird auf den geparsten Wert gesetzt.
+- `OnModeChanged` wird ausgelöst.
+- Für den Gegensatz (kein Wert / ungültiger Wert) siehe Regel „Standardmodus bei fehlendem oder ungültigem gespeichertem Wert" — dort wird `OnModeChanged` nicht ausgelöst.
+
+**Umsetzung:** `StorageModeService.InitializeAsync()` — `OnModeChanged?.Invoke()` innerhalb des `if`-Zweigs nach erfolgreicher Zuweisung von `CurrentMode`.
+
+---
+
+## Umgebungsselektor nach Restore explizit aktualisieren
+
+**Beschreibung:** Nach der Wiederherstellung der Umgebung aus dem `localStorage` ruft `AppShell` explizit `_topBar.RefreshEnvironmentSelectorAsync()` auf. Dieser Aufruf ist notwendig, weil `EnvironmentSelector` beim ersten Render bereits initialisiert ist und ein `StateHasChanged()` der Elternkomponente die interne Ladeoperation des Selektors nicht erneut auslöst.
+
+**Bedingungen:**
+- Erster Render von `AppShell`
+
+**Verhalten:**
+- `RestoreEnvironmentFromLocalStorageAsync` setzt `ActiveEnvironmentService.ActiveEnvironment`.
+- Anschliessend ruft `AppShell.OnAfterRenderAsync` `_topBar.RefreshEnvironmentSelectorAsync()` auf.
+- `RefreshEnvironmentSelectorAsync` delegiert an `EnvironmentSelector.RefreshAsync()`, das die Umgebungsliste neu lädt und den aktiven Eintrag selektiert.
+
+**Umsetzung:** `AppShell.OnAfterRenderAsync(bool firstRender)` — sequenziell nach `RestoreEnvironmentFromLocalStorageAsync`.
+
+---
+
+## API-First: Umgebungsabfrage über IApplicationApiClient
+
+**Beschreibung:** `AppShell` greift für die Umgebungsabfrage beim Restore ausschliesslich über `IApplicationApiClient.GetEnvironmentByIdAsync()` zu, nicht direkt auf `ISystemEnvironmentRepository`. Damit bleibt die Komponente vom Datenzugriff entkoppelt und das API-First-Prinzip des Projekts gewahrt.
+
+**Bedingungen:**
+- `RestoreEnvironmentFromLocalStorageAsync` findet eine gültige ID im `localStorage`
+
+**Verhalten:**
+- Es wird `IApplicationApiClient.GetEnvironmentByIdAsync(id)` aufgerufen, der intern `GET /api/system-environments/{id}` ausführt.
+- Gibt der Endpunkt `null` zurück (404), wird die gespeicherte ID aus dem `localStorage` entfernt und `ActiveEnvironmentService.ActiveEnvironment` auf `null` gesetzt.
+
+**Umsetzung:** `AppShell.RestoreEnvironmentFromLocalStorageAsync()` — Injection von `IApplicationApiClient` statt `ISystemEnvironmentRepository`.
+
+---
+
 ## Lazy-Import des JS-Moduls
 
 **Beschreibung:** Das JavaScript-Modul `storage-mode.js` wird erst beim ersten Zugriff importiert und dann gecacht. Weitere Aufrufe verwenden das gecachte Objekt, ohne ein erneutes `import` auszulösen.

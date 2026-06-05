@@ -14,15 +14,19 @@ Das Speichermodus-System besteht aus zwei Abläufen: dem einmaligen Lesen und Wi
 2. `AppShell` ruft `StorageModeService.InitializeAsync()` auf.
 3. `StorageModeService.GetModuleAsync()` importiert `storage-mode.js` lazy per `IJSRuntime.InvokeAsync<IJSObjectReference>("import", "./storage-mode.js")` und cached das Modul-Objekt in `_module`.
 4. `StorageModeService.InitializeAsync()` ruft `module.InvokeAsync<string?>("getStoredMode")` auf.
-5. Ist der zurückgegebene Wert nicht `null` und ein gültiger `StorageMode`-Enum-Wert (case-insensitive `Enum.TryParse`): `CurrentMode` wird gesetzt. Kein Event wird ausgelöst.
-6. Ist der Wert `null` oder ungültig: `CurrentMode` bleibt `StorageMode.Team`; keine Aktion.
-7. `AppShell` ruft `RestoreEnvironmentFromLocalStorageAsync(StorageModeService.CurrentMode)` auf — nun mit dem bereits wiederhergestellten Modus.
+5. Ist der zurückgegebene Wert nicht `null` und ein gültiger `StorageMode`-Enum-Wert (case-insensitive `Enum.TryParse`): `CurrentMode` wird gesetzt und `OnModeChanged` wird ausgelöst, damit `TopBar` den wiederhergestellten Wert sofort anzeigt.
+6. Ist der Wert `null` oder ungültig: `CurrentMode` bleibt `StorageMode.Team`; `OnModeChanged` wird nicht ausgelöst.
+7. `AppShell` ruft `RestoreEnvironmentFromLocalStorageAsync(StorageModeService.CurrentMode)` auf — nun mit dem bereits wiederhergestellten Modus. Die Umgebung wird über `IApplicationApiClient.GetEnvironmentByIdAsync(id)` geladen (HTTP-Aufruf an `GET /api/system-environments/{id}`).
+8. `AppShell` ruft `_topBar.RefreshEnvironmentSelectorAsync()` auf, damit `EnvironmentSelector` die wiederhergestellte Umgebung beim ersten Render korrekt anzeigt.
 
 Beteiligte Komponenten:
 - `AppShell.OnAfterRenderAsync` — Steuerung der Initialisierungsreihenfolge
-- `StorageModeService.InitializeAsync()` — liest gespeicherten Modus
+- `StorageModeService.InitializeAsync()` — liest gespeicherten Modus, löst `OnModeChanged` aus
 - `StorageModeService.GetModuleAsync()` — lädt und cached `storage-mode.js`
 - `storage-mode.js` — Funktion `getStoredMode()`
+- `ApplicationApiClient.GetEnvironmentByIdAsync()` — lädt Umgebung via HTTP
+- `SystemEnvironmentsController.GetByIdAsync()` — HTTP-Endpunkt `GET /api/system-environments/{id}`
+- `TopBar.RefreshEnvironmentSelectorAsync()` — aktualisiert `EnvironmentSelector` nach Restore
 
 ---
 
@@ -58,10 +62,12 @@ flowchart TD
     C --> D["GetModuleAsync() → storage-mode.js laden/cachen"]
     D --> E["getStoredMode() via JS-Interop"]
     E --> F{"Wert gültig?"}
-    F -- Ja --> G["CurrentMode = gespeicherter Wert"]
+    F -- Ja --> G["CurrentMode = gespeicherter Wert\nOnModeChanged auslösen"]
     F -- Nein / null --> H["CurrentMode bleibt StorageMode.Team"]
     G --> I["RestoreEnvironmentFromLocalStorageAsync(CurrentMode)"]
     H --> I
+    I --> I2["ApplicationApiClient.GetEnvironmentByIdAsync()\n→ GET /api/system-environments/{id}"]
+    I2 --> J2["TopBar.RefreshEnvironmentSelectorAsync()"]
 
     J["Benutzer wählt Modus in TopBar"] --> K["TopBar.OnStorageModeChanged()"]
     K --> L["StorageModeService.SetMode(mode)"]

@@ -73,6 +73,72 @@ Namespace: `Schnittstellenzentrale.Core.Helpers`
 | `StorageMode` | `const string` | `"storageMode"` | `localStorage`-Schlüssel für den gespeicherten Modus |
 | `SelectedEnvironmentId(StorageMode mode)` | `static string` | `"selectedEnvironmentId_Team"` / `"selectedEnvironmentId_User"` | `localStorage`-Schlüssel für die zuletzt gewählte Umgebung je Modus |
 
+## Interface `IApplicationApiClient` — Umgebungsabfrage
+
+Namespace: `Schnittstellenzentrale.Core.Interfaces`
+
+### `GetEnvironmentByIdAsync(int id)`
+
+**Beschreibung:** Lädt eine einzelne Systemumgebung anhand ihrer ID über den HTTP-Endpunkt `GET /api/system-environments/{id}`. Wird von `AppShell.RestoreEnvironmentFromLocalStorageAsync` aufgerufen, um die gespeicherte Umgebung nach dem Seitenreload wiederherzustellen.
+
+**Parameter:**
+
+| Name | Typ | Pflicht | Beschreibung |
+|------|-----|---------|--------------|
+| `id` | `int` | Ja | ID der gewünschten Systemumgebung |
+
+**Rückgabe:** `Task<SystemEnvironment?>` — `null`, wenn keine Umgebung mit der angegebenen ID existiert.
+
+---
+
+## HTTP-Endpunkt `GET /api/system-environments/{id}`
+
+Controller: `SystemEnvironmentsController` (Namespace `Schnittstellenzentrale.Controllers`)
+
+**Beschreibung:** Gibt eine einzelne Systemumgebung inkl. aller Variablen zurück.
+
+**Parameter:**
+
+| Name | Typ | In | Beschreibung |
+|------|-----|----|--------------|
+| `id` | `int` | Path | ID der Systemumgebung |
+
+**Authentifizierung:** Bearer-Token erforderlich (`Authorization: Bearer <token>`).
+
+**Antworten:**
+
+| Code | Typ | Beschreibung |
+|------|-----|--------------|
+| `200 OK` | `SystemEnvironmentResponse` | Umgebung gefunden |
+| `401 Unauthorized` | — | Kein oder ungültiger Token |
+| `404 Not Found` | — | Keine Umgebung mit der angegebenen ID |
+
+### Typ `SystemEnvironmentResponse`
+
+Namespace: `Schnittstellenzentrale.Core.Contracts`
+
+| Eigenschaft | Typ | Beschreibung |
+|-------------|-----|--------------|
+| `Id` | `int` | Primärschlüssel |
+| `Name` | `string` | Anzeigename der Umgebung |
+| `Mode` | `int` | Speichermodus als Integer (`0` = Team, `1` = User) |
+| `Owner` | `string?` | Windows-Benutzername des Eigentümers (nur im Modus User belegt) |
+| `Description` | `string?` | Optionale Beschreibung |
+| `Variables` | `IList<EnvironmentVariableResponse>` | Liste der Umgebungsvariablen |
+
+### Typ `EnvironmentVariableResponse`
+
+Namespace: `Schnittstellenzentrale.Core.Contracts`
+
+| Eigenschaft | Typ | Beschreibung |
+|-------------|-----|--------------|
+| `Id` | `int` | Primärschlüssel |
+| `Name` | `string` | Variablenname |
+| `Value` | `string` | Variablenwert (maskiert, wenn `IsValueMasked = true`) |
+| `IsValueMasked` | `bool` | `true`, wenn der Wert in der UI als `****` dargestellt wird |
+
+---
+
 ## JavaScript-Modul `storage-mode.js`
 
 Das Modul wird ausschliesslich von `StorageModeService` via JS-Interop aufgerufen. Es ist kein öffentliches API, kann aber bei Bedarf direkt in anderen JS-Modulen importiert werden.
