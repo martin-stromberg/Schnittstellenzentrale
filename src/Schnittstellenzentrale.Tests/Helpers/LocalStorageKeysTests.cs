@@ -23,4 +23,11 @@ public class LocalStorageKeysTests
 
         Assert.Equal("selectedEnvironmentId_User", key);
     }
+
+    /// <summary>StorageMode-Konstante hat den erwarteten Wert.</summary>
+    [Fact]
+    public void StorageMode_Constant_HasExpectedValue()
+    {
+        Assert.Equal("storageMode", LocalStorageKeys.StorageMode);
+    }
 }
