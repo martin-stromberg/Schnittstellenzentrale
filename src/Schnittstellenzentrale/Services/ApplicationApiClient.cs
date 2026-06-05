@@ -310,7 +310,9 @@ public class ApplicationApiClient : IApplicationApiClient
             AuthenticationType = endpoint.AuthenticationType,
             PreRequestScript = endpoint.PreRequestScript,
             PostRequestScript = endpoint.PostRequestScript,
-            RowVersion = endpoint.RowVersion
+            RowVersion = endpoint.RowVersion,
+            Headers = [..endpoint.Headers.Select(h => new UpdateEndpointKeyValueItem { Key = h.Key, Value = h.Value })],
+            QueryParameters = [..endpoint.QueryParameters.Select(q => new UpdateEndpointKeyValueItem { Key = q.Key, Value = q.Value })]
         };
 
         var response = await SendWithTokenAsync<EndpointResponse>(
@@ -451,7 +453,7 @@ public class ApplicationApiClient : IApplicationApiClient
         if (storageMode.HasValue)
             httpRequest.Headers.Add("X-Storage-Mode", storageMode.Value.ToString());
         if (owner != null)
-            httpRequest.Headers.Add("X-Owner", owner);
+            httpRequest.Headers.Add("X-Owner", Uri.EscapeDataString(owner));
         return httpRequest;
     }
 
