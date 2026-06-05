@@ -4,5 +4,6 @@ public enum NavigationArea
 {
     Workspaces,
     Environments,
-    History
+    History,
+    Impressum
 }

@@ -6,6 +6,7 @@
 
   <ItemGroup>
     <PackageReference Include="Jint" Version="4.9.2" />
+    <PackageReference Include="Markdig" Version="1.2.0" />
     <PackageReference Include="Microsoft.AspNetCore.Http.Abstractions" Version="2.3.0" />
     <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="9.0.16" />
     <PackageReference Include="Microsoft.AspNetCore.SignalR.Core" Version="1.2.10" />

@@ -1,0 +1,43 @@
+@page "/impressum"
+@inject IStringLocalizer<SharedResources> L
+@inject IImpressumService ImpressumService
+@inject INavigationStateService NavigationStateService
+
+<PageTitle>@L["ImpressumPage_PageTitle"]</PageTitle>
+
+<div class="sz-impressum-page">
+    <h1>@L["ImpressumPage_Heading"]</h1>
+    @if (_isAvailable)
+    {
+        @((MarkupString)(_htmlContent ?? string.Empty))
+    }
+    else
+    {
+        <p>@L["ImpressumPage_NotAvailable"]</p>
+    }
+</div>
+
+@code {
+    public const string Route = "/impressum";
+
+    private bool _isAvailable;
+    private string? _htmlContent;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await NavigationStateService.SetAreaAsync(NavigationArea.Impressum);
+        _isAvailable = ImpressumService.IsAvailable();
+        if (_isAvailable)
+        {
+            try
+            {
+                _htmlContent = await ImpressumService.GetContentAsHtmlAsync();
+            }
+            catch (Exception e) when (e is IOException or UnauthorizedAccessException or FileNotFoundException)
+            {
+                _htmlContent = null;
+                _isAvailable = false;
+            }
+        }
+    }
+}

@@ -4,6 +4,7 @@
 @inject IStorageModeService StorageModeService
 @inject ICurrentUserService CurrentUserService
 @inject IStringLocalizer<SharedResources> L
+@inject IImpressumService ImpressumService
 
 <div class="sz-workspaces-sidebar">
     <div class="sz-sidebar-topbar">
@@ -29,7 +30,10 @@
         OnEndpointGroupSelected="OnEndpointGroupSelected" />
     <div class="sz-sidebar-footer">
         <p class="sz-sidebar-footer-copyright">@_copyrightInfo</p>
-        <a href="/impressum" class="sz-sidebar-footer-link">@L["WorkspacesSidebar_ImpressumLink"]</a>
+        @if (_impressumAvailable)
+        {
+            <a href="/impressum" class="sz-sidebar-footer-link">@L["WorkspacesSidebar_ImpressumLink"]</a>
+        }
     </div>
 </div>
 
@@ -49,11 +53,13 @@
     internal ApplicationGroupTree? _tree;
     private string _owner = string.Empty;
     private string _copyrightInfo = "";
+    private bool _impressumAvailable;
 
     protected override void OnInitialized()
     {
         _owner = CurrentUserService.GetCurrentUserName();
         _copyrightInfo = $"{Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyCopyrightAttribute>()?.Copyright}";
+        _impressumAvailable = ImpressumService.IsAvailable();
     }
 
     internal async Task RefreshTreeAsync()

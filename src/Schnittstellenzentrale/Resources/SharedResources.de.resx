@@ -1189,6 +1189,20 @@
     <comment>Fehlerseite: Warnung im Entwicklungshinweis-Abschnitt gegen den Produktionseinsatz</comment>
   </data>
 
+  <!-- ImpressumPage -->
+  <data name="ImpressumPage_PageTitle" xml:space="preserve">
+    <value>Impressum</value>
+    <comment>ImpressumPage: Browser-Tab-Titel (PageTitle-Element)</comment>
+  </data>
+  <data name="ImpressumPage_Heading" xml:space="preserve">
+    <value>Impressum</value>
+    <comment>ImpressumPage: h1-Hauptüberschrift der Impressum-Seite</comment>
+  </data>
+  <data name="ImpressumPage_NotAvailable" xml:space="preserve">
+    <value>Kein Impressum verfügbar.</value>
+    <comment>ImpressumPage: Text wenn die Impressum-Datei nicht vorhanden ist</comment>
+  </data>
+
   <!-- HelpPage -->
   <data name="HelpPage_PageTitle" xml:space="preserve">
     <value>Hilfe – Schnittstellenzentrale</value>

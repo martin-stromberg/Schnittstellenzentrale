@@ -20,6 +20,7 @@ Blazor Server-Anwendung zur zentralen Verwaltung lokaler Webservice-Endpunkte. S
 - **Icons und Links** – Sammlungen und Anwendungen können mit Icon (PNG/JPEG) und URL-Links versehen werden
 - **Health-Check** – Erreichbarkeit einer Anwendungs-URL prüfen (mit konfigurierbarem Cooldown)
 - **Mehrsprachigkeit** – Benutzeroberfläche auf Deutsch und Englisch; Sprachauswahl automatisch über den `Accept-Language`-Header des Browsers (Englisch ist Standard und Fallback)
+- **Impressum** – Optionale Impressumsseite unter `/impressum`; Inhalt wird aus einer Markdown-Datei (`impressum.md`) im Programmverzeichnis eingelesen und als HTML gerendert. Existiert die Datei nicht, bleibt der Navigationseintrag ausgeblendet — aktivierbar ohne Neustart durch einfaches Ablegen der Datei
 
 ## Voraussetzungen
 
@@ -52,6 +53,7 @@ Alle Einstellungen in `appsettings.json`:
 | `Upload:MaxIconSizeBytes` | `int` | `524288` | Maximale Icon-Dateigröße in Bytes (512 KB) |
 | `History:DefaultPageSize` | `int` | `50` | Einträge pro Seite in der Aufrufhistorie |
 | `Serilog:MinimumLevel` | `string` | `"Information"` | Log-Level: `Verbose`, `Debug`, `Information`, `Warning`, `Error` |
+| `Impressum:FilePath` | `string` | `""` (leer) | Pfad zur Impressum-Markdown-Datei; leer = `AppContext.BaseDirectory/impressum.md`. Relativer Pfad wird relativ zu `AppContext.BaseDirectory` aufgelöst, absoluter Pfad direkt verwendet. |
 
 **Beispiel (SQLite):**
 
@@ -70,6 +72,9 @@ Alle Einstellungen in `appsettings.json`:
       { "Name": "EventLog", "Args": { "source": "Schnittstellenzentrale", "logName": "Application" } },
       { "Name": "File", "Args": { "path": "logs/log-.txt", "rollingInterval": "Day", "retainedFileCountLimit": 7 } }
     ]
+  },
+  "Impressum": {
+    "FilePath": ""
   }
 }
 ```
@@ -98,7 +103,7 @@ src/
 └── Schnittstellenzentrale.Tests/    # Unit-, Integrations- und Playwright-E2E-Tests
 ```
 
-**Technologien:** ASP.NET Core 9 · Blazor Server · Entity Framework Core · ShadcnBlazor · SignalR · Serilog · xUnit · Playwright
+**Technologien:** ASP.NET Core 9 · Blazor Server · Entity Framework Core · ShadcnBlazor · SignalR · Serilog · Markdig · xUnit · Playwright
 
 ## Tests
 

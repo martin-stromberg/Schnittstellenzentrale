@@ -9,6 +9,7 @@
 @inject INavigationStateService NavigationStateService
 @inject IStringLocalizer<SharedResources> L
 @using Microsoft.AspNetCore.SignalR.Client
+@using Schnittstellenzentrale.Components.Pages
 @implements IAsyncDisposable
 
 <div class="sz-app-shell">
@@ -26,6 +27,10 @@
         {
             <HistoryLayout />
         }
+        else if (NavigationStateService.CurrentArea == NavigationArea.Impressum)
+        {
+            @Body
+        }
     </div>
 </div>
 
@@ -42,6 +47,7 @@
     private TopBar? _topBar;
     private EnvironmentManagementOverlay? _environmentManagementOverlay;
     private HubConnection? _hubConnection;
+    private NavigationArea _previousArea = NavigationArea.Workspaces;
 
     protected override void OnInitialized()
     {
@@ -49,6 +55,29 @@
         ThemeService.OnThemeChanged += OnStateChanged;
         ActiveEnvironmentService.OnActiveEnvironmentChanged += OnStateChanged;
         NavigationStateService.OnAreaChanged += OnStateChanged;
+        NavigationManager.LocationChanged += OnLocationChanged;
+        SyncAreaFromUrl(NavigationManager.Uri);
+    }
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        SyncAreaFromUrl(e.Location);
+    }
+
+    private void SyncAreaFromUrl(string url)
+    {
+        var path = new Uri(url).AbsolutePath;
+        if (path.Equals(ImpressumPage.Route, StringComparison.OrdinalIgnoreCase))
+        {
+            _previousArea = NavigationStateService.CurrentArea == NavigationArea.Impressum
+                ? _previousArea
+                : NavigationStateService.CurrentArea;
+            _ = InvokeAsync(() => NavigationStateService.SetAreaAsync(NavigationArea.Impressum));
+        }
+        else if (NavigationStateService.CurrentArea == NavigationArea.Impressum)
+        {
+            _ = InvokeAsync(() => NavigationStateService.SetAreaAsync(_previousArea));
+        }
     }
 
     private void OnStorageModeChanged()
@@ -177,6 +206,7 @@
         ThemeService.OnThemeChanged -= OnStateChanged;
         ActiveEnvironmentService.OnActiveEnvironmentChanged -= OnStateChanged;
         NavigationStateService.OnAreaChanged -= OnStateChanged;
+        NavigationManager.LocationChanged -= OnLocationChanged;
 
         if (_hubConnection != null)
         {
