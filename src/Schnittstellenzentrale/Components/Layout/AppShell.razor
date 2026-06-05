@@ -94,6 +94,7 @@
         if (firstRender)
         {
             await ThemeService.InitializeAsync();
+            await StorageModeService.InitializeAsync();
             await RestoreEnvironmentFromLocalStorageAsync(StorageModeService.CurrentMode);
             await InvokeAsync(StateHasChanged);
             _ = ConnectHubAsync();

@@ -15,7 +15,7 @@ Blazor Server-Anwendung zur zentralen Verwaltung lokaler Webservice-Endpunkte. S
 - **History** – Vollständige Aufrufhistorie mit Zeitraumfilter und Top-5-Auswertung je Anwendung
 - **Import** – Endpunkte aus Swagger/OpenAPI- oder OData-`$metadata`-Definitionen importieren (Diff-Vorschau mit selektiver Übernahme)
 - **Authentifizierungstypen** – None, Basic, Negotiate, BearerToken, NegotiateWithImpersonation (Credentials im Windows Credential Manager)
-- **Team-/Benutzermodus** – Umschaltung zwischen globalem und benutzerspezifischem Speicherbereich
+- **Team-/Benutzermodus** – Umschaltung zwischen globalem und benutzerspezifischem Speicherbereich; die gewählte Einstellung wird im `localStorage` des Browsers gespeichert und beim nächsten Seitenaufruf automatisch wiederhergestellt
 - **Echtzeit-Synchronisation** – SignalR-basiertes Broadcasting von Änderungen an alle verbundenen Sitzungen
 - **Icons und Links** – Sammlungen und Anwendungen können mit Icon (PNG/JPEG) und URL-Links versehen werden
 - **Health-Check** – Erreichbarkeit einer Anwendungs-URL prüfen (mit konfigurierbarem Cooldown)
