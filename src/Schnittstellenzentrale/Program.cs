@@ -131,6 +131,10 @@ public partial class Program {
         await EnsureDatabaseInitializedAsync(app.Services);
         await SystemEntryInitializer.InitializeAsync(app.Services, builder.Configuration);
 
+        var pathBase = app.Configuration["PathBase"];
+        if (!string.IsNullOrEmpty(pathBase))
+            app.UsePathBase(pathBase);
+
         if (!app.Environment.IsDevelopment())
         {
             app.UseExceptionHandler("/Error", createScopeForErrors: true);

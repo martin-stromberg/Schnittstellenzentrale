@@ -40,10 +40,13 @@ public class ApplicationApiClient : IApplicationApiClient
 
     private string GetBaseUrl()
     {
+        var configured = _configuration["Api:BaseUrl"];
+        if (!string.IsNullOrWhiteSpace(configured))
+            return configured;
         var ctx = _httpContextAccessor.HttpContext;
         if (ctx != null)
-            return $"{ctx.Request.Scheme}://{ctx.Request.Host}";
-        return _configuration["Api:BaseUrl"] ?? "https://localhost:5001";
+            return $"{ctx.Request.Scheme}://{ctx.Request.Host}{ctx.Request.PathBase}";
+        return "https://localhost:5001";
     }
 
     /// <inheritdoc/>
