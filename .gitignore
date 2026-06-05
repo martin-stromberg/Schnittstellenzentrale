@@ -446,3 +446,6 @@ claude.context*.md
 
 # auto generated assembly information
 assemblyinfo.cs
+
+# DataProtection key
+key-*.xml
