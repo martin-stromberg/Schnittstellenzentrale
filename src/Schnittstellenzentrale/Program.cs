@@ -12,6 +12,7 @@ using Schnittstellenzentrale.Resources;
 using Schnittstellenzentrale.Services;
 using Microsoft.EntityFrameworkCore;
 using ShadcnBlazor;
+using Microsoft.AspNetCore.DataProtection;
 
 
 /// <summary>Einstiegspunkt der Anwendung (für Integrationstests als partielle Klasse zugänglich).</summary>
@@ -123,6 +124,12 @@ public partial class Program {
         builder.Services.Configure<HistorySettings>(builder.Configuration.GetSection("History"));
 
         builder.Services.AddShadcnBlazor();
+
+        var keyPath = builder.Configuration["DataProtection:KeyPath"]
+            ?? Path.Combine(builder.Environment.ContentRootPath, "DataProtectionKeys");
+        builder.Services.AddDataProtection()
+            .PersistKeysToFileSystem(new DirectoryInfo(keyPath))
+            .SetApplicationName("Schnittstellenzentrale");
 
         configureServices?.Invoke(builder.Services);
 
