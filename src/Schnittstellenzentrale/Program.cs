@@ -45,8 +45,14 @@ public partial class Program {
 
         builder.Host.UseSerilog();
 
-        builder.Services.AddAuthentication(Microsoft.AspNetCore.Authentication.Negotiate.NegotiateDefaults.AuthenticationScheme)
-            .AddNegotiate();
+        // Windows-Authentifizierung nur verwenden, wenn die Anwendung in einem IIS-App-Pool läuft (z.B. bei Azure App Service),
+        // andernfalls könnte es zu Problemen mit der Authentifizierung kommen,
+        // wenn die Anwendung direkt mit Kestrel gehostet wird (z.B. bei lokalen Tests oder in Docker-Containern).
+        if (Environment.GetEnvironmentVariable("APP_POOL_ID") != null)
+            builder.Services.AddAuthentication("Windows");
+        else
+            builder.Services.AddAuthentication(Microsoft.AspNetCore.Authentication.Negotiate.NegotiateDefaults.AuthenticationScheme)
+                .AddNegotiate();
         builder.Services.AddAuthorization();
 
         builder.Services.AddLocalization();
