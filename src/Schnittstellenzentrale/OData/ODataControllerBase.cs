@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ApiExplorer;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Schnittstellenzentrale.Core.Interfaces;
 
@@ -7,6 +8,7 @@ namespace Schnittstellenzentrale.OData;
 
 /// <summary>Abstrakte Basisklasse für alle OData-Controller; reimplementiert Token-Validierung aus <see cref="Controllers.ApiControllerBase"/>.</summary>
 [AllowAnonymous]
+[ApiExplorerSettings(IgnoreApi = true)]
 public abstract class ODataControllerBase : ControllerBase, IAsyncActionFilter
 {
     private readonly ITokenStore _tokenStore;
