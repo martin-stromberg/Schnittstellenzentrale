@@ -14,6 +14,7 @@ Blazor Server-Anwendung zur zentralen Verwaltung lokaler Webservice-Endpunkte. S
 - **Environments** – Systemumgebungen mit Variablentabellen verwalten
 - **History** – Vollständige Aufrufhistorie mit Zeitraumfilter und Top-5-Auswertung je Anwendung
 - **Import** – Endpunkte aus Swagger/OpenAPI- oder OData-`$metadata`-Definitionen importieren (Diff-Vorschau mit selektiver Übernahme)
+- **OData v4-API** – vollständiger OData v4-Service unter `/odatav4` mit CSDL-Metadaten-Dokument (`/odatav4/$metadata`); exponiert alle vier Kernobjekte als Entity-Sets mit CRUD-Zugriff, `$filter`, `$select`, `$expand`, `$orderby`, `$top` und `$skip`
 - **Authentifizierungstypen** – None, Basic, Negotiate, BearerToken, NegotiateWithImpersonation (Credentials im Windows Credential Manager)
 - **Team-/Benutzermodus** – Umschaltung zwischen globalem und benutzerspezifischem Speicherbereich; die gewählte Einstellung wird im `localStorage` des Browsers gespeichert und beim nächsten Seitenaufruf automatisch wiederhergestellt
 - **Echtzeit-Synchronisation** – SignalR-basiertes Broadcasting von Änderungen an alle verbundenen Sitzungen
@@ -90,6 +91,36 @@ Alle Einstellungen in `appsettings.json`:
 }
 ```
 
+## API
+
+Die Schnittstellenzentrale stellt zwei API-Oberflächen bereit. Die Authentifizierung erfolgt für beide APIs zweistufig: zunächst `POST /authenticate` (Windows-Authentifizierung erforderlich), das ein kurzlebiges Bearer-Token liefert; dieses Token wird bei jedem Folgeaufruf im `Authorization`-Header übergeben und nach jeder erfolgreichen Anfrage rotiert (`X-New-Token`-Response-Header).
+
+### REST-API (`/api`)
+
+| Ressource | Beschreibung |
+|-----------|--------------|
+| `POST /authenticate` | Token beziehen |
+| `/api/application-groups` | CRUD für `ApplicationGroup` |
+| `/api/applications` | CRUD für `Application` |
+| `/api/endpoint-groups` | CRUD für `EndpointGroup` |
+| `/api/endpoints` | CRUD für `Endpoint` inkl. Header- und Query-Parameter-Routen |
+
+Unterstützt `X-Storage-Mode` (`Team`/`User`) und `X-Owner` für benutzermodus-abhängige Filterung. Schreibzugriffe lösen SignalR-Benachrichtigungen an alle verbundenen Clients aus.
+
+### OData v4-API (`/odatav4`)
+
+| Entity-Set | Endpunkt |
+|------------|----------|
+| `$metadata` | `GET /odatav4/$metadata` — CSDL-Metadaten-Dokument |
+| `Applications` | `GET/POST /odatav4/Applications`, `GET/PUT/PATCH/DELETE /odatav4/Applications({id})` |
+| `ApplicationGroups` | `GET/POST /odatav4/ApplicationGroups`, `GET/PUT/PATCH/DELETE /odatav4/ApplicationGroups({id})` |
+| `Endpoints` | `GET/POST /odatav4/Endpoints`, `GET/PUT/PATCH/DELETE /odatav4/Endpoints({id})` |
+| `EndpointGroups` | `GET/POST /odatav4/EndpointGroups`, `GET/PUT/PATCH/DELETE /odatav4/EndpointGroups({id})` |
+
+Unterstützte OData-Abfrageoptionen auf Collection-Endpunkten: `$filter`, `$select`, `$expand`, `$orderby`, `$top`, `$skip`. Kein `X-Storage-Mode`-Filter — die OData-API liefert stets alle Datensätze. `Id` und `RowVersion` sind bei POST/PUT/PATCH nicht schreibbar (serverseitig ignoriert bzw. aus der Datenbank übernommen). Systemeinträge (`IsSystem = true`) sind vor Änderungen und Löschungen geschützt (403).
+
+Ausführliche Dokumentation: [docs/help/api/](docs/help/api/)
+
 ## Projektstruktur
 
 ```
@@ -103,7 +134,7 @@ src/
 └── Schnittstellenzentrale.Tests/    # Unit-, Integrations- und Playwright-E2E-Tests
 ```
 
-**Technologien:** ASP.NET Core 9 · Blazor Server · Entity Framework Core · ShadcnBlazor · SignalR · Serilog · Markdig · xUnit · Playwright
+**Technologien:** ASP.NET Core 9 · Blazor Server · Entity Framework Core · ShadcnBlazor · SignalR · Microsoft.AspNetCore.OData 9.4.1 · Serilog · Markdig · xUnit · Playwright
 
 ## Tests
 
@@ -131,7 +162,7 @@ Trace-Dateien der Playwright-Tests werden nach jedem Lauf unter `playwright-trac
 npx playwright show-trace playwright-traces/ApplicationCrudTests.zip
 ```
 
-Abgedeckte E2E-Szenarien: Startseite, Anwendungs-CRUD, Endpunkt-Ausführung, Swagger-Import, Health-Check, Speichermoduswechsel, SignalR-Echtzeitsynchronisation.
+Abgedeckte E2E-Szenarien: Startseite, Anwendungs-CRUD, Endpunkt-Ausführung, Swagger-Import, OData-Import, Health-Check, Speichermoduswechsel, SignalR-Echtzeitsynchronisation.
 
 ## Lizenz
 

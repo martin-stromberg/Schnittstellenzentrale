@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.OData;
 using Microsoft.OpenApi;
 using Serilog;
 using Schnittstellenzentrale;
@@ -8,6 +9,7 @@ using Schnittstellenzentrale.Hubs;
 using Schnittstellenzentrale.Infrastructure.Data;
 using Schnittstellenzentrale.Infrastructure.Repositories;
 using Schnittstellenzentrale.Infrastructure.Services;
+using Schnittstellenzentrale.OData;
 using Schnittstellenzentrale.Resources;
 using Schnittstellenzentrale.Services;
 using Microsoft.EntityFrameworkCore;
@@ -58,9 +60,20 @@ public partial class Program {
         builder.Services.AddLocalization();
 
         builder.Services.AddControllers()
+            .AddJsonOptions(options =>
+                // Required for OData responses — Application.ApplicationGroup.Applications creates a cycle
+                options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles)
             .AddDataAnnotationsLocalization(options =>
                 options.DataAnnotationLocalizerProvider = (type, factory) =>
-                    factory.Create(typeof(SharedResources)));
+                    factory.Create(typeof(SharedResources)))
+            .AddOData(options => options
+                .AddRouteComponents("odatav4", ODataEdmModelBuilder.Build())
+                .Select()
+                .Filter()
+                .Expand()
+                .OrderBy()
+                .Count()
+                .SetMaxTop(null));
 
         builder.Services.AddSwaggerGen(c =>
         {
@@ -150,7 +163,11 @@ public partial class Program {
         if (!string.IsNullOrEmpty(pathBase))
             app.UsePathBase(pathBase);
 
-        if (!app.Environment.IsDevelopment())
+        if (app.Environment.IsDevelopment() || app.Environment.EnvironmentName.Equals("Testing", StringComparison.OrdinalIgnoreCase))
+        {
+            app.UseDeveloperExceptionPage();
+        }
+        else
         {
             app.UseExceptionHandler("/Error", createScopeForErrors: true);
             app.UseHsts();

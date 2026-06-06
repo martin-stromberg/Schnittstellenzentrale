@@ -1,12 +1,18 @@
-# REST-API — Beschreibung
+# REST-API und OData v4-API — Beschreibung
 
 ## Zweck
 
-Die REST-API ermöglicht es, Anwendungsgruppen, Anwendungen, Endpunktgruppen und Endpunkte programmatisch zu verwalten, ohne direkt auf die Datenbank zuzugreifen. Intern wird sie ausschließlich von den Blazor-Komponenten über `IApplicationApiClient` genutzt; nach außen steht sie jedem HTTP-Client zur Verfügung, der sich über das Token-Verfahren authentifizieren kann.
+Die Schnittstellenzentrale stellt zwei API-Oberflächen bereit:
+
+**REST-API** — ermöglicht es, Anwendungsgruppen, Anwendungen, Endpunktgruppen und Endpunkte programmatisch zu verwalten, ohne direkt auf die Datenbank zuzugreifen. Intern wird sie ausschließlich von den Blazor-Komponenten über `IApplicationApiClient` genutzt; nach außen steht sie jedem HTTP-Client zur Verfügung, der sich über das Token-Verfahren authentifizieren kann.
+
+**OData v4-API** — stellt dieselben vier Kernobjekte als OData-Entity-Sets unter dem Präfix `/odatav4` bereit. Sie richtet sich primär an maschinelle Clients, den `IODataImportService` und OData-kompatible Werkzeuge. Ein CSDL-Metadaten-Dokument wird automatisch unter `GET /odatav4/$metadata` veröffentlicht.
 
 ## Funktionsweise
 
-Die API umfasst folgende Ressourcenbereiche:
+### REST-API
+
+Die REST-API umfasst folgende Ressourcenbereiche:
 
 | Endpunkte | Zweck |
 |-----------|-------|
@@ -22,6 +28,20 @@ Der Ablauf für jeden Datenaufruf ist zweistufig:
 2. Der Client übergibt dieses Token als Bearer-Token im `Authorization`-Header bei jedem nachfolgenden Datenendpunkt-Aufruf. Nach jedem erfolgreichen Aufruf wird das verwendete Token invalidiert und ein neues Token im Response-Header `X-New-Token` zurückgegeben.
 
 Die Controller delegieren Lese- und Schreiboperationen an `IEndpointRepository` bzw. `IApplicationRepository`; die Datenbankschicht bleibt unverändert. Im Team-Modus lösen die Controller SignalR-Benachrichtigungen aus, damit andere verbundene Clients den aktuellen Stand erhalten.
+
+### OData v4-API
+
+Die OData-API exponiert dieselben vier Kernobjekte als OData-Entity-Sets:
+
+| Entity-Set | Präfix | Zweck |
+|------------|--------|-------|
+| `Applications` | `/odatav4/Applications` | CRUD für `Application` |
+| `ApplicationGroups` | `/odatav4/ApplicationGroups` | CRUD für `ApplicationGroup` |
+| `Endpoints` | `/odatav4/Endpoints` | CRUD für `Endpoint` |
+| `EndpointGroups` | `/odatav4/EndpointGroups` | CRUD für `EndpointGroup` |
+| `$metadata` | `/odatav4/$metadata` | CSDL-Metadaten-Dokument |
+
+Alle Endpunkte erfordern denselben Bearer-Token aus `/authenticate`. OData-Standardabfragemöglichkeiten wie `$filter`, `$select`, `$expand`, `$orderby`, `$top` und `$skip` werden auf Collection-Endpunkten unterstützt. Kein `X-Storage-Mode`-Header — die OData-API liefert stets alle Datensätze unabhängig vom Benutzermodus.
 
 ## Beispiele
 
@@ -85,3 +105,6 @@ Content-Type: application/json
 - Tokens sind nicht persistiert; ein Neustart der Anwendung invalidiert alle aktiven Tokens.
 - Ein Token wird nach jedem erfolgreichen Datenendpunkt-Aufruf rotiert; das alte Token ist danach nicht mehr verwendbar.
 - Die atomaren DELETE-Routen für Header und Query-Parameter (`DELETE /api/endpoints/headers/{id}`, `DELETE /api/endpoints/query-parameters/{id}`) geben kein 404 zurück, wenn die ID nicht existiert — der Aufruf von `IEndpointRepository.DeleteHeaderAsync` schlägt dann mit einer Datenbankausnahme fehl.
+- Die OData-API unterstützt keine Optimistic Concurrency über OData-ETags; `RowVersion` wird bei PUT/PATCH serverseitig ignoriert (aus dem gespeicherten Datensatz übernommen).
+- Die OData-API exponiert keine Header und Query-Parameter von `Endpoint`-Objekten (diese Navigationseigenschaften sind im EDM-Modell bewusst ausgeblendet, da die OData-API primär für den `IODataImportService`-Workflow ausgelegt ist).
+- `X-Storage-Mode`-Filterung ist in der OData-API nicht verfügbar; sie liefert stets alle Datensätze des Teams.

@@ -133,10 +133,20 @@ public class EndpointRepository : IEndpointRepository
     }
 
     /// <inheritdoc/>
+    public async Task<IList<EndpointGroup>> GetAllEndpointGroupsAsync()
+    {
+        await using var context = await _factory.CreateDbContextAsync();
+        return await context.EndpointGroups
+            .Include(g => g.Application).ThenInclude(a => a.ApplicationGroup)
+            .ToListAsync();
+    }
+
+    /// <inheritdoc/>
     public async Task<EndpointGroup?> GetEndpointGroupByIdAsync(int id)
     {
         await using var context = await _factory.CreateDbContextAsync();
         return await context.EndpointGroups
+            .Include(g => g.Application)
             .Include(g => g.Endpoints)
             .FirstOrDefaultAsync(g => g.Id == id);
     }

@@ -14,6 +14,7 @@ public interface IEndpointRepository
     Task DeleteEndpointAsync(int id);
 
     Task<IList<EndpointGroup>> GetEndpointGroupsAsync(int applicationId);
+    Task<IList<EndpointGroup>> GetAllEndpointGroupsAsync();
     Task<EndpointGroup?> GetEndpointGroupByIdAsync(int id);
     Task<EndpointGroup> AddEndpointGroupAsync(EndpointGroup group);
     Task<EndpointGroup> UpdateEndpointGroupAsync(EndpointGroup group);
