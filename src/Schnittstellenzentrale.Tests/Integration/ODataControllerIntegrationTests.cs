@@ -398,4 +398,47 @@ public class ODataControllerIntegrationTests : IClassFixture<ControllerTestFacto
         Assert.Contains("SelectApp", content);
     }
 
+    /// <summary>PatchApplication_WithInvalidBase64IconData_Returns400</summary>
+    [Fact]
+    public async Task PatchApplication_WithInvalidBase64IconData_Returns400()
+    {
+        var client = _factory.CreateClient();
+        var token = await ObtainTokenAsync(client);
+
+        var repo = _factory.Services.GetRequiredService<IApplicationRepository>();
+        var app = await repo.AddApplicationAsync(new Application { Name = "IconPatchApp", BaseUrl = "https://iconpatch.example.com" });
+
+        var request = CreateRequest(HttpMethod.Patch, $"/odatav4/Applications({app.Id})", token);
+        request.Content = new StringContent(
+            """{"IconData":"!!!ungueltig!!!"}""",
+            System.Text.Encoding.UTF8,
+            "application/json");
+
+        var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    /// <summary>PatchApplication_WithValidBase64IconData_Returns200</summary>
+    [Fact]
+    public async Task PatchApplication_WithValidBase64IconData_Returns200()
+    {
+        var client = _factory.CreateClient();
+        var token = await ObtainTokenAsync(client);
+
+        var repo = _factory.Services.GetRequiredService<IApplicationRepository>();
+        var app = await repo.AddApplicationAsync(new Application { Name = "IconPatchValidApp", BaseUrl = "https://iconpatchvalid.example.com" });
+
+        var validBase64 = Convert.ToBase64String(new byte[] { 1, 2, 3, 4 });
+        var request = CreateRequest(HttpMethod.Patch, $"/odatav4/Applications({app.Id})", token);
+        request.Content = new StringContent(
+            $$$"""{"IconData":"{{{validBase64}}}"}""",
+            System.Text.Encoding.UTF8,
+            "application/json");
+
+        var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
 }

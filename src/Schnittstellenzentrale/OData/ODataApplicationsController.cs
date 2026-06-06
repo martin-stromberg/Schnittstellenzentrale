@@ -89,15 +89,18 @@ public class ODataApplicationsController : ODataControllerBase
         if (existing.IsSystem)
             return StatusCode(StatusCodes.Status403Forbidden);
 
-        ApplyPatch(patch, existing);
+        if (!TryApplyPatch(patch, existing, out var error))
+            return BadRequest(error);
+
         existing.InterfaceType = Application.DetectInterfaceType(existing.InterfaceUrl);
 
         var saved = await _applicationRepository.UpdateApplicationAsync(existing);
         return Ok(saved);
     }
 
-    private static void ApplyPatch(JsonElement patch, Application target)
+    private static bool TryApplyPatch(JsonElement patch, Application target, out string? error)
     {
+        error = null;
         foreach (var prop in patch.EnumerateObject())
         {
             switch (prop.Name.ToLowerInvariant())
@@ -109,9 +112,33 @@ public class ODataApplicationsController : ODataControllerBase
                 case "owner": target.Owner = prop.Value.ValueKind == JsonValueKind.Null ? null : prop.Value.GetString(); break;
                 case "applicationgroupid": target.ApplicationGroupId = prop.Value.ValueKind == JsonValueKind.Null ? null : prop.Value.GetInt32(); break;
                 case "subtitle": target.Subtitle = prop.Value.ValueKind == JsonValueKind.Null ? null : prop.Value.GetString(); break;
-                case "icondata": target.IconData = prop.Value.ValueKind == JsonValueKind.Null ? null : prop.Value.GetBytesFromBase64(); break;
+                case "icondata":
+                    if (prop.Value.ValueKind == JsonValueKind.Null)
+                    {
+                        target.IconData = null;
+                    }
+                    else
+                    {
+                        var raw = prop.Value.GetString();
+                        if (raw == null)
+                        {
+                            error = "IconData muss ein gültiger Base64-String sein.";
+                            return false;
+                        }
+                        try
+                        {
+                            target.IconData = Convert.FromBase64String(raw);
+                        }
+                        catch (FormatException)
+                        {
+                            error = "IconData muss ein gültiger Base64-String sein.";
+                            return false;
+                        }
+                    }
+                    break;
             }
         }
+        return true;
     }
 
     /// <summary>Löscht eine Anwendung.</summary>
