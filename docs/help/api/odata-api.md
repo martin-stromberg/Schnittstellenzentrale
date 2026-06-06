@@ -2,7 +2,31 @@
 
 ## Übersicht
 
-Der OData v4-Service ist unter dem Präfix `/odatav4` erreichbar. Er exponiert vier Entity-Sets und ein CSDL-Metadaten-Dokument. Alle Datenendpunkte erfordern einen gültigen Bearer-Token aus `POST /authenticate`. OData-Abfrageoptionen (`$filter`, `$select`, `$expand`, `$orderby`, `$top`, `$skip`) werden auf allen Collection-Endpunkten unterstützt.
+Der OData v4-Service ist unter dem Präfix `/odatav4` erreichbar. Er exponiert vier Entity-Sets und ein CSDL-Metadaten-Dokument. Alle Datenendpunkte erfordern einen gültigen Bearer-Token. Der Token kann direkt über `GET /odatav4/authenticate` oder `POST /odatav4/authenticate` (Windows/Negotiate) bezogen werden — unabhängig von der REST-API. OData-Abfrageoptionen (`$filter`, `$select`, `$expand`, `$orderby`, `$top`, `$skip`) werden auf allen Collection-Endpunkten unterstützt.
+
+---
+
+## GET /odatav4/authenticate  ·  POST /odatav4/authenticate
+
+Authentifiziert den aktuellen Windows-Benutzer per Negotiate und gibt einen Bearer-Token für die OData-API zurück.
+
+**Authentifizierung:** Windows/Negotiate (wird vom Browser oder Client automatisch ausgehandelt)
+
+**Response: 200 OK**
+
+```json
+{
+  "token": "eyJhb..."
+}
+```
+
+**Fehler:**
+
+| Status | Ursache |
+|--------|---------|
+| 401 Unauthorized | Windows-Authentifizierung fehlgeschlagen oder Benutzeridentität nicht verfügbar |
+
+Der zurückgegebene Token wird in allen weiteren OData-Requests als `Authorization: Bearer <token>` mitgesendet. Jede erfolgreiche OData-Antwort enthält im Header `X-New-Token` einen rotierten Nachfolge-Token, der den vorherigen ersetzt.
 
 ---
 
