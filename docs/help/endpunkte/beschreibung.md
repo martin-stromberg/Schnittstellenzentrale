@@ -111,6 +111,26 @@ Alle Endpunkte werden einheitlich nach diesem Muster behandelt — es gibt keine
 
 **Re-Import:** Beim erneuten Import werden Skripte und `AuthenticationType` mit den Werten aus der Swagger-Definition überschrieben. Fehlen die Erweiterungsfelder im Re-Import, werden `PreRequestScript`, `PostRequestScript` und `AuthenticationType` auf ihre Standardwerte (`null` bzw. `None`) zurückgesetzt — auch wenn diese Felder zuvor manuell gesetzt wurden.
 
+## OData-Import
+
+Ist eine Anwendung vom Typ `OData`, erscheint in der `ApplicationCard`-Detailansicht die Schaltfläche **OData-Import**. Der `ODataImportService` ruft das CSDL-Metadaten-Dokument von `Application.InterfaceUrl` ab (in der Regel `https://host/service/$metadata`) und leitet daraus Endpunkte ab:
+
+| Quelle im CSDL | Erzeugte Endpunkte | HTTP-Methode |
+|----------------|--------------------|--------------|
+| `IEdmEntitySet` | Je ein Endpunkt pro Entity-Set | GET und POST |
+| `IEdmAction` (OData-Action) | Je ein Endpunkt pro Action | POST |
+| `IEdmFunction` (OData-Function) | Je ein Endpunkt pro Function | GET |
+
+Der `RelativePath` eines importierten Endpunkts entspricht dem Namen des Entity-Sets oder der Operation (z. B. `Products`, `Orders`). Eine Ordnerzuweisung findet nicht statt; importierte Endpunkte werden direkt unter der Anwendung angelegt.
+
+Die Diff-Berechnung erfolgt über denselben `ImportDiffCalculator` wie beim Swagger-Import. Das Ergebnis zeigt neue, geänderte und zu entfernende Endpunkte. Nach Bestätigung durch den Anwender wendet `ODataImportService.ApplyDiffAsync` die Änderungen über `IEndpointRepository` an.
+
+**Unterschiede zum Swagger-Import:**
+- Keine Ordnerzuweisung via `EndpointGroupHelper` — OData-Entity-Sets sind flache Ressourcennamen ohne hierarchische Pfad-Segmente.
+- Keine Bearer-Token-Persistierung — das CSDL-Format enthält kein proprietäres `x-sz-bearer-token`-Feld. Authentifizierungseinstellungen müssen manuell gesetzt werden.
+
+**Fehlerverhalten:** Ist `InterfaceUrl` leer, wird eine leere `ImportDiff` ohne Fehlermeldung zurückgegeben und kein Dialog öffnet sich. Bei HTTP-Fehlern oder ungültigem XML wird eine Fehlermeldung in der `ApplicationCard` angezeigt; der Dialog öffnet sich nicht.
+
 ## Einschränkungen
 
 - Das Pfadfeld zeigt die aufgelöste URL, nicht das Template. Wer den Pfad bearbeiten möchte, sieht also die ersetzten Werte, nicht die `{name}`-Platzhalter — nach dem Verlassen des Felds wird der neue Pfad analysiert und neu aufgelöst.

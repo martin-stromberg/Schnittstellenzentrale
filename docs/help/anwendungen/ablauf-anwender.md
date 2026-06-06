@@ -277,6 +277,19 @@ Ziehen Sie den schmalen Trennstrich am rechten Rand der Seitenleiste nach links 
 
 ---
 
+## Anwendungs-Detailansicht aufrufen
+
+Klicken Sie auf den Namen einer Anwendung im Navigationsbaum. Die Detailkarte öffnet sich rechts und zeigt Name, Beschreibung, Basis-URL und Schnittstellen-URL der Anwendung.
+
+Im Kopfbereich der Karte erscheinen typabhängige Schaltflächen:
+
+- **REST-Anwendungen**: **Swagger-Import**, **Health Check**
+- **OData-Anwendungen**: **OData-Import**, **Health Check**
+
+Den OData-Import-Ablauf finden Sie in der Endpunkte-Dokumentation unter [OData-Endpunkte importieren](../endpunkte/ablauf-anwender.md#odata-endpunkte-importieren).
+
+---
+
 ## Moduswechsel (Team / Benutzer)
 
 Wenn Sie den Modus wechseln, werden alle geöffneten Dialoge und Formulare automatisch geschlossen und der Navigationsbaum mit den Daten des neuen Modus neu geladen. Der Detailbereich auf der rechten Seite wird ebenfalls ausgeblendet.

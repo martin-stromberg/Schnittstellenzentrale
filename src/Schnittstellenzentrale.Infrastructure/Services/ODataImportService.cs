@@ -1,4 +1,3 @@
-#pragma warning disable CS1591
 using Microsoft.Extensions.Logging;
 using Microsoft.OData.Edm;
 using Microsoft.OData.Edm.Csdl;
@@ -8,12 +7,14 @@ using System.Xml;
 
 namespace Schnittstellenzentrale.Infrastructure.Services;
 
+/// <summary>Importiert Endpunkte aus einem OData v4-CSDL-Metadaten-Dokument.</summary>
 public class ODataImportService : IODataImportService
 {
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly IEndpointRepository _endpointRepository;
     private readonly ILogger<ODataImportService> _logger;
 
+    /// <summary>Initialisiert eine neue Instanz von <see cref="ODataImportService"/>.</summary>
     public ODataImportService(IHttpClientFactory httpClientFactory, IEndpointRepository endpointRepository, ILogger<ODataImportService> logger)
     {
         _httpClientFactory = httpClientFactory;
@@ -21,8 +22,10 @@ public class ODataImportService : IODataImportService
         _logger = logger;
     }
 
+    /// <inheritdoc/>
     public async Task<ImportDiff> ImportAsync(Core.Models.Application application)
     {
+        ArgumentNullException.ThrowIfNull(application);
         if (string.IsNullOrEmpty(application.InterfaceUrl))
             return new ImportDiff();
 
@@ -92,6 +95,7 @@ public class ODataImportService : IODataImportService
         return ImportDiffCalculator.Calculate(existingEndpoints, importedEndpoints);
     }
 
+    /// <inheritdoc/>
     public async Task ApplyDiffAsync(ImportDiff diff)
     {
         foreach (var endpoint in diff.NewEndpoints)

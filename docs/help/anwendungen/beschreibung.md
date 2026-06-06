@@ -12,6 +12,8 @@ In der `ApplicationGroupTree`-Seitenleiste befinden sich zwei Schaltflächen: **
 
 **Neue Anwendung** öffnet den `ApplicationEditor`. Pflichtfelder sind Name und Basis-URL. Optional können Beschreibung und Schnittstellen-URL eingetragen werden; aus der Schnittstellen-URL wird der Typ (REST/OData) automatisch erkannt und als Badge angezeigt. Über ein Auswahlfeld kann die Anwendung einer vorhandenen Gruppe zugeordnet werden; die Option „Ohne Gruppe" ist ebenfalls wählbar.
 
+Bei OData-Anwendungen wird das Schnittstellen-URL-Feld in der Detailansicht als **Metadaten-URL** bezeichnet, da es auf das CSDL-Metadaten-Dokument zeigt.
+
 Nach dem Speichern wird das Formular geschlossen und die Seitenleiste aktualisiert. Über **Abbrechen** lässt sich das Formular jederzeit ohne Datenverlust schließen.
 
 ## Bearbeiten und Verwalten
@@ -66,6 +68,24 @@ Alle Knoten im Navigationsbaum können durch einen Klick auf den Beschriftungste
 | `EndpointGroup` (Ordner) | klappt auf/zu | klappt auf/zu |
 
 > **Hinweis:** Endpunktordner sind beim Laden des Navigationsbaums initial zugeklappt. Nach einem Moduswechsel oder Datenneu-Laden werden alle aufgeklappten Zustände zurückgesetzt.
+
+## Anwendungs-Detailansicht (`ApplicationCard`)
+
+Ein Klick auf den Anwendungsnamen im Navigationsbaum wählt die Anwendung aus und öffnet die `ApplicationCard`-Detailansicht im rechten Bereich. Sie zeigt Name, Beschreibung, Basis-URL und — je nach Typ — die Schnittstellen-URL der Anwendung:
+
+- Bei **REST-Anwendungen** erscheint das Feld als **Swagger-URL**.
+- Bei **OData-Anwendungen** erscheint das Feld als **Metadaten-URL**.
+
+Im Kopfbereich der Karte stehen typabhängige Import-Schaltflächen:
+
+| Anwendungstyp | Schaltfläche | Funktion |
+|---------------|-------------|---------|
+| `Rest` | **Swagger-Import** | Lädt das Swagger/OpenAPI-Dokument und importiert Endpunkte |
+| `OData` | **OData-Import** | Lädt das CSDL-Metadaten-Dokument und importiert Endpunkte |
+
+Zusätzlich zeigt die Karte die Schaltfläche **Health Check** für alle Anwendungstypen.
+
+Details zum Import-Workflow sind unter [Endpunkte → Beschreibung](../endpunkte/beschreibung.md) dokumentiert.
 
 ## Endpunktgruppen und Endpunkte
 

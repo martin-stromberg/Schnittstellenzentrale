@@ -93,6 +93,7 @@
     private async Task OpenODataImport()
     {
         if (_application == null) return;
+        _errorMessage = null;
         _odataDiff = await ODataImportService.ImportAsync(_application);
         if (_odataDiff.ErrorMessage != null)
         {

@@ -315,6 +315,106 @@ flowchart TD
 
 ---
 
+## Ablauf: OData-Import
+
+### 1. Auslöser
+
+Der Anwender klickt auf **OData-Import** in `ApplicationCard`. `ApplicationCard.OpenODataImport()` ruft `IODataImportService.ImportAsync(application)` auf.
+
+### 2. Metadatenabruf
+
+`ODataImportService.ImportAsync` prüft zunächst `application.InterfaceUrl`: ist der Wert leer, wird sofort eine leere `ImportDiff` zurückgegeben. Andernfalls wird das CSDL-Dokument per `IHttpClientFactory.CreateClient().GetStringAsync(interfaceUrl)` abgerufen.
+
+Beteiligte Komponenten:
+- `ODataImportService.ImportAsync` — HTTP-Abruf und Steuerungslogik
+- `IHttpClientFactory` — HTTP-Client-Bereitstellung
+
+### 3. CSDL parsen
+
+Das abgerufene XML wird mit `CsdlReader.Parse(XmlReader.Create(new StringReader(xmlContent)))` aus `Microsoft.OData.Edm.Csdl` in ein `IEdmModel` überführt.
+
+Beteiligte Komponenten:
+- `CsdlReader.Parse` (`Microsoft.OData.Edm.Csdl`) — CSDL-Parsing
+
+### 4. Endpunkte ableiten
+
+Für jeden `IEdmEntitySet` in `model.EntityContainer.EntitySets()` werden zwei `Endpoint`-Objekte erzeugt:
+
+| Eigenschaft | Wert |
+|-------------|------|
+| `Name` | `"GET {EntitySet.Name}"` / `"POST {EntitySet.Name}"` |
+| `Method` | `HttpMethod.GET` / `HttpMethod.POST` |
+| `RelativePath` | `EntitySet.Name` |
+| `ApplicationId` | `application.Id` |
+
+Für jede `IEdmOperation` (aus `model.SchemaElements.OfType<IEdmOperation>()`) wird ein weiterer `Endpoint` erzeugt: `IEdmAction` ergibt `POST`, `IEdmFunction` ergibt `GET`.
+
+Beteiligte Komponenten:
+- `ODataImportService.ImportAsync` — Endpunkt-Ableitung aus dem EDM-Modell
+
+### 5. Diff berechnen
+
+`ImportDiffCalculator.Calculate(existingEndpoints, importedEndpoints)` wird identisch zum Swagger-Import-Pfad aufgerufen.
+
+Beteiligte Komponenten:
+- `ImportDiffCalculator.Calculate` — Diff-Berechnung (wiederverwendet)
+- `IEndpointRepository.GetEndpointsAsync(applicationId)` — lädt bestehende Endpunkte
+
+### 6. Dialog anzeigen
+
+`ApplicationCard` empfängt die `ImportDiff`. Enthält `ImportDiff.ErrorMessage` einen Wert, wird der Dialog nicht geöffnet und die Fehlermeldung in `_errorMessage` gesetzt. Andernfalls wird `_showODataImport = true` gesetzt, was `ODataImportDialog` einblendet.
+
+`ODataImportDialog` delegiert an `ImportDialog` (wiederverwendet) mit dem Titel `L["ODataImportDialog_Title"]` (DE: „OData-Import-Vorschau").
+
+Beteiligte Komponenten:
+- `ApplicationCard.OpenODataImport()` — Fehlerprüfung und Dialog-Steuerung
+- `ODataImportDialog` — Wrapper-Komponente
+- `ImportDialog` — generische Dialog-Komponente (wiederverwendet)
+
+### 7. Diff anwenden
+
+`ODataImportDialog.ApplyAsync` ruft `IODataImportService.ApplyDiffAsync(diff)` auf.
+
+`ODataImportService.ApplyDiffAsync` iteriert über:
+- `diff.NewEndpoints` → `IEndpointRepository.AddEndpointAsync(endpoint)`
+- `diff.ChangedEndpoints` → `IEndpointRepository.UpdateEndpointAsync(endpoint)`
+- `diff.RemovedEndpoints` → `IEndpointRepository.DeleteEndpointAsync(endpoint.Id)`
+
+Es erfolgt keine Ordnerzuweisung und keine Bearer-Token-Persistierung.
+
+Beteiligte Komponenten:
+- `ODataImportService.ApplyDiffAsync` — Persistierung über `IEndpointRepository`
+
+### Diagramm: OData-Import
+
+```mermaid
+flowchart TD
+    A[OpenODataImport] --> B{InterfaceUrl leer?}
+    B -- Ja --> C[Leere ImportDiff zurückgeben]
+    B -- Nein --> D[HTTP: GetStringAsync InterfaceUrl]
+    D --> E{HTTP-Fehler?}
+    E -- Ja --> F[ImportDiff mit ErrorMessage]
+    E -- Nein --> G[CsdlReader.Parse XmlReader]
+    G --> H{XML/CSDL-Fehler?}
+    H -- Ja --> F
+    H -- Nein --> I[Für jeden EntitySet: GET + POST Endpunkt erzeugen]
+    I --> J[Für jede IEdmOperation: Endpunkt erzeugen]
+    J --> K[GetEndpointsAsync - Bestand laden]
+    K --> L[ImportDiffCalculator.Calculate]
+    L --> M{ErrorMessage gesetzt?}
+    M -- Ja --> N[Fehlermeldung in ApplicationCard]
+    M -- Nein --> O[ODataImportDialog öffnen]
+    O --> P{Anwender: Übernehmen oder Abbrechen?}
+    P -- Abbrechen --> Q[Dialog schließen]
+    P -- Übernehmen --> R[ApplyDiffAsync]
+    R --> S[AddEndpointAsync für NewEndpoints]
+    S --> T[UpdateEndpointAsync für ChangedEndpoints]
+    T --> U[DeleteEndpointAsync für RemovedEndpoints]
+    U --> Q
+```
+
+---
+
 ## Diagramm: Swagger-Import
 
 ```mermaid
@@ -358,3 +458,4 @@ flowchart TD
 - Einträge mit leerem `Key` werden in `BuildRequest()` und in `ResolveDisplayUrl()` übersprungen.
 - Import-Fehler beim Laden oder Parsen des Swagger-JSONs erzeugen ein `ImportDiff { ErrorMessage = ... }` und verhindern jede weitere Verarbeitung.
 - Fehler beim Schreiben in den Windows Credential Manager werden per `_logger.LogWarning` protokolliert; die restlichen Endpunkte des Imports werden trotzdem persistiert.
+- OData-Import: `HttpRequestException` beim Metadatenabruf → `ImportDiff { ErrorMessage = "HTTP-Fehler beim Abruf der Metadaten: ..." }`. `XmlException` beim Parsing → `ImportDiff { ErrorMessage = "Ungültiges XML in Metadaten: ..." }`. Sonstige Ausnahmen beim Parsing → `ImportDiff { ErrorMessage = "Fehler beim Parsen der Metadaten: ..." }`. In allen Fehlerfall-Varianten wird der Fehler per `_logger.LogWarning` protokolliert.

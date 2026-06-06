@@ -36,6 +36,7 @@ public class EndpointRepository : IEndpointRepository
             .Include(e => e.Headers)
             .Include(e => e.QueryParameters)
             .Include(e => e.EndpointGroup)
+            .Include(e => e.Application).ThenInclude(a => a!.ApplicationGroup)
             .ToListAsync();
     }
 

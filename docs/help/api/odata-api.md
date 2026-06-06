@@ -6,6 +6,16 @@ Der OData v4-Service ist unter dem Präfix `/odatav4` erreichbar. Er exponiert v
 
 ---
 
+## OData-Metadaten-Import
+
+Das unter `GET /odatav4/$metadata` veröffentlichte CSDL-Dokument wird auch vom internen **OData-Import-Workflow** verwendet: Ist eine Anwendung vom Typ `OData`, erscheint in der Detailansicht (`ApplicationCard`) die Schaltfläche **OData-Import**. Ein Klick darauf ruft das CSDL-Dokument von `Application.InterfaceUrl` ab, leitet daraus Endpunkte ab (je ein GET und ein POST pro Entity-Set sowie Endpunkte für OData-Operationen) und zeigt eine Import-Vorschau. Nach Bestätigung werden die Endpunkte automatisch in der Datenbank angelegt oder aktualisiert.
+
+Der OData-Import-Workflow ist analog zum Swagger-Import für REST-Anwendungen — mit dem Unterschied, dass keine Ordnerzuweisung und keine Bearer-Token-Persistierung stattfindet (das CSDL-Format enthält kein proprietäres `x-sz-bearer-token`-Feld).
+
+Technische Details und Anwenderanleitung zum OData-Import sind unter [Endpunkte](../endpunkte/beschreibung.md) dokumentiert.
+
+---
+
 ## GET /odatav4/authenticate  ·  POST /odatav4/authenticate
 
 Authentifiziert den aktuellen Windows-Benutzer per Negotiate und gibt einen Bearer-Token für die OData-API zurück.

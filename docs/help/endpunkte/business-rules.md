@@ -196,6 +196,69 @@
 
 ---
 
+## OData-Import: Keine Ordnerzuweisung
+
+**Beschreibung:** Importierte OData-Endpunkte werden ohne `EndpointGroupId` angelegt — sie erscheinen direkt unter der Anwendung ohne Ordner.
+
+**Bedingungen:**
+- `ODataImportService.ApplyDiffAsync` wird aufgerufen.
+
+**Verhalten:**
+- `IEndpointRepository.AddEndpointAsync` wird mit Endpunkten aufgerufen, deren `EndpointGroupId` den Standardwert `null` hat.
+- Nachträgliche Ordnerzuweisung ist manuell über das Zahnrad-Menü möglich.
+
+**Umsetzung:** `ODataImportService.ApplyDiffAsync` — OData-Entity-Sets sind flache Ressourcennamen (z. B. `Products`, `Orders`) ohne hierarchische Pfad-Segmente. Eine Gruppenableitung aus dem Entity-Set-Namen ergibt fachlich keinen Mehrwert.
+
+---
+
+## OData-Import: Keine Bearer-Token-Persistierung
+
+**Beschreibung:** Beim OData-Import wird kein Bearer-Token im Windows Credential Manager gespeichert, da das CSDL-Format kein proprietäres Authentifizierungsfeld enthält.
+
+**Bedingungen:**
+- `ODataImportService.ApplyDiffAsync` wird aufgerufen.
+
+**Verhalten:**
+- `ICredentialService` wird nicht injiziert und nicht aufgerufen.
+- Alle importierten Endpunkte erhalten `AuthenticationType = None`.
+- Authentifizierungseinstellungen müssen nach dem Import manuell gesetzt werden.
+
+**Umsetzung:** `ODataImportService` — kein `ICredentialService` im Konstruktor; der Konstruktor akzeptiert nur `IHttpClientFactory`, `IEndpointRepository` und `ILogger<ODataImportService>`.
+
+---
+
+## OData-Import: Leere InterfaceUrl ergibt leere ImportDiff ohne Fehler
+
+**Beschreibung:** Ist `Application.InterfaceUrl` leer oder `null`, gibt `ODataImportService.ImportAsync` eine leere `ImportDiff` zurück — ohne `ErrorMessage` und ohne HTTP-Anfrage.
+
+**Bedingungen:**
+- `string.IsNullOrEmpty(application.InterfaceUrl)` ergibt `true`.
+
+**Verhalten:**
+- Sofortige Rückgabe von `new ImportDiff()`.
+- Der Dialog öffnet sich nicht (da keine Endpunkte abgeleitet werden können).
+- Keine Fehlermeldung in der `ApplicationCard`.
+
+**Umsetzung:** `ODataImportService.ImportAsync` — Early-Return-Guard vor dem HTTP-Aufruf.
+
+---
+
+## OData-Import: Fehler beim Metadatenabruf verhindert Dialog
+
+**Beschreibung:** HTTP-Fehler oder ein ungültiges CSDL-Dokument führen dazu, dass der Import-Dialog nicht geöffnet wird; die Fehlermeldung erscheint stattdessen in der `ApplicationCard`.
+
+**Bedingungen:**
+- `HttpRequestException`, `XmlException` oder eine sonstige Exception während des Abrufs oder Parsings.
+
+**Verhalten:**
+- `ImportDiff.ErrorMessage` ist nicht `null`.
+- `ApplicationCard.OpenODataImport()` prüft `_odataDiff.ErrorMessage != null` und setzt `_errorMessage` statt `_showODataImport = true`.
+- Der Dialog `ODataImportDialog` wird nicht eingeblendet.
+
+**Umsetzung:** `ApplicationCard.OpenODataImport()` — explizite Fehlerprüfung vor dem Öffnen des Dialogs.
+
+---
+
 ## Swagger-Import: Erweiterungsfelder steuern Skripte und Authentifizierung
 
 **Beschreibung:** Beim Import einer Swagger/OpenAPI-Definition werden Skripte und `AuthenticationType` ausschließlich über die OpenAPI-Erweiterungsfelder der einzelnen Operationen gesteuert — es gibt keine hartcodierten Sonderfälle nach Pfad, Endpunktname oder Position in der Swagger-Definition.
