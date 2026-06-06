@@ -98,6 +98,9 @@ public class ODataApplicationsController : ODataControllerBase
         return Ok(saved);
     }
 
+    // Bleibt privat: Die Signatur (bool + out error für IconData-Base64-Validierung) unterscheidet sich
+    // von den void-ApplyPatch-Methoden der anderen OData-Controller und eignet sich nicht für eine
+    // gemeinsame protected-Methode in ODataControllerBase.
     private static bool TryApplyPatch(JsonElement patch, Application target, out string? error)
     {
         error = null;

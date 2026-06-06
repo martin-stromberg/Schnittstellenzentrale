@@ -94,6 +94,11 @@
     {
         if (_application == null) return;
         _odataDiff = await ODataImportService.ImportAsync(_application);
+        if (_odataDiff.ErrorMessage != null)
+        {
+            _errorMessage = _odataDiff.ErrorMessage;
+            return;
+        }
         _showODataImport = true;
     }
 

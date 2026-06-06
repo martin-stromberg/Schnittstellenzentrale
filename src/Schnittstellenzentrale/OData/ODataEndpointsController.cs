@@ -29,9 +29,7 @@ public class ODataEndpointsController : ODataControllerBase
     [HttpGet("Endpoints")]
     public async Task<IActionResult> Get()
     {
-        var applications = await _applicationRepository.GetApplicationsAsync(Core.Enums.StorageMode.Team, string.Empty);
-        var ids = applications.Select(a => a.Id);
-        var endpoints = await _endpointRepository.GetEndpointsByApplicationIdsAsync(ids);
+        var endpoints = await _endpointRepository.GetAllEndpointsAsync();
         return Ok(endpoints.AsQueryable());
     }
 

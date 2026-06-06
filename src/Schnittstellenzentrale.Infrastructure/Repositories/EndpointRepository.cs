@@ -29,6 +29,17 @@ public class EndpointRepository : IEndpointRepository
     }
 
     /// <inheritdoc/>
+    public async Task<IList<Core.Models.Endpoint>> GetAllEndpointsAsync()
+    {
+        await using var context = await _factory.CreateDbContextAsync();
+        return await context.Endpoints
+            .Include(e => e.Headers)
+            .Include(e => e.QueryParameters)
+            .Include(e => e.EndpointGroup)
+            .ToListAsync();
+    }
+
+    /// <inheritdoc/>
     public async Task<IList<Core.Models.Endpoint>> GetEndpointsByApplicationIdsAsync(IEnumerable<int> applicationIds)
     {
         await using var context = await _factory.CreateDbContextAsync();
