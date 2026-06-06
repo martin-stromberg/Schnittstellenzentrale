@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
+using Schnittstellenzentrale.Core.Contracts;
 using Schnittstellenzentrale.Core.Interfaces;
 using Schnittstellenzentrale.Core.Models;
 using Schnittstellenzentrale.Tests.Helpers;
@@ -439,6 +440,51 @@ public class ODataControllerIntegrationTests : IClassFixture<ControllerTestFacto
         var response = await client.SendAsync(request);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    /// <summary>ODataAuthenticate_Get_ReturnsToken</summary>
+    [Fact]
+    public async Task ODataAuthenticate_Get_ReturnsToken()
+    {
+        var client = _factory.CreateClient();
+
+        var response = await client.GetAsync("/odatav4/authenticate");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<AuthenticateResponse>(JsonOptions);
+        Assert.NotNull(body);
+        Assert.NotEmpty(body.Token);
+    }
+
+    /// <summary>ODataAuthenticate_Post_ReturnsToken</summary>
+    [Fact]
+    public async Task ODataAuthenticate_Post_ReturnsToken()
+    {
+        var client = _factory.CreateClient();
+
+        var response = await client.PostAsync("/odatav4/authenticate", null);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<AuthenticateResponse>(JsonOptions);
+        Assert.NotNull(body);
+        Assert.NotEmpty(body.Token);
+    }
+
+    /// <summary>ODataAuthenticate_TokenCanBeUsedForODataRequests</summary>
+    [Fact]
+    public async Task ODataAuthenticate_TokenCanBeUsedForODataRequests()
+    {
+        var client = _factory.CreateClient();
+
+        var authResponse = await client.GetAsync("/odatav4/authenticate");
+        Assert.Equal(HttpStatusCode.OK, authResponse.StatusCode);
+        var body = await authResponse.Content.ReadFromJsonAsync<AuthenticateResponse>(JsonOptions);
+        var token = body!.Token;
+
+        var request = CreateRequest(HttpMethod.Get, "/odatav4/Applications", token);
+        var dataResponse = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.OK, dataResponse.StatusCode);
     }
 
 }
