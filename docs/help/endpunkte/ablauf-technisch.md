@@ -319,7 +319,7 @@ flowchart TD
 
 ### 1. Auslöser
 
-Der Anwender klickt auf **OData-Import** in `ApplicationCard`. `ApplicationCard.OpenODataImport()` ruft `IODataImportService.ImportAsync(application)` auf.
+Der Anwender klickt auf **OData-Import** in `ApplicationContentView`. `ApplicationContentView.OpenODataImportAsync()` ruft `IODataImportService.ImportAsync(application)` auf.
 
 ### 2. Metadatenabruf
 
@@ -362,12 +362,12 @@ Beteiligte Komponenten:
 
 ### 6. Dialog anzeigen
 
-`ApplicationCard` empfängt die `ImportDiff`. Enthält `ImportDiff.ErrorMessage` einen Wert, wird der Dialog nicht geöffnet und die Fehlermeldung in `_errorMessage` gesetzt. Andernfalls wird `_showODataImport = true` gesetzt, was `ODataImportDialog` einblendet.
+`ApplicationContentView` empfängt die `ImportDiff`. Enthält `ImportDiff.ErrorMessage` einen Wert, wird der Dialog nicht geöffnet und die Fehlermeldung in `_errorMessage` gesetzt; ein inline-Fehler-Alert erscheint im `sz-hero-right`-Bereich. Andernfalls wird `_showODataImport = true` gesetzt, was `ODataImportDialog` einblendet.
 
 `ODataImportDialog` delegiert an `ImportDialog` (wiederverwendet) mit dem Titel `L["ODataImportDialog_Title"]` (DE: „OData-Import-Vorschau").
 
 Beteiligte Komponenten:
-- `ApplicationCard.OpenODataImport()` — Fehlerprüfung und Dialog-Steuerung
+- `ApplicationContentView.OpenODataImportAsync()` — Fehlerprüfung und Dialog-Steuerung
 - `ODataImportDialog` — Wrapper-Komponente
 - `ImportDialog` — generische Dialog-Komponente (wiederverwendet)
 
@@ -402,7 +402,7 @@ flowchart TD
     J --> K[GetEndpointsAsync - Bestand laden]
     K --> L[ImportDiffCalculator.Calculate]
     L --> M{ErrorMessage gesetzt?}
-    M -- Ja --> N[Fehlermeldung in ApplicationCard]
+    M -- Ja --> N[Fehlermeldung in ApplicationContentView]
     M -- Nein --> O[ODataImportDialog öffnen]
     O --> P{Anwender: Übernehmen oder Abbrechen?}
     P -- Abbrechen --> Q[Dialog schließen]

@@ -135,7 +135,7 @@ Beteiligte Komponenten: `ApplicationContextMenu`, `ApplicationGroupContextMenu`,
 `ApplicationGroupTree.OnDeleteApplicationRequested(application)` setzt `_deleteTargetApplication = application`. Nach Bestätigung ruft `ApplicationGroupTree.OnDeleteApplicationConfirmed(application)`:
 1. `ApplicationRepository.DeleteApplicationAsync(application.Id)`
 2. Bei `StorageMode.Team`: `SignalRNotificationService.NotifyApplicationChangedAsync(application.Id)`
-3. `OnSelectionCleared.InvokeAsync()` — blendet `ApplicationCard` in `Home` aus
+3. `OnSelectionCleared.InvokeAsync()` — blendet `ApplicationContentView` in `Home` aus
 4. `LoadDataAsync()`
 
 ---

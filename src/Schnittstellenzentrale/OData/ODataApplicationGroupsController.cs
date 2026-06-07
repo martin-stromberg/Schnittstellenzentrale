@@ -83,14 +83,16 @@ public class ODataApplicationGroupsController : ODataControllerBase
         if (existing.IsSystem)
             return StatusCode(StatusCodes.Status403Forbidden);
 
-        ApplyPatch(patch, existing);
+        if (!TryApplyPatch(patch, existing, out var error))
+            return BadRequest(error);
 
         var saved = await _applicationRepository.UpdateGroupAsync(existing);
         return Ok(saved);
     }
 
-    private static void ApplyPatch(JsonElement patch, ApplicationGroup target)
+    private static bool TryApplyPatch(JsonElement patch, ApplicationGroup target, out string? error)
     {
+        error = null;
         foreach (var prop in patch.EnumerateObject())
         {
             switch (prop.Name.ToLowerInvariant())
@@ -98,8 +100,33 @@ public class ODataApplicationGroupsController : ODataControllerBase
                 case "name": target.Name = prop.Value.GetString() ?? target.Name; break;
                 case "description": target.Description = prop.Value.GetString() ?? target.Description; break;
                 case "subtitle": target.Subtitle = prop.Value.ValueKind == JsonValueKind.Null ? null : prop.Value.GetString(); break;
+                case "icondata":
+                    if (prop.Value.ValueKind == JsonValueKind.Null)
+                    {
+                        target.IconData = null;
+                    }
+                    else
+                    {
+                        var raw = prop.Value.GetString();
+                        if (raw == null)
+                        {
+                            error = "IconData muss ein gültiger Base64-String sein.";
+                            return false;
+                        }
+                        try
+                        {
+                            target.IconData = Convert.FromBase64String(raw);
+                        }
+                        catch (FormatException)
+                        {
+                            error = "IconData muss ein gültiger Base64-String sein.";
+                            return false;
+                        }
+                    }
+                    break;
             }
         }
+        return true;
     }
 
     /// <summary>Löscht eine Anwendungsgruppe.</summary>

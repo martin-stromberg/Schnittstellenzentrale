@@ -66,6 +66,22 @@ public class ODataImportServiceTests
         return new ODataImportService(factoryMock.Object, repoMock.Object, NullLogger<ODataImportService>.Instance);
     }
 
+    private static ODataImportService CreateServiceWithCancellationHandler(Mock<IEndpointRepository> repoMock)
+    {
+        var handlerMock = new Mock<HttpMessageHandler>();
+        handlerMock.Protected()
+            .Setup<Task<HttpResponseMessage>>("SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>())
+            .ThrowsAsync(new TaskCanceledException("Request timed out"));
+
+        var factoryMock = new Mock<IHttpClientFactory>();
+        factoryMock.Setup(f => f.CreateClient(It.IsAny<string>()))
+            .Returns(new HttpClient(handlerMock.Object));
+
+        return new ODataImportService(factoryMock.Object, repoMock.Object, NullLogger<ODataImportService>.Instance);
+    }
+
     /// <summary>Import_NewODataMetadata_ReturnsCorrectDiff</summary>
     [Fact]
     public async Task Import_NewODataMetadata_ReturnsCorrectDiff()
@@ -159,6 +175,19 @@ public class ODataImportServiceTests
         Assert.Empty(diff.NewEndpoints);
         Assert.Empty(diff.ChangedEndpoints);
         Assert.Empty(diff.RemovedEndpoints);
+    }
+
+    /// <summary>Import_Cancelled_ReturnsErrorMessage</summary>
+    [Fact]
+    public async Task Import_Cancelled_ReturnsErrorMessage()
+    {
+        var repoMock = new Mock<IEndpointRepository>();
+        var service = CreateServiceWithCancellationHandler(repoMock);
+        var app = new Core.Models.Application { Id = 1, InterfaceUrl = "http://localhost/$metadata", InterfaceType = Core.Enums.InterfaceType.OData, BaseUrl = "http://localhost" };
+
+        var diff = await service.ImportAsync(app);
+
+        Assert.NotNull(diff.ErrorMessage);
     }
 
     /// <summary>ApplyDiff_NewChangedRemoved_CallsRepositoryMethods</summary>

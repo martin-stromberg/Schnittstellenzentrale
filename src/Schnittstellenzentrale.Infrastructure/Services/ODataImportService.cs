@@ -35,6 +35,11 @@ public class ODataImportService : IODataImportService
             var client = _httpClientFactory.CreateClient();
             xmlContent = await client.GetStringAsync(application.InterfaceUrl);
         }
+        catch (OperationCanceledException ex)
+        {
+            _logger.LogWarning(ex, "OData-Import abgebrochen für Anwendung {ApplicationId}", application.Id);
+            return new ImportDiff { ErrorMessage = $"Abruf der Metadaten wurde abgebrochen: {ex.Message}" };
+        }
         catch (HttpRequestException ex)
         {
             _logger.LogWarning(ex, "OData-Import HTTP-Fehler für Anwendung {ApplicationId}", application.Id);

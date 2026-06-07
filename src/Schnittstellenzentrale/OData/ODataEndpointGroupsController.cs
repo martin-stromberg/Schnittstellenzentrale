@@ -71,7 +71,10 @@ public class ODataEndpointGroupsController : ODataControllerBase
         if (existing == null)
             return NotFound();
 
-        if (existing.Application?.IsSystem == true)
+        if (existing.Application == null)
+            return NotFound();
+
+        if (existing.Application.IsSystem)
             return StatusCode(StatusCodes.Status403Forbidden);
 
         existing.Name = entity.Name;
@@ -89,7 +92,10 @@ public class ODataEndpointGroupsController : ODataControllerBase
         if (existing == null)
             return NotFound();
 
-        if (existing.Application?.IsSystem == true)
+        if (existing.Application == null)
+            return NotFound();
+
+        if (existing.Application.IsSystem)
             return StatusCode(StatusCodes.Status403Forbidden);
 
         ApplyPatch(patch, existing);
@@ -118,7 +124,10 @@ public class ODataEndpointGroupsController : ODataControllerBase
         if (existing == null)
             return NotFound();
 
-        if (existing.Application?.IsSystem == true)
+        if (existing.Application == null)
+            return NotFound();
+
+        if (existing.Application.IsSystem)
             return StatusCode(StatusCodes.Status403Forbidden);
 
         await _endpointRepository.DeleteEndpointGroupAsync(key);

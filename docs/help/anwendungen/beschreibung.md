@@ -69,21 +69,17 @@ Alle Knoten im Navigationsbaum können durch einen Klick auf den Beschriftungste
 
 > **Hinweis:** Endpunktordner sind beim Laden des Navigationsbaums initial zugeklappt. Nach einem Moduswechsel oder Datenneu-Laden werden alle aufgeklappten Zustände zurückgesetzt.
 
-## Anwendungs-Detailansicht (`ApplicationCard`)
+## Anwendungs-Detailansicht (`ApplicationContentView`)
 
-Ein Klick auf den Anwendungsnamen im Navigationsbaum wählt die Anwendung aus und öffnet die `ApplicationCard`-Detailansicht im rechten Bereich. Sie zeigt Name, Beschreibung, Basis-URL und — je nach Typ — die Schnittstellen-URL der Anwendung:
-
-- Bei **REST-Anwendungen** erscheint das Feld als **Swagger-URL**.
-- Bei **OData-Anwendungen** erscheint das Feld als **Metadaten-URL**.
-
-Im Kopfbereich der Karte stehen typabhängige Import-Schaltflächen:
+Ein Klick auf den Anwendungsnamen im Navigationsbaum wählt die Anwendung aus und öffnet die `ApplicationContentView`-Detailansicht im rechten Bereich. Sie zeigt Name, Beschreibung, Basis-URL und — je nach Typ — die Schnittstellen-URL der Anwendung. Im Kopfbereich stehen typabhängige Import-Schaltflächen sowie der **Health Check**-Button:
 
 | Anwendungstyp | Schaltfläche | Funktion |
 |---------------|-------------|---------|
 | `Rest` | **Swagger-Import** | Lädt das Swagger/OpenAPI-Dokument und importiert Endpunkte |
 | `OData` | **OData-Import** | Lädt das CSDL-Metadaten-Dokument und importiert Endpunkte |
+| Alle | **Health Check** | Prüft die Erreichbarkeit der Basis-URL |
 
-Zusätzlich zeigt die Karte die Schaltfläche **Health Check** für alle Anwendungstypen.
+Schlägt ein Import fehl (z. B. nicht erreichbare URL oder ungültiges Dokument), erscheint eine inline-Fehlermeldung im Kopfbereich der Detailansicht; der Import-Dialog öffnet sich nicht.
 
 Details zum Import-Workflow sind unter [Endpunkte → Beschreibung](../endpunkte/beschreibung.md) dokumentiert.
 

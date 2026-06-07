@@ -237,7 +237,7 @@
 **Verhalten:**
 - Sofortige Rückgabe von `new ImportDiff()`.
 - Der Dialog öffnet sich nicht (da keine Endpunkte abgeleitet werden können).
-- Keine Fehlermeldung in der `ApplicationCard`.
+- Keine Fehlermeldung in der `ApplicationContentView`.
 
 **Umsetzung:** `ODataImportService.ImportAsync` — Early-Return-Guard vor dem HTTP-Aufruf.
 
@@ -245,17 +245,17 @@
 
 ## OData-Import: Fehler beim Metadatenabruf verhindert Dialog
 
-**Beschreibung:** HTTP-Fehler oder ein ungültiges CSDL-Dokument führen dazu, dass der Import-Dialog nicht geöffnet wird; die Fehlermeldung erscheint stattdessen in der `ApplicationCard`.
+**Beschreibung:** HTTP-Fehler oder ein ungültiges CSDL-Dokument führen dazu, dass der Import-Dialog nicht geöffnet wird; die Fehlermeldung erscheint stattdessen in der `ApplicationContentView`.
 
 **Bedingungen:**
 - `HttpRequestException`, `XmlException` oder eine sonstige Exception während des Abrufs oder Parsings.
 
 **Verhalten:**
 - `ImportDiff.ErrorMessage` ist nicht `null`.
-- `ApplicationCard.OpenODataImport()` prüft `_odataDiff.ErrorMessage != null` und setzt `_errorMessage` statt `_showODataImport = true`.
+- `ApplicationContentView.OpenODataImportAsync()` prüft `result.ErrorMessage != null` und setzt `_errorMessage` statt `_showODataImport = true`.
 - Der Dialog `ODataImportDialog` wird nicht eingeblendet.
 
-**Umsetzung:** `ApplicationCard.OpenODataImport()` — explizite Fehlerprüfung vor dem Öffnen des Dialogs.
+**Umsetzung:** `ApplicationContentView.OpenODataImportAsync()` — explizite Fehlerprüfung vor dem Öffnen des Dialogs.
 
 ---
 

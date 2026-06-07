@@ -442,6 +442,56 @@ public class ODataControllerIntegrationTests : IClassFixture<ControllerTestFacto
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 
+    /// <summary>PatchApplicationGroup_WithValidBase64IconData_Returns200AndPersistsIconData</summary>
+    [Fact]
+    public async Task PatchApplicationGroup_WithValidBase64IconData_Returns200AndPersistsIconData()
+    {
+        var client = _factory.CreateClient();
+        var token = await ObtainTokenAsync(client);
+
+        using var scope = _factory.Services.CreateScope();
+        var repo = scope.ServiceProvider.GetRequiredService<IApplicationRepository>();
+        var group = await repo.AddGroupAsync(new ApplicationGroup { Name = "IconGroupPatchValid" });
+
+        var validBase64 = Convert.ToBase64String(new byte[] { 10, 20, 30, 40 });
+        var request = CreateRequest(HttpMethod.Patch, $"/odatav4/ApplicationGroups({group.Id})", token);
+        request.Content = new StringContent(
+            $$$"""{"IconData":"{{{validBase64}}}"}""",
+            System.Text.Encoding.UTF8,
+            "application/json");
+
+        var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        using var readScope = _factory.Services.CreateScope();
+        var readRepo = readScope.ServiceProvider.GetRequiredService<IApplicationRepository>();
+        var updated = await readRepo.GetGroupByIdAsync(group.Id);
+        Assert.NotNull(updated!.IconData);
+        Assert.Equal(new byte[] { 10, 20, 30, 40 }, updated.IconData);
+    }
+
+    /// <summary>PatchApplicationGroup_WithInvalidBase64IconData_Returns400</summary>
+    [Fact]
+    public async Task PatchApplicationGroup_WithInvalidBase64IconData_Returns400()
+    {
+        var client = _factory.CreateClient();
+        var token = await ObtainTokenAsync(client);
+
+        var repo = _factory.Services.GetRequiredService<IApplicationRepository>();
+        var group = await repo.AddGroupAsync(new ApplicationGroup { Name = "IconGroupPatchInvalid" });
+
+        var request = CreateRequest(HttpMethod.Patch, $"/odatav4/ApplicationGroups({group.Id})", token);
+        request.Content = new StringContent(
+            """{"IconData":"!!!ungueltig!!!"}""",
+            System.Text.Encoding.UTF8,
+            "application/json");
+
+        var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
     /// <summary>ODataAuthenticate_Get_ReturnsToken</summary>
     [Fact]
     public async Task ODataAuthenticate_Get_ReturnsToken()

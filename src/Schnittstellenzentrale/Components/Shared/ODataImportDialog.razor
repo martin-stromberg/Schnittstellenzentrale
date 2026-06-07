@@ -3,13 +3,28 @@
 
 <ImportDialog Title="@L["ODataImportDialog_Title"]" Diff="Diff" Application="Application" OnApply="ApplyAsync" OnClose="OnClose" />
 
+@if (!string.IsNullOrEmpty(_errorMessage))
+{
+    <div class="sz-alert sz-alert--destructive">@_errorMessage</div>
+}
+
 @code {
     [Parameter] public ImportDiff Diff { get; set; } = null!;
     [Parameter] public Application Application { get; set; } = null!;
     [Parameter] public EventCallback OnClose { get; set; }
 
+    private string? _errorMessage;
+
     private async Task ApplyAsync(ImportDiff diff)
     {
-        await ODataImportService.ApplyDiffAsync(diff);
+        _errorMessage = null;
+        try
+        {
+            await ODataImportService.ApplyDiffAsync(diff);
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = string.Format(L["ODataImportDialog_Error_Apply"], ex.Message);
+        }
     }
 }

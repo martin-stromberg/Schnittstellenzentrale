@@ -264,7 +264,7 @@ flowchart TD
 
 ### 1. Benutzer klickt „Swagger-Import" oder „OData-Import"
 
-`ApplicationCard` ruft `SwaggerImportService.ImportAsync(application)` bzw. `ODataImportService.ImportAsync(application)` auf.
+`ApplicationContentView` ruft `SwaggerImportService.ImportAsync(application)` bzw. `ODataImportService.ImportAsync(application)` auf.
 
 ### 2. Definition abrufen
 

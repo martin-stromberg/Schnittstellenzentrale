@@ -838,6 +838,10 @@
     <value>OData-Import-Vorschau</value>
     <comment>ODataImportDialog: Titel des OData-Import-Vorschau-Dialogs</comment>
   </data>
+  <data name="ODataImportDialog_Error_Apply" xml:space="preserve">
+    <value>Fehler beim Anwenden des Imports: {0}</value>
+    <comment>ODataImportDialog: Fehlermeldung wenn ApplyDiffAsync fehlschlägt (Platzhalter ist die Exception-Message)</comment>
+  </data>
 
   <!-- SwaggerImportDialog -->
   <data name="SwaggerImportDialog_Title" xml:space="preserve">
@@ -905,6 +909,10 @@
   <data name="ApplicationContentView_Button_SwaggerImport" xml:space="preserve">
     <value>Swagger-Import</value>
     <comment>ApplicationContentView: Button-Beschriftung für den Swagger-Import-Dialog</comment>
+  </data>
+  <data name="ApplicationContentView_Button_ODataImport" xml:space="preserve">
+    <value>OData-Import</value>
+    <comment>Beschriftung des Buttons zum Auslösen des OData-Imports in der Anwendungsdetailansicht (ApplicationContentView)</comment>
   </data>
   <data name="ApplicationContentView_Button_HealthCheck" xml:space="preserve">
     <value>Health-Check</value>
@@ -1009,36 +1017,6 @@
   <data name="FolderContentView_Tooltip_Execute" xml:space="preserve">
     <value>Ausführen</value>
     <comment>FolderContentView: title-Attribut des Ausführen-Buttons</comment>
-  </data>
-
-  <!-- ApplicationCard -->
-  <data name="ApplicationCard_Error_LoadApplication" xml:space="preserve">
-    <value>Fehler beim Laden der Anwendung: {0}</value>
-    <comment>ApplicationCard: Fehlermeldung wenn das Laden einer Anwendung fehlschlägt</comment>
-  </data>
-  <data name="ApplicationCard_Button_SwaggerImport" xml:space="preserve">
-    <value>Swagger-Import</value>
-    <comment>ApplicationCard: Button-Beschriftung für den Swagger-Import-Dialog</comment>
-  </data>
-  <data name="ApplicationCard_Button_ODataImport" xml:space="preserve">
-    <value>OData-Import</value>
-    <comment>ApplicationCard: Button-Beschriftung für den OData-Import-Dialog</comment>
-  </data>
-  <data name="ApplicationCard_Button_HealthCheck" xml:space="preserve">
-    <value>Health-Check</value>
-    <comment>ApplicationCard: Button-Beschriftung für den Health-Check</comment>
-  </data>
-  <data name="ApplicationCard_Label_BaseUrl" xml:space="preserve">
-    <value>Basis-URL:</value>
-    <comment>ApplicationCard: Beschriftung vor der Basis-URL</comment>
-  </data>
-  <data name="ApplicationCard_Label_MetadataUrl" xml:space="preserve">
-    <value>Metadaten-URL:</value>
-    <comment>ApplicationCard: Beschriftung vor der OData-Metadaten-URL</comment>
-  </data>
-  <data name="ApplicationCard_Label_SwaggerUrl" xml:space="preserve">
-    <value>Swagger-URL:</value>
-    <comment>ApplicationCard: Beschriftung vor der Swagger/REST-Schnittstellen-URL</comment>
   </data>
 
   <!-- EnvironmentContentView -->

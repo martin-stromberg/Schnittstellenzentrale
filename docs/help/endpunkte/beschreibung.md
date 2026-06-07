@@ -113,7 +113,7 @@ Alle Endpunkte werden einheitlich nach diesem Muster behandelt — es gibt keine
 
 ## OData-Import
 
-Ist eine Anwendung vom Typ `OData`, erscheint in der `ApplicationCard`-Detailansicht die Schaltfläche **OData-Import**. Der `ODataImportService` ruft das CSDL-Metadaten-Dokument von `Application.InterfaceUrl` ab (in der Regel `https://host/service/$metadata`) und leitet daraus Endpunkte ab:
+Ist eine Anwendung vom Typ `OData`, erscheint in der `ApplicationContentView`-Detailansicht die Schaltfläche **OData-Import**. Der `ODataImportService` ruft das CSDL-Metadaten-Dokument von `Application.InterfaceUrl` ab (in der Regel `https://host/service/$metadata`) und leitet daraus Endpunkte ab:
 
 | Quelle im CSDL | Erzeugte Endpunkte | HTTP-Methode |
 |----------------|--------------------|--------------|
@@ -129,7 +129,7 @@ Die Diff-Berechnung erfolgt über denselben `ImportDiffCalculator` wie beim Swag
 - Keine Ordnerzuweisung via `EndpointGroupHelper` — OData-Entity-Sets sind flache Ressourcennamen ohne hierarchische Pfad-Segmente.
 - Keine Bearer-Token-Persistierung — das CSDL-Format enthält kein proprietäres `x-sz-bearer-token`-Feld. Authentifizierungseinstellungen müssen manuell gesetzt werden.
 
-**Fehlerverhalten:** Ist `InterfaceUrl` leer, wird eine leere `ImportDiff` ohne Fehlermeldung zurückgegeben und kein Dialog öffnet sich. Bei HTTP-Fehlern oder ungültigem XML wird eine Fehlermeldung in der `ApplicationCard` angezeigt; der Dialog öffnet sich nicht.
+**Fehlerverhalten:** Ist `InterfaceUrl` leer, wird eine leere `ImportDiff` ohne Fehlermeldung zurückgegeben und kein Dialog öffnet sich. Bei HTTP-Fehlern oder ungültigem XML wird eine inline-Fehlermeldung in der `ApplicationContentView` angezeigt; der Dialog öffnet sich nicht.
 
 ## Einschränkungen
 
