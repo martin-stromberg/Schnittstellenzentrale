@@ -23,4 +23,14 @@ Keine — Plan ist vollständig umgesetzt.
 
 ## Rückmeldung vom Kunden (Design-Überdenken)
 
-- [ ] **Authenticate-Endpunkt — Design falsch** — Die aktuelle Implementierung fügt beim OData-Import immer automatisch einen `POST authenticate`-Endpunkt hinzu. Das ist falsch: Nicht jede OData-API hat einen Authenticate-Endpunkt. Der Grund, warum er nicht in `$metadata` enthalten ist: OData `$metadata` beschreibt nur das Datenmodell (Entity-Typen, Entity-Sets, Aktionen/Funktionen des Datenmodells) — keine beliebigen HTTP-Endpunkte wie Authentifizierung. Die automatische Einfügung rückgängig machen und alternative Lösung klären (z.B. nur für die eigene Schnittstellenzentrale-API einfügen, oder als konfigurierbares Verhalten).
+- [ ] **Authenticate-Endpunkt — Design falsch** — Die aktuelle Implementierung fügt beim OData-Import immer automatisch einen `POST authenticate`-Endpunkt hinzu. Das ist falsch: Nicht jede OData-API hat einen Authenticate-Endpunkt. Die automatische Einfügung rückgängig machen.
+
+- [ ] **Authenticate als OData Unbound Action** — Den `ODataAuthController` als OData Unbound Action modellieren (`POST /odatav4/Authenticate()`), damit der Endpunkt in `$metadata` erscheint und vom Import automatisch erkannt wird. Die Action nimmt Username/Password entgegen und gibt ein Token zurück. Route ändert sich von `/odatav4/authenticate` zu `/odatav4/Authenticate()`.
+
+- [ ] **PUT-Endpunkte fehlen beim Import** — Der OData-Import erfasst aktuell nur GET- und POST-Endpunkte. OData-Entitäten haben standardmäßig auch PUT (vollständige Aktualisierung) und PATCH (Teilaktualisierung) und DELETE-Endpunkte. Für jede Entity-Set aus `$metadata` müssen alle HTTP-Methoden (GET collection, GET by key, POST, PUT, PATCH, DELETE) als separate Endpunkte importiert werden, sofern die Entität schreibbar ist (`<EntitySet>` ohne `<Annotation Term="Org.OData.Capabilities.V1.InsertRestrictions" ...>`-Ausschluss).
+
+- [ ] **Endpunktgruppen fehlen** — Wie beim Swagger-Import soll für jede Entität (Entity-Set) eine eigene Endpunktgruppe (`EndpointGroup`) angelegt werden. Alle Endpunkte einer Entität (GET, POST, PUT, PATCH, DELETE) kommen in dieselbe Gruppe. Der Gruppenname entspricht dem Entity-Set-Namen (z.B. `Applications`, `Endpoints`).
+
+- [ ] **Authentifizierungsart immer „None"** — Die importierten Endpunkte sollen — falls möglich — die Authentifizierungsart aus der `$metadata`-Datei lesen. Vorschlag: `$metadata` um ein herstellerspezifisches Annotation-Attribut erweitern (z.B. `x-sz-auth-type` analog zu `x-sz-bearer-token` bei Swagger). Entitäts-Endpunkte der eigenen API sollen `BearerToken` vorgeben, der Authenticate-Endpunkt `Negotiate`. Für fremde OData-APIs ohne diese Annotation: Standardwert `None` beibehalten.
+
+- [ ] **Skripte nicht erfasst** — Wie beim Swagger-Import soll die `$metadata`-Datei um herstellerspezifische Annotation-Attribute für Skripte erweiterbar sein (z.B. `x-sz-post-request-script` an der jeweiligen Action/EntitySet-Annotation). Der OData-Import-Service soll diese Attribute auslesen und den Endpunkten zuweisen — analog zur bestehenden Swagger-Implementierung mit `x-sz-post-request-script`.
