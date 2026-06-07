@@ -73,7 +73,7 @@ public partial class Program {
                 .Expand()
                 .OrderBy()
                 .Count()
-                .SetMaxTop(null));
+                .SetMaxTop(1000));
 
         builder.Services.AddSwaggerGen(c =>
         {

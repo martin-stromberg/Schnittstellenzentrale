@@ -12,11 +12,15 @@ Keine — Plan ist vollständig umgesetzt.
 
 ## Code-Review-Befunde
 
-- [ ] **ODataApplicationsController.cs:46** — POST akzeptiert `IsSystem=true` im Request-Body; Einfügen von `entity.IsSystem = false;` vor dem Repository-Aufruf verhindert, dass API-Clients dauerhaft unveränderbare System-Entitäten anlegen können.
-- [ ] **ODataApplicationGroupsController.cs:46** — Identisches Problem: POST akzeptiert `IsSystem=true` im Request-Body für ApplicationGroups.
-- [ ] **ODataApplicationsController.cs:58** — Optimistische Nebenläufigkeitskontrolle wirkungslos: PUT-Handler kopiert `entity`-Felder in `existing` und gibt `existing` (mit aktuellem DB-RowVersion) ans Repository weiter; EF-Concurrency-Check vergleicht den DB-Wert gegen sich selbst. Fix: Client-seitiges `RowVersion` aus `entity` als OriginalValue setzen.
-- [ ] **ApplicationContentView.razor:3** — Blazor-Komponente injiziert `IODataImportService` direkt, was gegen die API-First-Architekturvorgabe aus CLAUDE.md verstößt (analog zu `ISwaggerImportService`, der ebenfalls direkt injiziert ist — ggf. ist die Regel auf reine Datenzugriffs-Services beschränkt; klären).
-- [ ] **ODataControllerBase.cs:23** — `[EnableQuery]`-Validierungsfehler können zurückgegeben werden, bevor `OnActionExecutionAsync` die Authentifizierung prüft; ein nicht-authentifizierter Client erhält ggf. Schema-Details.
-- [ ] **Program.cs:76** — `SetMaxTop(null)` entfernt die serverseitige Obergrenze für `$top`; unbeschränkte Tabellen-Dumps sind möglich.
-- [ ] **ODataEndpointsController.cs:68** — PUT für Endpoints erlaubt implizites Verschieben auf eine andere Anwendung durch Setzen von `EndpointGroupId` einer fremden Anwendungsgruppe ohne IsSystem-Prüfung der Zielanwendung.
-- [ ] **ODataApplicationGroupsController.cs:93** — `TryApplyPatch` mit IconData-Base64-Validierung ist eine Kopie aus `ODataApplicationsController`; in gemeinsame Hilfsklasse extrahieren.
+- [ ] **ODataApplicationGroupsController.cs:72** — PUT ignoriert Client-seitiges RowVersion; EF-Concurrency-Check ist wirkungslos (analog zum bereits korrigierten `ODataApplicationsController`). Fix: `concurrencyRowVersion`-Muster aus `ODataApplicationsController.Put` übernehmen.
+- [ ] **ODataEndpointsController.cs:100** — Identisches RowVersion-Problem für Endpoints PUT.
+- [ ] **ODataEndpointGroupsController.cs:83** — Identisches RowVersion-Problem für EndpointGroups PUT.
+- [ ] **ODataApplicationsController.cs:72** — Concurrency-Schutz ist opt-in: leeres/fehlendes RowVersion im Request umgeht den Check (Fallback auf DB-Wert). Erwägen, ob das gewünschtes Verhalten ist, oder ob leeres RowVersion als Fehler gewertet werden soll.
+- [ ] **ApplicationContentView.razor:3** — `IODataImportService` direkt injiziert (API-First-Frage, mehrfach flagged). Klären ob Import-Services von der Regel ausgenommen sind; ggf. in CLAUDE.md dokumentieren.
+- [ ] **ODataEndpointsController.cs:84** — PUT-EndpointGroupId-Validierung prüft nicht `targetGroup.Application.IsSystem`; Endpoint kann in eine System-Gruppe derselben Anwendung verschoben werden.
+- [ ] **ODataImportDialog.razor:13** — `ODataImportDialog_Error_Apply`-Schlüssel in beiden resx-Dateien ist verwaist (toter Code nach Fehlerbehandlungs-Refaktor). Entfernen.
+- [ ] **ODataImportService.cs:127** — authenticate-Endpunkt-Duplikatprüfung ist case-sensitiv; `RelativePath`-Vergleich sollte `StringComparison.OrdinalIgnoreCase` verwenden.
+
+## Rückmeldung vom Kunden (Design-Überdenken)
+
+- [ ] **Authenticate-Endpunkt — Design falsch** — Die aktuelle Implementierung fügt beim OData-Import immer automatisch einen `POST authenticate`-Endpunkt hinzu. Das ist falsch: Nicht jede OData-API hat einen Authenticate-Endpunkt. Der Grund, warum er nicht in `$metadata` enthalten ist: OData `$metadata` beschreibt nur das Datenmodell (Entity-Typen, Entity-Sets, Aktionen/Funktionen des Datenmodells) — keine beliebigen HTTP-Endpunkte wie Authentifizierung. Die automatische Einfügung rückgängig machen und alternative Lösung klären (z.B. nur für die eigene Schnittstellenzentrale-API einfügen, oder als konfigurierbares Verhalten).

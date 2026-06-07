@@ -1,56 +1,59 @@
 # Code-Review: issue-48-odata-api
 
-Diff-Basis: `git diff main...HEAD` (Branches: `issue-48-odata-api` vs `main`)
+Diff-Basis: `git diff main...HEAD` + uncommittete Änderungen im Working Tree
+Branches: `issue-48-odata-api` vs `main`
+Datum: 2026-06-07
+Effort: high
 
 ```json
 [
   {
-    "file": "src/Schnittstellenzentrale/OData/ODataApplicationsController.cs",
-    "line": 46,
-    "summary": "POST akzeptiert IsSystem=true im Request-Body und legt eine system-markierte Anwendung an.",
-    "failure_scenario": "Ein authentifizierter API-Client sendet POST /odatav4/Applications mit {\"Name\":\"x\",\"BaseUrl\":\"y\",\"IsSystem\":true}. Der Controller setzt nur Id und RowVersion zurück, nicht IsSystem. Die Anwendung wird mit IsSystem=true in der Datenbank gespeichert — danach kann sie weder via PUT/DELETE noch über die UI verändert werden, weil alle Write-Pfade IsSystem=true als Schutz werten."
-  },
-  {
     "file": "src/Schnittstellenzentrale/OData/ODataApplicationGroupsController.cs",
-    "line": 46,
-    "summary": "POST akzeptiert IsSystem=true im Request-Body und legt eine system-markierte Anwendungsgruppe an.",
-    "failure_scenario": "Analog zu ODataApplicationsController.Post: Ein Aufrufer kann eine ApplicationGroup mit IsSystem=true erstellen. Danach ist die Gruppe unveränderbar und unlöschbar über alle Write-Endpunkte (PUT/PATCH/DELETE prüfen IsSystem und geben 403 zurück), ohne dass es einen legitimen Weg gibt, diesen Zustand rückgängig zu machen."
+    "line": 72,
+    "summary": "PUT für ApplicationGroups ignoriert das Client-seitige RowVersion — optimistische Nebenläufigkeitskontrolle ist wirkungslos.",
+    "failure_scenario": "Client A liest ApplicationGroup(1) mit RowVersion=[1,2,3]. Client B ändert dieselbe Gruppe (RowVersion=[4,5,6]). Client A sendet PUT mit RowVersion=[1,2,3]. Der Controller lädt 'existing' (RowVersion=[4,5,6]), kopiert Name/Description/Subtitle/IconData, übergibt aber 'existing' (mit RowVersion=[4,5,6]) an UpdateGroupAsync. Das Repository setzt OriginalValue=[4,5,6] — der EF-Concurrency-Check vergleicht [4,5,6] mit [4,5,6] und sieht keinen Konflikt. Client A überschreibt stillschweigend die Änderungen von Client B. Gegensatz: ODataApplicationsController.Put wurde bereits mit concurrencyRowVersion-Logik gefixt — diese Korrektur fehlt hier."
+  },
+  {
+    "file": "src/Schnittstellenzentrale/OData/ODataEndpointsController.cs",
+    "line": 100,
+    "summary": "PUT für Endpoints ignoriert das Client-seitige RowVersion — optimistische Nebenläufigkeitskontrolle ist wirkungslos.",
+    "failure_scenario": "Analog zu ODataApplicationGroupsController.Put: Der Controller übergibt 'existing' (mit DB-RowVersion) an UpdateEndpointAsync. Das Repository setzt OriginalValue = existing.RowVersion = DB-Wert → Concurrency-Check vergleicht DB-Wert gegen sich selbst → immer erfolgreich. Zwei gleichzeitige Clients können denselben Endpoint überschreiben ohne DbUpdateConcurrencyException."
+  },
+  {
+    "file": "src/Schnittstellenzentrale/OData/ODataEndpointGroupsController.cs",
+    "line": 83,
+    "summary": "PUT für EndpointGroups ignoriert das Client-seitige RowVersion — optimistische Nebenläufigkeitskontrolle ist wirkungslos.",
+    "failure_scenario": "Analog zu den anderen Controllern: 'existing' wird mit unveränderter DB-RowVersion an UpdateEndpointGroupAsync übergeben. UpdateEndpointGroupAsync setzt OriginalValue = group.RowVersion (= DB-Wert). EF-Concurrency-Check ist wirkungslos — lost updates werden nicht erkannt."
   },
   {
     "file": "src/Schnittstellenzentrale/OData/ODataApplicationsController.cs",
-    "line": 58,
-    "summary": "PUT ignoriert das Client-seitige RowVersion — optimistische Nebenläufigkeitskontrolle ist für alle OData-PUT/PATCH-Operationen wirkungslos.",
-    "failure_scenario": "Client A liest Application(1) mit RowVersion=[1,2,3]. Client B liest und ändert dieselbe Ressource (RowVersion wird zu [4,5,6]). Client A sendet PUT mit RowVersion=[1,2,3] im Body. Der Controller lädt `existing` aus der DB (RowVersion=[4,5,6]), kopiert alle Felder von `entity` in `existing`, übergibt aber `existing` (nicht `entity`) an UpdateApplicationAsync. Im Repository wird `existing.RowVersion` (=[4,5,6]) als OriginalValue gesetzt — der EF-Concurrency-Check vergleicht [4,5,6] mit dem aktuellen DB-Wert [4,5,6] und sieht keinen Konflikt. Client A überschreibt stillschweigend die Änderungen von Client B."
+    "line": 72,
+    "summary": "Concurrency-Fallback akzeptiert leeres RowVersion vom Client und verwendet dann den DB-Wert — Schutz kann durch Weglassen des RowVersion im Request-Body umgangen werden.",
+    "failure_scenario": "var concurrencyRowVersion = entity.RowVersion.Length > 0 ? entity.RowVersion : existing.RowVersion — ein Client sendet PUT ohne RowVersion-Feld (oder mit leerem Array, was durch JSON-Deserialisierung Standard ist). entity.RowVersion.Length == 0 → Fallback auf existing.RowVersion (DB-Wert) → Concurrency-Check immer erfolgreich. Die Schutzfunktion ist opt-in statt opt-out: nur Clients, die explizit ein RowVersion mitsenden, profitieren davon."
   },
   {
     "file": "src/Schnittstellenzentrale/Components/Shared/ApplicationContentView.razor",
     "line": 3,
     "summary": "Blazor-Komponente injiziert IODataImportService direkt — verletzt die API-First-Architekturvorgabe aus CLAUDE.md.",
-    "failure_scenario": "Die Komponente ruft ODataImportService.ImportAsync und ApplyDiffAsync direkt auf, statt diese Funktionalität über IApplicationApiClient zu leiten. Das erzeugt eine direkte Abhängigkeit zwischen UI-Schicht und Infrastruktur-Service. Bei einem späteren Wechsel auf eine verteilte Architektur (z.B. separater Backend-Service) bricht dieser Aufruf, während alle IApplicationApiClient-Aufrufe transparent umgeleitet werden können. Außerdem umgeht es den einheitlichen HTTP-Client-basierten Fehlerbehandlungs- und Retry-Mechanismus."
-  },
-  {
-    "file": "src/Schnittstellenzentrale/OData/ODataControllerBase.cs",
-    "line": 23,
-    "summary": "Bei OData-Abfragevalidierungsfehlern ([EnableQuery]) kann die Authentifizierung umgangen werden — der Filter läuft ggf. nach dem OData-Framework.",
-    "failure_scenario": "ODataControllerBase implementiert IAsyncActionFilter, das vom MVC-Filter-Pipeline nach der OData-Query-Validierung ausgeführt werden kann. Wenn [EnableQuery] eine ungültige $filter-Anfrage ablehnt, liefert das Framework möglicherweise ein 400-Fehlerdetail zurück, bevor OnActionExecutionAsync greift. In der Praxis hängt die Reihenfolge von der Registrierung der OData- vs. MVC-Middleware ab — ein nicht-authentifizierter Client erhält ggf. strukturierte Fehlerdetails über das Datenbankschema (z.B. \"Property 'X' not found\")."
-  },
-  {
-    "file": "src/Schnittstellenzentrale/Program.cs",
-    "line": 76,
-    "summary": "SetMaxTop(null) entfernt jede serverseitige Obergrenze für OData-$top — unbeschränkte Tabellen-Dumps möglich.",
-    "failure_scenario": "Ein authentifizierter Client kann GET /odatav4/Endpoints ohne $top-Parameter senden und erhält alle Endpunkte in einer einzigen Antwort. In einer Instanz mit Tausenden von Endpunkten führt das zu hohem Speicher- und Serialisierungsaufwand auf dem Server. Da SetMaxTop(null) explizit kein Limit setzt, gibt es keinen Fallback-Schutz."
+    "failure_scenario": "CLAUDE.md: 'Alle Datenentitäten werden aus UI-Komponenten ausschließlich über IApplicationApiClient abgerufen. Direktzugriffe auf Repository-Interfaces aus Blazor-Komponenten sind nicht erlaubt.' IODataImportService greift direkt auf IEndpointRepository zu (in ApplyDiffAsync). Die Komponente bypässt die IApplicationApiClient-Abstraktionsschicht, was bei einer Umstellung auf eine verteilte Architektur (z. B. separater Backend-Service) bricht, während alle IApplicationApiClient-Aufrufe transparent umgeleitet werden können. Hinweis: ISwaggerImportService folgt demselben Muster — ggf. gilt die Regel nur für reine Datenzugriffs-Interfaces; klären."
   },
   {
     "file": "src/Schnittstellenzentrale/OData/ODataEndpointsController.cs",
-    "line": 68,
-    "summary": "PUT für Endpoints überträgt nicht ApplicationId — ein Endpoint kann aber implizit auf eine andere Anwendung verschoben werden, wenn der Aufrufer EndpointGroupId einer anderen Anwendung setzt.",
-    "failure_scenario": "Der PUT-Handler lässt `existing.EndpointGroupId = entity.EndpointGroupId` zu. Wenn entity.EndpointGroupId auf eine Gruppe einer anderen (fremden) Anwendung zeigt, wird der Endpoint in eine andere Anwendung verschoben, ohne dass die IsSystem-Prüfung für die Zielanwendung ausgeführt wird. Ein Endpoint aus einer normalen Anwendung könnte so in eine System-Anwendungs-Gruppe verschoben werden."
+    "line": 84,
+    "summary": "EndpointGroupId-Validierung in PUT prüft nicht, ob die Zielanwendung IsSystem=true ist — ein Endpoint kann in eine System-Gruppe verschoben werden.",
+    "failure_scenario": "Client sendet PUT /odatav4/Endpoints(5) mit EndpointGroupId=99, wobei Gruppe 99 zu einer System-Anwendung gehört. Der Validator prüft nur targetGroup.ApplicationId != existing.ApplicationId — nicht ob die Zielanwendung IsSystem ist. Da bestehende Endpoint-Anwendung != Ziel-Anwendung, schlägt bereits die ApplicationId-Prüfung an (BadRequest). Aber: falls ein Endpoint aus einer normalen Anwendung zu einer Gruppe derselben Anwendung (die IsSystem=false ist, aber die Gruppe wurde nachträglich zu IsSystem befördert) verschoben wird, greift kein Schutz. Konkret: EndpointGroup.Application.IsSystem wird nicht geprüft — nur existing.Application.IsSystem."
   },
   {
-    "file": "src/Schnittstellenzentrale/OData/ODataApplicationGroupsController.cs",
-    "line": 93,
-    "summary": "TryApplyPatch mit IconData-Base64-Validierung ist eine Kopie der entsprechenden Methode in ODataApplicationsController — Wartungsrisiko.",
-    "failure_scenario": "Beide Klassen haben eine identische private TryApplyPatch-Methode mit identischer IconData-Validierungslogik. Wird die Validierung (z.B. MIME-Typ-Prüfung) in einem der Controller erweitert, muss die Änderung manuell in den anderen übertragen werden. Vergisst man dies, verhalten sich die Endpunkte inkonsistent."
+    "file": "src/Schnittstellenzentrale/Components/Shared/ODataImportDialog.razor",
+    "line": 13,
+    "summary": "ApplyAsync delegiert jetzt direkt ohne eigene Fehlerbehandlung — Fehlertext kommt aus ImportDialog_Error_Apply statt ODataImportDialog_Error_Apply; der resx-Schlüssel ODataImportDialog_Error_Apply ist verwaist.",
+    "failure_scenario": "Kein Absturz, aber: Die Fehlermeldung bei einem Repository-Fehler während des OData-Imports wird jetzt aus ImportDialog_Error_Apply ('Fehler beim Übernehmen: {0}') formatiert statt aus dem spezifischeren ODataImportDialog_Error_Apply-Schlüssel. Der ODataImportDialog_Error_Apply-Schlüssel in beiden resx-Dateien ist toter Code, wird aber nicht entfernt. Wartungsrisiko: spätere Übersetzer pflegen zwei Schlüssel, von denen einer nie angezeigt wird."
+  },
+  {
+    "file": "src/Schnittstellenzentrale.Infrastructure/Services/ODataImportService.cs",
+    "line": 127,
+    "summary": "authenticate-Endpunkt wird nur hinzugefügt wenn er noch nicht existiert, aber der Pfad-Vergleich ist case-sensitiv und normalisiert nicht trailing-Slashes.",
+    "failure_scenario": "existingEndpoints.Any(e => e.Method == POST && e.RelativePath == authenticateEndpoint.RelativePath) — RelativePath aus BuildRelativePath verwendet StringComparison.OrdinalIgnoreCase für den Präfix-Check, aber der Ergebnis-String hat beliebige Groß-/Kleinschreibung je nach entityName. Der anschließende Vergleich e.RelativePath == authenticateEndpoint.RelativePath ist case-sensitiv (standard string ==). Falls ein bestehender Endpoint 'Authenticate' statt 'authenticate' heißt (oder trailing Slash abweicht), erkennt der Check keine Übereinstimmung → authenticate-Endpunkt wird doppelt importiert."
   }
 ]
 ```

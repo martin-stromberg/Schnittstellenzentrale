@@ -57,7 +57,8 @@ public class ODataImportServiceIntegrationTests : IClassFixture<ControllerTestFa
         factoryMock.Setup(f => f.CreateClient(It.IsAny<string>()))
             .Returns(new HttpClient(handlerMock.Object));
 
-        return new ODataImportService(factoryMock.Object, endpointRepository, NullLogger<ODataImportService>.Instance);
+        var credentialMock = new Mock<ICredentialService>();
+        return new ODataImportService(factoryMock.Object, endpointRepository, credentialMock.Object, NullLogger<ODataImportService>.Instance);
     }
 
     /// <summary>Import_NewODataApplication_PersistsEndpoints</summary>
@@ -80,13 +81,15 @@ public class ODataImportServiceIntegrationTests : IClassFixture<ControllerTestFa
 
         var diff = await service.ImportAsync(application);
 
-        Assert.Equal(2, diff.NewEndpoints.Count);
+        // GET Products, POST Products, + POST authenticate
+        Assert.Equal(3, diff.NewEndpoints.Count);
         Assert.Null(diff.ErrorMessage);
 
         await service.ApplyDiffAsync(diff);
 
         var persistedEndpoints = await endpointRepository.GetEndpointsAsync(application.Id);
-        Assert.Equal(2, persistedEndpoints.Count);
+        Assert.Equal(3, persistedEndpoints.Count);
         Assert.Contains(persistedEndpoints, e => e.RelativePath == "Products");
+        Assert.Contains(persistedEndpoints, e => e.Name == "POST authenticate");
     }
 }

@@ -42,7 +42,8 @@ public class ODataImportServiceRealMetadataTests
         factoryMock.Setup(f => f.CreateClient(It.IsAny<string>()))
             .Returns(new HttpClient(handlerMock.Object));
 
-        return new ODataImportService(factoryMock.Object, repoMock.Object, NullLogger<ODataImportService>.Instance);
+        var credentialMock = new Mock<ICredentialService>();
+        return new ODataImportService(factoryMock.Object, repoMock.Object, credentialMock.Object, NullLogger<ODataImportService>.Instance);
     }
 
     /// <summary>Import_RealMetadata_ReturnsCorrectEntitySetEndpoints</summary>

@@ -537,4 +537,235 @@ public class ODataControllerIntegrationTests : IClassFixture<ControllerTestFacto
         Assert.Equal(HttpStatusCode.OK, dataResponse.StatusCode);
     }
 
+    /// <summary>PostApplication_WithIsSystemTrue_IsSystemIsFalseInDb</summary>
+    [Fact]
+    public async Task PostApplication_WithIsSystemTrue_IsSystemIsFalseInDb()
+    {
+        var client = _factory.CreateClient();
+        var token = await ObtainTokenAsync(client);
+
+        var request = CreateRequest(HttpMethod.Post, "/odatav4/Applications", token);
+        request.Content = JsonContent.Create(new Application
+        {
+            Name = "IsSystemPostApp",
+            BaseUrl = "https://issystem-post.example.com",
+            IsSystem = true
+        });
+
+        var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        var content = await response.Content.ReadAsStringAsync();
+        var saved = JsonSerializer.Deserialize<Application>(content, JsonOptions);
+        Assert.NotNull(saved);
+        Assert.False(saved.IsSystem);
+    }
+
+    /// <summary>PostApplicationGroup_WithIsSystemTrue_IsSystemIsFalseInDb</summary>
+    [Fact]
+    public async Task PostApplicationGroup_WithIsSystemTrue_IsSystemIsFalseInDb()
+    {
+        var client = _factory.CreateClient();
+        var token = await ObtainTokenAsync(client);
+
+        var request = CreateRequest(HttpMethod.Post, "/odatav4/ApplicationGroups", token);
+        request.Content = JsonContent.Create(new ApplicationGroup
+        {
+            Name = "IsSystemPostGroup",
+            IsSystem = true
+        });
+
+        var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        var content = await response.Content.ReadAsStringAsync();
+        var saved = JsonSerializer.Deserialize<ApplicationGroup>(content, JsonOptions);
+        Assert.NotNull(saved);
+        Assert.False(saved.IsSystem);
+    }
+
+    /// <summary>PutApplication_WithRowVersion_AppliesConcurrencyCheck</summary>
+    [Fact]
+    public async Task PutApplication_WithRowVersion_AppliesConcurrencyCheck()
+    {
+        var client = _factory.CreateClient();
+        var token = await ObtainTokenAsync(client);
+
+        var repo = _factory.Services.GetRequiredService<IApplicationRepository>();
+        var app = await repo.AddApplicationAsync(new Application { Name = "ConcurrencyApp", BaseUrl = "https://concurrency.example.com" });
+
+        var savedApp = await repo.GetApplicationByIdAsync(app.Id);
+        Assert.NotNull(savedApp);
+
+        var request = CreateRequest(HttpMethod.Put, $"/odatav4/Applications({app.Id})", token);
+        request.Content = JsonContent.Create(new Application
+        {
+            Name = "ConcurrencyAppUpdated",
+            BaseUrl = "https://concurrency.example.com",
+            RowVersion = savedApp.RowVersion
+        });
+
+        var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    /// <summary>PutEndpoint_WithEndpointGroupFromDifferentApplication_Returns400</summary>
+    [Fact]
+    public async Task PutEndpoint_WithEndpointGroupFromDifferentApplication_Returns400()
+    {
+        var client = _factory.CreateClient();
+        var token = await ObtainTokenAsync(client);
+
+        var appRepo = _factory.Services.GetRequiredService<IApplicationRepository>();
+        var endpointRepo = _factory.Services.GetRequiredService<IEndpointRepository>();
+
+        var app1 = await appRepo.AddApplicationAsync(new Application { Name = "App1CrossGroup", BaseUrl = "https://app1-cross.example.com" });
+        var app2 = await appRepo.AddApplicationAsync(new Application { Name = "App2CrossGroup", BaseUrl = "https://app2-cross.example.com" });
+
+        var endpoint = await endpointRepo.AddEndpointAsync(new Core.Models.Endpoint
+        {
+            Name = "GET Test",
+            Method = Core.Enums.HttpMethod.GET,
+            RelativePath = "/test",
+            ApplicationId = app1.Id
+        });
+
+        var foreignGroup = await endpointRepo.AddEndpointGroupAsync(new EndpointGroup
+        {
+            Name = "ForeignGroup",
+            ApplicationId = app2.Id
+        });
+
+        var request = CreateRequest(HttpMethod.Put, $"/odatav4/Endpoints({endpoint.Id})", token);
+        request.Content = JsonContent.Create(new Core.Models.Endpoint
+        {
+            Name = "GET Test",
+            Method = Core.Enums.HttpMethod.GET,
+            RelativePath = "/test",
+            ApplicationId = app1.Id,
+            EndpointGroupId = foreignGroup.Id
+        });
+
+        var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    /// <summary>PutEndpoint_WithEndpointGroupFromSameApplication_Returns200</summary>
+    [Fact]
+    public async Task PutEndpoint_WithEndpointGroupFromSameApplication_Returns200()
+    {
+        var client = _factory.CreateClient();
+        var token = await ObtainTokenAsync(client);
+
+        var appRepo = _factory.Services.GetRequiredService<IApplicationRepository>();
+        var endpointRepo = _factory.Services.GetRequiredService<IEndpointRepository>();
+
+        var app = await appRepo.AddApplicationAsync(new Application { Name = "AppSameGroup", BaseUrl = "https://app-same-group.example.com" });
+
+        var endpoint = await endpointRepo.AddEndpointAsync(new Core.Models.Endpoint
+        {
+            Name = "GET SameGroup",
+            Method = Core.Enums.HttpMethod.GET,
+            RelativePath = "/same",
+            ApplicationId = app.Id
+        });
+
+        var ownGroup = await endpointRepo.AddEndpointGroupAsync(new EndpointGroup
+        {
+            Name = "OwnGroup",
+            ApplicationId = app.Id
+        });
+
+        var request = CreateRequest(HttpMethod.Put, $"/odatav4/Endpoints({endpoint.Id})", token);
+        request.Content = JsonContent.Create(new Core.Models.Endpoint
+        {
+            Name = "GET SameGroup",
+            Method = Core.Enums.HttpMethod.GET,
+            RelativePath = "/same",
+            ApplicationId = app.Id,
+            EndpointGroupId = ownGroup.Id
+        });
+
+        var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    /// <summary>PatchEndpoint_WithEndpointGroupFromDifferentApplication_Returns400</summary>
+    [Fact]
+    public async Task PatchEndpoint_WithEndpointGroupFromDifferentApplication_Returns400()
+    {
+        var client = _factory.CreateClient();
+        var token = await ObtainTokenAsync(client);
+
+        var appRepo = _factory.Services.GetRequiredService<IApplicationRepository>();
+        var endpointRepo = _factory.Services.GetRequiredService<IEndpointRepository>();
+
+        var app1 = await appRepo.AddApplicationAsync(new Application { Name = "PatchApp1CrossGroup", BaseUrl = "https://patch-app1-cross.example.com" });
+        var app2 = await appRepo.AddApplicationAsync(new Application { Name = "PatchApp2CrossGroup", BaseUrl = "https://patch-app2-cross.example.com" });
+
+        var endpoint = await endpointRepo.AddEndpointAsync(new Core.Models.Endpoint
+        {
+            Name = "GET PatchCross",
+            Method = Core.Enums.HttpMethod.GET,
+            RelativePath = "/patch-cross",
+            ApplicationId = app1.Id
+        });
+
+        var foreignGroup = await endpointRepo.AddEndpointGroupAsync(new EndpointGroup
+        {
+            Name = "PatchForeignGroup",
+            ApplicationId = app2.Id
+        });
+
+        var request = CreateRequest(HttpMethod.Patch, $"/odatav4/Endpoints({endpoint.Id})", token);
+        request.Content = new StringContent(
+            $$$"""{"EndpointGroupId":{{{foreignGroup.Id}}}}""",
+            System.Text.Encoding.UTF8,
+            "application/json");
+
+        var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    /// <summary>PatchEndpoint_WithEndpointGroupFromSameApplication_Returns200</summary>
+    [Fact]
+    public async Task PatchEndpoint_WithEndpointGroupFromSameApplication_Returns200()
+    {
+        var client = _factory.CreateClient();
+        var token = await ObtainTokenAsync(client);
+
+        var appRepo = _factory.Services.GetRequiredService<IApplicationRepository>();
+        var endpointRepo = _factory.Services.GetRequiredService<IEndpointRepository>();
+
+        var app = await appRepo.AddApplicationAsync(new Application { Name = "PatchAppSameGroup", BaseUrl = "https://patch-app-same-group.example.com" });
+
+        var endpoint = await endpointRepo.AddEndpointAsync(new Core.Models.Endpoint
+        {
+            Name = "GET PatchSame",
+            Method = Core.Enums.HttpMethod.GET,
+            RelativePath = "/patch-same",
+            ApplicationId = app.Id
+        });
+
+        var ownGroup = await endpointRepo.AddEndpointGroupAsync(new EndpointGroup
+        {
+            Name = "PatchOwnGroup",
+            ApplicationId = app.Id
+        });
+
+        var request = CreateRequest(HttpMethod.Patch, $"/odatav4/Endpoints({endpoint.Id})", token);
+        request.Content = new StringContent(
+            $$$"""{"EndpointGroupId":{{{ownGroup.Id}}}}""",
+            System.Text.Encoding.UTF8,
+            "application/json");
+
+        var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
 }

@@ -25,6 +25,9 @@ public class ODataEndpointsController : ODataControllerBase
     }
 
     /// <summary>Gibt alle Endpunkte zurück.</summary>
+    // IEndpointRepository gibt IList<> zurück, kein IQueryable<>. [EnableQuery] filtert daher
+    // in-memory (LINQ-to-Objects) statt auf DB-Ebene. Ein IQueryable-Repository ist nicht
+    // vorgesehen; der Aufwand wäre unverhältnismäßig für die erwarteten Datenmengen.
     [EnableQuery]
     [HttpGet("Endpoints")]
     public async Task<IActionResult> Get()
@@ -77,6 +80,13 @@ public class ODataEndpointsController : ODataControllerBase
         if (existing.Application.IsSystem)
             return StatusCode(StatusCodes.Status403Forbidden);
 
+        if (entity.EndpointGroupId != null)
+        {
+            var targetGroup = await _endpointRepository.GetEndpointGroupByIdAsync(entity.EndpointGroupId.Value);
+            if (targetGroup == null || targetGroup.ApplicationId != existing.ApplicationId)
+                return BadRequest("Die angegebene EndpointGroup gehört nicht zur selben Anwendung.");
+        }
+
         existing.Name = entity.Name;
         existing.Method = entity.Method;
         existing.RelativePath = entity.RelativePath;
@@ -106,6 +116,13 @@ public class ODataEndpointsController : ODataControllerBase
             return StatusCode(StatusCodes.Status403Forbidden);
 
         ApplyPatch(patch, existing);
+
+        if (existing.EndpointGroupId != null)
+        {
+            var targetGroup = await _endpointRepository.GetEndpointGroupByIdAsync(existing.EndpointGroupId.Value);
+            if (targetGroup == null || targetGroup.ApplicationId != existing.ApplicationId)
+                return BadRequest("Die angegebene EndpointGroup gehört nicht zur selben Anwendung.");
+        }
 
         var saved = await _endpointRepository.UpdateEndpointAsync(existing);
         return Ok(saved);

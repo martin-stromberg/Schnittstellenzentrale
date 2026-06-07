@@ -47,7 +47,8 @@ public class ODataImportServiceTests
         factoryMock.Setup(f => f.CreateClient(It.IsAny<string>()))
             .Returns(new HttpClient(handlerMock.Object));
 
-        return new ODataImportService(factoryMock.Object, repoMock.Object, NullLogger<ODataImportService>.Instance);
+        var credentialMock = new Mock<ICredentialService>();
+        return new ODataImportService(factoryMock.Object, repoMock.Object, credentialMock.Object, NullLogger<ODataImportService>.Instance);
     }
 
     private static ODataImportService CreateServiceWithErrorHandler(Mock<IEndpointRepository> repoMock)
@@ -63,7 +64,8 @@ public class ODataImportServiceTests
         factoryMock.Setup(f => f.CreateClient(It.IsAny<string>()))
             .Returns(new HttpClient(handlerMock.Object));
 
-        return new ODataImportService(factoryMock.Object, repoMock.Object, NullLogger<ODataImportService>.Instance);
+        var credentialMock = new Mock<ICredentialService>();
+        return new ODataImportService(factoryMock.Object, repoMock.Object, credentialMock.Object, NullLogger<ODataImportService>.Instance);
     }
 
     private static ODataImportService CreateServiceWithCancellationHandler(Mock<IEndpointRepository> repoMock)
@@ -79,7 +81,8 @@ public class ODataImportServiceTests
         factoryMock.Setup(f => f.CreateClient(It.IsAny<string>()))
             .Returns(new HttpClient(handlerMock.Object));
 
-        return new ODataImportService(factoryMock.Object, repoMock.Object, NullLogger<ODataImportService>.Instance);
+        var credentialMock = new Mock<ICredentialService>();
+        return new ODataImportService(factoryMock.Object, repoMock.Object, credentialMock.Object, NullLogger<ODataImportService>.Instance);
     }
 
     /// <summary>Import_NewODataMetadata_ReturnsCorrectDiff</summary>
@@ -93,7 +96,11 @@ public class ODataImportServiceTests
 
         var diff = await service.ImportAsync(app);
 
-        Assert.Equal(2, diff.NewEndpoints.Count);
+        // GET Products, POST Products, + POST authenticate
+        Assert.Equal(3, diff.NewEndpoints.Count);
+        Assert.Contains(diff.NewEndpoints, e => e.Name == "GET Products");
+        Assert.Contains(diff.NewEndpoints, e => e.Name == "POST Products");
+        Assert.Contains(diff.NewEndpoints, e => e.Name == "POST authenticate");
         Assert.Empty(diff.ChangedEndpoints);
         Assert.Empty(diff.RemovedEndpoints);
     }
@@ -220,5 +227,131 @@ public class ODataImportServiceTests
         repoMock.Verify(r => r.AddEndpointAsync(newEndpoint), Times.Once);
         repoMock.Verify(r => r.UpdateEndpointAsync(changedEndpoint), Times.Once);
         repoMock.Verify(r => r.DeleteEndpointAsync(removedEndpoint.Id), Times.Once);
+    }
+
+    /// <summary>Import_BaseUrlMatchesServiceUrl_UsesEntityNameAsRelativePath</summary>
+    [Fact]
+    public async Task Import_BaseUrlMatchesServiceUrl_UsesEntityNameAsRelativePath()
+    {
+        var repoMock = new Mock<IEndpointRepository>();
+        repoMock.Setup(r => r.GetEndpointsAsync(It.IsAny<int>())).ReturnsAsync([]);
+        var service = CreateService(ODataMetadata, repoMock);
+        var app = new Core.Models.Application
+        {
+            Id = 1,
+            InterfaceUrl = "http://localhost/odatav4/$metadata",
+            InterfaceType = Core.Enums.InterfaceType.OData,
+            BaseUrl = "http://localhost/odatav4"
+        };
+
+        var diff = await service.ImportAsync(app);
+
+        var productsGet = diff.NewEndpoints.FirstOrDefault(e => e.Name == "GET Products");
+        Assert.NotNull(productsGet);
+        Assert.Equal("Products", productsGet.RelativePath);
+    }
+
+    /// <summary>Import_BaseUrlDiffersFromServiceUrl_UsesSubpathAsRelativePath</summary>
+    [Fact]
+    public async Task Import_BaseUrlDiffersFromServiceUrl_UsesSubpathAsRelativePath()
+    {
+        var repoMock = new Mock<IEndpointRepository>();
+        repoMock.Setup(r => r.GetEndpointsAsync(It.IsAny<int>())).ReturnsAsync([]);
+        var service = CreateService(ODataMetadata, repoMock);
+        var app = new Core.Models.Application
+        {
+            Id = 1,
+            InterfaceUrl = "http://localhost/odatav4/$metadata",
+            InterfaceType = Core.Enums.InterfaceType.OData,
+            BaseUrl = "http://localhost"
+        };
+
+        var diff = await service.ImportAsync(app);
+
+        var productsGet = diff.NewEndpoints.FirstOrDefault(e => e.Name == "GET Products");
+        Assert.NotNull(productsGet);
+        Assert.Equal("odatav4/Products", productsGet.RelativePath);
+    }
+
+    /// <summary>Import_AuthenticateEndpointNotYetPresent_IsAddedToNewEndpoints</summary>
+    [Fact]
+    public async Task Import_AuthenticateEndpointNotYetPresent_IsAddedToNewEndpoints()
+    {
+        var repoMock = new Mock<IEndpointRepository>();
+        repoMock.Setup(r => r.GetEndpointsAsync(It.IsAny<int>())).ReturnsAsync([]);
+        var service = CreateService(ODataMetadata, repoMock);
+        var app = new Core.Models.Application
+        {
+            Id = 1,
+            InterfaceUrl = "http://localhost/$metadata",
+            InterfaceType = Core.Enums.InterfaceType.OData,
+            BaseUrl = "http://localhost"
+        };
+
+        var diff = await service.ImportAsync(app);
+
+        Assert.Contains(diff.NewEndpoints, e => e.Name == "POST authenticate" && e.Method == Core.Enums.HttpMethod.POST);
+    }
+
+    /// <summary>Import_AuthenticateEndpointAlreadyPresent_IsNotDuplicated</summary>
+    [Fact]
+    public async Task Import_AuthenticateEndpointAlreadyPresent_IsNotDuplicated()
+    {
+        var existing = new List<Core.Models.Endpoint>
+        {
+            new() { Id = 10, Name = "POST authenticate", Method = Core.Enums.HttpMethod.POST, RelativePath = "authenticate", ApplicationId = 1 }
+        };
+        var repoMock = new Mock<IEndpointRepository>();
+        repoMock.Setup(r => r.GetEndpointsAsync(It.IsAny<int>())).ReturnsAsync(existing);
+        var service = CreateService(ODataMetadata, repoMock);
+        var app = new Core.Models.Application
+        {
+            Id = 1,
+            InterfaceUrl = "http://localhost/$metadata",
+            InterfaceType = Core.Enums.InterfaceType.OData,
+            BaseUrl = "http://localhost"
+        };
+
+        var diff = await service.ImportAsync(app);
+
+        Assert.DoesNotContain(diff.NewEndpoints, e => e.Name == "POST authenticate");
+    }
+
+    /// <summary>Import_WithExistingBearerToken_SetsAuthTypeOnEndpoints</summary>
+    [Fact]
+    public async Task Import_WithExistingBearerToken_SetsAuthTypeOnEndpoints()
+    {
+        var repoMock = new Mock<IEndpointRepository>();
+        repoMock.Setup(r => r.GetEndpointsAsync(It.IsAny<int>())).ReturnsAsync([]);
+
+        var handlerMock = new Mock<HttpMessageHandler>();
+        handlerMock.Protected()
+            .Setup<Task<HttpResponseMessage>>("SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>())
+            .ReturnsAsync(new HttpResponseMessage(System.Net.HttpStatusCode.OK)
+            {
+                Content = new System.Net.Http.StringContent(ODataMetadata, System.Text.Encoding.UTF8, "application/xml")
+            });
+        var factoryMock = new Mock<IHttpClientFactory>();
+        factoryMock.Setup(f => f.CreateClient(It.IsAny<string>()))
+            .Returns(new HttpClient(handlerMock.Object));
+
+        var credentialMock = new Mock<ICredentialService>();
+        credentialMock.Setup(c => c.GetPassword(It.IsAny<string>())).Returns("my-token");
+
+        var service = new ODataImportService(factoryMock.Object, repoMock.Object, credentialMock.Object, Microsoft.Extensions.Logging.Abstractions.NullLogger<ODataImportService>.Instance);
+        var app = new Core.Models.Application
+        {
+            Id = 1,
+            InterfaceUrl = "http://localhost/$metadata",
+            InterfaceType = Core.Enums.InterfaceType.OData,
+            BaseUrl = "http://localhost"
+        };
+
+        var diff = await service.ImportAsync(app);
+
+        Assert.All(diff.NewEndpoints, e => Assert.Equal(Core.Enums.AuthenticationType.BearerToken, e.AuthenticationType));
+        Assert.True(diff.BearerTokens.Values.All(v => v == "my-token"));
     }
 }

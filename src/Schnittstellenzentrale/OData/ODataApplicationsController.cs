@@ -46,6 +46,7 @@ public class ODataApplicationsController : ODataControllerBase
     public async Task<IActionResult> Post([FromBody] Application entity)
     {
         entity.Id = 0;
+        entity.IsSystem = false;
         entity.RowVersion = [];
         entity.InterfaceType = Application.DetectInterfaceType(entity.InterfaceUrl);
 
@@ -64,6 +65,12 @@ public class ODataApplicationsController : ODataControllerBase
         if (existing.IsSystem)
             return StatusCode(StatusCodes.Status403Forbidden);
 
+        // DB-RowVersion sichern, bevor Felder überschrieben werden.
+        // Das Repository setzt OriginalValue = existing.RowVersion für den EF-Concurrency-Check.
+        // Daher muss existing.RowVersion den vom Client gesendeten Wert enthalten — nicht den beim
+        // Laden gelesenen DB-Wert, da sonst der Check immer erfolgreich wäre.
+        var concurrencyRowVersion = entity.RowVersion.Length > 0 ? entity.RowVersion : existing.RowVersion;
+
         existing.Name = entity.Name;
         existing.Description = entity.Description;
         existing.BaseUrl = entity.BaseUrl;
@@ -73,6 +80,7 @@ public class ODataApplicationsController : ODataControllerBase
         existing.ApplicationGroupId = entity.ApplicationGroupId;
         existing.Subtitle = entity.Subtitle;
         existing.IconData = entity.IconData;
+        existing.RowVersion = concurrencyRowVersion;
 
         var saved = await _applicationRepository.UpdateApplicationAsync(existing);
         return Ok(saved);
@@ -89,59 +97,13 @@ public class ODataApplicationsController : ODataControllerBase
         if (existing.IsSystem)
             return StatusCode(StatusCodes.Status403Forbidden);
 
-        if (!TryApplyPatch(patch, existing, out var error))
+        if (!ODataPatchHelper.TryApplyPatch(patch, existing, out var error))
             return BadRequest(error);
 
         existing.InterfaceType = Application.DetectInterfaceType(existing.InterfaceUrl);
 
         var saved = await _applicationRepository.UpdateApplicationAsync(existing);
         return Ok(saved);
-    }
-
-    // Bleibt privat: Die Signatur (bool + out error für IconData-Base64-Validierung) unterscheidet sich
-    // von den void-ApplyPatch-Methoden der anderen OData-Controller und eignet sich nicht für eine
-    // gemeinsame protected-Methode in ODataControllerBase.
-    private static bool TryApplyPatch(JsonElement patch, Application target, out string? error)
-    {
-        error = null;
-        foreach (var prop in patch.EnumerateObject())
-        {
-            switch (prop.Name.ToLowerInvariant())
-            {
-                case "name": target.Name = prop.Value.GetString() ?? target.Name; break;
-                case "description": target.Description = prop.Value.GetString() ?? target.Description; break;
-                case "baseurl": target.BaseUrl = prop.Value.GetString() ?? target.BaseUrl; break;
-                case "interfaceurl": target.InterfaceUrl = prop.Value.ValueKind == JsonValueKind.Null ? null : prop.Value.GetString(); break;
-                case "owner": target.Owner = prop.Value.ValueKind == JsonValueKind.Null ? null : prop.Value.GetString(); break;
-                case "applicationgroupid": target.ApplicationGroupId = prop.Value.ValueKind == JsonValueKind.Null ? null : prop.Value.GetInt32(); break;
-                case "subtitle": target.Subtitle = prop.Value.ValueKind == JsonValueKind.Null ? null : prop.Value.GetString(); break;
-                case "icondata":
-                    if (prop.Value.ValueKind == JsonValueKind.Null)
-                    {
-                        target.IconData = null;
-                    }
-                    else
-                    {
-                        var raw = prop.Value.GetString();
-                        if (raw == null)
-                        {
-                            error = "IconData muss ein gültiger Base64-String sein.";
-                            return false;
-                        }
-                        try
-                        {
-                            target.IconData = Convert.FromBase64String(raw);
-                        }
-                        catch (FormatException)
-                        {
-                            error = "IconData muss ein gültiger Base64-String sein.";
-                            return false;
-                        }
-                    }
-                    break;
-            }
-        }
-        return true;
     }
 
     /// <summary>Löscht eine Anwendung.</summary>
