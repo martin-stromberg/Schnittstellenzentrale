@@ -388,27 +388,39 @@ public class ApplicationApiClient : IApplicationApiClient
     }
 
     /// <inheritdoc/>
-    public async Task<ImportDiff> ImportSwaggerMetadataAsync(int applicationId)
+    public async Task<ImportDiff> ImportMetadataAsync(int applicationId)
     {
         var baseUrl = GetBaseUrl();
         var storageMode = _storageModeService.CurrentMode;
 
-        var response = await SendWithTokenAsync<ImportDiff>(
-            t => BuildRequestWithBody(HttpMethod.Post, $"{baseUrl}/api/applications/{applicationId}/import/swagger", (object?)null, storageMode, t));
+        var httpResponse = await ExecuteWithTokenAsync(
+            t => BuildRequestWithBody(HttpMethod.Post, $"{baseUrl}/api/applications/{applicationId}/import", (object?)null, storageMode, t));
 
-        return response;
+        if (httpResponse.StatusCode == System.Net.HttpStatusCode.UnprocessableEntity)
+        {
+            var errorBody = await TryReadErrorMessageAsync(httpResponse);
+            return new ImportDiff { ErrorMessage = errorBody ?? "Interface-Typ nicht unterstützt" };
+        }
+
+        httpResponse.EnsureSuccessStatusCode();
+
+        return await httpResponse.Content.ReadFromJsonAsync<ImportDiff>()
+            ?? throw new InvalidOperationException("Response deserialization returned null.");
     }
 
-    /// <inheritdoc/>
-    public async Task<ImportDiff> ImportODataMetadataAsync(int applicationId)
+    private static async Task<string?> TryReadErrorMessageAsync(HttpResponseMessage response)
     {
-        var baseUrl = GetBaseUrl();
-        var storageMode = _storageModeService.CurrentMode;
-
-        var response = await SendWithTokenAsync<ImportDiff>(
-            t => BuildRequestWithBody(HttpMethod.Post, $"{baseUrl}/api/applications/{applicationId}/import/odata", (object?)null, storageMode, t));
-
-        return response;
+        try
+        {
+            var body = await response.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>();
+            if (body.TryGetProperty("errorMessage", out var prop))
+                return prop.GetString();
+        }
+        catch
+        {
+            // Body ist optional — Parsing-Fehler werden ignoriert
+        }
+        return null;
     }
 
     /// <inheritdoc/>

@@ -46,6 +46,7 @@ public class ODataImportTests : PlaywrightTestBase
             .Filter(new() { Has = Page.Locator(".sz-tree-item-btn", new() { HasText = "OData-Test-Anwendung" }) })
             .Locator(".sz-tree-chevron-btn");
         await appChevron.ClickAsync();
+        await appChevron.ClickAsync();
 
         await Assertions.Expect(Page.Locator(".sz-tree-item-btn", new() { HasText = "GET Applications" })).ToBeVisibleAsync();
     }

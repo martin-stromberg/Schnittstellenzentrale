@@ -832,9 +832,9 @@ public class ApplicationApiClientTests
             ItExpr.IsAny<CancellationToken>());
     }
 
-    /// <summary>ImportSwaggerMetadataAsync_SendsCorrectPostRequestAndReturnsDiff</summary>
+    /// <summary>ImportMetadataAsync_SendsCorrectPostRequestAndReturnsDiff</summary>
     [Fact]
-    public async Task ImportSwaggerMetadataAsync_SendsCorrectPostRequestAndReturnsDiff()
+    public async Task ImportMetadataAsync_SendsCorrectPostRequestAndReturnsDiff()
     {
         var authToken = Guid.NewGuid().ToString();
         var newToken = Guid.NewGuid().ToString();
@@ -846,7 +846,7 @@ public class ApplicationApiClientTests
 
         var (apiClient, handlerMock, tokenStoreMock) = CreateClient(authToken, newToken, HttpStatusCode.OK, responseJson);
 
-        var result = await apiClient.ImportSwaggerMetadataAsync(5);
+        var result = await apiClient.ImportMetadataAsync(5);
 
         Assert.NotNull(result);
         Assert.Single(result.NewEndpoints);
@@ -858,7 +858,7 @@ public class ApplicationApiClientTests
             "SendAsync",
             Times.Once(),
             ItExpr.Is<HttpRequestMessage>(r =>
-                r.RequestUri!.AbsolutePath == "/api/applications/5/import/swagger" &&
+                r.RequestUri!.AbsolutePath == "/api/applications/5/import" &&
                 r.Method == HttpMethod.Post &&
                 r.Headers.Authorization != null &&
                 r.Headers.Authorization.Parameter == authToken &&
@@ -866,36 +866,20 @@ public class ApplicationApiClientTests
             ItExpr.IsAny<CancellationToken>());
     }
 
-    /// <summary>ImportODataMetadataAsync_SendsCorrectPostRequestAndReturnsDiff</summary>
+    /// <summary>ImportMetadataAsync_On422_ReturnsImportDiffWithErrorMessage</summary>
     [Fact]
-    public async Task ImportODataMetadataAsync_SendsCorrectPostRequestAndReturnsDiff()
+    public async Task ImportMetadataAsync_On422_ReturnsImportDiffWithErrorMessage()
     {
         var authToken = Guid.NewGuid().ToString();
         var newToken = Guid.NewGuid().ToString();
-        var diff = new ImportDiff
-        {
-            ErrorMessage = "Metadaten nicht erreichbar"
-        };
-        var responseJson = JsonSerializer.Serialize(diff);
+        var errorBody = JsonSerializer.Serialize(new { errorMessage = "Interface-Typ nicht unterstützt" });
 
-        var (apiClient, handlerMock, tokenStoreMock) = CreateClient(authToken, newToken, HttpStatusCode.OK, responseJson);
+        var (apiClient, _, _) = CreateClient(authToken, newToken, HttpStatusCode.UnprocessableEntity, errorBody);
 
-        var result = await apiClient.ImportODataMetadataAsync(7);
+        var result = await apiClient.ImportMetadataAsync(5);
 
         Assert.NotNull(result);
-        Assert.Equal("Metadaten nicht erreichbar", result.ErrorMessage);
-
-        tokenStoreMock.Verify(s => s.CreateTokenAsync("testuser"), Times.Once());
-
-        handlerMock.Protected().Verify(
-            "SendAsync",
-            Times.Once(),
-            ItExpr.Is<HttpRequestMessage>(r =>
-                r.RequestUri!.AbsolutePath == "/api/applications/7/import/odata" &&
-                r.Method == HttpMethod.Post &&
-                r.Headers.Authorization != null &&
-                r.Headers.Authorization.Parameter == authToken &&
-                r.Headers.Contains("X-Storage-Mode")),
-            ItExpr.IsAny<CancellationToken>());
+        Assert.NotNull(result.ErrorMessage);
+        Assert.False(string.IsNullOrEmpty(result.ErrorMessage));
     }
 }

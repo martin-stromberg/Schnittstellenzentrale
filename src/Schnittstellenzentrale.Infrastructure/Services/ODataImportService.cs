@@ -144,17 +144,43 @@ public class ODataImportService : IODataImportService
             }
 
             await _endpointRepository.AddEndpointAsync(endpoint);
-            SaveBearerTokenIfPresent(endpoint, diff);
         }
 
         foreach (var endpoint in diff.ChangedEndpoints)
-        {
             await _endpointRepository.UpdateEndpointAsync(endpoint);
-            SaveBearerTokenIfPresent(endpoint, diff);
-        }
 
         foreach (var endpoint in diff.RemovedEndpoints)
             await _endpointRepository.DeleteEndpointAsync(endpoint.Id);
+
+        SaveBearerTokenOnce(diff);
+    }
+
+    private void SaveBearerTokenOnce(ImportDiff diff)
+    {
+        var allEndpoints = diff.NewEndpoints.Concat(diff.ChangedEndpoints);
+        var writtenTargets = new HashSet<string>();
+        foreach (var endpoint in allEndpoints)
+        {
+            if (endpoint.AuthenticationType != AuthenticationType.BearerToken)
+                continue;
+
+            var key = EndpointKeyHelper.BuildKey(endpoint);
+            if (!diff.BearerTokens.TryGetValue(key, out var tokenValue))
+                continue;
+
+            var credentialTarget = CredentialTargetHelper.Build(endpoint.ApplicationId, AuthenticationType.BearerToken);
+            if (!writtenTargets.Add(credentialTarget))
+                continue;
+
+            try
+            {
+                _credentialService.SavePassword(credentialTarget, string.Empty, tokenValue);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Credential Manager konnte für Anwendung {ApplicationId} nicht beschrieben werden.", endpoint.ApplicationId);
+            }
+        }
     }
 
     private static string? ExtractEntitySetName(string endpointName)
@@ -252,9 +278,13 @@ public class ODataImportService : IODataImportService
                     result[name] = annotations;
             }
         }
-        catch
+        catch (XmlException)
         {
             // Annotationen sind optional — Parsing-Fehler werden ignoriert
+        }
+        catch (InvalidOperationException)
+        {
+            // Annotationen sind optional — LINQ-Traversal-Fehler werden ignoriert
         }
         return result;
     }
@@ -293,23 +323,4 @@ public class ODataImportService : IODataImportService
         }
     }
 
-    private void SaveBearerTokenIfPresent(Core.Models.Endpoint endpoint, ImportDiff diff)
-    {
-        if (endpoint.AuthenticationType != AuthenticationType.BearerToken)
-            return;
-
-        var key = EndpointKeyHelper.BuildKey(endpoint);
-        if (!diff.BearerTokens.TryGetValue(key, out var tokenValue))
-            return;
-
-        try
-        {
-            var credentialTarget = CredentialTargetHelper.Build(endpoint.ApplicationId, AuthenticationType.BearerToken);
-            _credentialService.SavePassword(credentialTarget, string.Empty, tokenValue);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Credential Manager konnte für Endpunkt {Key} nicht beschrieben werden.", key);
-        }
-    }
 }

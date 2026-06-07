@@ -104,12 +104,15 @@ public class ODataControllerIntegrationTests : IClassFixture<ControllerTestFacto
 
         var repo = _factory.Services.GetRequiredService<IApplicationRepository>();
         var app = await repo.AddApplicationAsync(new Application { Name = "PutApp", BaseUrl = "https://put.example.com" });
+        var saved = await repo.GetApplicationByIdAsync(app.Id);
+        Assert.NotNull(saved);
 
         var request = CreateRequest(HttpMethod.Put, $"/odatav4/Applications({app.Id})", token);
         request.Content = JsonContent.Create(new Application
         {
             Name = "PutAppUpdated",
-            BaseUrl = "https://put-updated.example.com"
+            BaseUrl = "https://put-updated.example.com",
+            RowVersion = saved.RowVersion
         });
 
         var response = await client.SendAsync(request);
@@ -331,13 +334,16 @@ public class ODataControllerIntegrationTests : IClassFixture<ControllerTestFacto
 
         var repo = _factory.Services.GetRequiredService<IApplicationRepository>();
         var app = await repo.AddApplicationAsync(new Application { Name = "ElevateApp", BaseUrl = "https://elevate.example.com", IsSystem = false });
+        var saved = await repo.GetApplicationByIdAsync(app.Id);
+        Assert.NotNull(saved);
 
         var request = CreateRequest(HttpMethod.Put, $"/odatav4/Applications({app.Id})", token);
         request.Content = JsonContent.Create(new Application
         {
             Name = "ElevateApp",
             BaseUrl = "https://elevate.example.com",
-            IsSystem = true
+            IsSystem = true,
+            RowVersion = saved.RowVersion
         });
 
         var response = await client.SendAsync(request);
@@ -616,6 +622,8 @@ public class ODataControllerIntegrationTests : IClassFixture<ControllerTestFacto
             RelativePath = "/test",
             ApplicationId = app1.Id
         });
+        var savedEndpoint = await endpointRepo.GetEndpointByIdAsync(endpoint.Id);
+        Assert.NotNull(savedEndpoint);
 
         var foreignGroup = await endpointRepo.AddEndpointGroupAsync(new EndpointGroup
         {
@@ -630,7 +638,8 @@ public class ODataControllerIntegrationTests : IClassFixture<ControllerTestFacto
             Method = Core.Enums.HttpMethod.GET,
             RelativePath = "/test",
             ApplicationId = app1.Id,
-            EndpointGroupId = foreignGroup.Id
+            EndpointGroupId = foreignGroup.Id,
+            RowVersion = savedEndpoint.RowVersion
         });
 
         var response = await client.SendAsync(request);
@@ -657,6 +666,8 @@ public class ODataControllerIntegrationTests : IClassFixture<ControllerTestFacto
             RelativePath = "/same",
             ApplicationId = app.Id
         });
+        var savedEndpoint = await endpointRepo.GetEndpointByIdAsync(endpoint.Id);
+        Assert.NotNull(savedEndpoint);
 
         var ownGroup = await endpointRepo.AddEndpointGroupAsync(new EndpointGroup
         {
@@ -671,7 +682,8 @@ public class ODataControllerIntegrationTests : IClassFixture<ControllerTestFacto
             Method = Core.Enums.HttpMethod.GET,
             RelativePath = "/same",
             ApplicationId = app.Id,
-            EndpointGroupId = ownGroup.Id
+            EndpointGroupId = ownGroup.Id,
+            RowVersion = savedEndpoint.RowVersion
         });
 
         var response = await client.SendAsync(request);
@@ -878,6 +890,8 @@ public class ODataControllerIntegrationTests : IClassFixture<ControllerTestFacto
             ApplicationId = normalApp.Id,
             EndpointGroupId = normalGroup.Id
         });
+        var savedEndpoint = await endpointRepo.GetEndpointByIdAsync(endpoint.Id);
+        Assert.NotNull(savedEndpoint);
 
         // Versuche, den Endpoint in eine Gruppe einer System-Anwendung zu verschieben.
         // Da ApplicationId-Check (normalApp != systemApp) zuerst greift, erwarten wir 400.
@@ -888,7 +902,8 @@ public class ODataControllerIntegrationTests : IClassFixture<ControllerTestFacto
             Method = Core.Enums.HttpMethod.GET,
             RelativePath = "/for-sys-group",
             ApplicationId = normalApp.Id,
-            EndpointGroupId = systemGroup.Id
+            EndpointGroupId = systemGroup.Id,
+            RowVersion = savedEndpoint.RowVersion
         });
 
         var response = await client.SendAsync(request);
@@ -971,6 +986,160 @@ public class ODataControllerIntegrationTests : IClassFixture<ControllerTestFacto
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var content = await response.Content.ReadAsStringAsync();
         Assert.Contains("Authenticate", content);
+    }
+
+    /// <summary>PutApplication_WithEmptyRowVersion_Returns400</summary>
+    [Fact]
+    public async Task PutApplication_WithEmptyRowVersion_Returns400()
+    {
+        var client = _factory.CreateClient();
+        var token = await ObtainTokenAsync(client);
+
+        var repo = _factory.Services.GetRequiredService<IApplicationRepository>();
+        var app = await repo.AddApplicationAsync(new Application { Name = "ConcurrencyOptInApp", BaseUrl = "https://concurrency-optin.example.com" });
+
+        var request = CreateRequest(HttpMethod.Put, $"/odatav4/Applications({app.Id})", token);
+        request.Content = JsonContent.Create(new Application
+        {
+            Name = "ConcurrencyOptInAppUpdated",
+            BaseUrl = "https://concurrency-optin.example.com",
+            RowVersion = []
+        });
+
+        var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    /// <summary>PutApplicationGroup_WithEmptyRowVersion_Returns400</summary>
+    [Fact]
+    public async Task PutApplicationGroup_WithEmptyRowVersion_Returns400()
+    {
+        var client = _factory.CreateClient();
+        var token = await ObtainTokenAsync(client);
+
+        var repo = _factory.Services.GetRequiredService<IApplicationRepository>();
+        var group = await repo.AddGroupAsync(new ApplicationGroup { Name = "ConcurrencyOptInGroup" });
+
+        var request = CreateRequest(HttpMethod.Put, $"/odatav4/ApplicationGroups({group.Id})", token);
+        request.Content = JsonContent.Create(new ApplicationGroup
+        {
+            Name = "ConcurrencyOptInGroupUpdated",
+            RowVersion = []
+        });
+
+        var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    /// <summary>PutEndpoint_WithEmptyRowVersion_Returns400</summary>
+    [Fact]
+    public async Task PutEndpoint_WithEmptyRowVersion_Returns400()
+    {
+        var client = _factory.CreateClient();
+        var token = await ObtainTokenAsync(client);
+
+        var appRepo = _factory.Services.GetRequiredService<IApplicationRepository>();
+        var endpointRepo = _factory.Services.GetRequiredService<IEndpointRepository>();
+
+        var app = await appRepo.AddApplicationAsync(new Application { Name = "AppForEndpointConcurrencyOptIn", BaseUrl = "https://endpoint-concurrency-optin.example.com" });
+        var endpoint = await endpointRepo.AddEndpointAsync(new Core.Models.Endpoint
+        {
+            Name = "GET ConcurrencyOptIn",
+            Method = Core.Enums.HttpMethod.GET,
+            RelativePath = "/concurrency-optin",
+            ApplicationId = app.Id
+        });
+
+        var request = CreateRequest(HttpMethod.Put, $"/odatav4/Endpoints({endpoint.Id})", token);
+        request.Content = JsonContent.Create(new Core.Models.Endpoint
+        {
+            Name = "GET ConcurrencyOptInUpdated",
+            Method = Core.Enums.HttpMethod.GET,
+            RelativePath = "/concurrency-optin",
+            ApplicationId = app.Id,
+            RowVersion = []
+        });
+
+        var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    /// <summary>PutEndpointGroup_WithEmptyRowVersion_Returns400</summary>
+    [Fact]
+    public async Task PutEndpointGroup_WithEmptyRowVersion_Returns400()
+    {
+        var client = _factory.CreateClient();
+        var token = await ObtainTokenAsync(client);
+
+        var appRepo = _factory.Services.GetRequiredService<IApplicationRepository>();
+        var endpointRepo = _factory.Services.GetRequiredService<IEndpointRepository>();
+
+        var app = await appRepo.AddApplicationAsync(new Application { Name = "AppForEGConcurrencyOptIn", BaseUrl = "https://eg-concurrency-optin.example.com" });
+        var group = await endpointRepo.AddEndpointGroupAsync(new EndpointGroup { Name = "EGConcurrencyOptIn", ApplicationId = app.Id });
+
+        var request = CreateRequest(HttpMethod.Put, $"/odatav4/EndpointGroups({group.Id})", token);
+        request.Content = JsonContent.Create(new EndpointGroup
+        {
+            Name = "EGConcurrencyOptInUpdated",
+            ApplicationId = app.Id,
+            RowVersion = []
+        });
+
+        var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    /// <summary>GetApplications_ReturnsPersonalApplications</summary>
+    [Fact]
+    public async Task GetApplications_ReturnsPersonalApplications()
+    {
+        var client = _factory.CreateClient();
+        var token = await ObtainTokenAsync(client);
+
+        var repo = _factory.Services.GetRequiredService<IApplicationRepository>();
+        await repo.AddApplicationAsync(new Application
+        {
+            Name = "PersonalAppOData",
+            BaseUrl = "https://personal-odata.example.com",
+            Owner = "personaluser"
+        });
+
+        var request = CreateRequest(HttpMethod.Get, "/odatav4/Applications?$filter=Name eq 'PersonalAppOData'", token);
+        var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var content = await response.Content.ReadAsStringAsync();
+        Assert.Contains("PersonalAppOData", content);
+    }
+
+    /// <summary>GetApplicationGroups_ReturnsPersonalApplicationGroups</summary>
+    [Fact]
+    public async Task GetApplicationGroups_ReturnsPersonalApplicationGroups()
+    {
+        var client = _factory.CreateClient();
+        var token = await ObtainTokenAsync(client);
+
+        var repo = _factory.Services.GetRequiredService<IApplicationRepository>();
+        var group = await repo.AddGroupAsync(new ApplicationGroup { Name = "PersonalGroupOData" });
+        var app = await repo.AddApplicationAsync(new Application
+        {
+            Name = "AppForPersonalGroup",
+            BaseUrl = "https://personal-group-odata.example.com",
+            Owner = "personaluser2",
+            ApplicationGroupId = group.Id
+        });
+        _ = app;
+
+        var request = CreateRequest(HttpMethod.Get, $"/odatav4/ApplicationGroups?$filter=Name eq 'PersonalGroupOData'", token);
+        var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var content = await response.Content.ReadAsStringAsync();
+        Assert.Contains("PersonalGroupOData", content);
     }
 
 }

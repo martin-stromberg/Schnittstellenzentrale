@@ -135,14 +135,21 @@
 
     private async Task OpenSwaggerImportAsync()
     {
-        _swaggerDiff = await ApplicationApiClient.ImportSwaggerMetadataAsync(Application.Id);
+        _errorMessage = null;
+        var result = await ApplicationApiClient.ImportMetadataAsync(Application.Id);
+        if (result.ErrorMessage != null)
+        {
+            _errorMessage = result.ErrorMessage;
+            return;
+        }
+        _swaggerDiff = result;
         _showSwaggerImport = true;
     }
 
     private async Task OpenODataImportAsync()
     {
         _errorMessage = null;
-        var result = await ApplicationApiClient.ImportODataMetadataAsync(Application.Id);
+        var result = await ApplicationApiClient.ImportMetadataAsync(Application.Id);
         if (result.ErrorMessage != null)
         {
             _errorMessage = result.ErrorMessage;

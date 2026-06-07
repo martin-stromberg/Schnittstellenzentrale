@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Moq;
+using Schnittstellenzentrale.Core.Enums;
 using Schnittstellenzentrale.Core.Interfaces;
 using Schnittstellenzentrale.Core.Models;
 using Schnittstellenzentrale.Tests.Helpers;
@@ -33,9 +34,9 @@ public class ApplicationImportControllerIntegrationTests : IClassFixture<Applica
         return request;
     }
 
-    /// <summary>ImportSwagger_WithValidToken_Returns200AndDiff</summary>
+    /// <summary>Import_WithRestApplication_Returns200AndDiff</summary>
     [Fact]
-    public async Task ImportSwagger_WithValidToken_Returns200AndDiff()
+    public async Task Import_WithRestApplication_Returns200AndDiff()
     {
         var client = _factory.CreateClient();
         var token = await _factory.ObtainTokenAsync(client);
@@ -45,10 +46,11 @@ public class ApplicationImportControllerIntegrationTests : IClassFixture<Applica
         {
             Name = "SwaggerImportTestApp",
             BaseUrl = "https://swagger-import.example.com",
-            InterfaceUrl = "https://swagger-import.example.com/swagger.json"
+            InterfaceUrl = "https://swagger-import.example.com/swagger.json",
+            InterfaceType = InterfaceType.Rest
         });
 
-        var request = BuildRequest(HttpMethod.Post, $"/api/applications/{app.Id}/import/swagger", token);
+        var request = BuildRequest(HttpMethod.Post, $"/api/applications/{app.Id}/import", token);
         var response = await client.SendAsync(request);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -58,33 +60,9 @@ public class ApplicationImportControllerIntegrationTests : IClassFixture<Applica
         Assert.Equal("GET Items", diff.NewEndpoints[0].Name);
     }
 
-    /// <summary>ImportSwagger_WithoutToken_Returns401</summary>
+    /// <summary>Import_WithODataApplication_Returns200AndDiff</summary>
     [Fact]
-    public async Task ImportSwagger_WithoutToken_Returns401()
-    {
-        var client = _factory.CreateClient();
-
-        var response = await client.PostAsync("/api/applications/1/import/swagger", null);
-
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
-    }
-
-    /// <summary>ImportSwagger_WithUnknownApplicationId_Returns404</summary>
-    [Fact]
-    public async Task ImportSwagger_WithUnknownApplicationId_Returns404()
-    {
-        var client = _factory.CreateClient();
-        var token = await _factory.ObtainTokenAsync(client);
-
-        var request = BuildRequest(HttpMethod.Post, "/api/applications/99999/import/swagger", token);
-        var response = await client.SendAsync(request);
-
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
-    }
-
-    /// <summary>ImportOData_WithValidToken_Returns200AndDiff</summary>
-    [Fact]
-    public async Task ImportOData_WithValidToken_Returns200AndDiff()
+    public async Task Import_WithODataApplication_Returns200AndDiff()
     {
         var client = _factory.CreateClient();
         var token = await _factory.ObtainTokenAsync(client);
@@ -94,10 +72,11 @@ public class ApplicationImportControllerIntegrationTests : IClassFixture<Applica
         {
             Name = "ODataImportTestApp",
             BaseUrl = "https://odata-import.example.com",
-            InterfaceUrl = "https://odata-import.example.com/$metadata"
+            InterfaceUrl = "https://odata-import.example.com/$metadata",
+            InterfaceType = InterfaceType.OData
         });
 
-        var request = BuildRequest(HttpMethod.Post, $"/api/applications/{app.Id}/import/odata", token);
+        var request = BuildRequest(HttpMethod.Post, $"/api/applications/{app.Id}/import", token);
         var response = await client.SendAsync(request);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -106,28 +85,74 @@ public class ApplicationImportControllerIntegrationTests : IClassFixture<Applica
         Assert.Equal("Verbindung fehlgeschlagen", diff.ErrorMessage);
     }
 
-    /// <summary>ImportOData_WithoutToken_Returns401</summary>
+    /// <summary>Import_WithUnknownInterfaceType_Returns422</summary>
     [Fact]
-    public async Task ImportOData_WithoutToken_Returns401()
-    {
-        var client = _factory.CreateClient();
-
-        var response = await client.PostAsync("/api/applications/1/import/odata", null);
-
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
-    }
-
-    /// <summary>ImportOData_WithUnknownApplicationId_Returns404</summary>
-    [Fact]
-    public async Task ImportOData_WithUnknownApplicationId_Returns404()
+    public async Task Import_WithUnknownInterfaceType_Returns422()
     {
         var client = _factory.CreateClient();
         var token = await _factory.ObtainTokenAsync(client);
 
-        var request = BuildRequest(HttpMethod.Post, "/api/applications/99999/import/odata", token);
+        var appRepo = _factory.Services.GetRequiredService<IApplicationRepository>();
+        var app = await appRepo.AddApplicationAsync(new Application
+        {
+            Name = "UnknownTypeApp",
+            BaseUrl = "https://unknown.example.com",
+            InterfaceType = InterfaceType.Unknown
+        });
+
+        var request = BuildRequest(HttpMethod.Post, $"/api/applications/{app.Id}/import", token);
+        var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, response.StatusCode);
+    }
+
+    /// <summary>Import_WithoutToken_Returns401</summary>
+    [Fact]
+    public async Task Import_WithoutToken_Returns401()
+    {
+        var client = _factory.CreateClient();
+
+        var response = await client.PostAsync("/api/applications/1/import", null);
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    /// <summary>Import_WithUnknownApplicationId_Returns404</summary>
+    [Fact]
+    public async Task Import_WithUnknownApplicationId_Returns404()
+    {
+        var client = _factory.CreateClient();
+        var token = await _factory.ObtainTokenAsync(client);
+
+        var request = BuildRequest(HttpMethod.Post, "/api/applications/99999/import", token);
         var response = await client.SendAsync(request);
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    /// <summary>Import_WithUnknownInterfaceType_Returns422WithErrorMessageBody</summary>
+    [Fact]
+    public async Task Import_WithUnknownInterfaceType_Returns422WithErrorMessageBody()
+    {
+        var client = _factory.CreateClient();
+        var token = await _factory.ObtainTokenAsync(client);
+
+        var appRepo = _factory.Services.GetRequiredService<IApplicationRepository>();
+        var app = await appRepo.AddApplicationAsync(new Application
+        {
+            Name = "UnknownTypeAppWithBody",
+            BaseUrl = "https://unknown-body.example.com",
+            InterfaceType = InterfaceType.Unknown
+        });
+
+        var request = BuildRequest(HttpMethod.Post, $"/api/applications/{app.Id}/import", token);
+        var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<JsonDocument>(JsonOptions);
+        Assert.NotNull(body);
+        Assert.True(body.RootElement.TryGetProperty("errorMessage", out var errorMsg));
+        Assert.False(string.IsNullOrEmpty(errorMsg.GetString()));
     }
 }
 

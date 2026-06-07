@@ -64,17 +64,14 @@ public class ODataApplicationGroupsController : ODataControllerBase
         if (existing.IsSystem)
             return StatusCode(StatusCodes.Status403Forbidden);
 
-        // DB-RowVersion sichern, bevor Felder überschrieben werden.
-        // Das Repository setzt OriginalValue = existing.RowVersion für den EF-Concurrency-Check.
-        // Daher muss existing.RowVersion den vom Client gesendeten Wert enthalten — nicht den beim
-        // Laden gelesenen DB-Wert, da sonst der Check immer erfolgreich wäre.
-        var concurrencyRowVersion = entity.RowVersion.Length > 0 ? entity.RowVersion : existing.RowVersion;
+        if (entity.RowVersion.Length == 0)
+            return BadRequest("RowVersion ist erforderlich.");
 
         existing.Name = entity.Name;
         existing.Description = entity.Description;
         existing.Subtitle = entity.Subtitle;
         existing.IconData = entity.IconData;
-        existing.RowVersion = concurrencyRowVersion;
+        existing.RowVersion = entity.RowVersion;
 
         var saved = await _applicationRepository.UpdateGroupAsync(existing);
         return Ok(saved);

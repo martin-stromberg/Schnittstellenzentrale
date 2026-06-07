@@ -98,7 +98,7 @@ public class ApplicationContentViewTests : BunitContext
     {
         var app = CreateODataApplication();
         _apiClientMock
-            .Setup(s => s.ImportODataMetadataAsync(app.Id))
+            .Setup(s => s.ImportMetadataAsync(app.Id))
             .ReturnsAsync(new ImportDiff { ErrorMessage = "Connection refused" });
 
         var cut = Render<ApplicationContentView>(p => p.Add(x => x.Application, app));
@@ -117,7 +117,7 @@ public class ApplicationContentViewTests : BunitContext
     {
         var app = CreateODataApplication();
         _apiClientMock
-            .Setup(s => s.ImportODataMetadataAsync(app.Id))
+            .Setup(s => s.ImportMetadataAsync(app.Id))
             .ReturnsAsync(new ImportDiff());
 
         var cut = Render<ApplicationContentView>(p => p.Add(x => x.Application, app));
@@ -127,5 +127,43 @@ public class ApplicationContentViewTests : BunitContext
         await cut.InvokeAsync(() => button.Click());
 
         Assert.Single(cut.FindComponents<ODataImportDialog>());
+    }
+
+    /// <summary>OpenSwaggerImportAsync setzt _errorMessage auf null vor dem Import-Aufruf.</summary>
+    [Fact]
+    public async Task OpenSwaggerImport_ClearsPreviousErrorMessage()
+    {
+        var app = CreateRestApplication();
+        _apiClientMock
+            .Setup(s => s.ImportMetadataAsync(app.Id))
+            .ReturnsAsync(new ImportDiff());
+
+        var cut = Render<ApplicationContentView>(p => p.Add(x => x.Application, app));
+        var swaggerButton = cut.FindAll("button")
+            .Single(b => b.TextContent.Contains("ApplicationContentView_Button_SwaggerImport"));
+
+        await cut.InvokeAsync(() => swaggerButton.Click());
+
+        Assert.DoesNotContain("sz-alert-danger", cut.Markup);
+        Assert.Single(cut.FindComponents<SwaggerImportDialog>());
+    }
+
+    /// <summary>OpenSwaggerImportAsync zeigt Fehlermeldung wenn ErrorMessage gesetzt ist, öffnet keinen Dialog.</summary>
+    [Fact]
+    public async Task OpenSwaggerImport_OnError_ShowsErrorMessage()
+    {
+        var app = CreateRestApplication();
+        _apiClientMock
+            .Setup(s => s.ImportMetadataAsync(app.Id))
+            .ReturnsAsync(new ImportDiff { ErrorMessage = "Swagger nicht erreichbar" });
+
+        var cut = Render<ApplicationContentView>(p => p.Add(x => x.Application, app));
+        var button = cut.FindAll("button")
+            .Single(b => b.TextContent.Contains("ApplicationContentView_Button_SwaggerImport"));
+
+        await cut.InvokeAsync(() => button.Click());
+
+        Assert.Contains("Swagger nicht erreichbar", cut.Markup);
+        Assert.Empty(cut.FindComponents<SwaggerImportDialog>());
     }
 }

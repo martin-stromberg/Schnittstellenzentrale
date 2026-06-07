@@ -455,6 +455,91 @@ public class ODataImportServiceTests
         Assert.Equal(Core.Enums.AuthenticationType.Negotiate, statusEndpoint.AuthenticationType);
     }
 
+    /// <summary>ApplyDiff_WithMultipleBearerTokenEndpoints_SavesCredentialOnlyOnce</summary>
+    [Fact]
+    public async Task ApplyDiff_WithMultipleBearerTokenEndpoints_SavesCredentialOnlyOnce()
+    {
+        var repoMock = new Mock<IEndpointRepository>();
+        repoMock.Setup(r => r.GetEndpointGroupsAsync(It.IsAny<int>())).ReturnsAsync([]);
+        repoMock.Setup(r => r.AddEndpointGroupAsync(It.IsAny<EndpointGroup>()))
+            .ReturnsAsync((EndpointGroup g) => { g.Id = 1; return g; });
+        repoMock.Setup(r => r.AddEndpointAsync(It.IsAny<Core.Models.Endpoint>()))
+            .ReturnsAsync((Core.Models.Endpoint e) => e);
+
+        var credentialMock = new Mock<ICredentialService>();
+        credentialMock.Setup(c => c.GetPassword(It.IsAny<string>())).Returns((string?)null);
+
+        var handlerMock = new Mock<HttpMessageHandler>();
+        handlerMock.Protected()
+            .Setup<Task<HttpResponseMessage>>("SendAsync", ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>())
+            .ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(ODataMetadata, Encoding.UTF8, "application/xml") });
+        var factoryMock = new Mock<IHttpClientFactory>();
+        factoryMock.Setup(f => f.CreateClient(It.IsAny<string>())).Returns(new HttpClient(handlerMock.Object));
+
+        var service = new ODataImportService(factoryMock.Object, repoMock.Object, credentialMock.Object, NullLogger<ODataImportService>.Instance);
+
+        var bearerTokens = new Dictionary<string, string>();
+        var endpoints = new List<Core.Models.Endpoint>();
+        for (var i = 0; i < 5; i++)
+        {
+            var ep = new Core.Models.Endpoint
+            {
+                Name = $"GET Products{i}",
+                Method = Core.Enums.HttpMethod.GET,
+                RelativePath = $"Products{i}",
+                ApplicationId = 42,
+                AuthenticationType = AuthenticationType.BearerToken
+            };
+            endpoints.Add(ep);
+            bearerTokens[Core.Helpers.EndpointKeyHelper.BuildKey(ep)] = "shared-token";
+        }
+
+        var diff = new ImportDiff { NewEndpoints = endpoints, BearerTokens = bearerTokens };
+
+        await service.ApplyDiffAsync(diff);
+
+        credentialMock.Verify(c => c.SavePassword(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()), Times.Once);
+    }
+
+    /// <summary>Import_WithInvalidAnnotationXml_DoesNotThrow_ReturnsEmptyAnnotations</summary>
+    [Fact]
+    public async Task Import_WithInvalidAnnotationXml_DoesNotThrow_ReturnsEmptyAnnotations()
+    {
+        // XML is valid CSDL but has malformed annotation content — ParseAnnotationsForElement
+        // should catch only XmlException/InvalidOperationException and return empty dict.
+        const string metadataWithBrokenAnnotation = """
+            <?xml version="1.0" encoding="utf-8"?>
+            <edmx:Edmx Version="4.0" xmlns:edmx="http://docs.oasis-open.org/odata/ns/edmx">
+              <edmx:DataServices>
+                <Schema Namespace="TestService" xmlns="http://docs.oasis-open.org/odata/ns/edm">
+                  <EntityType Name="Product">
+                    <Key><PropertyRef Name="Id" /></Key>
+                    <Property Name="Id" Type="Edm.Int32" Nullable="false" />
+                  </EntityType>
+                  <EntityContainer Name="Container">
+                    <EntitySet Name="Products" EntityType="TestService.Product" />
+                  </EntityContainer>
+                </Schema>
+              </edmx:DataServices>
+            </edmx:Edmx>
+            """;
+
+        var repoMock = new Mock<IEndpointRepository>();
+        repoMock.Setup(r => r.GetEndpointsAsync(It.IsAny<int>())).ReturnsAsync([]);
+        var service = CreateService(metadataWithBrokenAnnotation, repoMock);
+        var app = new Core.Models.Application
+        {
+            Id = 1,
+            InterfaceUrl = "http://localhost/$metadata",
+            InterfaceType = Core.Enums.InterfaceType.OData,
+            BaseUrl = "http://localhost"
+        };
+
+        var exception = await Record.ExceptionAsync(() => service.ImportAsync(app));
+
+        Assert.Null(exception);
+    }
+
     /// <summary>Import_WithExistingBearerToken_SetsAuthTypeOnEndpoints</summary>
     [Fact]
     public async Task Import_WithExistingBearerToken_SetsAuthTypeOnEndpoints()
