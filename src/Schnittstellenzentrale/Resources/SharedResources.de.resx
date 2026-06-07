@@ -838,10 +838,6 @@
     <value>OData-Import-Vorschau</value>
     <comment>ODataImportDialog: Titel des OData-Import-Vorschau-Dialogs</comment>
   </data>
-  <data name="ODataImportDialog_Error_Apply" xml:space="preserve">
-    <value>Fehler beim Anwenden des Imports: {0}</value>
-    <comment>ODataImportDialog: Fehlermeldung wenn ApplyDiffAsync fehlschlägt (Platzhalter ist die Exception-Message)</comment>
-  </data>
 
   <!-- SwaggerImportDialog -->
   <data name="SwaggerImportDialog_Title" xml:space="preserve">

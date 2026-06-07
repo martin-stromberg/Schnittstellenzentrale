@@ -388,6 +388,30 @@ public class ApplicationApiClient : IApplicationApiClient
     }
 
     /// <inheritdoc/>
+    public async Task<ImportDiff> ImportSwaggerMetadataAsync(int applicationId)
+    {
+        var baseUrl = GetBaseUrl();
+        var storageMode = _storageModeService.CurrentMode;
+
+        var response = await SendWithTokenAsync<ImportDiff>(
+            t => BuildRequestWithBody(HttpMethod.Post, $"{baseUrl}/api/applications/{applicationId}/import/swagger", (object?)null, storageMode, t));
+
+        return response;
+    }
+
+    /// <inheritdoc/>
+    public async Task<ImportDiff> ImportODataMetadataAsync(int applicationId)
+    {
+        var baseUrl = GetBaseUrl();
+        var storageMode = _storageModeService.CurrentMode;
+
+        var response = await SendWithTokenAsync<ImportDiff>(
+            t => BuildRequestWithBody(HttpMethod.Post, $"{baseUrl}/api/applications/{applicationId}/import/odata", (object?)null, storageMode, t));
+
+        return response;
+    }
+
+    /// <inheritdoc/>
     public async Task<SystemEnvironment?> GetEnvironmentByIdAsync(int id)
     {
         var baseUrl = GetBaseUrl();

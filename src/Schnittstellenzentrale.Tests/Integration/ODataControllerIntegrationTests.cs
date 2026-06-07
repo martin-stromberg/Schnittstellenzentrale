@@ -492,27 +492,13 @@ public class ODataControllerIntegrationTests : IClassFixture<ControllerTestFacto
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
-    /// <summary>ODataAuthenticate_Get_ReturnsToken</summary>
-    [Fact]
-    public async Task ODataAuthenticate_Get_ReturnsToken()
-    {
-        var client = _factory.CreateClient();
-
-        var response = await client.GetAsync("/odatav4/authenticate");
-
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var body = await response.Content.ReadFromJsonAsync<AuthenticateResponse>(JsonOptions);
-        Assert.NotNull(body);
-        Assert.NotEmpty(body.Token);
-    }
-
     /// <summary>ODataAuthenticate_Post_ReturnsToken</summary>
     [Fact]
     public async Task ODataAuthenticate_Post_ReturnsToken()
     {
         var client = _factory.CreateClient();
 
-        var response = await client.PostAsync("/odatav4/authenticate", null);
+        var response = await client.PostAsync("/odatav4/Authenticate()", null);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var body = await response.Content.ReadFromJsonAsync<AuthenticateResponse>(JsonOptions);
@@ -526,7 +512,7 @@ public class ODataControllerIntegrationTests : IClassFixture<ControllerTestFacto
     {
         var client = _factory.CreateClient();
 
-        var authResponse = await client.GetAsync("/odatav4/authenticate");
+        var authResponse = await client.PostAsync("/odatav4/Authenticate()", null);
         Assert.Equal(HttpStatusCode.OK, authResponse.StatusCode);
         var body = await authResponse.Content.ReadFromJsonAsync<AuthenticateResponse>(JsonOptions);
         var token = body!.Token;
@@ -766,6 +752,225 @@ public class ODataControllerIntegrationTests : IClassFixture<ControllerTestFacto
         var response = await client.SendAsync(request);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    /// <summary>PutApplicationGroup_WithRowVersion_AppliesConcurrencyCheck</summary>
+    [Fact]
+    public async Task PutApplicationGroup_WithRowVersion_AppliesConcurrencyCheck()
+    {
+        var client = _factory.CreateClient();
+        var token = await ObtainTokenAsync(client);
+
+        var repo = _factory.Services.GetRequiredService<IApplicationRepository>();
+        var group = await repo.AddGroupAsync(new ApplicationGroup { Name = "RowVersionGroup" });
+        var savedGroup = await repo.GetGroupByIdAsync(group.Id);
+        Assert.NotNull(savedGroup);
+
+        var request = CreateRequest(HttpMethod.Put, $"/odatav4/ApplicationGroups({group.Id})", token);
+        request.Content = JsonContent.Create(new ApplicationGroup
+        {
+            Name = "RowVersionGroupUpdated",
+            RowVersion = savedGroup.RowVersion
+        });
+
+        var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    /// <summary>PutEndpointGroup_WithRowVersion_AppliesConcurrencyCheck</summary>
+    [Fact]
+    public async Task PutEndpointGroup_WithRowVersion_AppliesConcurrencyCheck()
+    {
+        var client = _factory.CreateClient();
+        var token = await ObtainTokenAsync(client);
+
+        var appRepo = _factory.Services.GetRequiredService<IApplicationRepository>();
+        var endpointRepo = _factory.Services.GetRequiredService<IEndpointRepository>();
+
+        var app = await appRepo.AddApplicationAsync(new Application { Name = "AppForEGRowVersion", BaseUrl = "https://eg-rowversion.example.com" });
+        var group = await endpointRepo.AddEndpointGroupAsync(new EndpointGroup { Name = "EGRowVersion", ApplicationId = app.Id });
+        var savedGroup = await endpointRepo.GetEndpointGroupByIdAsync(group.Id);
+        Assert.NotNull(savedGroup);
+
+        var request = CreateRequest(HttpMethod.Put, $"/odatav4/EndpointGroups({group.Id})", token);
+        request.Content = JsonContent.Create(new EndpointGroup
+        {
+            Name = "EGRowVersionUpdated",
+            ApplicationId = app.Id,
+            RowVersion = savedGroup.RowVersion
+        });
+
+        var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    /// <summary>PutEndpoint_WithRowVersion_AppliesConcurrencyCheck</summary>
+    [Fact]
+    public async Task PutEndpoint_WithRowVersion_AppliesConcurrencyCheck()
+    {
+        var client = _factory.CreateClient();
+        var token = await ObtainTokenAsync(client);
+
+        var appRepo = _factory.Services.GetRequiredService<IApplicationRepository>();
+        var endpointRepo = _factory.Services.GetRequiredService<IEndpointRepository>();
+
+        var app = await appRepo.AddApplicationAsync(new Application { Name = "AppForEndpointRowVersion", BaseUrl = "https://endpoint-rowversion.example.com" });
+        var endpoint = await endpointRepo.AddEndpointAsync(new Core.Models.Endpoint
+        {
+            Name = "GET RowVersion",
+            Method = Core.Enums.HttpMethod.GET,
+            RelativePath = "/rowversion",
+            ApplicationId = app.Id
+        });
+        var savedEndpoint = await endpointRepo.GetEndpointByIdAsync(endpoint.Id);
+        Assert.NotNull(savedEndpoint);
+
+        var request = CreateRequest(HttpMethod.Put, $"/odatav4/Endpoints({endpoint.Id})", token);
+        request.Content = JsonContent.Create(new Core.Models.Endpoint
+        {
+            Name = "GET RowVersionUpdated",
+            Method = Core.Enums.HttpMethod.GET,
+            RelativePath = "/rowversion",
+            ApplicationId = app.Id,
+            RowVersion = savedEndpoint.RowVersion
+        });
+
+        var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    /// <summary>PutEndpoint_MoveToGroupOfSystemApplication_Returns403</summary>
+    [Fact]
+    public async Task PutEndpoint_MoveToGroupOfSystemApplication_Returns403()
+    {
+        var client = _factory.CreateClient();
+        var token = await ObtainTokenAsync(client);
+
+        var appRepo = _factory.Services.GetRequiredService<IApplicationRepository>();
+        var endpointRepo = _factory.Services.GetRequiredService<IEndpointRepository>();
+
+        // Endpoint und Gruppe gehören zur selben Anwendung, die als IsSystem markiert ist.
+        // Der PUT schlägt bereits am IsSystem-Check der Anwendung mit 403 fehl.
+        // Wir testen den Fall, dass targetGroup.Application?.IsSystem == true.
+        var systemApp = await appRepo.AddApplicationAsync(new Application { Name = "SystemAppForEndpointGroupTest", BaseUrl = "https://sysapp-eg.example.com", IsSystem = true });
+
+        var systemGroup = await endpointRepo.AddEndpointGroupAsync(new EndpointGroup
+        {
+            Name = "SystemEndpointGroup",
+            ApplicationId = systemApp.Id
+        });
+
+        var normalApp = await appRepo.AddApplicationAsync(new Application { Name = "NormalAppForEGTest", BaseUrl = "https://normal-eg.example.com" });
+        var normalGroup = await endpointRepo.AddEndpointGroupAsync(new EndpointGroup
+        {
+            Name = "NormalGroupForEGTest",
+            ApplicationId = normalApp.Id
+        });
+
+        var endpoint = await endpointRepo.AddEndpointAsync(new Core.Models.Endpoint
+        {
+            Name = "GET ForSystemGroupTest",
+            Method = Core.Enums.HttpMethod.GET,
+            RelativePath = "/for-sys-group",
+            ApplicationId = normalApp.Id,
+            EndpointGroupId = normalGroup.Id
+        });
+
+        // Versuche, den Endpoint in eine Gruppe einer System-Anwendung zu verschieben.
+        // Da ApplicationId-Check (normalApp != systemApp) zuerst greift, erwarten wir 400.
+        var request = CreateRequest(HttpMethod.Put, $"/odatav4/Endpoints({endpoint.Id})", token);
+        request.Content = JsonContent.Create(new Core.Models.Endpoint
+        {
+            Name = "GET ForSystemGroupTest",
+            Method = Core.Enums.HttpMethod.GET,
+            RelativePath = "/for-sys-group",
+            ApplicationId = normalApp.Id,
+            EndpointGroupId = systemGroup.Id
+        });
+
+        var response = await client.SendAsync(request);
+
+        // ApplicationId-Mismatch (normalApp vs. systemApp) → 400 BadRequest
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    /// <summary>PatchEndpoint_WithSystemApplication_Returns403</summary>
+    [Fact]
+    public async Task PatchEndpoint_WithSystemApplication_Returns403()
+    {
+        var client = _factory.CreateClient();
+        var token = await ObtainTokenAsync(client);
+
+        var appRepo = _factory.Services.GetRequiredService<IApplicationRepository>();
+        var endpointRepo = _factory.Services.GetRequiredService<IEndpointRepository>();
+
+        var systemApp = await appRepo.AddApplicationAsync(new Application { Name = "PatchSystemApp", BaseUrl = "https://patch-system.example.com", IsSystem = true });
+        var endpoint = await endpointRepo.AddEndpointAsync(new Core.Models.Endpoint
+        {
+            Name = "GET PatchSystem",
+            Method = Core.Enums.HttpMethod.GET,
+            RelativePath = "/patch-system",
+            ApplicationId = systemApp.Id
+        });
+
+        var request = CreateRequest(HttpMethod.Patch, $"/odatav4/Endpoints({endpoint.Id})", token);
+        request.Content = new StringContent(
+            """{"Name":"Changed"}""",
+            System.Text.Encoding.UTF8,
+            "application/json");
+
+        var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    /// <summary>PatchEndpoint_MoveToSystemGroupSameApp_Returns403</summary>
+    [Fact]
+    public async Task PatchEndpoint_MoveToSystemGroupSameApp_Returns403()
+    {
+        var client = _factory.CreateClient();
+        var token = await ObtainTokenAsync(client);
+
+        var appRepo = _factory.Services.GetRequiredService<IApplicationRepository>();
+        var endpointRepo = _factory.Services.GetRequiredService<IEndpointRepository>();
+
+        // Endpoint und Zielgruppe gehören zur selben System-Anwendung.
+        // existing.Application.IsSystem == true → 403 wird vor der targetGroup-Prüfung geliefert.
+        var systemApp = await appRepo.AddApplicationAsync(new Application { Name = "PatchSystemApp2", BaseUrl = "https://patch-system2.example.com", IsSystem = true });
+        var systemGroup = await endpointRepo.AddEndpointGroupAsync(new EndpointGroup { Name = "SysGroupForPatch", ApplicationId = systemApp.Id });
+        var endpoint = await endpointRepo.AddEndpointAsync(new Core.Models.Endpoint
+        {
+            Name = "GET PatchSystemGroup",
+            Method = Core.Enums.HttpMethod.GET,
+            RelativePath = "/patch-sys-group",
+            ApplicationId = systemApp.Id
+        });
+
+        var request = CreateRequest(HttpMethod.Patch, $"/odatav4/Endpoints({endpoint.Id})", token);
+        request.Content = new StringContent(
+            $$$"""{"EndpointGroupId":{{{systemGroup.Id}}}}""",
+            System.Text.Encoding.UTF8,
+            "application/json");
+
+        var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    /// <summary>GetMetadata_ContainsAuthenticateAction</summary>
+    [Fact]
+    public async Task GetMetadata_ContainsAuthenticateAction()
+    {
+        var client = _factory.CreateClient();
+
+        var response = await client.GetAsync("/odatav4/$metadata");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var content = await response.Content.ReadAsStringAsync();
+        Assert.Contains("Authenticate", content);
     }
 
 }

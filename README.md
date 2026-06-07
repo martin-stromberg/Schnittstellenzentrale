@@ -93,33 +93,39 @@ Alle Einstellungen in `appsettings.json`:
 
 ## API
 
-Die Schnittstellenzentrale stellt zwei API-Oberflächen bereit. Die Authentifizierung erfolgt für beide APIs zweistufig: zunächst `POST /authenticate` (Windows-Authentifizierung erforderlich), das ein kurzlebiges Bearer-Token liefert; dieses Token wird bei jedem Folgeaufruf im `Authorization`-Header übergeben und nach jeder erfolgreichen Anfrage rotiert (`X-New-Token`-Response-Header).
+Die Schnittstellenzentrale stellt zwei API-Oberflächen bereit:
+
+- **REST-API** unter `/api` — Token über `POST /authenticate`
+- **OData v4-API** unter `/odatav4` — Token über `GET /odatav4/authenticate` oder `POST /odatav4/authenticate`
+
+Die Authentifizierung erfolgt mittels Windows-Authentifizierung (Negotiate), die ein kurzlebiges Bearer-Token liefert. Dieses Token wird bei jedem Folgeaufruf im `Authorization`-Header übergeben und nach jeder erfolgreichen Anfrage rotiert (`X-New-Token`-Response-Header).
 
 ### REST-API (`/api`)
 
 | Ressource | Beschreibung |
 |-----------|--------------|
-| `POST /authenticate` | Token beziehen |
+| `POST /authenticate` | Bearer-Token beziehen (Windows/Negotiate) |
 | `/api/application-groups` | CRUD für `ApplicationGroup` |
 | `/api/applications` | CRUD für `Application` |
 | `/api/endpoint-groups` | CRUD für `EndpointGroup` |
 | `/api/endpoints` | CRUD für `Endpoint` inkl. Header- und Query-Parameter-Routen |
 
-Unterstützt `X-Storage-Mode` (`Team`/`User`) und `X-Owner` für benutzermodus-abhängige Filterung. Schreibzugriffe lösen SignalR-Benachrichtigungen an alle verbundenen Clients aus.
+Alle Endpunkte erfordern Bearer-Token im `Authorization`-Header. Unterstützt `X-Storage-Mode` (`Team`/`User`) und `X-Owner` für benutzermodus-abhängige Filterung. Schreibzugriffe lösen SignalR-Benachrichtigungen an alle verbundenen Clients aus.
 
 ### OData v4-API (`/odatav4`)
 
-| Entity-Set | Endpunkt |
-|------------|----------|
-| `$metadata` | `GET /odatav4/$metadata` — CSDL-Metadaten-Dokument |
-| `Applications` | `GET/POST /odatav4/Applications`, `GET/PUT/PATCH/DELETE /odatav4/Applications({id})` |
-| `ApplicationGroups` | `GET/POST /odatav4/ApplicationGroups`, `GET/PUT/PATCH/DELETE /odatav4/ApplicationGroups({id})` |
-| `Endpoints` | `GET/POST /odatav4/Endpoints`, `GET/PUT/PATCH/DELETE /odatav4/Endpoints({id})` |
-| `EndpointGroups` | `GET/POST /odatav4/EndpointGroups`, `GET/PUT/PATCH/DELETE /odatav4/EndpointGroups({id})` |
+| Ressource | Beschreibung |
+|-----------|--------------|
+| `GET /odatav4/authenticate`<br/>`POST /odatav4/authenticate` | Bearer-Token beziehen (Windows/Negotiate) |
+| `GET /odatav4/$metadata` | CSDL-Metadaten-Dokument (öffentlich zugänglich) |
+| `GET/POST /odatav4/Applications`<br/>`GET/PUT/PATCH/DELETE /odatav4/Applications({id})` | CRUD für `Application` |
+| `GET/POST /odatav4/ApplicationGroups`<br/>`GET/PUT/PATCH/DELETE /odatav4/ApplicationGroups({id})` | CRUD für `ApplicationGroup` |
+| `GET/POST /odatav4/Endpoints`<br/>`GET/PUT/PATCH/DELETE /odatav4/Endpoints({id})` | CRUD für `Endpoint` |
+| `GET/POST /odatav4/EndpointGroups`<br/>`GET/PUT/PATCH/DELETE /odatav4/EndpointGroups({id})` | CRUD für `EndpointGroup` |
 
-Unterstützte OData-Abfrageoptionen auf Collection-Endpunkten: `$filter`, `$select`, `$expand`, `$orderby`, `$top`, `$skip`. Kein `X-Storage-Mode`-Filter — die OData-API liefert stets alle Datensätze. `Id` und `RowVersion` sind bei POST/PUT/PATCH nicht schreibbar (serverseitig ignoriert bzw. aus der Datenbank übernommen). Systemeinträge (`IsSystem = true`) sind vor Änderungen und Löschungen geschützt (403).
+Daten-Endpunkte erfordern Bearer-Token. Unterstützte OData-Abfrageoptionen auf Collection-Endpunkten: `$filter`, `$select`, `$expand`, `$orderby`, `$top`, `$skip`. Besonderheiten: Keine `X-Storage-Mode`-Filterung (API liefert stets alle Datensätze), `Id` und `RowVersion` sind bei POST/PUT/PATCH nicht schreibbar, Systemeinträge (`IsSystem = true`) sind vor Änderungen und Löschungen geschützt (403).
 
-Ausführliche Dokumentation: [docs/help/api/](docs/help/api/)
+Ausführliche Dokumentation: [docs/help/api/odata-api.md](docs/help/api/odata-api.md)
 
 ## Projektstruktur
 

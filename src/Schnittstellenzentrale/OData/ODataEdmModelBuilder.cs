@@ -1,5 +1,7 @@
 using Microsoft.OData.Edm;
+using Microsoft.OData.Edm.Vocabularies;
 using Microsoft.OData.ModelBuilder;
+using Schnittstellenzentrale.Core.Contracts;
 using Schnittstellenzentrale.Core.Models;
 
 namespace Schnittstellenzentrale.OData;
@@ -7,6 +9,8 @@ namespace Schnittstellenzentrale.OData;
 /// <summary>Erstellt das OData-EDM-Modell mit den vier Entity-Types und Navigationseigenschaften.</summary>
 public static class ODataEdmModelBuilder
 {
+    private const string SzAuthTypeTerm = "x-sz-auth-type";
+
     /// <summary>Erzeugt und gibt das fertige <see cref="IEdmModel"/> zurück.</summary>
     public static IEdmModel Build()
     {
@@ -27,6 +31,27 @@ public static class ODataEdmModelBuilder
         var endpointGroups = builder.EntitySet<EndpointGroup>("EndpointGroups");
         endpointGroups.EntityType.HasKey(g => g.Id);
 
-        return builder.GetEdmModel();
+        var authenticate = builder.Action("Authenticate");
+        authenticate.Returns<AuthenticateResponse>();
+
+        var model = (EdmModel)builder.GetEdmModel();
+
+        var authTypeTerm = new EdmTerm("Schnittstellenzentrale.V1", SzAuthTypeTerm, EdmCoreModel.Instance.GetString(true));
+        model.AddElement(authTypeTerm);
+
+        foreach (var entitySetName in new[] { "Applications", "ApplicationGroups", "Endpoints", "EndpointGroups" })
+        {
+            var entitySet = model.EntityContainer?.FindEntitySet(entitySetName);
+            if (entitySet != null)
+                model.SetVocabularyAnnotation(new EdmVocabularyAnnotation(entitySet, authTypeTerm, new EdmStringConstant("BearerToken")));
+        }
+
+        var authenticateAction = model.SchemaElements
+            .OfType<IEdmAction>()
+            .FirstOrDefault(a => a.Name == "Authenticate");
+        if (authenticateAction != null)
+            model.SetVocabularyAnnotation(new EdmVocabularyAnnotation(authenticateAction, authTypeTerm, new EdmStringConstant("Negotiate")));
+
+        return model;
     }
 }

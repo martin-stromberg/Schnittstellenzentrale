@@ -96,11 +96,13 @@ public class ODataImportServiceTests
 
         var diff = await service.ImportAsync(app);
 
-        // GET Products, POST Products, + POST authenticate
-        Assert.Equal(3, diff.NewEndpoints.Count);
+        // GET Products, POST Products, PUT Products({key}), PATCH Products({key}), DELETE Products({key})
+        Assert.Equal(5, diff.NewEndpoints.Count);
         Assert.Contains(diff.NewEndpoints, e => e.Name == "GET Products");
         Assert.Contains(diff.NewEndpoints, e => e.Name == "POST Products");
-        Assert.Contains(diff.NewEndpoints, e => e.Name == "POST authenticate");
+        Assert.Contains(diff.NewEndpoints, e => e.Name == "PUT Products");
+        Assert.Contains(diff.NewEndpoints, e => e.Name == "PATCH Products");
+        Assert.Contains(diff.NewEndpoints, e => e.Name == "DELETE Products");
         Assert.Empty(diff.ChangedEndpoints);
         Assert.Empty(diff.RemovedEndpoints);
     }
@@ -208,6 +210,10 @@ public class ODataImportServiceTests
             .ReturnsAsync((Core.Models.Endpoint e) => e);
         repoMock.Setup(r => r.DeleteEndpointAsync(It.IsAny<int>()))
             .Returns(Task.CompletedTask);
+        repoMock.Setup(r => r.GetEndpointGroupsAsync(It.IsAny<int>()))
+            .ReturnsAsync([]);
+        repoMock.Setup(r => r.AddEndpointGroupAsync(It.IsAny<EndpointGroup>()))
+            .ReturnsAsync((EndpointGroup g) => { g.Id = 1; return g; });
 
         var service = CreateService(ODataMetadata, repoMock);
 
@@ -273,9 +279,9 @@ public class ODataImportServiceTests
         Assert.Equal("odatav4/Products", productsGet.RelativePath);
     }
 
-    /// <summary>Import_AuthenticateEndpointNotYetPresent_IsAddedToNewEndpoints</summary>
+    /// <summary>Import_AuthenticateEndpointNotAutoAdded — automatische Einfügung wurde entfernt</summary>
     [Fact]
-    public async Task Import_AuthenticateEndpointNotYetPresent_IsAddedToNewEndpoints()
+    public async Task Import_AuthenticateEndpointNotAutoAdded()
     {
         var repoMock = new Mock<IEndpointRepository>();
         repoMock.Setup(r => r.GetEndpointsAsync(It.IsAny<int>())).ReturnsAsync([]);
@@ -290,20 +296,150 @@ public class ODataImportServiceTests
 
         var diff = await service.ImportAsync(app);
 
-        Assert.Contains(diff.NewEndpoints, e => e.Name == "POST authenticate" && e.Method == Core.Enums.HttpMethod.POST);
+        Assert.DoesNotContain(diff.NewEndpoints, e => e.Name == "POST authenticate");
     }
 
-    /// <summary>Import_AuthenticateEndpointAlreadyPresent_IsNotDuplicated</summary>
+    /// <summary>Import_PutPatchDelete_EndpointsHaveKeyInRelativePath</summary>
     [Fact]
-    public async Task Import_AuthenticateEndpointAlreadyPresent_IsNotDuplicated()
+    public async Task Import_PutPatchDelete_EndpointsHaveKeyInRelativePath()
     {
-        var existing = new List<Core.Models.Endpoint>
-        {
-            new() { Id = 10, Name = "POST authenticate", Method = Core.Enums.HttpMethod.POST, RelativePath = "authenticate", ApplicationId = 1 }
-        };
         var repoMock = new Mock<IEndpointRepository>();
-        repoMock.Setup(r => r.GetEndpointsAsync(It.IsAny<int>())).ReturnsAsync(existing);
+        repoMock.Setup(r => r.GetEndpointsAsync(It.IsAny<int>())).ReturnsAsync([]);
         var service = CreateService(ODataMetadata, repoMock);
+        var app = new Core.Models.Application { Id = 1, InterfaceUrl = "http://localhost/$metadata", InterfaceType = Core.Enums.InterfaceType.OData, BaseUrl = "http://localhost" };
+
+        var diff = await service.ImportAsync(app);
+
+        var putEndpoint = diff.NewEndpoints.FirstOrDefault(e => e.Method == Core.Enums.HttpMethod.PUT);
+        var patchEndpoint = diff.NewEndpoints.FirstOrDefault(e => e.Method == Core.Enums.HttpMethod.PATCH);
+        var deleteEndpoint = diff.NewEndpoints.FirstOrDefault(e => e.Method == Core.Enums.HttpMethod.DELETE);
+        Assert.NotNull(putEndpoint);
+        Assert.NotNull(patchEndpoint);
+        Assert.NotNull(deleteEndpoint);
+        Assert.Contains("{key}", putEndpoint.RelativePath);
+        Assert.Contains("{key}", patchEndpoint.RelativePath);
+        Assert.Contains("{key}", deleteEndpoint.RelativePath);
+    }
+
+    /// <summary>Import_WithAuthTypeAnnotation_SetsAuthTypeFromAnnotation</summary>
+    [Fact]
+    public async Task Import_WithAuthTypeAnnotation_SetsAuthTypeFromAnnotation()
+    {
+        const string metadataWithAnnotation = """
+            <?xml version="1.0" encoding="utf-8"?>
+            <edmx:Edmx Version="4.0" xmlns:edmx="http://docs.oasis-open.org/odata/ns/edmx">
+              <edmx:DataServices>
+                <Schema Namespace="TestService" xmlns="http://docs.oasis-open.org/odata/ns/edm">
+                  <EntityType Name="Product">
+                    <Key><PropertyRef Name="Id" /></Key>
+                    <Property Name="Id" Type="Edm.Int32" Nullable="false" />
+                  </EntityType>
+                  <EntityContainer Name="Container">
+                    <EntitySet Name="Products" EntityType="TestService.Product">
+                      <Annotation Term="x-sz-auth-type" String="BearerToken" />
+                    </EntitySet>
+                  </EntityContainer>
+                </Schema>
+              </edmx:DataServices>
+            </edmx:Edmx>
+            """;
+        var repoMock = new Mock<IEndpointRepository>();
+        repoMock.Setup(r => r.GetEndpointsAsync(It.IsAny<int>())).ReturnsAsync([]);
+        var service = CreateService(metadataWithAnnotation, repoMock);
+        var app = new Core.Models.Application { Id = 1, InterfaceUrl = "http://localhost/$metadata", InterfaceType = Core.Enums.InterfaceType.OData, BaseUrl = "http://localhost" };
+
+        var diff = await service.ImportAsync(app);
+
+        Assert.All(diff.NewEndpoints, e => Assert.Equal(Core.Enums.AuthenticationType.BearerToken, e.AuthenticationType));
+    }
+
+    /// <summary>Import_WithPostRequestScriptAnnotation_SetsPostRequestScript</summary>
+    [Fact]
+    public async Task Import_WithPostRequestScriptAnnotation_SetsPostRequestScript()
+    {
+        const string metadataWithScript = """
+            <?xml version="1.0" encoding="utf-8"?>
+            <edmx:Edmx Version="4.0" xmlns:edmx="http://docs.oasis-open.org/odata/ns/edmx">
+              <edmx:DataServices>
+                <Schema Namespace="TestService" xmlns="http://docs.oasis-open.org/odata/ns/edm">
+                  <EntityType Name="Product">
+                    <Key><PropertyRef Name="Id" /></Key>
+                    <Property Name="Id" Type="Edm.Int32" Nullable="false" />
+                  </EntityType>
+                  <EntityContainer Name="Container">
+                    <EntitySet Name="Products" EntityType="TestService.Product">
+                      <Annotation Term="x-sz-post-request-script" String="console.log('done');" />
+                    </EntitySet>
+                  </EntityContainer>
+                </Schema>
+              </edmx:DataServices>
+            </edmx:Edmx>
+            """;
+        var repoMock = new Mock<IEndpointRepository>();
+        repoMock.Setup(r => r.GetEndpointsAsync(It.IsAny<int>())).ReturnsAsync([]);
+        var service = CreateService(metadataWithScript, repoMock);
+        var app = new Core.Models.Application { Id = 1, InterfaceUrl = "http://localhost/$metadata", InterfaceType = Core.Enums.InterfaceType.OData, BaseUrl = "http://localhost" };
+
+        var diff = await service.ImportAsync(app);
+
+        Assert.All(diff.NewEndpoints, e => Assert.Equal("console.log('done');", e.PostRequestScript));
+    }
+
+    /// <summary>ApplyDiff_NewEndpoints_CreatesEndpointGroupPerEntitySet</summary>
+    [Fact]
+    public async Task ApplyDiff_NewEndpoints_CreatesEndpointGroupPerEntitySet()
+    {
+        var repoMock = new Mock<IEndpointRepository>();
+        repoMock.Setup(r => r.GetEndpointGroupsAsync(It.IsAny<int>())).ReturnsAsync([]);
+        var createdGroups = new List<EndpointGroup>();
+        repoMock.Setup(r => r.AddEndpointGroupAsync(It.IsAny<EndpointGroup>()))
+            .ReturnsAsync((EndpointGroup g) => { g.Id = createdGroups.Count + 1; createdGroups.Add(g); return g; });
+        repoMock.Setup(r => r.AddEndpointAsync(It.IsAny<Core.Models.Endpoint>()))
+            .ReturnsAsync((Core.Models.Endpoint e) => e);
+
+        var service = CreateService(ODataMetadata, repoMock);
+
+        var getEndpoint = new Core.Models.Endpoint { Id = 0, Name = "GET Products", Method = Core.Enums.HttpMethod.GET, RelativePath = "Products", ApplicationId = 1 };
+        var postEndpoint = new Core.Models.Endpoint { Id = 0, Name = "POST Products", Method = Core.Enums.HttpMethod.POST, RelativePath = "Products", ApplicationId = 1 };
+        var diff = new ImportDiff { NewEndpoints = [getEndpoint, postEndpoint] };
+
+        await service.ApplyDiffAsync(diff);
+
+        Assert.Single(createdGroups);
+        Assert.Equal("Products", createdGroups[0].Name);
+        Assert.NotNull(getEndpoint.EndpointGroupId);
+        Assert.NotNull(postEndpoint.EndpointGroupId);
+        Assert.Equal(getEndpoint.EndpointGroupId, postEndpoint.EndpointGroupId);
+    }
+
+    /// <summary>Import_FunctionWithAuthTypeAnnotation_SetsAuthTypeFromAnnotation — prüft dass Function-Elemente in ParseOperationAnnotations verarbeitet werden</summary>
+    [Fact]
+    public async Task Import_FunctionWithAuthTypeAnnotation_SetsAuthTypeFromAnnotation()
+    {
+        const string metadataWithFunction = """
+            <?xml version="1.0" encoding="utf-8"?>
+            <edmx:Edmx Version="4.0" xmlns:edmx="http://docs.oasis-open.org/odata/ns/edmx">
+              <edmx:DataServices>
+                <Schema Namespace="TestService" xmlns="http://docs.oasis-open.org/odata/ns/edm">
+                  <EntityType Name="Product">
+                    <Key><PropertyRef Name="Id" /></Key>
+                    <Property Name="Id" Type="Edm.Int32" Nullable="false" />
+                  </EntityType>
+                  <Function Name="GetStatus">
+                    <ReturnType Type="Edm.String" />
+                    <Annotation Term="Schnittstellenzentrale.V1.x-sz-auth-type" String="Negotiate" />
+                  </Function>
+                  <EntityContainer Name="Container">
+                    <EntitySet Name="Products" EntityType="TestService.Product" />
+                    <FunctionImport Name="GetStatus" Function="TestService.GetStatus" />
+                  </EntityContainer>
+                </Schema>
+              </edmx:DataServices>
+            </edmx:Edmx>
+            """;
+        var repoMock = new Mock<IEndpointRepository>();
+        repoMock.Setup(r => r.GetEndpointsAsync(It.IsAny<int>())).ReturnsAsync([]);
+        var service = CreateService(metadataWithFunction, repoMock);
         var app = new Core.Models.Application
         {
             Id = 1,
@@ -314,7 +450,9 @@ public class ODataImportServiceTests
 
         var diff = await service.ImportAsync(app);
 
-        Assert.DoesNotContain(diff.NewEndpoints, e => e.Name == "POST authenticate");
+        var statusEndpoint = diff.NewEndpoints.FirstOrDefault(e => e.Name == "GetStatus");
+        Assert.NotNull(statusEndpoint);
+        Assert.Equal(Core.Enums.AuthenticationType.Negotiate, statusEndpoint.AuthenticationType);
     }
 
     /// <summary>Import_WithExistingBearerToken_SetsAuthTypeOnEndpoints</summary>

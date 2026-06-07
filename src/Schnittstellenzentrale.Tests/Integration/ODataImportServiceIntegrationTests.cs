@@ -81,15 +81,18 @@ public class ODataImportServiceIntegrationTests : IClassFixture<ControllerTestFa
 
         var diff = await service.ImportAsync(application);
 
-        // GET Products, POST Products, + POST authenticate
-        Assert.Equal(3, diff.NewEndpoints.Count);
+        // GET Products, POST Products, PUT Products({key}), PATCH Products({key}), DELETE Products({key})
+        Assert.Equal(5, diff.NewEndpoints.Count);
         Assert.Null(diff.ErrorMessage);
 
         await service.ApplyDiffAsync(diff);
 
         var persistedEndpoints = await endpointRepository.GetEndpointsAsync(application.Id);
-        Assert.Equal(3, persistedEndpoints.Count);
-        Assert.Contains(persistedEndpoints, e => e.RelativePath == "Products");
-        Assert.Contains(persistedEndpoints, e => e.Name == "POST authenticate");
+        Assert.Equal(5, persistedEndpoints.Count);
+        Assert.Contains(persistedEndpoints, e => e.RelativePath == "Products" && e.Method == Core.Enums.HttpMethod.GET);
+        Assert.Contains(persistedEndpoints, e => e.RelativePath == "Products" && e.Method == Core.Enums.HttpMethod.POST);
+        Assert.Contains(persistedEndpoints, e => e.Method == Core.Enums.HttpMethod.PUT);
+        Assert.Contains(persistedEndpoints, e => e.Method == Core.Enums.HttpMethod.PATCH);
+        Assert.Contains(persistedEndpoints, e => e.Method == Core.Enums.HttpMethod.DELETE);
     }
 }

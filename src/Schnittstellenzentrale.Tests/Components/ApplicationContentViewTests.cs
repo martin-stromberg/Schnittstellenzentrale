@@ -28,6 +28,7 @@ public class ApplicationContentViewTests : BunitContext
         _historyServiceMock.Setup(s => s.GetTopEndpointsAsync(It.IsAny<int>(), It.IsAny<int>())).ReturnsAsync([]);
 
         Services.AddSingleton(_applicationServiceMock.Object);
+        // ODataImportDialog und SwaggerImportDialog injizieren die Services direkt — werden als transitive Abhängigkeiten registriert.
         Services.AddSingleton(_swaggerImportMock.Object);
         Services.AddSingleton(_odataImportMock.Object);
         Services.AddSingleton(_healthCheckMock.Object);
@@ -96,8 +97,8 @@ public class ApplicationContentViewTests : BunitContext
     public async Task OpenODataImport_OnError_ShowsErrorMessage()
     {
         var app = CreateODataApplication();
-        _odataImportMock
-            .Setup(s => s.ImportAsync(app))
+        _apiClientMock
+            .Setup(s => s.ImportODataMetadataAsync(app.Id))
             .ReturnsAsync(new ImportDiff { ErrorMessage = "Connection refused" });
 
         var cut = Render<ApplicationContentView>(p => p.Add(x => x.Application, app));
@@ -115,8 +116,8 @@ public class ApplicationContentViewTests : BunitContext
     public async Task OpenODataImport_OnSuccess_OpensDialog()
     {
         var app = CreateODataApplication();
-        _odataImportMock
-            .Setup(s => s.ImportAsync(app))
+        _apiClientMock
+            .Setup(s => s.ImportODataMetadataAsync(app.Id))
             .ReturnsAsync(new ImportDiff());
 
         var cut = Render<ApplicationContentView>(p => p.Add(x => x.Application, app));

@@ -831,4 +831,71 @@ public class ApplicationApiClientTests
                 r.Method == HttpMethod.Get),
             ItExpr.IsAny<CancellationToken>());
     }
+
+    /// <summary>ImportSwaggerMetadataAsync_SendsCorrectPostRequestAndReturnsDiff</summary>
+    [Fact]
+    public async Task ImportSwaggerMetadataAsync_SendsCorrectPostRequestAndReturnsDiff()
+    {
+        var authToken = Guid.NewGuid().ToString();
+        var newToken = Guid.NewGuid().ToString();
+        var diff = new ImportDiff
+        {
+            NewEndpoints = [new Endpoint { Id = 1, Name = "GET Items", RelativePath = "/items", ApplicationId = 5 }]
+        };
+        var responseJson = JsonSerializer.Serialize(diff);
+
+        var (apiClient, handlerMock, tokenStoreMock) = CreateClient(authToken, newToken, HttpStatusCode.OK, responseJson);
+
+        var result = await apiClient.ImportSwaggerMetadataAsync(5);
+
+        Assert.NotNull(result);
+        Assert.Single(result.NewEndpoints);
+        Assert.Equal("GET Items", result.NewEndpoints[0].Name);
+
+        tokenStoreMock.Verify(s => s.CreateTokenAsync("testuser"), Times.Once());
+
+        handlerMock.Protected().Verify(
+            "SendAsync",
+            Times.Once(),
+            ItExpr.Is<HttpRequestMessage>(r =>
+                r.RequestUri!.AbsolutePath == "/api/applications/5/import/swagger" &&
+                r.Method == HttpMethod.Post &&
+                r.Headers.Authorization != null &&
+                r.Headers.Authorization.Parameter == authToken &&
+                r.Headers.Contains("X-Storage-Mode")),
+            ItExpr.IsAny<CancellationToken>());
+    }
+
+    /// <summary>ImportODataMetadataAsync_SendsCorrectPostRequestAndReturnsDiff</summary>
+    [Fact]
+    public async Task ImportODataMetadataAsync_SendsCorrectPostRequestAndReturnsDiff()
+    {
+        var authToken = Guid.NewGuid().ToString();
+        var newToken = Guid.NewGuid().ToString();
+        var diff = new ImportDiff
+        {
+            ErrorMessage = "Metadaten nicht erreichbar"
+        };
+        var responseJson = JsonSerializer.Serialize(diff);
+
+        var (apiClient, handlerMock, tokenStoreMock) = CreateClient(authToken, newToken, HttpStatusCode.OK, responseJson);
+
+        var result = await apiClient.ImportODataMetadataAsync(7);
+
+        Assert.NotNull(result);
+        Assert.Equal("Metadaten nicht erreichbar", result.ErrorMessage);
+
+        tokenStoreMock.Verify(s => s.CreateTokenAsync("testuser"), Times.Once());
+
+        handlerMock.Protected().Verify(
+            "SendAsync",
+            Times.Once(),
+            ItExpr.Is<HttpRequestMessage>(r =>
+                r.RequestUri!.AbsolutePath == "/api/applications/7/import/odata" &&
+                r.Method == HttpMethod.Post &&
+                r.Headers.Authorization != null &&
+                r.Headers.Authorization.Parameter == authToken &&
+                r.Headers.Contains("X-Storage-Mode")),
+            ItExpr.IsAny<CancellationToken>());
+    }
 }

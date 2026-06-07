@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.ApiExplorer;
+using Microsoft.AspNetCore.OData.Routing.Attributes;
 using Schnittstellenzentrale.Core.Contracts;
 using Schnittstellenzentrale.Core.Interfaces;
 
@@ -8,8 +8,7 @@ namespace Schnittstellenzentrale.OData;
 
 /// <summary>Authentifizierungsendpunkt für die OData-API — liefert per Negotiate einen Bearer-Token.</summary>
 [Authorize]
-[ApiExplorerSettings(IgnoreApi = true)]
-[Route("odatav4/authenticate")]
+[Route("odatav4")]
 public class ODataAuthController : ControllerBase
 {
     private readonly ITokenStore _tokenStore;
@@ -20,10 +19,10 @@ public class ODataAuthController : ControllerBase
         _tokenStore = tokenStore;
     }
 
-    /// <summary>Authentifiziert den aktuellen Windows-Benutzer und gibt einen Bearer-Token für die OData-API zurück.</summary>
-    [HttpGet]
-    [HttpPost]
-    public async Task<IActionResult> AuthenticateAsync()
+    /// <summary>Authentifiziert den aktuellen Windows-Benutzer und gibt einen Bearer-Token für die OData-API zurück (OData Unbound Action).</summary>
+    [HttpPost("Authenticate()")]
+    [ODataAttributeRouting]
+    public async Task<IActionResult> Authenticate()
     {
         var username = HttpContext.User.Identity?.Name;
         if (string.IsNullOrEmpty(username))

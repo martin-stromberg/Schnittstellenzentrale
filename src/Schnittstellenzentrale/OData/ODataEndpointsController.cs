@@ -85,7 +85,15 @@ public class ODataEndpointsController : ODataControllerBase
             var targetGroup = await _endpointRepository.GetEndpointGroupByIdAsync(entity.EndpointGroupId.Value);
             if (targetGroup == null || targetGroup.ApplicationId != existing.ApplicationId)
                 return BadRequest("Die angegebene EndpointGroup gehört nicht zur selben Anwendung.");
+            if (targetGroup.Application?.IsSystem == true)
+                return StatusCode(StatusCodes.Status403Forbidden);
         }
+
+        // DB-RowVersion sichern, bevor Felder überschrieben werden.
+        // Das Repository setzt OriginalValue = existing.RowVersion für den EF-Concurrency-Check.
+        // Daher muss existing.RowVersion den vom Client gesendeten Wert enthalten — nicht den beim
+        // Laden gelesenen DB-Wert, da sonst der Check immer erfolgreich wäre.
+        var concurrencyRowVersion = entity.RowVersion.Length > 0 ? entity.RowVersion : existing.RowVersion;
 
         existing.Name = entity.Name;
         existing.Method = entity.Method;
@@ -96,6 +104,7 @@ public class ODataEndpointsController : ODataControllerBase
         existing.EndpointGroupId = entity.EndpointGroupId;
         existing.PreRequestScript = entity.PreRequestScript;
         existing.PostRequestScript = entity.PostRequestScript;
+        existing.RowVersion = concurrencyRowVersion;
 
         var saved = await _endpointRepository.UpdateEndpointAsync(existing);
         return Ok(saved);
@@ -122,6 +131,8 @@ public class ODataEndpointsController : ODataControllerBase
             var targetGroup = await _endpointRepository.GetEndpointGroupByIdAsync(existing.EndpointGroupId.Value);
             if (targetGroup == null || targetGroup.ApplicationId != existing.ApplicationId)
                 return BadRequest("Die angegebene EndpointGroup gehört nicht zur selben Anwendung.");
+            if (targetGroup.Application?.IsSystem == true)
+                return StatusCode(StatusCodes.Status403Forbidden);
         }
 
         var saved = await _endpointRepository.UpdateEndpointAsync(existing);

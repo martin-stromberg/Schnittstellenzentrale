@@ -1,6 +1,4 @@
 @inject IApplicationService ApplicationService
-@inject ISwaggerImportService SwaggerImportService
-@inject IODataImportService ODataImportService
 @inject IHealthCheckService HealthCheckService
 @inject IApplicationApiClient ApplicationApiClient
 @inject IStringLocalizer<SharedResources> L
@@ -137,14 +135,14 @@
 
     private async Task OpenSwaggerImportAsync()
     {
-        _swaggerDiff = await SwaggerImportService.ImportAsync(Application);
+        _swaggerDiff = await ApplicationApiClient.ImportSwaggerMetadataAsync(Application.Id);
         _showSwaggerImport = true;
     }
 
     private async Task OpenODataImportAsync()
     {
         _errorMessage = null;
-        var result = await ODataImportService.ImportAsync(Application);
+        var result = await ApplicationApiClient.ImportODataMetadataAsync(Application.Id);
         if (result.ErrorMessage != null)
         {
             _errorMessage = result.ErrorMessage;

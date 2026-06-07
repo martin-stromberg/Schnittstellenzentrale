@@ -69,6 +69,9 @@ public class ODataApplicationsController : ODataControllerBase
         // Das Repository setzt OriginalValue = existing.RowVersion für den EF-Concurrency-Check.
         // Daher muss existing.RowVersion den vom Client gesendeten Wert enthalten — nicht den beim
         // Laden gelesenen DB-Wert, da sonst der Check immer erfolgreich wäre.
+        // Opt-in: Sendet der Client kein oder ein leeres RowVersion, fällt der Fallback auf den DB-Wert —
+        // der EF-Check ist dann immer erfolgreich und ein gleichzeitiger Schreibkonflikt wird nicht erkannt.
+        // Dieses Verhalten ist bewusst rückwärtskompatibel (Clients ohne Concurrency-Unterstützung können schreiben).
         var concurrencyRowVersion = entity.RowVersion.Length > 0 ? entity.RowVersion : existing.RowVersion;
 
         existing.Name = entity.Name;

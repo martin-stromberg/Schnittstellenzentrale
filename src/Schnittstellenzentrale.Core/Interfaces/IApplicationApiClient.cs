@@ -30,4 +30,6 @@ public interface IApplicationApiClient
     Task<EndpointQueryParameter> AddQueryParameterAsync(EndpointQueryParameter parameter);
     Task DeleteQueryParameterAsync(int id);
     Task<SystemEnvironment?> GetEnvironmentByIdAsync(int id);
+    Task<ImportDiff> ImportSwaggerMetadataAsync(int applicationId);
+    Task<ImportDiff> ImportODataMetadataAsync(int applicationId);
 }

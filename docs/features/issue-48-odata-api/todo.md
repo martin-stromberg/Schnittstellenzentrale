@@ -12,7 +12,15 @@ Branch: `issue-48-odata-api`
 | [x] | 5 | Umsetzungsplanung (Unteragent) | `plan.md` |
 | [x] | 5a | Offene Punkte prüfen und ggf. Planung wiederholen | `plan.md` (aktualisiert) |
 | [x] | 5b | Planungscommit | – |
-| [x] | 6 | Implementierung (Unteragent) | Codeänderungen |
+| [x] | 6 | Implementierung Iteration 1 (Unteragent) | Codeänderungen |
+| [x] | 6 | Implementierung Iteration 2 (Unteragent) | Codeänderungen |
+| [x] | 7 | Plan-Review Iteration 2 (übersprungen — review.md grün) | – |
+| [x] | 8 | Code-Review Iteration 2 (Unteragent) | `review-code.md` |
+| [x] | – | Iteration 2 Abschluss: Fortschritt 7→4, weiter Iteration 3 | – |
+| [x] | 6 | Implementierung Iteration 3 (Unteragent) | Codeänderungen |
+| [x] | 7 | Plan-Review Iteration 3 (übersprungen — review.md grün) | – |
+| [x] | 8 | Code-Review Iteration 3 (Unteragent) | `review-code.md` |
+| [x] | – | Iteration 3 Abschluss: 3 Befunde, Iterationsmax erreicht → Schleifenabbruch | – |
 | [x] | 7 | Plan-Review (Unteragent, bedingt) | `review.md` |
 | [x] | 8 | Code-Review (Unteragent) | `review-code.md` |
 | [x] | – | Iteration oder Abschluss entscheiden | – |
