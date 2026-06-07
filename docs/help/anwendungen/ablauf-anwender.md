@@ -286,7 +286,52 @@ Im Kopfbereich der Karte erscheinen typabhängige Schaltflächen:
 - **REST-Anwendungen**: **Swagger-Import**, **Health Check**
 - **OData-Anwendungen**: **OData-Import**, **Health Check**
 
-Den OData-Import-Ablauf finden Sie in der Endpunkte-Dokumentation unter [OData-Endpunkte importieren](../endpunkte/ablauf-anwender.md#odata-endpunkte-importieren).
+---
+
+## OData-Endpunkte importieren
+
+### Voraussetzungen
+
+- Die Anwendung ist vom Typ **OData** (erkannt an der Schnittstellen-URL, die auf ein CSDL-Metadaten-Dokument zeigt, meist mit `/ODataService/$metadata` endend).
+- Die **OData-Import**-Schaltfläche ist im Kopfbereich der Anwendungsdetailansicht sichtbar.
+
+### Ablauf
+
+#### 1. Import-Button klicken
+
+Klicken Sie auf **OData-Import** in der Detailansicht Ihrer OData-Anwendung.
+
+#### 2. Metadaten werden abgerufen
+
+Die Schnittstellenzentrale lädt das CSDL-Metadaten-Dokument von der hinterlegten **Metadaten-URL** ab. Dieser Vorgang kann je nach Netzwerkgeschwindigkeit und Größe des Dokuments kurz dauern.
+
+**Fehlerfall:** Tritt ein Fehler auf (z. B. Netzwerk-Timeout, 401 Unauthorized, ungültiges XML), erscheint eine rote Fehlermeldung im Kopfbereich der Detailansicht. Der Dialog öffnet sich nicht. Überprüfen Sie:
+- Die Metadaten-URL ist korrekt und erreichbar.
+- Falls Authentifizierung erforderlich ist, ist diese bereits konfiguriert (manuell in der **Autorisierung**-Registerkarte eines Testendpunkts).
+
+#### 3. Endpunkte generieren und vergleichen
+
+Aus dem CSDL-Dokument werden automatisch Endpunkte für jedes **Entity-Set** und jede **OData-Operation** (Action/Function) generiert. Die Schnittstellenzentrale vergleicht diese mit den bereits in der Datenbank vorhandenen Endpunkten und zeigt:
+
+- **Neue Endpunkte** (werden hinzugefügt)
+- **Geänderte Endpunkte** (werden aktualisiert)
+- **Zu entfernende Endpunkte** (werden gelöscht)
+
+#### 4. Import-Dialog bestätigen
+
+Der Dialog zeigt eine Tabelle mit den zu importierenden Änderungen. Überprüfen Sie die Einträge und klicken Sie auf **Importieren**, um die Endpunkte zu speichern, oder auf **Abbrechen**, um den Import zu verwerfen.
+
+#### 5. Endpunkte sind verfügbar
+
+Nach erfolgreichem Import erscheinen die neuen Endpunkte sofort im Navigationsbaum unter der Anwendung. Sie können diese wie gewohnt bearbeiten und ausführen.
+
+**Hinweis:** Der OData-Import ergänzt oder aktualisiert nur den Endpunkt-Katalog. Die **Authentifizierung** muss manuell konfiguriert werden:
+1. Öffnen Sie einen der importierten Endpunkte.
+2. Wechseln Sie in den Reiter **Autorisierung**.
+3. Wählen Sie den benötigten Authentifizierungstyp (z. B. **BearerToken** oder **Negotiate**).
+4. Speichern Sie die Änderungen.
+
+---
 
 ---
 

@@ -506,3 +506,114 @@ flowchart TD
 Beim Laden der Seite ist `_expandedEndpointGroupIds` leer (`new HashSet<int>()`), weshalb alle Ordner initial zugeklappt erscheinen. `_expandedEndpointGroupIds` wird nicht explizit zurückgesetzt — weder bei `OnModeChanged` noch bei `LoadDataAsync`. Das bedeutet: aufgeklappte Ordner bleiben auch nach SignalR-Reloads aufgeklappt. Nur beim ersten Seitenaufruf und nach einem Browser-Reload sind alle Ordner zugeklappt.
 
 Beteiligte Klassen/Komponenten: `ApplicationGroupTree` (`ToggleEndpointGroupExpanded`, `RenderEndpointGroup`, `_expandedEndpointGroupIds`)
+
+---
+
+## Ablauf: OData-Import aus der Detailansicht
+
+Dieser Ablauf wird ausgelöst, wenn der Anwender in der `ApplicationContentView`-Detailansicht auf die Schaltfläche **OData-Import** klickt (sichtbar nur bei `Application.InterfaceType == InterfaceType.OData` und nicht-leerer `InterfaceUrl`).
+
+### 1. Import auslösen
+
+`ApplicationContentView.OpenODataImportAsync` wird aufgerufen:
+- Setzt `_errorMessage = null` zurück.
+- Awaitet `IApplicationApiClient.ImportODataMetadataAsync(Application.Id)`.
+
+### 2. Metadaten abrufen und parsen
+
+`ApplicationApiClient.ImportODataMetadataAsync` leitet die Anfrage an den REST-API-Controller weiter.
+
+`ODataImportService.ImportAsync` führt folgende Schritte durch:
+- HTTP-GET auf `Application.InterfaceUrl` (in der Regel ein CSDL-Metadaten-Dokument wie `https://host/service/$metadata`).
+- **Fehlerfall HTTP:** `HttpRequestException` wird abgefangen, ein `ImportDiff` mit `ErrorMessage` wird zurückgegeben. Beispiel: `HTTP-Fehler beim Abruf der Metadaten: The remote server returned an error: (401) Unauthorized.`
+- **Fehlerfall Timeout:** `OperationCanceledException` wird abgefangen, ein `ImportDiff` mit `ErrorMessage` wird zurückgegeben.
+- XML wird mit `CsdlReader.Parse` geparst (benötigt `Microsoft.OData.Edm`).
+- **Fehlerfall XML/CSDL:** `XmlException` oder allgemeine `Exception` wird abgefangen, ein `ImportDiff` mit `ErrorMessage` wird zurückgegeben.
+
+### 3. Endpunkte generieren
+
+Aus dem geparsten `IEdmModel` werden Endpunkte erzeugt:
+
+- Für jedes `IEdmEntitySet` (z. B. `Products`, `Orders`): GET-, POST-, PUT-, PATCH- und DELETE-Endpunkt mit relativen Pfaden `/{EntitySetName}` und `/{EntitySetName}({key})`.
+- Für jede `IEdmAction` (OData-Action): POST-Endpunkt.
+- Für jede `IEdmFunction` (OData-Function): GET-Endpunkt.
+
+Beteiligte Klassen: `ODataImportService.ImportAsync`, `CsdlReader`, `IEdmModel`, `IEdmEntitySet`, `IEdmAction`, `IEdmFunction`
+
+### 4. Bearer-Token auslesen und auflösen
+
+`ODataImportService.ImportAsync` ermittelt die Standardauthentifizierung aus bestehenden Einträgen:
+- Wenn ein Bearer-Token für die Anwendung bereits in den Windows-Anmeldeinformationen gespeichert ist, wird dieser verwendet (`AuthenticationType.BearerToken`).
+- Sonst: `AuthenticationType.None`.
+
+CSDL-Format unterstützt keine proprietären Felder wie `x-sz-bearer-token` (im Gegensatz zu Swagger), daher ist keine Token-Persistierung möglich — Authentifizierungseinstellungen müssen manuell konfiguriert werden.
+
+### 5. Diff berechnen
+
+`ImportDiffCalculator.CalculateAsync` vergleicht die neu generierten Endpunkte mit den bereits in der Datenbank vorhandenen:
+- **Neue Endpunkte:** werden in `Diff.NewEndpoints` aufgelistet.
+- **Geänderte Endpunkte:** werden in `Diff.UpdatedEndpoints` aufgelistet.
+- **Zu entfernende Endpunkte:** werden in `Diff.DeletedEndpoints` aufgelistet.
+
+### 6. ImportDiff zurückgeben
+
+`ImportDiff` wird zusammen mit `ErrorMessage` (falls ein Fehler auftrat) zurückgegeben.
+
+### 7. Fehlerfall anzeigen (kein Dialog)
+
+In `ApplicationContentView.OpenODataImportAsync`:
+- Wenn `result.ErrorMessage != null`, wird `_errorMessage = result.ErrorMessage` gesetzt.
+- Die Methode kehrt zurück ohne `_showODataImport = true` zu setzen.
+- Das Markup zeigt den roten Alert-Block `<div class="sz-alert sz-alert-danger">@_errorMessage</div>`.
+
+### 8. Erfolgsfall — Dialog öffnen
+
+In `ApplicationContentView.OpenODataImportAsync`:
+- Wenn `result.ErrorMessage == null`, wird `_odataDiff = result` und `_showODataImport = true` gesetzt.
+- Blazor rendert `<ODataImportDialog Diff="_odataDiff" Application="Application" OnClose="CloseODataImport" />`.
+
+### 9. Benutzer bestätigt oder bricht ab
+
+`ODataImportDialog` delegiert an die generische `ImportDialog`-Komponente und registriert den `OnClose`-Callback.
+
+- **Bestätigung:** `ImportDialog` ruft die von `ODataImportDialog` übergebene `OnApplyAsync`-Callback auf.
+  - `ODataImportService.ApplyDiffAsync` persistiert die neuen, geänderten und gelöschten Endpunkte über `IEndpointRepository`.
+  - Bei `StorageMode.Team`: `ISignalRNotificationService.NotifyEndpointChangedAsync` für jede betroffene Anwendung.
+  - Dialog wird geschlossen; `CloseODataImport` wird aufgerufen.
+
+- **Abbruch:** Der Dialog wird ohne Speichern geschlossen; `OnClose`-Handler wird aufgerufen.
+
+### 10. Dialog schließen
+
+`ApplicationContentView.CloseODataImport` wird aufgerufen:
+- Setzt `_showODataImport = false`.
+- Blazor blendet den Dialog aus.
+
+Beteiligte Klassen/Komponenten: `ApplicationContentView`, `ODataImportDialog`, `ImportDialog`, `ODataImportService`, `ImportDiffCalculator`, `IApplicationApiClient`, `IEndpointRepository`, `ISignalRNotificationService`
+
+```mermaid
+flowchart TD
+    A[Benutzer klickt OData-Import-Button] --> B[OpenODataImportAsync]
+    B --> C[_errorMessage = null]
+    C --> D[ImportODataMetadataAsync]
+    D --> E{Fehler aufgetreten?}
+    E -- HTTP/XML/Timeout --> F[ErrorMessage setzen]
+    F --> G[Beende ohne Dialog]
+    E -- Kein Fehler --> H[Endpunkte aus CSDL generieren]
+    H --> I[ImportDiff berechnen]
+    I --> J[_odataDiff = result\n_showODataImport = true]
+    J --> K[ODataImportDialog wird gerendert]
+    K --> L{Benutzer wählt?}
+    L -- Abbrechen --> M[OnClose: CloseODataImport]
+    L -- Bestätigen --> N[ApplyDiffAsync]
+    N --> O[Endpunkte persistieren]
+    O --> P{StorageMode?}
+    P -- Team --> Q[NotifyEndpointChangedAsync]
+    P -- User --> R[Keine SignalR-Benachrichtigung]
+    Q --> M
+    R --> M
+    M --> S[_showODataImport = false]
+    G --> T[Fehler-Alert sichtbar]
+```
+
+---

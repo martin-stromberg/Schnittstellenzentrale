@@ -79,7 +79,7 @@ Ein Klick auf den Anwendungsnamen im Navigationsbaum wählt die Anwendung aus un
 | `OData` | **OData-Import** | Lädt das CSDL-Metadaten-Dokument und importiert Endpunkte |
 | Alle | **Health Check** | Prüft die Erreichbarkeit der Basis-URL |
 
-Schlägt ein Import fehl (z. B. nicht erreichbare URL oder ungültiges Dokument), erscheint eine inline-Fehlermeldung im Kopfbereich der Detailansicht; der Import-Dialog öffnet sich nicht.
+**Fehlerbehandlung:** Schlägt ein Import fehl (z. B. nicht erreichbare URL oder ungültiges Dokument), erscheint eine inline-Fehlermeldung im Kopfbereich der Detailansicht; der Import-Dialog öffnet sich nicht. Der rote Alert-Text beschreibt die konkrete Ursache (z. B. `HTTP-Fehler beim Abruf der Metadaten: The remote server returned an error: (401) Unauthorized.`). Der Fehler bleibt sichtbar, bis der Anwender erneut den Import-Button klickt.
 
 Details zum Import-Workflow sind unter [Endpunkte → Beschreibung](../endpunkte/beschreibung.md) dokumentiert.
 
