@@ -2,7 +2,7 @@
 
 ## Übersicht
 
-Der OData v4-Service ist unter dem Präfix `/odatav4` erreichbar. Er exponiert vier Entity-Sets und ein CSDL-Metadaten-Dokument. Alle Datenendpunkte erfordern einen gültigen Bearer-Token. Der Token kann direkt über `GET /odatav4/authenticate` oder `POST /odatav4/authenticate` (Windows/Negotiate) bezogen werden — unabhängig von der REST-API. OData-Abfrageoptionen (`$filter`, `$select`, `$expand`, `$orderby`, `$top`, `$skip`) werden auf allen Collection-Endpunkten unterstützt.
+Der OData v4-Service ist unter dem Präfix `/odatav4` erreichbar. Er exponiert vier Entity-Sets und ein CSDL-Metadaten-Dokument. Alle Datenendpunkte erfordern einen gültigen Bearer-Token. Der Token kann direkt über `GET /odatav4/Authenticate()` oder `POST /odatav4/Authenticate()` (Windows/Negotiate) bezogen werden — unabhängig von der REST-API. OData-Abfrageoptionen (`$filter`, `$select`, `$expand`, `$orderby`, `$top`, `$skip`) werden auf allen Collection-Endpunkten unterstützt. Der `X-Storage-Mode`-Header wird von allen Datencontrollern ausgewertet (Standard: `User`), um die zurückgegebenen Datensätze zu filtern.
 
 ---
 
@@ -10,15 +10,15 @@ Der OData v4-Service ist unter dem Präfix `/odatav4` erreichbar. Er exponiert v
 
 Das unter `GET /odatav4/$metadata` veröffentlichte CSDL-Dokument wird auch vom internen **OData-Import-Workflow** verwendet: Ist eine Anwendung vom Typ `OData`, erscheint in der Detailansicht (`ApplicationContentView`) die Schaltfläche **OData-Import**. Ein Klick darauf ruft das CSDL-Dokument von `Application.InterfaceUrl` ab, leitet daraus Endpunkte ab (je ein GET und ein POST pro Entity-Set sowie Endpunkte für OData-Operationen) und zeigt eine Import-Vorschau. Nach Bestätigung werden die Endpunkte automatisch in der Datenbank angelegt oder aktualisiert.
 
-Der OData-Import-Workflow ist analog zum Swagger-Import für REST-Anwendungen — mit dem Unterschied, dass keine Ordnerzuweisung und keine Bearer-Token-Persistierung stattfindet (das CSDL-Format enthält kein proprietäres `x-sz-bearer-token`-Feld).
+Der OData-Import-Workflow ist analog zum Swagger-Import für REST-Anwendungen. Der Import liest optional die proprietäre Annotation `x-sz-bearer-token` aus dem CSDL-Dokument (auf Entity-Set- oder Operationsebene). Ist diese vorhanden, wird der importierte Endpunkt mit Authentifizierungstyp `BearerToken` versehen und der Token-Wert persistiert.
 
 Technische Details und Anwenderanleitung zum OData-Import sind unter [Endpunkte](../endpunkte/beschreibung.md) dokumentiert.
 
 ---
 
-## GET /odatav4/authenticate  ·  POST /odatav4/authenticate
+## GET /odatav4/Authenticate()  ·  POST /odatav4/Authenticate()
 
-Authentifiziert den aktuellen Windows-Benutzer per Negotiate und gibt einen Bearer-Token für die OData-API zurück.
+Authentifiziert den aktuellen Windows-Benutzer per Negotiate und gibt einen Bearer-Token für die OData-API zurück. Beide Methoden (GET und POST) sind unterstützt — GET folgt der OData-Unbound-Function-Konvention, POST der Unbound-Action-Konvention.
 
 **Authentifizierung:** Windows/Negotiate (wird vom Browser oder Client automatisch ausgehandelt)
 
@@ -54,13 +54,14 @@ Gibt das CSDL-Metadaten-Dokument des OData-Service zurück.
 
 Gibt alle Anwendungen als OData-Collection zurück.
 
-**Authentifizierung:** Bearer-Token (aus `POST /authenticate`).
+**Authentifizierung:** Bearer-Token (aus `POST /odatav4/Authenticate()`).
 
 **Request-Header:**
 
 | Header | Pflicht | Beschreibung |
 |--------|---------|--------------|
 | `Authorization` | Ja | `Bearer <token>` |
+| `X-Storage-Mode` | Nein | `Team` oder `User` (Standard: `User`); filtert die Datensätze je nach Speichermoduszugehörigkeit des authentifizierten Benutzers |
 
 **OData-Abfrageoptionen:** `$filter`, `$select`, `$expand`, `$orderby`, `$top`, `$skip`, `$count`
 
@@ -148,7 +149,7 @@ Legt eine neue Anwendung an.
 | `applicationGroupId` | `int?` | ID der Gruppe; `null` für gruppenlose Anwendung |
 | `owner` | `string?` | Windows-Benutzername |
 | `id` | `int` | Wird serverseitig ignoriert (auf 0 zurückgesetzt) |
-| `rowVersion` | `byte[]` | Wird serverseitig ignoriert |
+| `rowVersion` | `byte[]` | Wird bei POST serverseitig ignoriert |
 
 **Response: 201 Created**
 
@@ -184,7 +185,13 @@ Ersetzt eine Anwendung vollständig.
 
 **Pfadparameter:** `key` (int) — ID der Anwendung
 
-**Request-Body:** analog zu `POST /odatav4/Applications`
+**Request-Body:** analog zu `POST /odatav4/Applications`, jedoch **mit** nicht-leerem `rowVersion`-Feld (Optimistic-Concurrency-Pflichtfeld).
+
+| Feld | Typ | Beschreibung |
+|------|-----|--------------|
+| `rowVersion` | `byte[]` | Pflichtfeld — muss den aktuellen RowVersion-Wert des Objekts enthalten |
+
+`id` und `isSystem` werden serverseitig ignoriert.
 
 **Response: 200 OK** — aktualisiertes `Application`-Objekt
 
@@ -192,6 +199,7 @@ Ersetzt eine Anwendung vollständig.
 
 | Status | Ursache |
 |--------|---------|
+| 400 Bad Request | `rowVersion` fehlt oder ist leer |
 | 401 Unauthorized | Token fehlt, unbekannt oder abgelaufen |
 | 403 Forbidden | Anwendung ist eine Systemanwendung (`IsSystem == true`) |
 | 404 Not Found | Anwendung nicht gefunden |
@@ -215,6 +223,10 @@ Aktualisiert einzelne Felder einer Anwendung (partielles Update).
 
 Unterstützte Felder: `name`, `description`, `baseUrl`, `interfaceUrl`, `owner`, `applicationGroupId`, `subtitle`, `iconData`.
 
+**Null-Behandlung:** String-Felder (`name`, `description`, etc.) können explizit auf `null` gesetzt werden, um sie zu leeren. Numerische Felder wie `applicationGroupId` können auf `null` gesetzt werden. Der Wert `null` setzt das Feld auf seinen leeren Zustand oder `null`-Wert.
+
+**Type-Guards:** Numerische Felder wie `applicationGroupId` akzeptieren nur JSON-Number-Werte oder `null` — String-Werte oder Arrays werden mit 400 Bad Request abgewiesen.
+
 `id` und `rowVersion` werden auch im PATCH-Body ignoriert.
 
 **Response: 200 OK** — aktualisiertes `Application`-Objekt
@@ -223,6 +235,7 @@ Unterstützte Felder: `name`, `description`, `baseUrl`, `interfaceUrl`, `owner`,
 
 | Status | Ursache |
 |--------|---------|
+| 400 Bad Request | Ein Feld hat einen ungültigen Datentyp (z. B. String statt Number) |
 | 401 Unauthorized | Token fehlt, unbekannt oder abgelaufen |
 | 403 Forbidden | Anwendung ist eine Systemanwendung |
 | 404 Not Found | Anwendung nicht gefunden |
@@ -252,6 +265,13 @@ Löscht eine Anwendung.
 Gibt alle Anwendungsgruppen als OData-Collection zurück.
 
 **Authentifizierung:** Bearer-Token.
+
+**Request-Header:**
+
+| Header | Pflicht | Beschreibung |
+|--------|---------|--------------|
+| `Authorization` | Ja | `Bearer <token>` |
+| `X-Storage-Mode` | Nein | `Team` oder `User` (Standard: `User`); filtert Gruppen nach Speichermoduszugehörigkeit |
 
 **OData-Abfrageoptionen:** `$filter`, `$select`, `$expand`, `$orderby`, `$top`, `$skip`, `$count`
 
@@ -295,11 +315,13 @@ Legt eine neue Anwendungsgruppe an.
 
 Ersetzt eine Anwendungsgruppe vollständig.
 
-**Felder:** `name`, `description`, `subtitle`, `iconData`
+**Felder:** `name`, `description`, `subtitle`, `iconData`, `rowVersion` (Pflichtfeld)
+
+`id` und `isSystem` werden serverseitig ignoriert.
 
 **Response: 200 OK**
 
-**Fehler:** 401 Unauthorized, 403 Forbidden (Systemgruppe), 404 Not Found
+**Fehler:** 400 Bad Request (`rowVersion` fehlt), 401 Unauthorized, 403 Forbidden (Systemgruppe), 404 Not Found
 
 ---
 
@@ -309,9 +331,18 @@ Partielles Update einer Anwendungsgruppe.
 
 Unterstützte Felder: `name`, `description`, `subtitle`.
 
+**Null-Behandlung:** `description` und `subtitle` können auf `null` gesetzt werden. Das Feld `name` akzeptiert nur String-Werte.
+
 **Response: 200 OK**
 
-**Fehler:** 401 Unauthorized, 403 Forbidden (Systemgruppe), 404 Not Found
+**Fehler:**
+
+| Status | Ursache |
+|--------|---------|
+| 400 Bad Request | Ein Feld hat einen ungültigen Datentyp |
+| 401 Unauthorized | Token fehlt oder ist ungültig |
+| 403 Forbidden | Gruppe ist eine Systemgruppe |
+| 404 Not Found | Gruppe nicht gefunden |
 
 ---
 
@@ -383,11 +414,13 @@ Legt einen neuen Endpunkt an.
 
 Ersetzt einen Endpunkt vollständig.
 
-**Felder:** `name`, `method`, `relativePath`, `body`, `bodyMode`, `authenticationType`, `endpointGroupId`, `preRequestScript`, `postRequestScript`
+**Felder:** `name`, `method`, `relativePath`, `body`, `bodyMode`, `authenticationType`, `endpointGroupId`, `preRequestScript`, `postRequestScript`, `rowVersion` (Pflichtfeld)
+
+`id` wird serverseitig ignoriert.
 
 **Response: 200 OK**
 
-**Fehler:** 401 Unauthorized, 403 Forbidden (Systemanwendung), 404 Not Found
+**Fehler:** 400 Bad Request (`rowVersion` fehlt), 401 Unauthorized, 403 Forbidden (Systemanwendung), 404 Not Found
 
 ---
 
@@ -397,9 +430,20 @@ Partielles Update eines Endpunkts.
 
 Unterstützte Felder: `name`, `relativePath`, `body`, `preRequestScript`, `postRequestScript`, `endpointGroupId`, `method`, `authenticationType`.
 
+**Null-Behandlung:** String-Felder können auf `null` gesetzt werden. Das Feld `endpointGroupId` kann auf `null` gesetzt werden (um den Endpunkt aus einer Gruppe zu entfernen).
+
+**Type-Guards:** Numerische Felder wie `endpointGroupId` akzeptieren nur JSON-Number-Werte oder `null`.
+
 **Response: 200 OK**
 
-**Fehler:** 401 Unauthorized, 403 Forbidden (Systemanwendung), 404 Not Found
+**Fehler:**
+
+| Status | Ursache |
+|--------|---------|
+| 400 Bad Request | Ein Feld hat einen ungültigen Datentyp |
+| 401 Unauthorized | Token fehlt oder ist ungültig |
+| 403 Forbidden | Endpunkt gehört zu einer Systemanwendung |
+| 404 Not Found | Endpunkt nicht gefunden |
 
 ---
 
@@ -467,11 +511,13 @@ Legt eine neue Endpunktgruppe an.
 
 Ersetzt eine Endpunktgruppe vollständig.
 
-**Felder:** `name`, `parentGroupId`
+**Felder:** `name`, `parentGroupId`, `rowVersion` (Pflichtfeld)
+
+`id` und `applicationId` werden serverseitig ignoriert.
 
 **Response: 200 OK**
 
-**Fehler:** 401 Unauthorized, 403 Forbidden (Systemanwendung), 404 Not Found
+**Fehler:** 400 Bad Request (`rowVersion` fehlt), 401 Unauthorized, 403 Forbidden (Systemanwendung), 404 Not Found
 
 ---
 
@@ -481,9 +527,20 @@ Partielles Update einer Endpunktgruppe.
 
 Unterstützte Felder: `name`, `parentGroupId`.
 
+**Null-Behandlung:** `parentGroupId` kann auf `null` gesetzt werden (um die Gruppe auf die oberste Ebene zu verschieben).
+
+**Type-Guards:** Das Feld `parentGroupId` akzeptiert nur JSON-Number-Werte oder `null`.
+
 **Response: 200 OK**
 
-**Fehler:** 401 Unauthorized, 403 Forbidden (Systemanwendung), 404 Not Found
+**Fehler:**
+
+| Status | Ursache |
+|--------|---------|
+| 400 Bad Request | Ein Feld hat einen ungültigen Datentyp |
+| 401 Unauthorized | Token fehlt oder ist ungültig |
+| 403 Forbidden | Gruppe gehört zu einer Systemanwendung |
+| 404 Not Found | Gruppe nicht gefunden |
 
 ---
 
