@@ -98,7 +98,7 @@ public class ODataImportService : IODataImportService
         foreach (var operation in model.SchemaElements.OfType<IEdmOperation>())
         {
             var method = operation is IEdmAction ? Core.Enums.HttpMethod.POST : Core.Enums.HttpMethod.GET;
-            var relativePath = BuildRelativePath(application.BaseUrl, serviceUrl, operation.Name);
+            var relativePath = BuildRelativePath(application.BaseUrl, serviceUrl, $"{operation.Name}()");
 
             operationAnnotations.TryGetValue(operation.Name, out var opAnnotations);
             var opAuthType = ResolveAuthType(opAnnotations, defaultAuthType);
@@ -118,6 +118,8 @@ public class ODataImportService : IODataImportService
         var groupLookup = new Dictionary<string, EndpointGroup>();
 
         var applicationId = diff.NewEndpoints.Select(e => e.ApplicationId).FirstOrDefault();
+        if (applicationId == 0)
+            applicationId = diff.ChangedEndpoints.Select(e => e.ApplicationId).FirstOrDefault();
         if (applicationId != 0)
         {
             var existingGroups = await _endpointRepository.GetEndpointGroupsAsync(applicationId);
@@ -147,7 +149,25 @@ public class ODataImportService : IODataImportService
         }
 
         foreach (var endpoint in diff.ChangedEndpoints)
+        {
+            var groupName = ExtractEntitySetName(endpoint.Name);
+            if (groupName != null)
+            {
+                if (!groupLookup.TryGetValue(groupName, out var group))
+                {
+                    group = await _endpointRepository.AddEndpointGroupAsync(new EndpointGroup
+                    {
+                        Name = groupName,
+                        ApplicationId = endpoint.ApplicationId,
+                        ParentGroupId = null
+                    });
+                    groupLookup[groupName] = group;
+                }
+                endpoint.EndpointGroupId = group.Id;
+            }
+
             await _endpointRepository.UpdateEndpointAsync(endpoint);
+        }
 
         foreach (var endpoint in diff.RemovedEndpoints)
             await _endpointRepository.DeleteEndpointAsync(endpoint.Id);
@@ -255,6 +275,7 @@ public class ODataImportService : IODataImportService
         {
             var xdoc = XDocument.Parse(xmlContent);
             var ns = XNamespace.Get("http://docs.oasis-open.org/odata/ns/edm");
+
             foreach (var element in xdoc.Descendants(ns + elementLocalName))
             {
                 var name = element.Attribute("Name")?.Value;
@@ -263,19 +284,30 @@ public class ODataImportService : IODataImportService
 
                 var annotations = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
                 foreach (var annotation in element.Elements(ns + "Annotation"))
-                {
-                    var term = annotation.Attribute("Term")?.Value;
-                    if (string.IsNullOrEmpty(term))
-                        continue;
-                    // Term kann vollqualifiziert sein (z.B. "Schnittstellenzentrale.V1.x-sz-auth-type")
-                    // oder kurz (z.B. "x-sz-auth-type"). Wir normalisieren auf den letzten Segment.
-                    var termKey = term.Contains('.') ? term[(term.LastIndexOf('.') + 1)..] : term;
-                    var value = annotation.Attribute("String")?.Value ?? annotation.Value;
-                    if (!string.IsNullOrEmpty(value))
-                        annotations[termKey] = value;
-                }
+                    MergeAnnotation(annotations, annotation);
                 if (annotations.Count > 0)
                     result[name] = annotations;
+            }
+
+            foreach (var annotationsElement in xdoc.Descendants(ns + "Annotations"))
+            {
+                var target = annotationsElement.Attribute("Target")?.Value;
+                if (string.IsNullOrEmpty(target))
+                    continue;
+
+                var name = ExtractNameFromAnnotationsTarget(target, elementLocalName);
+                if (string.IsNullOrEmpty(name))
+                    continue;
+
+                if (!result.TryGetValue(name, out var annotations))
+                {
+                    annotations = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                    result[name] = annotations;
+                }
+                foreach (var annotation in annotationsElement.Elements(ns + "Annotation"))
+                    MergeAnnotation(annotations, annotation);
+                if (annotations.Count == 0)
+                    result.Remove(name);
             }
         }
         catch (XmlException)
@@ -287,6 +319,43 @@ public class ODataImportService : IODataImportService
             // Annotationen sind optional — LINQ-Traversal-Fehler werden ignoriert
         }
         return result;
+    }
+
+    private static void MergeAnnotation(Dictionary<string, string> annotations, XElement annotation)
+    {
+        var term = annotation.Attribute("Term")?.Value;
+        if (string.IsNullOrEmpty(term))
+            return;
+        var termKey = term.Contains('.') ? term[(term.LastIndexOf('.') + 1)..] : term;
+        var value = annotation.Attribute("String")?.Value ?? annotation.Value;
+        if (!string.IsNullOrEmpty(value))
+            annotations[termKey] = value;
+    }
+
+    private static string? ExtractNameFromAnnotationsTarget(string target, string elementLocalName)
+    {
+        // Target examples:
+        //   EntitySet/Action:  "Default.Container/Applications"   → entityLocalName=EntitySet → "Applications"
+        //   Action:            "Default.Authenticate()"            → elementLocalName=Action   → "Authenticate"
+        //   Function:          "Default.GetStatus()"               → elementLocalName=Function → "GetStatus"
+        if (elementLocalName is "Action" or "Function")
+        {
+            // Ends with "()" — strip namespace prefix and "()"
+            if (!target.EndsWith("()", StringComparison.Ordinal))
+                return null;
+            var withoutParens = target[..^2];
+            var dotIndex = withoutParens.LastIndexOf('.');
+            return dotIndex >= 0 ? withoutParens[(dotIndex + 1)..] : withoutParens;
+        }
+
+        if (elementLocalName == "EntitySet")
+        {
+            // Contains "/" — part after last "/" is the entity set name
+            var slashIndex = target.LastIndexOf('/');
+            return slashIndex >= 0 ? target[(slashIndex + 1)..] : null;
+        }
+
+        return null;
     }
 
     private static string ResolveServiceUrl(string interfaceUrl)

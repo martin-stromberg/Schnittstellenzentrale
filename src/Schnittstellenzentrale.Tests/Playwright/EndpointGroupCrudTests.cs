@@ -129,7 +129,6 @@ public class EndpointGroupCrudTests : PlaywrightTestBase
         await Page.GetByLabel("Name").FillAsync("Soll-Nicht-Gespeichert-Werden");
         await Page.GetByRole(AriaRole.Button, new() { Name = "Abbrechen" }).ClickAsync();
 
-        await ExpandSystemAppAsync();
         await Assertions.Expect(Page.GetByText("Abbrechen-Ordner")).ToBeVisibleAsync();
         await Assertions.Expect(Page.GetByText("Soll-Nicht-Gespeichert-Werden")).Not.ToBeVisibleAsync();
     }

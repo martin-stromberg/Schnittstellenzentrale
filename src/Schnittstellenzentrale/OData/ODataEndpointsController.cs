@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OData.Query;
+using Microsoft.EntityFrameworkCore;
 using Schnittstellenzentrale.Core.Interfaces;
 using Endpoint = Schnittstellenzentrale.Core.Models.Endpoint;
 
@@ -132,8 +133,19 @@ public class ODataEndpointsController : ODataControllerBase
                 return StatusCode(StatusCodes.Status403Forbidden);
         }
 
-        var saved = await _endpointRepository.UpdateEndpointAsync(existing);
-        return Ok(saved);
+        var rowVersion = ODataPatchHelper.TryExtractRowVersion(patch);
+        if (rowVersion != null)
+            existing.RowVersion = rowVersion;
+
+        try
+        {
+            var saved = await _endpointRepository.UpdateEndpointAsync(existing);
+            return Ok(saved);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            return Conflict("Der Endpunkt wurde zwischenzeitlich geändert. Bitte die Seite neu laden.");
+        }
     }
 
     private static void ApplyPatch(JsonElement patch, Endpoint target)
@@ -151,6 +163,10 @@ public class ODataEndpointsController : ODataControllerBase
                 case "method":
                     if (Enum.TryParse<Schnittstellenzentrale.Core.Enums.HttpMethod>(prop.Value.GetString(), true, out var method))
                         target.Method = method;
+                    break;
+                case "bodymode":
+                    if (Enum.TryParse<Schnittstellenzentrale.Core.Enums.BodyMode>(prop.Value.GetString(), true, out var bodyMode))
+                        target.BodyMode = bodyMode;
                     break;
                 case "authenticationtype":
                     if (Enum.TryParse<Schnittstellenzentrale.Core.Enums.AuthenticationType>(prop.Value.GetString(), true, out var auth))

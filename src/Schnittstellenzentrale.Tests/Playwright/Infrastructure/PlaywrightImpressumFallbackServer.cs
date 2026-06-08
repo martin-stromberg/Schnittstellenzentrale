@@ -4,15 +4,14 @@ using Schnittstellenzentrale.Infrastructure.Services;
 namespace Schnittstellenzentrale.Tests.Playwright.Infrastructure;
 
 /// <summary>
-/// Variante von <see cref="PlaywrightServer"/>, die vor dem App-Start eine temporäre
-/// <c>impressum.md</c>-Datei in einem eindeutigen Verzeichnis anlegt und
-/// <see cref="ImpressumSettings.FilePath"/> entsprechend konfiguriert.
-/// Das isolierte Verzeichnis verhindert Datei-Kontaminierung beim parallelen Testlauf.
+/// Variante von <see cref="PlaywrightServer"/>, die eine <c>impressum.md</c>-Datei ohne
+/// sprachspezifische Variante anlegt. Damit fällt die Spracherkennung in <see cref="ImpressumService"/>
+/// auf die Fallback-Datei zurück, unabhängig vom konfigurierten Thread-Locale.
 /// </summary>
-public class PlaywrightImpressumServer : PlaywrightServer
+public class PlaywrightImpressumFallbackServer : PlaywrightServer
 {
     /// <inheritdoc/>
-    protected override string BindUrl => "http://127.0.0.1:5101";
+    protected override string BindUrl => "http://127.0.0.1:5104";
 
     private string? _tempDir;
     private string? _impressumFilePath;
@@ -20,11 +19,11 @@ public class PlaywrightImpressumServer : PlaywrightServer
     /// <inheritdoc/>
     public override async Task InitializeAsync()
     {
-        _tempDir = Path.Combine(Path.GetTempPath(), $"sz-impressum-{Guid.NewGuid():N}");
+        _tempDir = Path.Combine(Path.GetTempPath(), $"sz-impressum-fb-{Guid.NewGuid():N}");
         Directory.CreateDirectory(_tempDir);
         _impressumFilePath = Path.Combine(_tempDir, "impressum.md");
         await File.WriteAllTextAsync(_impressumFilePath,
-            "# Impressum\n\nDies ist ein Test-Impressum.");
+            "# Impressum\n\nDies ist das Fallback-Impressum.");
 
         try
         {

@@ -18,7 +18,7 @@ public class ODataImportTests : PlaywrightTestBase
         await Page.WaitForLoadStateAsync(LoadState.NetworkIdle);
         await Page.Locator(".sz-topbar-tab", new() { HasText = "Workspaces" }).ClickAsync();
 
-        await Page.GetByRole(AriaRole.Button, new() { Name = "Neue Anwendung" }).ClickAsync();
+        await Page.GetByRole(AriaRole.Button, new() { Name = "+ Neue Anwendung" }).ClickAsync();
 
         await Page.GetByLabel("Name").FillAsync("OData-Test-Anwendung");
         await Page.GetByLabel("Basis-URL").FillAsync($"{BaseUrl}/odatav4");
@@ -48,6 +48,11 @@ public class ODataImportTests : PlaywrightTestBase
         await appChevron.ClickAsync();
         await appChevron.ClickAsync();
 
+        var groupChevron = Page.Locator(".sz-tree-row")
+            .Filter(new() { Has = Page.Locator(".sz-tree-item-label", new() { HasText = "Applications" }) })
+            .Locator(".sz-tree-chevron-btn");
+        await groupChevron.ClickAsync();
+
         await Assertions.Expect(Page.Locator(".sz-tree-item-btn", new() { HasText = "GET Applications" })).ToBeVisibleAsync();
     }
 
@@ -59,7 +64,7 @@ public class ODataImportTests : PlaywrightTestBase
         await Page.WaitForLoadStateAsync(LoadState.NetworkIdle);
         await Page.Locator(".sz-topbar-tab", new() { HasText = "Workspaces" }).ClickAsync();
 
-        await Page.GetByRole(AriaRole.Button, new() { Name = "Neue Anwendung" }).ClickAsync();
+        await Page.GetByRole(AriaRole.Button, new() { Name = "+ Neue Anwendung" }).ClickAsync();
         await Page.GetByLabel("Name").FillAsync("OData-CRUD-Anwendung");
         await Page.GetByLabel("Basis-URL").FillAsync($"{BaseUrl}/odatav4");
         await Page.GetByLabel("Schnittstellen-URL").FillAsync($"{BaseUrl}/odatav4/$metadata");
@@ -75,6 +80,12 @@ public class ODataImportTests : PlaywrightTestBase
             .Filter(new() { Has = Page.Locator(".sz-tree-item-btn", new() { HasText = "OData-CRUD-Anwendung" }) })
             .Locator(".sz-tree-chevron-btn");
         await appChevron.ClickAsync();
+        await appChevron.ClickAsync();
+
+        var groupChevron = Page.Locator(".sz-tree-row")
+            .Filter(new() { Has = Page.Locator(".sz-tree-item-label", new() { HasText = "Applications" }) })
+            .Locator(".sz-tree-chevron-btn");
+        await groupChevron.ClickAsync();
 
         await Assertions.Expect(Page.Locator(".sz-tree-item-btn", new() { HasText = "GET Applications" })).ToBeVisibleAsync();
 
@@ -90,6 +101,11 @@ public class ODataImportTests : PlaywrightTestBase
             .Filter(new() { Has = Page.Locator(".sz-tree-item-btn", new() { HasText = "OData-CRUD-Anwendung" }) })
             .Locator(".sz-tree-chevron-btn");
         await restoredChevron.ClickAsync();
+
+        var restoredGroupChevron = Page.Locator(".sz-tree-row")
+            .Filter(new() { Has = Page.Locator(".sz-tree-item-label", new() { HasText = "Applications" }) })
+            .Locator(".sz-tree-chevron-btn");
+        await restoredGroupChevron.ClickAsync();
 
         await Assertions.Expect(Page.Locator(".sz-tree-item-btn", new() { HasText = "GET Applications" })).ToBeVisibleAsync();
     }

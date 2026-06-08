@@ -402,7 +402,11 @@ public class ApplicationApiClient : IApplicationApiClient
             return new ImportDiff { ErrorMessage = errorBody ?? "Interface-Typ nicht unterstützt" };
         }
 
-        httpResponse.EnsureSuccessStatusCode();
+        if (!httpResponse.IsSuccessStatusCode)
+        {
+            var errorBody = await TryReadErrorMessageAsync(httpResponse);
+            return new ImportDiff { ErrorMessage = errorBody ?? $"HTTP-Fehler: {(int)httpResponse.StatusCode} {httpResponse.ReasonPhrase}" };
+        }
 
         return await httpResponse.Content.ReadFromJsonAsync<ImportDiff>()
             ?? throw new InvalidOperationException("Response deserialization returned null.");

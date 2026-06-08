@@ -5,8 +5,8 @@
         <EditForm Model="_model" OnValidSubmit="SaveAsync">
             <DataAnnotationsValidator />
             <div class="sz-form-group">
-                <label class="sz-form-label">@L["RenameEndpointGroupDialog_Label_Name"]</label>
-                <InputText class="sz-input" @bind-Value="_model.Name" />
+                <label class="sz-form-label" for="rename-endpoint-group-name">@L["RenameEndpointGroupDialog_Label_Name"]</label>
+                <InputText id="rename-endpoint-group-name" class="sz-input" @bind-Value="_model.Name" />
             </div>
             @if (!string.IsNullOrEmpty(_errorMessage))
             {

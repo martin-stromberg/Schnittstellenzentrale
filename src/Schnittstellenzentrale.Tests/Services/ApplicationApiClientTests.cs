@@ -882,4 +882,52 @@ public class ApplicationApiClientTests
         Assert.NotNull(result.ErrorMessage);
         Assert.False(string.IsNullOrEmpty(result.ErrorMessage));
     }
+
+    /// <summary>ImportMetadataAsync_On401_ReturnsImportDiffWithErrorMessage</summary>
+    [Fact]
+    public async Task ImportMetadataAsync_On401_ReturnsImportDiffWithErrorMessage()
+    {
+        var authToken = Guid.NewGuid().ToString();
+        var newToken = Guid.NewGuid().ToString();
+
+        var (apiClient, _, _) = CreateClient(authToken, newToken, HttpStatusCode.Unauthorized, "{}");
+
+        var result = await apiClient.ImportMetadataAsync(5);
+
+        Assert.NotNull(result);
+        Assert.NotNull(result.ErrorMessage);
+        Assert.False(string.IsNullOrEmpty(result.ErrorMessage));
+    }
+
+    /// <summary>ImportMetadataAsync_On404_ReturnsImportDiffWithErrorMessage</summary>
+    [Fact]
+    public async Task ImportMetadataAsync_On404_ReturnsImportDiffWithErrorMessage()
+    {
+        var authToken = Guid.NewGuid().ToString();
+        var newToken = Guid.NewGuid().ToString();
+
+        var (apiClient, _, _) = CreateClient(authToken, newToken, HttpStatusCode.NotFound, "{}");
+
+        var result = await apiClient.ImportMetadataAsync(5);
+
+        Assert.NotNull(result);
+        Assert.NotNull(result.ErrorMessage);
+        Assert.False(string.IsNullOrEmpty(result.ErrorMessage));
+    }
+
+    /// <summary>ImportMetadataAsync_On500_ReturnsImportDiffWithErrorMessage</summary>
+    [Fact]
+    public async Task ImportMetadataAsync_On500_ReturnsImportDiffWithErrorMessage()
+    {
+        var authToken = Guid.NewGuid().ToString();
+        var newToken = Guid.NewGuid().ToString();
+
+        var (apiClient, _, _) = CreateClient(authToken, newToken, HttpStatusCode.InternalServerError, "{}");
+
+        var result = await apiClient.ImportMetadataAsync(5);
+
+        Assert.NotNull(result);
+        Assert.NotNull(result.ErrorMessage);
+        Assert.False(string.IsNullOrEmpty(result.ErrorMessage));
+    }
 }

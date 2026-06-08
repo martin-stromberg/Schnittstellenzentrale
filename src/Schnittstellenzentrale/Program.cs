@@ -177,8 +177,11 @@ public partial class Program {
         if (!app.Environment.EnvironmentName.Equals("Playwright", StringComparison.OrdinalIgnoreCase))
             app.UseHttpsRedirection();
 
+        var defaultCulture = app.Environment.EnvironmentName.Equals("Playwright", StringComparison.OrdinalIgnoreCase)
+            ? "de"
+            : "en";
         var localizationOptions = new RequestLocalizationOptions()
-            .SetDefaultCulture("en")
+            .SetDefaultCulture(defaultCulture)
             .AddSupportedCultures("en", "de")
             .AddSupportedUICultures("en", "de");
         app.UseRequestLocalization(localizationOptions);

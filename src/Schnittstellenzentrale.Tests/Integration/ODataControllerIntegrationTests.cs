@@ -1116,6 +1116,104 @@ public class ODataControllerIntegrationTests : IClassFixture<ControllerTestFacto
         Assert.Contains("PersonalAppOData", content);
     }
 
+    /// <summary>PatchEndpoint_BodyMode_AppliesChange</summary>
+    [Fact]
+    public async Task PatchEndpoint_BodyMode_AppliesChange()
+    {
+        var client = _factory.CreateClient();
+        var token = await ObtainTokenAsync(client);
+
+        var appRepo = _factory.Services.GetRequiredService<IApplicationRepository>();
+        var endpointRepo = _factory.Services.GetRequiredService<IEndpointRepository>();
+
+        var app = await appRepo.AddApplicationAsync(new Application { Name = "BodyModeApp", BaseUrl = "https://bodymode.example.com" });
+        var endpoint = await endpointRepo.AddEndpointAsync(new Core.Models.Endpoint
+        {
+            Name = "GET BodyMode",
+            Method = Core.Enums.HttpMethod.GET,
+            RelativePath = "/bodymode",
+            ApplicationId = app.Id
+        });
+
+        var request = CreateRequest(HttpMethod.Patch, $"/odatav4/Endpoints({endpoint.Id})", token);
+        request.Content = new StringContent(
+            """{"BodyMode":"Json"}""",
+            System.Text.Encoding.UTF8,
+            "application/json");
+
+        var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var responseContent = await response.Content.ReadAsStringAsync();
+        var patchedEndpoint = JsonSerializer.Deserialize<Core.Models.Endpoint>(responseContent, JsonOptions);
+        Assert.NotNull(patchedEndpoint);
+        Assert.Equal(Core.Enums.BodyMode.Json, patchedEndpoint.BodyMode);
+    }
+
+    /// <summary>PatchApplication_WithNonStringName_Returns400</summary>
+    [Fact]
+    public async Task PatchApplication_WithNonStringName_Returns400()
+    {
+        var client = _factory.CreateClient();
+        var token = await ObtainTokenAsync(client);
+
+        var repo = _factory.Services.GetRequiredService<IApplicationRepository>();
+        var app = await repo.AddApplicationAsync(new Application { Name = "TypeCheckApp", BaseUrl = "https://typecheck.example.com" });
+
+        var request = CreateRequest(HttpMethod.Patch, $"/odatav4/Applications({app.Id})", token);
+        request.Content = new StringContent(
+            """{"Name":42}""",
+            System.Text.Encoding.UTF8,
+            "application/json");
+
+        var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    /// <summary>PatchApplication_WithNonStringBaseUrl_Returns400</summary>
+    [Fact]
+    public async Task PatchApplication_WithNonStringBaseUrl_Returns400()
+    {
+        var client = _factory.CreateClient();
+        var token = await ObtainTokenAsync(client);
+
+        var repo = _factory.Services.GetRequiredService<IApplicationRepository>();
+        var app = await repo.AddApplicationAsync(new Application { Name = "TypeCheckBaseUrlApp", BaseUrl = "https://typecheck-baseurl.example.com" });
+
+        var request = CreateRequest(HttpMethod.Patch, $"/odatav4/Applications({app.Id})", token);
+        request.Content = new StringContent(
+            """{"BaseUrl":true}""",
+            System.Text.Encoding.UTF8,
+            "application/json");
+
+        var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    /// <summary>PatchApplicationGroup_WithNonStringName_Returns400</summary>
+    [Fact]
+    public async Task PatchApplicationGroup_WithNonStringName_Returns400()
+    {
+        var client = _factory.CreateClient();
+        var token = await ObtainTokenAsync(client);
+
+        using var scope = _factory.Services.CreateScope();
+        var repo = scope.ServiceProvider.GetRequiredService<IApplicationRepository>();
+        var group = await repo.AddGroupAsync(new ApplicationGroup { Name = "TypeCheckGroup" });
+
+        var request = CreateRequest(HttpMethod.Patch, $"/odatav4/ApplicationGroups({group.Id})", token);
+        request.Content = new StringContent(
+            """{"Name":42}""",
+            System.Text.Encoding.UTF8,
+            "application/json");
+
+        var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
     /// <summary>GetApplicationGroups_ReturnsPersonalApplicationGroups</summary>
     [Fact]
     public async Task GetApplicationGroups_ReturnsPersonalApplicationGroups()

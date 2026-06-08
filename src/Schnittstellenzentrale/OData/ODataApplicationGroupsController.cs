@@ -1,7 +1,7 @@
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OData.Query;
-using Schnittstellenzentrale.Core.Enums;
+using Microsoft.EntityFrameworkCore;
 using Schnittstellenzentrale.Core.Interfaces;
 using Schnittstellenzentrale.Core.Models;
 
@@ -12,12 +12,14 @@ namespace Schnittstellenzentrale.OData;
 public class ODataApplicationGroupsController : ODataControllerBase
 {
     private readonly IApplicationRepository _applicationRepository;
+    private readonly IStorageModeService _storageModeService;
 
     /// <summary>Initialisiert eine neue Instanz von <see cref="ODataApplicationGroupsController"/>.</summary>
-    public ODataApplicationGroupsController(ITokenStore tokenStore, IApplicationRepository applicationRepository)
+    public ODataApplicationGroupsController(ITokenStore tokenStore, IApplicationRepository applicationRepository, IStorageModeService storageModeService)
         : base(tokenStore)
     {
         _applicationRepository = applicationRepository;
+        _storageModeService = storageModeService;
     }
 
     /// <summary>Gibt alle Anwendungsgruppen zurück.</summary>
@@ -25,7 +27,7 @@ public class ODataApplicationGroupsController : ODataControllerBase
     [HttpGet("ApplicationGroups")]
     public async Task<IActionResult> Get()
     {
-        var groups = await _applicationRepository.GetGroupsAsync(StorageMode.Team, string.Empty);
+        var groups = await _applicationRepository.GetGroupsAsync(_storageModeService.CurrentMode, AuthenticatedUser);
         return Ok(groups.AsQueryable());
     }
 
@@ -91,8 +93,15 @@ public class ODataApplicationGroupsController : ODataControllerBase
         if (!ODataPatchHelper.TryApplyPatch(patch, existing, out var error))
             return BadRequest(error);
 
-        var saved = await _applicationRepository.UpdateGroupAsync(existing);
-        return Ok(saved);
+        try
+        {
+            var saved = await _applicationRepository.UpdateGroupAsync(existing);
+            return Ok(saved);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            return Conflict("Die Anwendungsgruppe wurde zwischenzeitlich geändert. Bitte die Seite neu laden.");
+        }
     }
 
     /// <summary>Löscht eine Anwendungsgruppe.</summary>

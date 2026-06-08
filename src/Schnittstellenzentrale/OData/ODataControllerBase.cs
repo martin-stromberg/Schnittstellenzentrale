@@ -19,6 +19,10 @@ public abstract class ODataControllerBase : ControllerBase, IAsyncActionFilter
         _tokenStore = tokenStore;
     }
 
+    /// <summary>Gibt den Benutzernamen zurück, der durch den validierten Bearer-Token authentifiziert wurde.</summary>
+    protected string AuthenticatedUser =>
+        HttpContext.Items.TryGetValue("ODataAuthenticatedUser", out var user) ? (string)user! : string.Empty;
+
     /// <inheritdoc/>
     public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
     {
@@ -37,6 +41,7 @@ public abstract class ODataControllerBase : ControllerBase, IAsyncActionFilter
             return;
         }
 
+        context.HttpContext.Items["ODataAuthenticatedUser"] = newToken.WindowsUsername;
         context.HttpContext.Response.Headers["X-New-Token"] = newToken.TokenValue;
         await next();
     }

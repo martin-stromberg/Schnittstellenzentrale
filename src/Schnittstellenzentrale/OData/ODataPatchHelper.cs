@@ -15,9 +15,18 @@ internal static class ODataPatchHelper
         {
             switch (prop.Name.ToLowerInvariant())
             {
-                case "name": target.Name = prop.Value.GetString() ?? target.Name; break;
-                case "description": target.Description = prop.Value.GetString() ?? target.Description; break;
-                case "baseurl": target.BaseUrl = prop.Value.GetString() ?? target.BaseUrl; break;
+                case "name":
+                    if (prop.Value.ValueKind != JsonValueKind.String) { error = $"'{prop.Name}' muss ein String sein."; return false; }
+                    target.Name = prop.Value.GetString() ?? target.Name;
+                    break;
+                case "description":
+                    if (prop.Value.ValueKind != JsonValueKind.String && prop.Value.ValueKind != JsonValueKind.Null) { error = $"'{prop.Name}' muss ein String oder null sein."; return false; }
+                    target.Description = prop.Value.GetString() ?? target.Description;
+                    break;
+                case "baseurl":
+                    if (prop.Value.ValueKind != JsonValueKind.String) { error = $"'{prop.Name}' muss ein String sein."; return false; }
+                    target.BaseUrl = prop.Value.GetString() ?? target.BaseUrl;
+                    break;
                 case "interfaceurl": target.InterfaceUrl = prop.Value.ValueKind == JsonValueKind.Null ? null : prop.Value.GetString(); break;
                 case "owner": target.Owner = prop.Value.ValueKind == JsonValueKind.Null ? null : prop.Value.GetString(); break;
                 case "applicationgroupid": target.ApplicationGroupId = prop.Value.ValueKind == JsonValueKind.Null ? null : prop.Value.GetInt32(); break;
@@ -25,6 +34,12 @@ internal static class ODataPatchHelper
                 case "icondata":
                     if (!TryApplyIconData(prop.Value, v => target.IconData = v, out error))
                         return false;
+                    break;
+                case "rowversion":
+                    if (prop.Value.ValueKind == JsonValueKind.String)
+                    {
+                        try { target.RowVersion = Convert.FromBase64String(prop.Value.GetString()!); } catch (FormatException) { }
+                    }
                     break;
             }
         }
@@ -40,16 +55,43 @@ internal static class ODataPatchHelper
         {
             switch (prop.Name.ToLowerInvariant())
             {
-                case "name": target.Name = prop.Value.GetString() ?? target.Name; break;
-                case "description": target.Description = prop.Value.GetString() ?? target.Description; break;
+                case "name":
+                    if (prop.Value.ValueKind != JsonValueKind.String) { error = $"'{prop.Name}' muss ein String sein."; return false; }
+                    target.Name = prop.Value.GetString() ?? target.Name;
+                    break;
+                case "description":
+                    if (prop.Value.ValueKind != JsonValueKind.String && prop.Value.ValueKind != JsonValueKind.Null) { error = $"'{prop.Name}' muss ein String oder null sein."; return false; }
+                    target.Description = prop.Value.GetString() ?? target.Description;
+                    break;
                 case "subtitle": target.Subtitle = prop.Value.ValueKind == JsonValueKind.Null ? null : prop.Value.GetString(); break;
                 case "icondata":
                     if (!TryApplyIconData(prop.Value, v => target.IconData = v, out error))
                         return false;
                     break;
+                case "rowversion":
+                    if (prop.Value.ValueKind == JsonValueKind.String)
+                    {
+                        try { target.RowVersion = Convert.FromBase64String(prop.Value.GetString()!); } catch (FormatException) { }
+                    }
+                    break;
             }
         }
         return true;
+    }
+
+    /// <summary>Liest eine optionale <c>RowVersion</c>-Eigenschaft aus einem JSON-Patch-Dokument.</summary>
+    /// <returns>Das decodierte Byte-Array oder <c>null</c>, wenn die Eigenschaft fehlt oder ungültig ist.</returns>
+    public static byte[]? TryExtractRowVersion(JsonElement patch)
+    {
+        foreach (var prop in patch.EnumerateObject())
+        {
+            if (!string.Equals(prop.Name, "rowversion", StringComparison.OrdinalIgnoreCase))
+                continue;
+            if (prop.Value.ValueKind != JsonValueKind.String)
+                return null;
+            try { return Convert.FromBase64String(prop.Value.GetString()!); } catch (FormatException) { return null; }
+        }
+        return null;
     }
 
     /// <summary>Liest den <c>IconData</c>-Wert aus einem JSON-Patch und setzt ihn auf dem Zielobjekt.</summary>

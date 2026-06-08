@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OData.Query;
+using Microsoft.EntityFrameworkCore;
 using Schnittstellenzentrale.Core.Interfaces;
 using Schnittstellenzentrale.Core.Models;
 
@@ -104,8 +105,19 @@ public class ODataEndpointGroupsController : ODataControllerBase
 
         ApplyPatch(patch, existing);
 
-        var saved = await _endpointRepository.UpdateEndpointGroupAsync(existing);
-        return Ok(saved);
+        var rowVersion = ODataPatchHelper.TryExtractRowVersion(patch);
+        if (rowVersion != null)
+            existing.RowVersion = rowVersion;
+
+        try
+        {
+            var saved = await _endpointRepository.UpdateEndpointGroupAsync(existing);
+            return Ok(saved);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            return Conflict("Die Endpunktgruppe wurde zwischenzeitlich geändert. Bitte die Seite neu laden.");
+        }
     }
 
     private static void ApplyPatch(JsonElement patch, EndpointGroup target)

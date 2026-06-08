@@ -1,7 +1,7 @@
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OData.Query;
-using Schnittstellenzentrale.Core.Enums;
+using Microsoft.EntityFrameworkCore;
 using Schnittstellenzentrale.Core.Interfaces;
 using Schnittstellenzentrale.Core.Models;
 
@@ -12,12 +12,14 @@ namespace Schnittstellenzentrale.OData;
 public class ODataApplicationsController : ODataControllerBase
 {
     private readonly IApplicationRepository _applicationRepository;
+    private readonly IStorageModeService _storageModeService;
 
     /// <summary>Initialisiert eine neue Instanz von <see cref="ODataApplicationsController"/>.</summary>
-    public ODataApplicationsController(ITokenStore tokenStore, IApplicationRepository applicationRepository)
+    public ODataApplicationsController(ITokenStore tokenStore, IApplicationRepository applicationRepository, IStorageModeService storageModeService)
         : base(tokenStore)
     {
         _applicationRepository = applicationRepository;
+        _storageModeService = storageModeService;
     }
 
     /// <summary>Gibt alle Anwendungen zurück.</summary>
@@ -25,7 +27,7 @@ public class ODataApplicationsController : ODataControllerBase
     [HttpGet("Applications")]
     public async Task<IActionResult> Get()
     {
-        var applications = await _applicationRepository.GetApplicationsAsync(StorageMode.Team, string.Empty);
+        var applications = await _applicationRepository.GetApplicationsAsync(_storageModeService.CurrentMode, AuthenticatedUser);
         return Ok(applications.AsQueryable());
     }
 
@@ -99,8 +101,15 @@ public class ODataApplicationsController : ODataControllerBase
 
         existing.InterfaceType = Application.DetectInterfaceType(existing.InterfaceUrl);
 
-        var saved = await _applicationRepository.UpdateApplicationAsync(existing);
-        return Ok(saved);
+        try
+        {
+            var saved = await _applicationRepository.UpdateApplicationAsync(existing);
+            return Ok(saved);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            return Conflict("Die Anwendung wurde zwischenzeitlich geändert. Bitte die Seite neu laden.");
+        }
     }
 
     /// <summary>Löscht eine Anwendung.</summary>

@@ -540,6 +540,31 @@ public class ODataImportServiceTests
         Assert.Null(exception);
     }
 
+    /// <summary>ApplyDiff_ChangedEndpoints_UpdatesEndpointGroupId</summary>
+    [Fact]
+    public async Task ApplyDiff_ChangedEndpoints_UpdatesEndpointGroupId()
+    {
+        var repoMock = new Mock<IEndpointRepository>();
+        repoMock.Setup(r => r.GetEndpointGroupsAsync(It.IsAny<int>())).ReturnsAsync([]);
+        var createdGroups = new List<EndpointGroup>();
+        repoMock.Setup(r => r.AddEndpointGroupAsync(It.IsAny<EndpointGroup>()))
+            .ReturnsAsync((EndpointGroup g) => { g.Id = createdGroups.Count + 1; createdGroups.Add(g); return g; });
+        repoMock.Setup(r => r.UpdateEndpointAsync(It.IsAny<Core.Models.Endpoint>()))
+            .ReturnsAsync((Core.Models.Endpoint e) => e);
+
+        var service = CreateService(ODataMetadata, repoMock);
+
+        var changedEndpoint = new Core.Models.Endpoint { Id = 5, Name = "GET NewModule", Method = Core.Enums.HttpMethod.GET, RelativePath = "NewModule", ApplicationId = 1 };
+        var diff = new ImportDiff { ChangedEndpoints = [changedEndpoint] };
+
+        await service.ApplyDiffAsync(diff);
+
+        Assert.Single(createdGroups);
+        Assert.Equal("NewModule", createdGroups[0].Name);
+        Assert.NotNull(changedEndpoint.EndpointGroupId);
+        Assert.Equal(createdGroups[0].Id, changedEndpoint.EndpointGroupId);
+    }
+
     /// <summary>Import_WithExistingBearerToken_SetsAuthTypeOnEndpoints</summary>
     [Fact]
     public async Task Import_WithExistingBearerToken_SetsAuthTypeOnEndpoints()

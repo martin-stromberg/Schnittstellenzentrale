@@ -10,6 +10,9 @@ namespace Schnittstellenzentrale.OData;
 public static class ODataEdmModelBuilder
 {
     private const string SzAuthTypeTerm = "x-sz-auth-type";
+    private const string SzPostRequestScriptTerm = "x-sz-post-request-script";
+    private const string AuthenticateScript = "sz.environment.set('schnittstellenzentrale.authToken', sz.response.body.asJson().token);";
+    private const string EntitySetScript = "var headerName = 'X-New-Token'; var newToken = sz.response.headers[headerName]; sz.environment.set('schnittstellenzentrale.authToken', newToken);";
 
     /// <summary>Erzeugt und gibt das fertige <see cref="IEdmModel"/> zurück.</summary>
     public static IEdmModel Build()
@@ -39,18 +42,27 @@ public static class ODataEdmModelBuilder
         var authTypeTerm = new EdmTerm("Schnittstellenzentrale.V1", SzAuthTypeTerm, EdmCoreModel.Instance.GetString(true));
         model.AddElement(authTypeTerm);
 
+        var postScriptTerm = new EdmTerm("Schnittstellenzentrale.V1", SzPostRequestScriptTerm, EdmCoreModel.Instance.GetString(true));
+        model.AddElement(postScriptTerm);
+
         foreach (var entitySetName in new[] { "Applications", "ApplicationGroups", "Endpoints", "EndpointGroups" })
         {
             var entitySet = model.EntityContainer?.FindEntitySet(entitySetName);
             if (entitySet != null)
+            {
                 model.SetVocabularyAnnotation(new EdmVocabularyAnnotation(entitySet, authTypeTerm, new EdmStringConstant("BearerToken")));
+                model.SetVocabularyAnnotation(new EdmVocabularyAnnotation(entitySet, postScriptTerm, new EdmStringConstant(EntitySetScript)));
+            }
         }
 
         var authenticateAction = model.SchemaElements
             .OfType<IEdmAction>()
             .FirstOrDefault(a => a.Name == "Authenticate");
         if (authenticateAction != null)
+        {
             model.SetVocabularyAnnotation(new EdmVocabularyAnnotation(authenticateAction, authTypeTerm, new EdmStringConstant("Negotiate")));
+            model.SetVocabularyAnnotation(new EdmVocabularyAnnotation(authenticateAction, postScriptTerm, new EdmStringConstant(AuthenticateScript)));
+        }
 
         return model;
     }
