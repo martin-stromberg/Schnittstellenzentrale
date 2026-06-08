@@ -1240,4 +1240,183 @@ public class ODataControllerIntegrationTests : IClassFixture<ControllerTestFacto
         Assert.Contains("PersonalGroupOData", content);
     }
 
+    /// <summary>ODataAuthenticate_Get_ReturnsToken</summary>
+    [Fact]
+    public async Task ODataAuthenticate_Get_ReturnsToken()
+    {
+        var client = _factory.CreateClient();
+
+        var response = await client.GetAsync("/odatav4/Authenticate()");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<AuthenticateResponse>(JsonOptions);
+        Assert.NotNull(body);
+        Assert.NotEmpty(body.Token);
+    }
+
+    /// <summary>PatchApplication_WithNullDescription_ClearsDescription</summary>
+    [Fact]
+    public async Task PatchApplication_WithNullDescription_ClearsDescription()
+    {
+        var client = _factory.CreateClient();
+        var token = await ObtainTokenAsync(client);
+
+        var repo = _factory.Services.GetRequiredService<IApplicationRepository>();
+        var app = await repo.AddApplicationAsync(new Application
+        {
+            Name = "DescNullPatchApp",
+            BaseUrl = "https://desc-null-patch.example.com",
+            Description = "initial description"
+        });
+
+        var request = CreateRequest(HttpMethod.Patch, $"/odatav4/Applications({app.Id})", token);
+        request.Content = new StringContent(
+            """{"description":null}""",
+            System.Text.Encoding.UTF8,
+            "application/json");
+
+        var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var updated = await repo.GetApplicationByIdAsync(app.Id);
+        Assert.Equal(string.Empty, updated!.Description);
+    }
+
+    /// <summary>PatchApplicationGroup_WithNullDescription_ClearsDescription</summary>
+    [Fact]
+    public async Task PatchApplicationGroup_WithNullDescription_ClearsDescription()
+    {
+        var client = _factory.CreateClient();
+        var token = await ObtainTokenAsync(client);
+
+        using var scope = _factory.Services.CreateScope();
+        var repo = scope.ServiceProvider.GetRequiredService<IApplicationRepository>();
+        var group = await repo.AddGroupAsync(new ApplicationGroup
+        {
+            Name = "DescNullPatchGroup",
+            Description = "initial description"
+        });
+
+        var request = CreateRequest(HttpMethod.Patch, $"/odatav4/ApplicationGroups({group.Id})", token);
+        request.Content = new StringContent(
+            """{"description":null}""",
+            System.Text.Encoding.UTF8,
+            "application/json");
+
+        var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using var readScope = _factory.Services.CreateScope();
+        var readRepo = readScope.ServiceProvider.GetRequiredService<IApplicationRepository>();
+        var updated = await readRepo.GetGroupByIdAsync(group.Id);
+        Assert.Null(updated!.Description);
+    }
+
+    /// <summary>PatchApplication_WithNonNumericApplicationGroupId_Returns400</summary>
+    [Fact]
+    public async Task PatchApplication_WithNonNumericApplicationGroupId_Returns400()
+    {
+        var client = _factory.CreateClient();
+        var token = await ObtainTokenAsync(client);
+
+        var repo = _factory.Services.GetRequiredService<IApplicationRepository>();
+        var app = await repo.AddApplicationAsync(new Application { Name = "TypeGuardAppGroupId", BaseUrl = "https://typeguard-appgroupid.example.com" });
+
+        var request = CreateRequest(HttpMethod.Patch, $"/odatav4/Applications({app.Id})", token);
+        request.Content = new StringContent(
+            """{"applicationGroupId":"not-a-number"}""",
+            System.Text.Encoding.UTF8,
+            "application/json");
+
+        var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    /// <summary>PatchEndpoint_WithNonNumericEndpointGroupId_Returns400</summary>
+    [Fact]
+    public async Task PatchEndpoint_WithNonNumericEndpointGroupId_Returns400()
+    {
+        var client = _factory.CreateClient();
+        var token = await ObtainTokenAsync(client);
+
+        var appRepo = _factory.Services.GetRequiredService<IApplicationRepository>();
+        var endpointRepo = _factory.Services.GetRequiredService<IEndpointRepository>();
+
+        var app = await appRepo.AddApplicationAsync(new Application { Name = "TypeGuardEndpointGroupId", BaseUrl = "https://typeguard-endpointgroupid.example.com" });
+        var endpoint = await endpointRepo.AddEndpointAsync(new Core.Models.Endpoint
+        {
+            Name = "GET TypeGuard",
+            Method = Core.Enums.HttpMethod.GET,
+            RelativePath = "/typeguard",
+            ApplicationId = app.Id
+        });
+
+        var request = CreateRequest(HttpMethod.Patch, $"/odatav4/Endpoints({endpoint.Id})", token);
+        request.Content = new StringContent(
+            """{"endpointgroupid":"abc"}""",
+            System.Text.Encoding.UTF8,
+            "application/json");
+
+        var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    /// <summary>PatchEndpointGroup_WithNonNumericParentGroupId_DoesNotThrow500</summary>
+    [Fact]
+    public async Task PatchEndpointGroup_WithNonNumericParentGroupId_DoesNotThrow500()
+    {
+        var client = _factory.CreateClient();
+        var token = await ObtainTokenAsync(client);
+
+        var appRepo = _factory.Services.GetRequiredService<IApplicationRepository>();
+        var endpointRepo = _factory.Services.GetRequiredService<IEndpointRepository>();
+
+        var app = await appRepo.AddApplicationAsync(new Application { Name = "TypeGuardParentGroupId", BaseUrl = "https://typeguard-parentgroupid.example.com" });
+        var group = await endpointRepo.AddEndpointGroupAsync(new EndpointGroup { Name = "TypeGuardGroup", ApplicationId = app.Id });
+
+        var request = CreateRequest(HttpMethod.Patch, $"/odatav4/EndpointGroups({group.Id})", token);
+        request.Content = new StringContent(
+            """{"parentgroupid":"not-a-number"}""",
+            System.Text.Encoding.UTF8,
+            "application/json");
+
+        var response = await client.SendAsync(request);
+
+        Assert.NotEqual(HttpStatusCode.InternalServerError, response.StatusCode);
+    }
+
+    /// <summary>GetApplications_WithStorageModeUserHeader_FiltersCorrectly</summary>
+    [Fact]
+    public async Task GetApplications_WithStorageModeUserHeader_FiltersCorrectly()
+    {
+        var client = _factory.CreateClient();
+        var token = await ObtainTokenAsync(client);
+
+        var request = new HttpRequestMessage(HttpMethod.Get, "/odatav4/Applications");
+        request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+        request.Headers.Add("X-Storage-Mode", "User");
+
+        var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    /// <summary>GetApplicationGroups_WithStorageModeUserHeader_Returns200</summary>
+    [Fact]
+    public async Task GetApplicationGroups_WithStorageModeUserHeader_Returns200()
+    {
+        var client = _factory.CreateClient();
+        var token = await ObtainTokenAsync(client);
+
+        var request = new HttpRequestMessage(HttpMethod.Get, "/odatav4/ApplicationGroups");
+        request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+        request.Headers.Add("X-Storage-Mode", "User");
+
+        var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
 }

@@ -122,16 +122,28 @@ public class ODataEndpointsController : ODataControllerBase
         if (existing.Application.IsSystem)
             return StatusCode(StatusCodes.Status403Forbidden);
 
-        ApplyPatch(patch, existing);
+        var endpointGroupProp = patch.EnumerateObject()
+            .Cast<System.Text.Json.JsonProperty?>()
+            .FirstOrDefault(p => p!.Value.Name.Equals("endpointgroupid", StringComparison.OrdinalIgnoreCase));
 
-        if (existing.EndpointGroupId != null)
+        if (endpointGroupProp.HasValue)
         {
-            var targetGroup = await _endpointRepository.GetEndpointGroupByIdAsync(existing.EndpointGroupId.Value);
-            if (targetGroup == null || targetGroup.ApplicationId != existing.ApplicationId)
-                return BadRequest("Die angegebene EndpointGroup gehört nicht zur selben Anwendung.");
-            if (targetGroup.Application?.IsSystem == true)
-                return StatusCode(StatusCodes.Status403Forbidden);
+            var propValue = endpointGroupProp.Value.Value;
+            if (propValue.ValueKind != JsonValueKind.Null && propValue.ValueKind != JsonValueKind.Number)
+                return BadRequest("'endpointgroupid' muss eine Zahl oder null sein.");
+
+            if (propValue.ValueKind == JsonValueKind.Number)
+            {
+                var groupId = propValue.GetInt32();
+                var targetGroup = await _endpointRepository.GetEndpointGroupByIdAsync(groupId);
+                if (targetGroup == null || targetGroup.ApplicationId != existing.ApplicationId)
+                    return BadRequest("Die angegebene EndpointGroup gehört nicht zur selben Anwendung.");
+                if (targetGroup.Application?.IsSystem == true)
+                    return StatusCode(StatusCodes.Status403Forbidden);
+            }
         }
+
+        ApplyPatch(patch, existing);
 
         var rowVersion = ODataPatchHelper.TryExtractRowVersion(patch);
         if (rowVersion != null)
@@ -159,7 +171,10 @@ public class ODataEndpointsController : ODataControllerBase
                 case "body": target.Body = prop.Value.ValueKind == JsonValueKind.Null ? null : prop.Value.GetString(); break;
                 case "prerequestscript": target.PreRequestScript = prop.Value.ValueKind == JsonValueKind.Null ? null : prop.Value.GetString(); break;
                 case "postrequestscript": target.PostRequestScript = prop.Value.ValueKind == JsonValueKind.Null ? null : prop.Value.GetString(); break;
-                case "endpointgroupid": target.EndpointGroupId = prop.Value.ValueKind == JsonValueKind.Null ? null : prop.Value.GetInt32(); break;
+                case "endpointgroupid":
+                    if (prop.Value.ValueKind == JsonValueKind.Null) { target.EndpointGroupId = null; break; }
+                    if (prop.Value.ValueKind == JsonValueKind.Number) { target.EndpointGroupId = prop.Value.GetInt32(); }
+                    break;
                 case "method":
                     if (Enum.TryParse<Schnittstellenzentrale.Core.Enums.HttpMethod>(prop.Value.GetString(), true, out var method))
                         target.Method = method;

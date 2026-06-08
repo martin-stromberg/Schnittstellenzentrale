@@ -11,8 +11,10 @@ public static class ODataEdmModelBuilder
 {
     private const string SzAuthTypeTerm = "x-sz-auth-type";
     private const string SzPostRequestScriptTerm = "x-sz-post-request-script";
+    private const string SzBearerTokenTerm = "x-sz-bearer-token";
     private const string AuthenticateScript = "sz.environment.set('schnittstellenzentrale.authToken', sz.response.body.asJson().token);";
     private const string EntitySetScript = "var headerName = 'X-New-Token'; var newToken = sz.response.headers[headerName]; sz.environment.set('schnittstellenzentrale.authToken', newToken);";
+    private const string BearerTokenVariable = "{{schnittstellenzentrale.authToken}}";
 
     /// <summary>Erzeugt und gibt das fertige <see cref="IEdmModel"/> zurück.</summary>
     public static IEdmModel Build()
@@ -45,6 +47,9 @@ public static class ODataEdmModelBuilder
         var postScriptTerm = new EdmTerm("Schnittstellenzentrale.V1", SzPostRequestScriptTerm, EdmCoreModel.Instance.GetString(true));
         model.AddElement(postScriptTerm);
 
+        var bearerTokenTerm = new EdmTerm("Schnittstellenzentrale.V1", SzBearerTokenTerm, EdmCoreModel.Instance.GetString(true));
+        model.AddElement(bearerTokenTerm);
+
         foreach (var entitySetName in new[] { "Applications", "ApplicationGroups", "Endpoints", "EndpointGroups" })
         {
             var entitySet = model.EntityContainer?.FindEntitySet(entitySetName);
@@ -52,6 +57,7 @@ public static class ODataEdmModelBuilder
             {
                 model.SetVocabularyAnnotation(new EdmVocabularyAnnotation(entitySet, authTypeTerm, new EdmStringConstant("BearerToken")));
                 model.SetVocabularyAnnotation(new EdmVocabularyAnnotation(entitySet, postScriptTerm, new EdmStringConstant(EntitySetScript)));
+                model.SetVocabularyAnnotation(new EdmVocabularyAnnotation(entitySet, bearerTokenTerm, new EdmStringConstant(BearerTokenVariable)));
             }
         }
 

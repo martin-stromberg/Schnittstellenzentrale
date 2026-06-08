@@ -15,6 +15,10 @@ Blazor Server-Anwendung zur zentralen Verwaltung lokaler Webservice-Endpunkte. S
 - **History** – Vollständige Aufrufhistorie mit Zeitraumfilter und Top-5-Auswertung je Anwendung
 - **Import** – Endpunkte aus Swagger/OpenAPI- oder OData-`$metadata`-Definitionen importieren (Diff-Vorschau mit selektiver Übernahme); der jeweilige Import-Button erscheint in der Anwendungsdetailansicht, sobald eine passende Interface-URL hinterlegt ist
 - **OData v4-API** – vollständiger OData v4-Service unter `/odatav4` mit CSDL-Metadaten-Dokument (`/odatav4/$metadata`); exponiert alle vier Kernobjekte als Entity-Sets mit CRUD-Zugriff, `$filter`, `$select`, `$expand`, `$orderby`, `$top` und `$skip`
+  - **OData-Authentifizierung** – Tokens via `GET` oder `POST /odatav4/Authenticate()` (Windows/Negotiate)
+  - **OData-Metadaten-Import** – Importiert Entity-Sets und Operationen aus fremden OData-Services; unterstützt die proprietäre `x-sz-bearer-token`-Annotation zur automatischen Token-Hinterlegung
+  - **API-Endpunkt für Import-Anwendung** – `POST /api/applications/{id}/odata-import/apply` wendet Import-Diffs auf Anwendungen an
+  - **Storage-Mode-Header** – `X-Storage-Mode` wird von OData-Controllern ausgewertet (`Team`/`User`) zur optionalen Datenbereichs-Filterung
 - **Authentifizierungstypen** – None, Basic, Negotiate, BearerToken, NegotiateWithImpersonation (Credentials im Windows Credential Manager)
 - **Team-/Benutzermodus** – Umschaltung zwischen globalem und benutzerspezifischem Speicherbereich; die gewählte Einstellung wird im `localStorage` des Browsers gespeichert und beim nächsten Seitenaufruf automatisch wiederhergestellt
 - **Echtzeit-Synchronisation** – SignalR-basiertes Broadcasting von Änderungen an alle verbundenen Sitzungen
@@ -107,6 +111,7 @@ Die Authentifizierung erfolgt mittels Windows-Authentifizierung (Negotiate), die
 | `POST /authenticate` | Bearer-Token beziehen (Windows/Negotiate) |
 | `/api/application-groups` | CRUD für `ApplicationGroup` |
 | `/api/applications` | CRUD für `Application` |
+| `/api/applications/{id}/odata-import/apply` | OData-Import-Diff auf Anwendung anwenden |
 | `/api/endpoint-groups` | CRUD für `EndpointGroup` |
 | `/api/endpoints` | CRUD für `Endpoint` inkl. Header- und Query-Parameter-Routen |
 
@@ -116,14 +121,22 @@ Alle Endpunkte erfordern Bearer-Token im `Authorization`-Header. Unterstützt `X
 
 | Ressource | Beschreibung |
 |-----------|--------------|
-| `GET /odatav4/authenticate`<br/>`POST /odatav4/authenticate` | Bearer-Token beziehen (Windows/Negotiate) |
+| `GET /odatav4/Authenticate()`<br/>`POST /odatav4/Authenticate()` | Bearer-Token beziehen (Windows/Negotiate) |
 | `GET /odatav4/$metadata` | CSDL-Metadaten-Dokument (öffentlich zugänglich) |
 | `GET/POST /odatav4/Applications`<br/>`GET/PUT/PATCH/DELETE /odatav4/Applications({id})` | CRUD für `Application` |
 | `GET/POST /odatav4/ApplicationGroups`<br/>`GET/PUT/PATCH/DELETE /odatav4/ApplicationGroups({id})` | CRUD für `ApplicationGroup` |
 | `GET/POST /odatav4/Endpoints`<br/>`GET/PUT/PATCH/DELETE /odatav4/Endpoints({id})` | CRUD für `Endpoint` |
 | `GET/POST /odatav4/EndpointGroups`<br/>`GET/PUT/PATCH/DELETE /odatav4/EndpointGroups({id})` | CRUD für `EndpointGroup` |
 
-Daten-Endpunkte erfordern Bearer-Token. Unterstützte OData-Abfrageoptionen auf Collection-Endpunkten: `$filter`, `$select`, `$expand`, `$orderby`, `$top`, `$skip`. Besonderheiten: Keine `X-Storage-Mode`-Filterung (API liefert stets alle Datensätze), `Id` und `RowVersion` sind bei POST/PUT/PATCH nicht schreibbar, Systemeinträge (`IsSystem = true`) sind vor Änderungen und Löschungen geschützt (403).
+**Authentifizierung & Token:** Alle Daten-Endpunkte erfordern Bearer-Token im `Authorization`-Header. Token können via `GET /odatav4/Authenticate()` oder `POST /odatav4/Authenticate()` (Windows/Negotiate) bezogen werden. Nach jeder erfolgreichen Anfrage wird ein neuer Token im `X-New-Token`-Response-Header bereitgestellt.
+
+**Abfrageoptionen:** Auf Collection-Endpunkten werden `$filter`, `$select`, `$expand`, `$orderby`, `$top`, `$skip` und `$count` unterstützt.
+
+**Storage-Mode-Filter:** Der `X-Storage-Mode`-Header (`Team` oder `User`, Standard: `User`) filtert die Datensätze nach Speichermodus-Zugehörigkeit. Wird nicht gesetzt, liefert die API standardmäßig Benutzer-Datensätze.
+
+**Besonderheiten:** `Id` und `RowVersion` sind bei POST/PUT/PATCH nicht schreibbar. Systemeinträge (`IsSystem = true`) sind vor Änderungen und Löschungen geschützt (403). PATCH-Anfragen akzeptieren nur die zu ändernden Felder; `null`-Werte setzen Felder auf ihren leeren Zustand.
+
+**OData-Metadaten-Import:** Das unter `/odatav4/$metadata` exponierte CSDL-Dokument wird auch intern für den OData-Import verwendet. Externe OData-Services können importiert werden; die API unterstützt die proprietäre `x-sz-bearer-token`-Annotation zur automatischen Hinterlegung von Bearer-Tokens bei importierten Endpunkten.
 
 Ausführliche Dokumentation: [docs/help/api/odata-api.md](docs/help/api/odata-api.md)
 

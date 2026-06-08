@@ -21,7 +21,7 @@ internal static class ODataPatchHelper
                     break;
                 case "description":
                     if (prop.Value.ValueKind != JsonValueKind.String && prop.Value.ValueKind != JsonValueKind.Null) { error = $"'{prop.Name}' muss ein String oder null sein."; return false; }
-                    target.Description = prop.Value.GetString() ?? target.Description;
+                    target.Description = prop.Value.ValueKind == JsonValueKind.Null ? string.Empty : (prop.Value.GetString() ?? string.Empty);
                     break;
                 case "baseurl":
                     if (prop.Value.ValueKind != JsonValueKind.String) { error = $"'{prop.Name}' muss ein String sein."; return false; }
@@ -29,7 +29,11 @@ internal static class ODataPatchHelper
                     break;
                 case "interfaceurl": target.InterfaceUrl = prop.Value.ValueKind == JsonValueKind.Null ? null : prop.Value.GetString(); break;
                 case "owner": target.Owner = prop.Value.ValueKind == JsonValueKind.Null ? null : prop.Value.GetString(); break;
-                case "applicationgroupid": target.ApplicationGroupId = prop.Value.ValueKind == JsonValueKind.Null ? null : prop.Value.GetInt32(); break;
+                case "applicationgroupid":
+                    if (prop.Value.ValueKind == JsonValueKind.Null) { target.ApplicationGroupId = null; break; }
+                    if (prop.Value.ValueKind != JsonValueKind.Number) { error = $"'{prop.Name}' muss eine Zahl oder null sein."; return false; }
+                    target.ApplicationGroupId = prop.Value.GetInt32();
+                    break;
                 case "subtitle": target.Subtitle = prop.Value.ValueKind == JsonValueKind.Null ? null : prop.Value.GetString(); break;
                 case "icondata":
                     if (!TryApplyIconData(prop.Value, v => target.IconData = v, out error))
@@ -61,7 +65,7 @@ internal static class ODataPatchHelper
                     break;
                 case "description":
                     if (prop.Value.ValueKind != JsonValueKind.String && prop.Value.ValueKind != JsonValueKind.Null) { error = $"'{prop.Name}' muss ein String oder null sein."; return false; }
-                    target.Description = prop.Value.GetString() ?? target.Description;
+                    target.Description = prop.Value.ValueKind == JsonValueKind.Null ? null : prop.Value.GetString();
                     break;
                 case "subtitle": target.Subtitle = prop.Value.ValueKind == JsonValueKind.Null ? null : prop.Value.GetString(); break;
                 case "icondata":

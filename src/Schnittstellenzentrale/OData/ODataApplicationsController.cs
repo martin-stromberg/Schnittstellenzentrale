@@ -12,14 +12,12 @@ namespace Schnittstellenzentrale.OData;
 public class ODataApplicationsController : ODataControllerBase
 {
     private readonly IApplicationRepository _applicationRepository;
-    private readonly IStorageModeService _storageModeService;
 
     /// <summary>Initialisiert eine neue Instanz von <see cref="ODataApplicationsController"/>.</summary>
-    public ODataApplicationsController(ITokenStore tokenStore, IApplicationRepository applicationRepository, IStorageModeService storageModeService)
+    public ODataApplicationsController(ITokenStore tokenStore, IApplicationRepository applicationRepository)
         : base(tokenStore)
     {
         _applicationRepository = applicationRepository;
-        _storageModeService = storageModeService;
     }
 
     /// <summary>Gibt alle Anwendungen zurück.</summary>
@@ -27,7 +25,12 @@ public class ODataApplicationsController : ODataControllerBase
     [HttpGet("Applications")]
     public async Task<IActionResult> Get()
     {
-        var applications = await _applicationRepository.GetApplicationsAsync(_storageModeService.CurrentMode, AuthenticatedUser);
+        var user = AuthenticatedUser;
+        if (user == null)
+            return Unauthorized();
+
+        var storageMode = ParseStorageMode();
+        var applications = await _applicationRepository.GetApplicationsAsync(storageMode, user);
         return Ok(applications.AsQueryable());
     }
 

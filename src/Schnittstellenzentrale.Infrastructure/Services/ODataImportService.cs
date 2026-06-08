@@ -70,8 +70,8 @@ public class ODataImportService : IODataImportService
         }
 
         var serviceUrl = ResolveServiceUrl(application.InterfaceUrl);
-        var bearerTokenValue = ReadExistingBearerToken(application.Id);
-        var defaultAuthType = bearerTokenValue != null ? AuthenticationType.BearerToken : AuthenticationType.None;
+        var existingBearerTokenValue = ReadExistingBearerToken(application.Id);
+        var defaultAuthType = existingBearerTokenValue != null ? AuthenticationType.BearerToken : AuthenticationType.None;
 
         var entitySetAnnotations = ParseEntitySetAnnotations(xmlContent);
         var operationAnnotations = ParseOperationAnnotations(xmlContent);
@@ -87,6 +87,8 @@ public class ODataImportService : IODataImportService
             entitySetAnnotations.TryGetValue(entitySet.Name, out var annotations);
             var authType = ResolveAuthType(annotations, defaultAuthType);
             var postScript = annotations?.GetValueOrDefault("x-sz-post-request-script");
+            var annotationBearerToken = annotations?.GetValueOrDefault("x-sz-bearer-token");
+            var bearerTokenValue = annotationBearerToken ?? existingBearerTokenValue;
 
             AddEndpoint(importedEndpoints, bearerTokens, $"GET {entitySet.Name}", Core.Enums.HttpMethod.GET, relativePath, application.Id, authType, bearerTokenValue, postScript: postScript);
             AddEndpoint(importedEndpoints, bearerTokens, $"POST {entitySet.Name}", Core.Enums.HttpMethod.POST, relativePath, application.Id, authType, bearerTokenValue, postScript: postScript);
@@ -103,8 +105,10 @@ public class ODataImportService : IODataImportService
             operationAnnotations.TryGetValue(operation.Name, out var opAnnotations);
             var opAuthType = ResolveAuthType(opAnnotations, defaultAuthType);
             var opPostScript = opAnnotations?.GetValueOrDefault("x-sz-post-request-script");
+            var opAnnotationBearerToken = opAnnotations?.GetValueOrDefault("x-sz-bearer-token");
+            var opBearerTokenValue = opAnnotationBearerToken ?? existingBearerTokenValue;
 
-            AddEndpoint(importedEndpoints, bearerTokens, operation.Name, method, relativePath, application.Id, opAuthType, bearerTokenValue, postScript: opPostScript);
+            AddEndpoint(importedEndpoints, bearerTokens, operation.Name, method, relativePath, application.Id, opAuthType, opBearerTokenValue, postScript: opPostScript);
         }
 
         var existingEndpoints = await _endpointRepository.GetEndpointsAsync(application.Id);
@@ -117,10 +121,12 @@ public class ODataImportService : IODataImportService
     {
         var groupLookup = new Dictionary<string, EndpointGroup>();
 
-        var applicationId = diff.NewEndpoints.Select(e => e.ApplicationId).FirstOrDefault();
-        if (applicationId == 0)
-            applicationId = diff.ChangedEndpoints.Select(e => e.ApplicationId).FirstOrDefault();
-        if (applicationId != 0)
+        var applicationIds = diff.NewEndpoints.Select(e => e.ApplicationId)
+            .Concat(diff.ChangedEndpoints.Select(e => e.ApplicationId))
+            .Where(id => id != 0)
+            .Distinct();
+
+        foreach (var applicationId in applicationIds)
         {
             var existingGroups = await _endpointRepository.GetEndpointGroupsAsync(applicationId);
             foreach (var g in existingGroups.Where(g => g.ParentGroupId == null))

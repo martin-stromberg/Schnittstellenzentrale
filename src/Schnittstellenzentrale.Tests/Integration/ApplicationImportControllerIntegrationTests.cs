@@ -154,6 +154,87 @@ public class ApplicationImportControllerIntegrationTests : IClassFixture<Applica
         Assert.True(body.RootElement.TryGetProperty("errorMessage", out var errorMsg));
         Assert.False(string.IsNullOrEmpty(errorMsg.GetString()));
     }
+
+    /// <summary>ApplyODataDiff_WithODataApplication_Returns204AndCallsService</summary>
+    [Fact]
+    public async Task ApplyODataDiff_WithODataApplication_Returns204AndCallsService()
+    {
+        var client = _factory.CreateClient();
+        var token = await _factory.ObtainTokenAsync(client);
+
+        var appRepo = _factory.Services.GetRequiredService<IApplicationRepository>();
+        var app = await appRepo.AddApplicationAsync(new Application
+        {
+            Name = "ODataApplyDiffApp",
+            BaseUrl = "https://odata-apply.example.com",
+            InterfaceUrl = "https://odata-apply.example.com/$metadata",
+            InterfaceType = InterfaceType.OData
+        });
+
+        _factory.ODataImportMock
+            .Setup(s => s.ApplyDiffAsync(It.IsAny<ImportDiff>()))
+            .Returns(Task.CompletedTask);
+
+        var diff = new ImportDiff();
+        var request = BuildRequest(HttpMethod.Post, $"/api/applications/{app.Id}/odata-import/apply", token);
+        request.Content = System.Net.Http.Json.JsonContent.Create(diff);
+        var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        _factory.ODataImportMock.Verify(s => s.ApplyDiffAsync(It.IsAny<ImportDiff>()), Times.Once);
+    }
+
+    /// <summary>ApplyODataDiff_WithNonODataApplication_Returns422</summary>
+    [Fact]
+    public async Task ApplyODataDiff_WithNonODataApplication_Returns422()
+    {
+        var client = _factory.CreateClient();
+        var token = await _factory.ObtainTokenAsync(client);
+
+        var appRepo = _factory.Services.GetRequiredService<IApplicationRepository>();
+        var app = await appRepo.AddApplicationAsync(new Application
+        {
+            Name = "RestApplyDiffApp",
+            BaseUrl = "https://rest-apply.example.com",
+            InterfaceType = InterfaceType.Rest
+        });
+
+        var diff = new ImportDiff();
+        var request = BuildRequest(HttpMethod.Post, $"/api/applications/{app.Id}/odata-import/apply", token);
+        request.Content = System.Net.Http.Json.JsonContent.Create(diff);
+        var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, response.StatusCode);
+    }
+
+    /// <summary>ApplyODataDiff_WithoutToken_Returns401</summary>
+    [Fact]
+    public async Task ApplyODataDiff_WithoutToken_Returns401()
+    {
+        var client = _factory.CreateClient();
+
+        var diff = new ImportDiff();
+        var request = new HttpRequestMessage(HttpMethod.Post, "/api/applications/1/odata-import/apply");
+        request.Content = System.Net.Http.Json.JsonContent.Create(diff);
+        var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    /// <summary>ApplyODataDiff_WithUnknownApplicationId_Returns404</summary>
+    [Fact]
+    public async Task ApplyODataDiff_WithUnknownApplicationId_Returns404()
+    {
+        var client = _factory.CreateClient();
+        var token = await _factory.ObtainTokenAsync(client);
+
+        var diff = new ImportDiff();
+        var request = BuildRequest(HttpMethod.Post, "/api/applications/99999/odata-import/apply", token);
+        request.Content = System.Net.Http.Json.JsonContent.Create(diff);
+        var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
 }
 
 /// <summary>Spezialisierte WebApplicationFactory für ApplicationImportController-Tests mit gemockten Import-Services.</summary>

@@ -31,4 +31,5 @@ public interface IApplicationApiClient
     Task DeleteQueryParameterAsync(int id);
     Task<SystemEnvironment?> GetEnvironmentByIdAsync(int id);
     Task<ImportDiff> ImportMetadataAsync(int applicationId);
+    Task ApplyODataDiffAsync(int applicationId, ImportDiff diff);
 }

@@ -19,10 +19,16 @@ public class ODataAuthController : ControllerBase
         _tokenStore = tokenStore;
     }
 
-    /// <summary>Authentifiziert den aktuellen Windows-Benutzer und gibt einen Bearer-Token für die OData-API zurück (OData Unbound Action).</summary>
+    /// <summary>Authentifiziert den aktuellen Windows-Benutzer und gibt einen Bearer-Token für die OData-API zurück (OData Unbound Action, POST).</summary>
     [HttpPost("Authenticate()")]
     [ODataAttributeRouting]
-    public async Task<IActionResult> Authenticate()
+    public Task<IActionResult> AuthenticatePost() => AuthenticateAsync();
+
+    /// <summary>Authentifiziert den aktuellen Windows-Benutzer und gibt einen Bearer-Token für die OData-API zurück (OData Unbound Function, GET).</summary>
+    [HttpGet("Authenticate()")]
+    public Task<IActionResult> AuthenticateGet() => AuthenticateAsync();
+
+    private async Task<IActionResult> AuthenticateAsync()
     {
         var username = HttpContext.User.Identity?.Name;
         if (string.IsNullOrEmpty(username))

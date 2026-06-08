@@ -19,9 +19,16 @@ public abstract class ODataControllerBase : ControllerBase, IAsyncActionFilter
         _tokenStore = tokenStore;
     }
 
-    /// <summary>Gibt den Benutzernamen zurück, der durch den validierten Bearer-Token authentifiziert wurde.</summary>
-    protected string AuthenticatedUser =>
-        HttpContext.Items.TryGetValue("ODataAuthenticatedUser", out var user) ? (string)user! : string.Empty;
+    /// <summary>Gibt den Benutzernamen zurück, der durch den validierten Bearer-Token authentifiziert wurde, oder <c>null</c> wenn kein authentifizierter Benutzer im Kontext gesetzt ist.</summary>
+    protected string? AuthenticatedUser =>
+        HttpContext.Items.TryGetValue("ODataAuthenticatedUser", out var user) ? (string)user! : null;
+
+    /// <summary>Liest den <c>X-Storage-Mode</c>-Header und gibt den entsprechenden <see cref="Core.Enums.StorageMode"/> zurück.</summary>
+    protected Core.Enums.StorageMode ParseStorageMode()
+    {
+        var storageModeHeader = HttpContext.Request.Headers["X-Storage-Mode"].ToString();
+        return storageModeHeader == "Team" ? Core.Enums.StorageMode.Team : Core.Enums.StorageMode.User;
+    }
 
     /// <inheritdoc/>
     public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)

@@ -12,14 +12,12 @@ namespace Schnittstellenzentrale.OData;
 public class ODataApplicationGroupsController : ODataControllerBase
 {
     private readonly IApplicationRepository _applicationRepository;
-    private readonly IStorageModeService _storageModeService;
 
     /// <summary>Initialisiert eine neue Instanz von <see cref="ODataApplicationGroupsController"/>.</summary>
-    public ODataApplicationGroupsController(ITokenStore tokenStore, IApplicationRepository applicationRepository, IStorageModeService storageModeService)
+    public ODataApplicationGroupsController(ITokenStore tokenStore, IApplicationRepository applicationRepository)
         : base(tokenStore)
     {
         _applicationRepository = applicationRepository;
-        _storageModeService = storageModeService;
     }
 
     /// <summary>Gibt alle Anwendungsgruppen zurück.</summary>
@@ -27,7 +25,12 @@ public class ODataApplicationGroupsController : ODataControllerBase
     [HttpGet("ApplicationGroups")]
     public async Task<IActionResult> Get()
     {
-        var groups = await _applicationRepository.GetGroupsAsync(_storageModeService.CurrentMode, AuthenticatedUser);
+        var user = AuthenticatedUser;
+        if (user == null)
+            return Unauthorized();
+
+        var storageMode = ParseStorageMode();
+        var groups = await _applicationRepository.GetGroupsAsync(storageMode, user);
         return Ok(groups.AsQueryable());
     }
 

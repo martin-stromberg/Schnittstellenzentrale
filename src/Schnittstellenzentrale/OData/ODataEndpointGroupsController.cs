@@ -127,7 +127,10 @@ public class ODataEndpointGroupsController : ODataControllerBase
             switch (prop.Name.ToLowerInvariant())
             {
                 case "name": target.Name = prop.Value.GetString() ?? target.Name; break;
-                case "parentgroupid": target.ParentGroupId = prop.Value.ValueKind == JsonValueKind.Null ? null : prop.Value.GetInt32(); break;
+                case "parentgroupid":
+                    if (prop.Value.ValueKind == JsonValueKind.Null) { target.ParentGroupId = null; break; }
+                    if (prop.Value.ValueKind == JsonValueKind.Number) { target.ParentGroupId = prop.Value.GetInt32(); }
+                    break;
             }
         }
     }

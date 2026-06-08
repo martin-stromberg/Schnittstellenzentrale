@@ -602,4 +602,96 @@ public class ODataImportServiceTests
         Assert.All(diff.NewEndpoints, e => Assert.Equal(Core.Enums.AuthenticationType.BearerToken, e.AuthenticationType));
         Assert.True(diff.BearerTokens.Values.All(v => v == "my-token"));
     }
+
+    /// <summary>ApplyDiff_NewAndChangedEndpointsFromDifferentApps_LoadsGroupsForBothApps</summary>
+    [Fact]
+    public async Task ApplyDiff_NewAndChangedEndpointsFromDifferentApps_LoadsGroupsForBothApps()
+    {
+        var repoMock = new Mock<IEndpointRepository>();
+
+        var existingGroupApp1 = new EndpointGroup { Id = 10, Name = "Products", ApplicationId = 1, ParentGroupId = null };
+        var existingGroupApp2 = new EndpointGroup { Id = 20, Name = "Orders", ApplicationId = 2, ParentGroupId = null };
+
+        repoMock.Setup(r => r.GetEndpointGroupsAsync(1)).ReturnsAsync([existingGroupApp1]);
+        repoMock.Setup(r => r.GetEndpointGroupsAsync(2)).ReturnsAsync([existingGroupApp2]);
+        repoMock.Setup(r => r.AddEndpointAsync(It.IsAny<Core.Models.Endpoint>()))
+            .ReturnsAsync((Core.Models.Endpoint e) => e);
+        repoMock.Setup(r => r.UpdateEndpointAsync(It.IsAny<Core.Models.Endpoint>()))
+            .ReturnsAsync((Core.Models.Endpoint e) => e);
+
+        var service = CreateService(ODataMetadata, repoMock);
+
+        var newEndpoint = new Core.Models.Endpoint { Id = 0, Name = "GET Products", Method = Core.Enums.HttpMethod.GET, RelativePath = "Products", ApplicationId = 1 };
+        var changedEndpoint = new Core.Models.Endpoint { Id = 5, Name = "GET Orders", Method = Core.Enums.HttpMethod.GET, RelativePath = "Orders", ApplicationId = 2 };
+
+        var diff = new ImportDiff
+        {
+            NewEndpoints = [newEndpoint],
+            ChangedEndpoints = [changedEndpoint]
+        };
+
+        await service.ApplyDiffAsync(diff);
+
+        // Both group lookups succeeded — no additional AddEndpointGroupAsync calls needed
+        repoMock.Verify(r => r.GetEndpointGroupsAsync(1), Times.Once);
+        repoMock.Verify(r => r.GetEndpointGroupsAsync(2), Times.Once);
+        repoMock.Verify(r => r.AddEndpointGroupAsync(It.IsAny<EndpointGroup>()), Times.Never);
+        Assert.Equal(existingGroupApp1.Id, newEndpoint.EndpointGroupId);
+        Assert.Equal(existingGroupApp2.Id, changedEndpoint.EndpointGroupId);
+    }
+
+    /// <summary>Import_WithBearerTokenAnnotation_StoresBearerTokenVariableFromAnnotation</summary>
+    [Fact]
+    public async Task Import_WithBearerTokenAnnotation_StoresBearerTokenVariableFromAnnotation()
+    {
+        const string metadataWithBearerToken = """
+            <?xml version="1.0" encoding="utf-8"?>
+            <edmx:Edmx Version="4.0" xmlns:edmx="http://docs.oasis-open.org/odata/ns/edmx">
+              <edmx:DataServices>
+                <Schema Namespace="TestService" xmlns="http://docs.oasis-open.org/odata/ns/edm">
+                  <EntityType Name="Product">
+                    <Key><PropertyRef Name="Id" /></Key>
+                    <Property Name="Id" Type="Edm.Int32" Nullable="false" />
+                  </EntityType>
+                  <EntityContainer Name="Container">
+                    <EntitySet Name="Products" EntityType="TestService.Product">
+                      <Annotation Term="x-sz-auth-type" String="BearerToken" />
+                      <Annotation Term="x-sz-bearer-token" String="{{schnittstellenzentrale.authToken}}" />
+                    </EntitySet>
+                  </EntityContainer>
+                </Schema>
+              </edmx:DataServices>
+            </edmx:Edmx>
+            """;
+
+        var repoMock = new Mock<IEndpointRepository>();
+        repoMock.Setup(r => r.GetEndpointsAsync(It.IsAny<int>())).ReturnsAsync([]);
+
+        var credentialMock = new Mock<ICredentialService>();
+        credentialMock.Setup(c => c.GetPassword(It.IsAny<string>())).Returns((string?)null);
+
+        var handlerMock = new Mock<HttpMessageHandler>();
+        handlerMock.Protected()
+            .Setup<Task<HttpResponseMessage>>("SendAsync", ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>())
+            .ReturnsAsync(new HttpResponseMessage(System.Net.HttpStatusCode.OK)
+            {
+                Content = new System.Net.Http.StringContent(metadataWithBearerToken, System.Text.Encoding.UTF8, "application/xml")
+            });
+        var factoryMock = new Mock<IHttpClientFactory>();
+        factoryMock.Setup(f => f.CreateClient(It.IsAny<string>())).Returns(new HttpClient(handlerMock.Object));
+
+        var service = new ODataImportService(factoryMock.Object, repoMock.Object, credentialMock.Object, Microsoft.Extensions.Logging.Abstractions.NullLogger<ODataImportService>.Instance);
+        var app = new Core.Models.Application
+        {
+            Id = 1,
+            InterfaceUrl = "http://localhost/$metadata",
+            InterfaceType = Core.Enums.InterfaceType.OData,
+            BaseUrl = "http://localhost"
+        };
+
+        var diff = await service.ImportAsync(app);
+
+        Assert.All(diff.NewEndpoints, e => Assert.Equal(Core.Enums.AuthenticationType.BearerToken, e.AuthenticationType));
+        Assert.True(diff.BearerTokens.Values.All(v => v == "{{schnittstellenzentrale.authToken}}"));
+    }
 }

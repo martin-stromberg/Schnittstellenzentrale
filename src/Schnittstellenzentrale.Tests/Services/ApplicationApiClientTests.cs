@@ -930,4 +930,47 @@ public class ApplicationApiClientTests
         Assert.NotNull(result.ErrorMessage);
         Assert.False(string.IsNullOrEmpty(result.ErrorMessage));
     }
+
+    /// <summary>ApplyODataDiffAsync_SendsCorrectPostRequest</summary>
+    [Fact]
+    public async Task ApplyODataDiffAsync_SendsCorrectPostRequest()
+    {
+        var authToken = Guid.NewGuid().ToString();
+        var newToken = Guid.NewGuid().ToString();
+
+        var (apiClient, handlerMock, tokenStoreMock) = CreateClient(authToken, newToken, HttpStatusCode.NoContent, "");
+
+        var diff = new ImportDiff
+        {
+            NewEndpoints = [new Endpoint { Name = "GET Items", RelativePath = "/items", ApplicationId = 7 }]
+        };
+
+        await apiClient.ApplyODataDiffAsync(7, diff);
+
+        tokenStoreMock.Verify(s => s.CreateTokenAsync("testuser"), Times.Once());
+
+        handlerMock.Protected().Verify(
+            "SendAsync",
+            Times.Once(),
+            ItExpr.Is<HttpRequestMessage>(r =>
+                r.RequestUri!.AbsolutePath == "/api/applications/7/odata-import/apply" &&
+                r.Method == HttpMethod.Post &&
+                r.Headers.Authorization != null &&
+                r.Headers.Authorization.Parameter == authToken &&
+                r.Headers.Contains("X-Storage-Mode")),
+            ItExpr.IsAny<CancellationToken>());
+    }
+
+    /// <summary>ApplyODataDiffAsync_On500_ThrowsInvalidOperationException</summary>
+    [Fact]
+    public async Task ApplyODataDiffAsync_On500_ThrowsInvalidOperationException()
+    {
+        var authToken = Guid.NewGuid().ToString();
+        var newToken = Guid.NewGuid().ToString();
+
+        var (apiClient, _, _) = CreateClient(authToken, newToken, HttpStatusCode.InternalServerError, "{}");
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            apiClient.ApplyODataDiffAsync(5, new ImportDiff()));
+    }
 }
