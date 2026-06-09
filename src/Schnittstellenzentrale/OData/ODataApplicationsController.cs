@@ -39,9 +39,18 @@ public class ODataApplicationsController : ODataControllerBase
     [HttpGet("Applications({key})")]
     public async Task<IActionResult> Get(int key)
     {
+        var user = AuthenticatedUser;
+        if (user == null)
+            return Unauthorized();
+
         var application = await _applicationRepository.GetApplicationByIdAsync(key);
         if (application == null)
             return NotFound();
+
+        var storageMode = ParseStorageMode();
+        var ownedApplications = await _applicationRepository.GetApplicationsAsync(storageMode, user);
+        if (!ownedApplications.Any(a => a.Id == key))
+            return StatusCode(StatusCodes.Status403Forbidden);
 
         return Ok(application);
     }
@@ -50,10 +59,15 @@ public class ODataApplicationsController : ODataControllerBase
     [HttpPost("Applications")]
     public async Task<IActionResult> Post([FromBody] Application entity)
     {
+        var user = AuthenticatedUser;
+        if (user == null)
+            return Unauthorized();
+
         entity.Id = 0;
         entity.IsSystem = false;
         entity.RowVersion = [];
         entity.InterfaceType = Application.DetectInterfaceType(entity.InterfaceUrl);
+        entity.Owner = user;
 
         var saved = await _applicationRepository.AddApplicationAsync(entity);
         return Created($"/odatav4/Applications({saved.Id})", saved);
@@ -63,11 +77,18 @@ public class ODataApplicationsController : ODataControllerBase
     [HttpPut("Applications({key})")]
     public async Task<IActionResult> Put(int key, [FromBody] Application entity)
     {
+        var user = AuthenticatedUser;
+        if (user == null)
+            return Unauthorized();
+
         var existing = await _applicationRepository.GetApplicationByIdAsync(key);
         if (existing == null)
             return NotFound();
 
         if (existing.IsSystem)
+            return StatusCode(StatusCodes.Status403Forbidden);
+
+        if (existing.Owner != null && existing.Owner != user)
             return StatusCode(StatusCodes.Status403Forbidden);
 
         if (entity.RowVersion.Length == 0)
@@ -92,12 +113,22 @@ public class ODataApplicationsController : ODataControllerBase
     [HttpPatch("Applications({key})")]
     public async Task<IActionResult> Patch(int key, [FromBody] JsonElement patch)
     {
+        var user = AuthenticatedUser;
+        if (user == null)
+            return Unauthorized();
+
         var existing = await _applicationRepository.GetApplicationByIdAsync(key);
         if (existing == null)
             return NotFound();
 
         if (existing.IsSystem)
             return StatusCode(StatusCodes.Status403Forbidden);
+
+        if (existing.Owner != null && existing.Owner != user)
+            return StatusCode(StatusCodes.Status403Forbidden);
+
+        if (!ODataPatchHelper.ContainsRowVersion(patch))
+            return BadRequest("RowVersion ist erforderlich.");
 
         if (!ODataPatchHelper.TryApplyPatch(patch, existing, out var error))
             return BadRequest(error);

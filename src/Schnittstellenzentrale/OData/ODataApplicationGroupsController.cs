@@ -31,6 +31,14 @@ public class ODataApplicationGroupsController : ODataControllerBase
 
         var storageMode = ParseStorageMode();
         var groups = await _applicationRepository.GetGroupsAsync(storageMode, user);
+
+        if (storageMode == Core.Enums.StorageMode.User)
+        {
+            var systemGroup = await _applicationRepository.GetSystemGroupAsync();
+            if (systemGroup != null && !groups.Any(g => g.Id == systemGroup.Id))
+                groups = [..groups, systemGroup];
+        }
+
         return Ok(groups.AsQueryable());
     }
 
@@ -39,9 +47,21 @@ public class ODataApplicationGroupsController : ODataControllerBase
     [HttpGet("ApplicationGroups({key})")]
     public async Task<IActionResult> Get(int key)
     {
+        var user = AuthenticatedUser;
+        if (user == null)
+            return Unauthorized();
+
         var group = await _applicationRepository.GetGroupByIdAsync(key);
         if (group == null)
             return NotFound();
+
+        var storageMode = ParseStorageMode();
+        if (!group.IsSystem)
+        {
+            var ownedGroups = await _applicationRepository.GetGroupsAsync(storageMode, user);
+            if (!ownedGroups.Any(g => g.Id == key))
+                return StatusCode(StatusCodes.Status403Forbidden);
+        }
 
         return Ok(group);
     }
@@ -50,6 +70,10 @@ public class ODataApplicationGroupsController : ODataControllerBase
     [HttpPost("ApplicationGroups")]
     public async Task<IActionResult> Post([FromBody] ApplicationGroup entity)
     {
+        var user = AuthenticatedUser;
+        if (user == null)
+            return Unauthorized();
+
         entity.Id = 0;
         entity.IsSystem = false;
         entity.RowVersion = [];
@@ -92,6 +116,9 @@ public class ODataApplicationGroupsController : ODataControllerBase
 
         if (existing.IsSystem)
             return StatusCode(StatusCodes.Status403Forbidden);
+
+        if (!ODataPatchHelper.ContainsRowVersion(patch))
+            return BadRequest("RowVersion ist erforderlich.");
 
         if (!ODataPatchHelper.TryApplyPatch(patch, existing, out var error))
             return BadRequest(error);

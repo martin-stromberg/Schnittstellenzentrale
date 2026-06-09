@@ -12,7 +12,9 @@ public static class ODataEdmModelBuilder
     private const string SzAuthTypeTerm = "x-sz-auth-type";
     private const string SzPostRequestScriptTerm = "x-sz-post-request-script";
     private const string SzBearerTokenTerm = "x-sz-bearer-token";
-    private const string AuthenticateScript = "sz.environment.set('schnittstellenzentrale.authToken', sz.response.body.asJson().token);";
+    private const string SzHeaderTokenTerm = "x-sz-header-";
+    private const string SzModeHeaderTokenTerm = $"{SzHeaderTokenTerm}mode";
+    private const string AuthenticateScript = "sz.environment.set('schnittstellenzentrale.authToken', sz.response.body.asJson().Token);";
     private const string EntitySetScript = "var headerName = 'X-New-Token'; var newToken = sz.response.headers[headerName]; sz.environment.set('schnittstellenzentrale.authToken', newToken);";
     private const string BearerTokenVariable = "{{schnittstellenzentrale.authToken}}";
 
@@ -50,6 +52,9 @@ public static class ODataEdmModelBuilder
         var bearerTokenTerm = new EdmTerm("Schnittstellenzentrale.V1", SzBearerTokenTerm, EdmCoreModel.Instance.GetString(true));
         model.AddElement(bearerTokenTerm);
 
+        var modeHeaderTerm = new EdmTerm("Schnittstellenzentrale.V1", SzModeHeaderTokenTerm, EdmCoreModel.Instance.GetString(true));
+        model.AddElement(modeHeaderTerm);
+
         foreach (var entitySetName in new[] { "Applications", "ApplicationGroups", "Endpoints", "EndpointGroups" })
         {
             var entitySet = model.EntityContainer?.FindEntitySet(entitySetName);
@@ -58,6 +63,7 @@ public static class ODataEdmModelBuilder
                 model.SetVocabularyAnnotation(new EdmVocabularyAnnotation(entitySet, authTypeTerm, new EdmStringConstant("BearerToken")));
                 model.SetVocabularyAnnotation(new EdmVocabularyAnnotation(entitySet, postScriptTerm, new EdmStringConstant(EntitySetScript)));
                 model.SetVocabularyAnnotation(new EdmVocabularyAnnotation(entitySet, bearerTokenTerm, new EdmStringConstant(BearerTokenVariable)));
+                model.SetVocabularyAnnotation(new EdmVocabularyAnnotation(entitySet, modeHeaderTerm, new EdmStringConstant("X-Storage-Mode:{{{Mode}}}")));
             }
         }
 

@@ -41,7 +41,7 @@ Die OData-API exponiert dieselben vier Kernobjekte als OData-Entity-Sets:
 | `EndpointGroups` | `/odatav4/EndpointGroups` | CRUD für `EndpointGroup` |
 | `$metadata` | `/odatav4/$metadata` | CSDL-Metadaten-Dokument |
 
-Alle Endpunkte erfordern denselben Bearer-Token aus `/authenticate`. OData-Standardabfragemöglichkeiten wie `$filter`, `$select`, `$expand`, `$orderby`, `$top` und `$skip` werden auf Collection-Endpunkten unterstützt. Kein `X-Storage-Mode`-Header — die OData-API liefert stets alle Datensätze unabhängig vom Benutzermodus.
+Alle Endpunkte erfordern denselben Bearer-Token aus `/odatav4/Authenticate()`. OData-Standardabfragemöglichkeiten wie `$filter`, `$select`, `$expand`, `$orderby`, `$top` und `$skip` werden auf Collection-Endpunkten unterstützt. Der `X-Storage-Mode`-Header wird von allen Datencontrollern ausgewertet (Standard: `User`); Collection-Endpunkte liefern nur die Datensätze des authentifizierten Benutzers im gewählten Modus — analog zur REST-API.
 
 ## Beispiele
 
@@ -105,6 +105,5 @@ Content-Type: application/json
 - Tokens sind nicht persistiert; ein Neustart der Anwendung invalidiert alle aktiven Tokens.
 - Ein Token wird nach jedem erfolgreichen Datenendpunkt-Aufruf rotiert; das alte Token ist danach nicht mehr verwendbar.
 - Die atomaren DELETE-Routen für Header und Query-Parameter (`DELETE /api/endpoints/headers/{id}`, `DELETE /api/endpoints/query-parameters/{id}`) geben kein 404 zurück, wenn die ID nicht existiert — der Aufruf von `IEndpointRepository.DeleteHeaderAsync` schlägt dann mit einer Datenbankausnahme fehl.
-- Die OData-API unterstützt keine Optimistic Concurrency über OData-ETags; `RowVersion` wird bei PUT/PATCH serverseitig ignoriert (aus dem gespeicherten Datensatz übernommen).
+- Die OData-API unterstützt keine Optimistic Concurrency über Standard-OData-ETags; stattdessen wird `RowVersion` als Pflichtfeld bei PUT und PATCH übergeben. PATCH fängt `DbUpdateConcurrencyException` ab und antwortet mit `409 Conflict`; bei PUT wird die Exception nicht explizit behandelt.
 - Die OData-API exponiert keine Header und Query-Parameter von `Endpoint`-Objekten (diese Navigationseigenschaften sind im EDM-Modell bewusst ausgeblendet, da die OData-API primär für den `IODataImportService`-Workflow ausgelegt ist).
-- `X-Storage-Mode`-Filterung ist in der OData-API nicht verfügbar; sie liefert stets alle Datensätze des Teams.

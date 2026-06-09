@@ -336,31 +336,45 @@ Das abgerufene XML wird mit `CsdlReader.Parse(XmlReader.Create(new StringReader(
 Beteiligte Komponenten:
 - `CsdlReader.Parse` (`Microsoft.OData.Edm.Csdl`) — CSDL-Parsing
 
-### 4. Endpunkte ableiten
+### 4. Annotationen parsen
 
-Für jeden `IEdmEntitySet` in `model.EntityContainer.EntitySets()` werden zwei `Endpoint`-Objekte erzeugt:
+Bevor Endpunkte erzeugt werden, liest `ODataImportService` die proprietären `x-sz-*`-Annotationen aus dem CSDL-XML. Die Annotation-Dictionaries werden separat für Entity-Sets und Operationen aufgebaut; sowohl Inline-Annotationen (direkt im Element) als auch externe `<Annotations Target="...">` -Blöcke werden berücksichtigt.
+
+Beteiligte Komponenten:
+- `ODataImportService.ParseEntitySetAnnotations` / `ParseOperationAnnotations` — Annotation-Extraktion per XDocument
+- `ODataImportService.MergeAnnotation` — fügt erkannte `x-sz-*`-Annotationen in das Dictionary ein
+
+### 5. Endpunkte ableiten
+
+Für jeden `IEdmEntitySet` in `model.EntityContainer.EntitySets()` werden fünf `Endpoint`-Objekte erzeugt:
 
 | Eigenschaft | Wert |
 |-------------|------|
-| `Name` | `"GET {EntitySet.Name}"` / `"POST {EntitySet.Name}"` |
-| `Method` | `HttpMethod.GET` / `HttpMethod.POST` |
-| `RelativePath` | `EntitySet.Name` |
+| `Name` | `"GET {EntitySet.Name}"`, `"POST {EntitySet.Name}"`, `"PUT {EntitySet.Name}"`, `"PATCH {EntitySet.Name}"`, `"DELETE {EntitySet.Name}"` |
+| `Method` | `GET`, `POST`, `PUT`, `PATCH`, `DELETE` |
+| `RelativePath` | Relativ zur `Application.BaseUrl` (z. B. `odatav4/Products` oder `Products({key})` für PUT/PATCH/DELETE) |
 | `ApplicationId` | `application.Id` |
+| `AuthenticationType` | Aus `x-sz-auth-type`-Annotation oder Standard (BearerToken wenn bestehender Token vorhanden, sonst None) |
+| `PostRequestScript` | Aus `x-sz-post-request-script`-Annotation, sonst `null` |
+| `Headers` | Aus `x-sz-header-{name}`-Annotationen, sonst leere Liste |
 
 Für jede `IEdmOperation` (aus `model.SchemaElements.OfType<IEdmOperation>()`) wird ein weiterer `Endpoint` erzeugt: `IEdmAction` ergibt `POST`, `IEdmFunction` ergibt `GET`.
 
+Bearer-Tokens aus `x-sz-bearer-token`-Annotationen werden in einem lokalen `bearerTokens`-Dictionary gesammelt (Schlüssel: `EndpointKeyHelper.BuildKey(endpoint)`).
+
 Beteiligte Komponenten:
 - `ODataImportService.ImportAsync` — Endpunkt-Ableitung aus dem EDM-Modell
+- `ODataImportService.AddEndpoint` / `ResolveAuthType` / `BuildRelativePath` — Hilfsmethoden für Pfad- und Authentifizierungsberechnung
 
-### 5. Diff berechnen
+### 6. Diff berechnen
 
-`ImportDiffCalculator.Calculate(existingEndpoints, importedEndpoints)` wird identisch zum Swagger-Import-Pfad aufgerufen.
+`ImportDiffCalculator.Calculate(existingEndpoints, importedEndpoints)` wird identisch zum Swagger-Import-Pfad aufgerufen. Das `bearerTokens`-Dictionary wird per `.WithBearerTokens(bearerTokens)` in das zurückgegebene `ImportDiff` übernommen.
 
 Beteiligte Komponenten:
 - `ImportDiffCalculator.Calculate` — Diff-Berechnung (wiederverwendet)
 - `IEndpointRepository.GetEndpointsAsync(applicationId)` — lädt bestehende Endpunkte
 
-### 6. Dialog anzeigen
+### 7. Dialog anzeigen
 
 `ApplicationContentView` empfängt die `ImportDiff`. Enthält `ImportDiff.ErrorMessage` einen Wert, wird der Dialog nicht geöffnet und die Fehlermeldung in `_errorMessage` gesetzt; ein inline-Fehler-Alert erscheint im `sz-hero-right`-Bereich. Andernfalls wird `_showODataImport = true` gesetzt, was `ODataImportDialog` einblendet.
 
@@ -371,19 +385,21 @@ Beteiligte Komponenten:
 - `ODataImportDialog` — Wrapper-Komponente
 - `ImportDialog` — generische Dialog-Komponente (wiederverwendet)
 
-### 7. Diff anwenden
+### 8. Diff anwenden
 
 `ODataImportDialog.ApplyAsync` ruft `IODataImportService.ApplyDiffAsync(diff)` auf.
 
-`ODataImportService.ApplyDiffAsync` iteriert über:
-- `diff.NewEndpoints` → `IEndpointRepository.AddEndpointAsync(endpoint)`
-- `diff.ChangedEndpoints` → `IEndpointRepository.UpdateEndpointAsync(endpoint)`
-- `diff.RemovedEndpoints` → `IEndpointRepository.DeleteEndpointAsync(endpoint.Id)`
+`ODataImportService.ApplyDiffAsync` iteriert über alle betroffenen `applicationId`-Werte, lädt die vorhandenen Endpunktgruppen und baut ein `groupLookup`-Dictionary auf. Anschließend werden die Endpunkte verarbeitet:
 
-Es erfolgt keine Ordnerzuweisung und keine Bearer-Token-Persistierung.
+1. **Neue Endpunkte** (`diff.NewEndpoints`): Gruppe nach Entity-Set-Namen suchen oder anlegen; `EndpointGroupId` setzen; `IEndpointRepository.AddEndpointAsync(endpoint)` aufrufen.
+2. **Geänderte Endpunkte** (`diff.ChangedEndpoints`): Gruppe wie oben; `IEndpointRepository.UpdateEndpointAsync(endpoint)` aufrufen.
+3. **Entfernte Endpunkte** (`diff.RemovedEndpoints`): `IEndpointRepository.DeleteEndpointAsync(endpoint.Id)` aufrufen.
+4. **Bearer-Tokens** (`SaveBearerTokenOnce`): Für jeden Endpunkt mit `AuthenticationType = BearerToken` und vorhandenem Token-Wert in `diff.BearerTokens` wird `ICredentialService.SavePassword` aufgerufen (maximal einmal pro Anwendung).
 
 Beteiligte Komponenten:
 - `ODataImportService.ApplyDiffAsync` — Persistierung über `IEndpointRepository`
+- `ODataImportService.SaveBearerTokenOnce` — Bearer-Token-Persistierung im Credential Manager
+- `ODataImportService.ExtractEntitySetName` — Ableitung des Gruppennamens aus dem Endpunkt-Namen
 
 ### Diagramm: OData-Import
 
@@ -397,20 +413,23 @@ flowchart TD
     E -- Nein --> G[CsdlReader.Parse XmlReader]
     G --> H{XML/CSDL-Fehler?}
     H -- Ja --> F
-    H -- Nein --> I[Für jeden EntitySet: GET + POST Endpunkt erzeugen]
-    I --> J[Für jede IEdmOperation: Endpunkt erzeugen]
-    J --> K[GetEndpointsAsync - Bestand laden]
-    K --> L[ImportDiffCalculator.Calculate]
-    L --> M{ErrorMessage gesetzt?}
-    M -- Ja --> N[Fehlermeldung in ApplicationContentView]
-    M -- Nein --> O[ODataImportDialog öffnen]
-    O --> P{Anwender: Übernehmen oder Abbrechen?}
-    P -- Abbrechen --> Q[Dialog schließen]
-    P -- Übernehmen --> R[ApplyDiffAsync]
-    R --> S[AddEndpointAsync für NewEndpoints]
-    S --> T[UpdateEndpointAsync für ChangedEndpoints]
-    T --> U[DeleteEndpointAsync für RemovedEndpoints]
-    U --> Q
+    H -- Nein --> I[ParseEntitySetAnnotations + ParseOperationAnnotations]
+    I --> J[Für jeden EntitySet: 5 Endpunkte erzeugen GET POST PUT PATCH DELETE]
+    J --> K[Für jede IEdmOperation: Endpunkt erzeugen]
+    K --> L[GetEndpointsAsync - Bestand laden]
+    L --> M[ImportDiffCalculator.Calculate + WithBearerTokens]
+    M --> N{ErrorMessage gesetzt?}
+    N -- Ja --> O[Fehlermeldung in ApplicationContentView]
+    N -- Nein --> P[ODataImportDialog öffnen]
+    P --> Q{Anwender: Übernehmen oder Abbrechen?}
+    Q -- Abbrechen --> R[Dialog schließen]
+    Q -- Übernehmen --> S[ApplyDiffAsync]
+    S --> T[Gruppe pro EntitySet suchen oder anlegen]
+    T --> U[AddEndpointAsync für NewEndpoints]
+    U --> V[UpdateEndpointAsync für ChangedEndpoints]
+    V --> W[DeleteEndpointAsync für RemovedEndpoints]
+    W --> X[SaveBearerTokenOnce - Credential Manager]
+    X --> R
 ```
 
 ---

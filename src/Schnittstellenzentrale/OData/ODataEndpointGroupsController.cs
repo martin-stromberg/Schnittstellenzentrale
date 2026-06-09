@@ -30,7 +30,15 @@ public class ODataEndpointGroupsController : ODataControllerBase
     [HttpGet("EndpointGroups")]
     public async Task<IActionResult> Get()
     {
-        var groups = await _endpointRepository.GetAllEndpointGroupsAsync();
+        var user = AuthenticatedUser;
+        if (user == null)
+            return Unauthorized();
+
+        var storageMode = ParseStorageMode();
+        var applications = await _applicationRepository.GetApplicationsAsync(storageMode, user);
+        var applicationIds = new HashSet<int>(applications.Select(a => a.Id));
+        var allGroups = await _endpointRepository.GetAllEndpointGroupsAsync();
+        var groups = allGroups.Where(g => applicationIds.Contains(g.ApplicationId)).ToList();
         return Ok(groups.AsQueryable());
     }
 
@@ -39,9 +47,18 @@ public class ODataEndpointGroupsController : ODataControllerBase
     [HttpGet("EndpointGroups({key})")]
     public async Task<IActionResult> Get(int key)
     {
+        var user = AuthenticatedUser;
+        if (user == null)
+            return Unauthorized();
+
         var group = await _endpointRepository.GetEndpointGroupByIdAsync(key);
         if (group == null)
             return NotFound();
+
+        var storageMode = ParseStorageMode();
+        var applications = await _applicationRepository.GetApplicationsAsync(storageMode, user);
+        if (!applications.Any(a => a.Id == group.ApplicationId))
+            return StatusCode(StatusCodes.Status403Forbidden);
 
         return Ok(group);
     }
@@ -103,11 +120,24 @@ public class ODataEndpointGroupsController : ODataControllerBase
         if (existing.Application.IsSystem)
             return StatusCode(StatusCodes.Status403Forbidden);
 
-        ApplyPatch(patch, existing);
+        var parentGroupIdProp = patch.EnumerateObject()
+            .Cast<System.Text.Json.JsonProperty?>()
+            .FirstOrDefault(p => p!.Value.Name.Equals("parentgroupid", StringComparison.OrdinalIgnoreCase));
+
+        if (parentGroupIdProp.HasValue && parentGroupIdProp.Value.Value.ValueKind == JsonValueKind.Number)
+        {
+            var parentGroupId = parentGroupIdProp.Value.Value.GetInt32();
+            var parentGroup = await _endpointRepository.GetEndpointGroupByIdAsync(parentGroupId);
+            if (parentGroup == null || parentGroup.ApplicationId != existing.ApplicationId)
+                return BadRequest("Die angegebene ParentGroup gehört nicht zur selben Anwendung.");
+        }
 
         var rowVersion = ODataPatchHelper.TryExtractRowVersion(patch);
-        if (rowVersion != null)
-            existing.RowVersion = rowVersion;
+        if (rowVersion == null)
+            return BadRequest("rowVersion is required for PATCH");
+
+        ApplyPatch(patch, existing);
+        existing.RowVersion = rowVersion;
 
         try
         {

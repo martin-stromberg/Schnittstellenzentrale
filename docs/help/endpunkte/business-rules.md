@@ -196,34 +196,39 @@
 
 ---
 
-## OData-Import: Keine Ordnerzuweisung
+## OData-Import: Ordnerzuweisung nach Entity-Set-Namen
 
-**Beschreibung:** Importierte OData-Endpunkte werden ohne `EndpointGroupId` angelegt — sie erscheinen direkt unter der Anwendung ohne Ordner.
+**Beschreibung:** Beim Anwenden eines OData-Import-Diffs werden importierte Endpunkte automatisch einer Endpunktgruppe zugewiesen, deren Name dem Entity-Set-Namen entspricht. Existiert die Gruppe noch nicht, wird sie angelegt.
 
 **Bedingungen:**
 - `ODataImportService.ApplyDiffAsync` wird aufgerufen.
+- Der Endpunkt-Name folgt dem Schema `"<METHODE> <EntitySetName>"` (z. B. `"GET Products"`).
 
 **Verhalten:**
-- `IEndpointRepository.AddEndpointAsync` wird mit Endpunkten aufgerufen, deren `EndpointGroupId` den Standardwert `null` hat.
-- Nachträgliche Ordnerzuweisung ist manuell über das Zahnrad-Menü möglich.
+- `ExtractEntitySetName` extrahiert den Entity-Set-Namen aus dem Endpunkt-Namen (Teil nach dem ersten Leerzeichen).
+- Existiert noch keine Gruppe mit diesem Namen für die Anwendung: `IEndpointRepository.AddEndpointGroupAsync` wird aufgerufen.
+- Der `endpoint.EndpointGroupId` wird auf die ID der gefundenen oder neu angelegten Gruppe gesetzt.
+- Endpunkte ohne Leerzeichen im Namen (OData-Operationen wie `Authenticate`) erhalten keine Gruppe (`EndpointGroupId = null`).
 
-**Umsetzung:** `ODataImportService.ApplyDiffAsync` — OData-Entity-Sets sind flache Ressourcennamen (z. B. `Products`, `Orders`) ohne hierarchische Pfad-Segmente. Eine Gruppenableitung aus dem Entity-Set-Namen ergibt fachlich keinen Mehrwert.
+**Umsetzung:** `ODataImportService.ApplyDiffAsync` — `groupLookup`-Dictionary pro Anwendung verhindert doppelte Gruppenanlage innerhalb desselben Imports.
 
 ---
 
-## OData-Import: Keine Bearer-Token-Persistierung
+## OData-Import: Bearer-Token-Persistierung über CSDL-Annotation
 
-**Beschreibung:** Beim OData-Import wird kein Bearer-Token im Windows Credential Manager gespeichert, da das CSDL-Format kein proprietäres Authentifizierungsfeld enthält.
+**Beschreibung:** Beim OData-Import wird ein Bearer-Token im Windows Credential Manager gespeichert, wenn die CSDL-Definition die proprietäre Annotation `x-sz-bearer-token` enthält oder bereits ein Token für die Anwendung im Credential Manager vorliegt.
 
 **Bedingungen:**
 - `ODataImportService.ApplyDiffAsync` wird aufgerufen.
+- Mindestens ein Endpunkt im Diff hat `AuthenticationType == BearerToken` und einen Eintrag im `BearerTokens`-Dictionary.
 
 **Verhalten:**
-- `ICredentialService` wird nicht injiziert und nicht aufgerufen.
-- Alle importierten Endpunkte erhalten `AuthenticationType = None`.
-- Authentifizierungseinstellungen müssen nach dem Import manuell gesetzt werden.
+- Für jeden Endpunkt mit `BearerToken` und vorhandenem Token-Wert im Dictionary wird `ICredentialService.SavePassword` aufgerufen.
+- Der Credential-Target wird über `CredentialTargetHelper.Build(applicationId, BearerToken)` gebildet; alle Endpunkte einer Anwendung teilen denselben Target.
+- Fehler beim Credential-Zugriff werden per `_logger.LogWarning` protokolliert und brechen den Import nicht ab.
+- Ist keine `x-sz-bearer-token`-Annotation vorhanden und kein bestehender Token im Credential Manager: alle Endpunkte erhalten `AuthenticationType = None`.
 
-**Umsetzung:** `ODataImportService` — kein `ICredentialService` im Konstruktor; der Konstruktor akzeptiert nur `IHttpClientFactory`, `IEndpointRepository` und `ILogger<ODataImportService>`.
+**Umsetzung:** `ODataImportService.SaveBearerTokenOnce` — schreibt den Token genau einmal pro Anwendung (verhindert redundante Credential-Manager-Zugriffe bei mehreren Endpunkten).
 
 ---
 

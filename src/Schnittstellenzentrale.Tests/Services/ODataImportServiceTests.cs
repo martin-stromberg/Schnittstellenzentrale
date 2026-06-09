@@ -694,4 +694,38 @@ public class ODataImportServiceTests
         Assert.All(diff.NewEndpoints, e => Assert.Equal(Core.Enums.AuthenticationType.BearerToken, e.AuthenticationType));
         Assert.True(diff.BearerTokens.Values.All(v => v == "{{schnittstellenzentrale.authToken}}"));
     }
+
+    /// <summary>ApplyDiff_SameGroupNameAcrossDifferentApps_AssignsCorrectGroupPerApp</summary>
+    [Fact]
+    public async Task ApplyDiff_SameGroupNameAcrossDifferentApps_AssignsCorrectGroupPerApp()
+    {
+        var repoMock = new Mock<IEndpointRepository>();
+
+        var groupApp1 = new EndpointGroup { Id = 10, Name = "Products", ApplicationId = 1, ParentGroupId = null };
+        var groupApp2 = new EndpointGroup { Id = 20, Name = "Products", ApplicationId = 2, ParentGroupId = null };
+
+        repoMock.Setup(r => r.GetEndpointGroupsAsync(1)).ReturnsAsync([groupApp1]);
+        repoMock.Setup(r => r.GetEndpointGroupsAsync(2)).ReturnsAsync([groupApp2]);
+        repoMock.Setup(r => r.AddEndpointAsync(It.IsAny<Core.Models.Endpoint>()))
+            .ReturnsAsync((Core.Models.Endpoint e) => e);
+        repoMock.Setup(r => r.UpdateEndpointAsync(It.IsAny<Core.Models.Endpoint>()))
+            .ReturnsAsync((Core.Models.Endpoint e) => e);
+
+        var service = CreateService(ODataMetadata, repoMock);
+
+        var newEndpoint = new Core.Models.Endpoint { Id = 0, Name = "GET Products", Method = Core.Enums.HttpMethod.GET, RelativePath = "Products", ApplicationId = 1 };
+        var changedEndpoint = new Core.Models.Endpoint { Id = 5, Name = "PATCH Products", Method = Core.Enums.HttpMethod.PATCH, RelativePath = "Products({key})", ApplicationId = 2 };
+
+        var diff = new ImportDiff
+        {
+            NewEndpoints = [newEndpoint],
+            ChangedEndpoints = [changedEndpoint]
+        };
+
+        await service.ApplyDiffAsync(diff);
+
+        repoMock.Verify(r => r.AddEndpointGroupAsync(It.IsAny<EndpointGroup>()), Times.Never);
+        Assert.Equal(groupApp1.Id, newEndpoint.EndpointGroupId);
+        Assert.Equal(groupApp2.Id, changedEndpoint.EndpointGroupId);
+    }
 }

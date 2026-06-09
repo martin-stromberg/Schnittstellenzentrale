@@ -433,6 +433,13 @@ public class ApplicationApiClient : IApplicationApiClient
         var baseUrl = GetBaseUrl();
         var storageMode = _storageModeService.CurrentMode;
 
+        //foreach (var endpoint in diff.NewEndpoints)
+        //    foreach (var header in endpoint.Headers)
+        //    {
+        //        header.Endpoint = endpoint;
+        //        header.EndpointId = endpoint.Id;
+        //    }
+
         var httpResponse = await ExecuteWithTokenAsync(
             t => BuildRequestWithBody(HttpMethod.Post, $"{baseUrl}/api/applications/{applicationId}/odata-import/apply", diff, storageMode, t));
 

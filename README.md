@@ -16,7 +16,7 @@ Blazor Server-Anwendung zur zentralen Verwaltung lokaler Webservice-Endpunkte. S
 - **Import** – Endpunkte aus Swagger/OpenAPI- oder OData-`$metadata`-Definitionen importieren (Diff-Vorschau mit selektiver Übernahme); der jeweilige Import-Button erscheint in der Anwendungsdetailansicht, sobald eine passende Interface-URL hinterlegt ist
 - **OData v4-API** – vollständiger OData v4-Service unter `/odatav4` mit CSDL-Metadaten-Dokument (`/odatav4/$metadata`); exponiert alle vier Kernobjekte als Entity-Sets mit CRUD-Zugriff, `$filter`, `$select`, `$expand`, `$orderby`, `$top` und `$skip`
   - **OData-Authentifizierung** – Tokens via `GET` oder `POST /odatav4/Authenticate()` (Windows/Negotiate)
-  - **OData-Metadaten-Import** – Importiert Entity-Sets und Operationen aus fremden OData-Services; unterstützt die proprietäre `x-sz-bearer-token`-Annotation zur automatischen Token-Hinterlegung
+  - **OData-Metadaten-Import** – Importiert Entity-Sets und Operationen aus fremden OData-Services; erzeugt je Entity-Set fünf Endpunkte (GET, POST, PUT/PATCH/DELETE mit `{key}`-Platzhalter); unterstützt proprietäre CSDL-Annotationen: `x-sz-bearer-token` (Token-Hinterlegung), `x-sz-auth-type` (Authentifizierungstyp), `x-sz-post-request-script` (Post-Request-Skript), `x-sz-header-{name}` (Custom-Header)
   - **API-Endpunkt für Import-Anwendung** – `POST /api/applications/{id}/odata-import/apply` wendet Import-Diffs auf Anwendungen an
   - **Storage-Mode-Header** – `X-Storage-Mode` wird von OData-Controllern ausgewertet (`Team`/`User`) zur optionalen Datenbereichs-Filterung
 - **Authentifizierungstypen** – None, Basic, Negotiate, BearerToken, NegotiateWithImpersonation (Credentials im Windows Credential Manager)
@@ -111,7 +111,8 @@ Die Authentifizierung erfolgt mittels Windows-Authentifizierung (Negotiate), die
 | `POST /authenticate` | Bearer-Token beziehen (Windows/Negotiate) |
 | `/api/application-groups` | CRUD für `ApplicationGroup` |
 | `/api/applications` | CRUD für `Application` |
-| `/api/applications/{id}/odata-import/apply` | OData-Import-Diff auf Anwendung anwenden |
+| `POST /api/applications/{id}/import` | Import-Diff berechnen (Swagger oder OData, je nach `InterfaceType`) |
+| `POST /api/applications/{id}/odata-import/apply` | OData-Import-Diff auf Anwendung anwenden |
 | `/api/endpoint-groups` | CRUD für `EndpointGroup` |
 | `/api/endpoints` | CRUD für `Endpoint` inkl. Header- und Query-Parameter-Routen |
 
@@ -136,7 +137,7 @@ Alle Endpunkte erfordern Bearer-Token im `Authorization`-Header. Unterstützt `X
 
 **Besonderheiten:** `Id` und `RowVersion` sind bei POST/PUT/PATCH nicht schreibbar. Systemeinträge (`IsSystem = true`) sind vor Änderungen und Löschungen geschützt (403). PATCH-Anfragen akzeptieren nur die zu ändernden Felder; `null`-Werte setzen Felder auf ihren leeren Zustand.
 
-**OData-Metadaten-Import:** Das unter `/odatav4/$metadata` exponierte CSDL-Dokument wird auch intern für den OData-Import verwendet. Externe OData-Services können importiert werden; die API unterstützt die proprietäre `x-sz-bearer-token`-Annotation zur automatischen Hinterlegung von Bearer-Tokens bei importierten Endpunkten.
+**OData-Metadaten-Import:** Das unter `/odatav4/$metadata` exponierte CSDL-Dokument wird auch intern für den OData-Import verwendet. Externe OData-Services können importiert werden. Der Import erzeugt je Entity-Set fünf Endpunkte (GET, POST, PUT/PATCH/DELETE mit `{key}`-Platzhalter) sowie einen Endpunkt je OData-Aktion und -Funktion. Unterstützte CSDL-Annotationen: `x-sz-bearer-token` (Token-Hinterlegung), `x-sz-auth-type` (Authentifizierungstyp), `x-sz-post-request-script` (Post-Request-Skript), `x-sz-header-{name}` (Custom-Header).
 
 Ausführliche Dokumentation: [docs/help/api/odata-api.md](docs/help/api/odata-api.md)
 

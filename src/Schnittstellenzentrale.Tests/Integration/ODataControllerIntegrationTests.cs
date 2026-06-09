@@ -131,10 +131,13 @@ public class ODataControllerIntegrationTests : IClassFixture<ControllerTestFacto
 
         var repo = _factory.Services.GetRequiredService<IApplicationRepository>();
         var app = await repo.AddApplicationAsync(new Application { Name = "PatchApp", BaseUrl = "https://patch.example.com" });
+        var saved = await repo.GetApplicationByIdAsync(app.Id);
+        Assert.NotNull(saved);
+        var rowVersionBase64 = Convert.ToBase64String(saved.RowVersion);
 
         var request = CreateRequest(HttpMethod.Patch, $"/odatav4/Applications({app.Id})", token);
         request.Content = new StringContent(
-            """{"Name":"PatchAppPatched"}""",
+            $$$"""{"Name":"PatchAppPatched","rowversion":"{{{rowVersionBase64}}}"}""",
             System.Text.Encoding.UTF8,
             "application/json");
 
@@ -363,7 +366,9 @@ public class ODataControllerIntegrationTests : IClassFixture<ControllerTestFacto
         var repo = _factory.Services.GetRequiredService<IApplicationRepository>();
         await repo.AddApplicationAsync(new Application { Name = "FilterableApp", BaseUrl = "https://filterable.example.com" });
 
-        var request = CreateRequest(HttpMethod.Get, "/odatav4/Applications?$filter=Name eq 'FilterableApp'", token);
+        var request = new HttpRequestMessage(HttpMethod.Get, "/odatav4/Applications?$filter=Name eq 'FilterableApp'");
+        request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+        request.Headers.Add("X-Storage-Mode", "Team");
         var response = await client.SendAsync(request);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -397,7 +402,9 @@ public class ODataControllerIntegrationTests : IClassFixture<ControllerTestFacto
         var repo = _factory.Services.GetRequiredService<IApplicationRepository>();
         await repo.AddApplicationAsync(new Application { Name = "SelectApp", BaseUrl = "https://select.example.com" });
 
-        var request = CreateRequest(HttpMethod.Get, "/odatav4/Applications?$select=Id,Name", token);
+        var request = new HttpRequestMessage(HttpMethod.Get, "/odatav4/Applications?$select=Id,Name");
+        request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+        request.Headers.Add("X-Storage-Mode", "Team");
         var response = await client.SendAsync(request);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -435,11 +442,14 @@ public class ODataControllerIntegrationTests : IClassFixture<ControllerTestFacto
 
         var repo = _factory.Services.GetRequiredService<IApplicationRepository>();
         var app = await repo.AddApplicationAsync(new Application { Name = "IconPatchValidApp", BaseUrl = "https://iconpatchvalid.example.com" });
+        var saved = await repo.GetApplicationByIdAsync(app.Id);
+        Assert.NotNull(saved);
+        var rowVersionBase64 = Convert.ToBase64String(saved.RowVersion);
 
         var validBase64 = Convert.ToBase64String(new byte[] { 1, 2, 3, 4 });
         var request = CreateRequest(HttpMethod.Patch, $"/odatav4/Applications({app.Id})", token);
         request.Content = new StringContent(
-            $$$"""{"IconData":"{{{validBase64}}}"}""",
+            $$$"""{"IconData":"{{{validBase64}}}","rowversion":"{{{rowVersionBase64}}}"}""",
             System.Text.Encoding.UTF8,
             "application/json");
 
@@ -458,11 +468,14 @@ public class ODataControllerIntegrationTests : IClassFixture<ControllerTestFacto
         using var scope = _factory.Services.CreateScope();
         var repo = scope.ServiceProvider.GetRequiredService<IApplicationRepository>();
         var group = await repo.AddGroupAsync(new ApplicationGroup { Name = "IconGroupPatchValid" });
+        var savedGroup = await repo.GetGroupByIdAsync(group.Id);
+        Assert.NotNull(savedGroup);
+        var rowVersionBase64 = Convert.ToBase64String(savedGroup.RowVersion);
 
         var validBase64 = Convert.ToBase64String(new byte[] { 10, 20, 30, 40 });
         var request = CreateRequest(HttpMethod.Patch, $"/odatav4/ApplicationGroups({group.Id})", token);
         request.Content = new StringContent(
-            $$$"""{"IconData":"{{{validBase64}}}"}""",
+            $$$"""{"IconData":"{{{validBase64}}}","rowversion":"{{{rowVersionBase64}}}"}""",
             System.Text.Encoding.UTF8,
             "application/json");
 
@@ -748,6 +761,9 @@ public class ODataControllerIntegrationTests : IClassFixture<ControllerTestFacto
             RelativePath = "/patch-same",
             ApplicationId = app.Id
         });
+        var savedEndpoint = await endpointRepo.GetEndpointByIdAsync(endpoint.Id);
+        Assert.NotNull(savedEndpoint);
+        var rowVersionBase64 = Convert.ToBase64String(savedEndpoint.RowVersion);
 
         var ownGroup = await endpointRepo.AddEndpointGroupAsync(new EndpointGroup
         {
@@ -757,7 +773,7 @@ public class ODataControllerIntegrationTests : IClassFixture<ControllerTestFacto
 
         var request = CreateRequest(HttpMethod.Patch, $"/odatav4/Endpoints({endpoint.Id})", token);
         request.Content = new StringContent(
-            $$$"""{"EndpointGroupId":{{{ownGroup.Id}}}}""",
+            $$$"""{"EndpointGroupId":{{{ownGroup.Id}}},"rowversion":"{{{rowVersionBase64}}}"}""",
             System.Text.Encoding.UTF8,
             "application/json");
 
@@ -1108,7 +1124,9 @@ public class ODataControllerIntegrationTests : IClassFixture<ControllerTestFacto
             Owner = "personaluser"
         });
 
-        var request = CreateRequest(HttpMethod.Get, "/odatav4/Applications?$filter=Name eq 'PersonalAppOData'", token);
+        var request = new HttpRequestMessage(HttpMethod.Get, "/odatav4/Applications?$filter=Name eq 'PersonalAppOData'");
+        request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+        request.Headers.Add("X-Storage-Mode", "Team");
         var response = await client.SendAsync(request);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -1134,10 +1152,13 @@ public class ODataControllerIntegrationTests : IClassFixture<ControllerTestFacto
             RelativePath = "/bodymode",
             ApplicationId = app.Id
         });
+        var savedEndpoint = await endpointRepo.GetEndpointByIdAsync(endpoint.Id);
+        Assert.NotNull(savedEndpoint);
+        var rowVersionBase64 = Convert.ToBase64String(savedEndpoint.RowVersion);
 
         var request = CreateRequest(HttpMethod.Patch, $"/odatav4/Endpoints({endpoint.Id})", token);
         request.Content = new StringContent(
-            """{"BodyMode":"Json"}""",
+            $$$"""{"BodyMode":"Json","rowversion":"{{{rowVersionBase64}}}"}""",
             System.Text.Encoding.UTF8,
             "application/json");
 
@@ -1232,7 +1253,9 @@ public class ODataControllerIntegrationTests : IClassFixture<ControllerTestFacto
         });
         _ = app;
 
-        var request = CreateRequest(HttpMethod.Get, $"/odatav4/ApplicationGroups?$filter=Name eq 'PersonalGroupOData'", token);
+        var request = new HttpRequestMessage(HttpMethod.Get, $"/odatav4/ApplicationGroups?$filter=Name eq 'PersonalGroupOData'");
+        request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+        request.Headers.Add("X-Storage-Mode", "Team");
         var response = await client.SendAsync(request);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -1268,10 +1291,13 @@ public class ODataControllerIntegrationTests : IClassFixture<ControllerTestFacto
             BaseUrl = "https://desc-null-patch.example.com",
             Description = "initial description"
         });
+        var saved = await repo.GetApplicationByIdAsync(app.Id);
+        Assert.NotNull(saved);
+        var rowVersionBase64 = Convert.ToBase64String(saved.RowVersion);
 
         var request = CreateRequest(HttpMethod.Patch, $"/odatav4/Applications({app.Id})", token);
         request.Content = new StringContent(
-            """{"description":null}""",
+            $$$"""{"description":null,"rowversion":"{{{rowVersionBase64}}}"}""",
             System.Text.Encoding.UTF8,
             "application/json");
 
@@ -1296,10 +1322,13 @@ public class ODataControllerIntegrationTests : IClassFixture<ControllerTestFacto
             Name = "DescNullPatchGroup",
             Description = "initial description"
         });
+        var savedGroup = await repo.GetGroupByIdAsync(group.Id);
+        Assert.NotNull(savedGroup);
+        var rowVersionBase64 = Convert.ToBase64String(savedGroup.RowVersion);
 
         var request = CreateRequest(HttpMethod.Patch, $"/odatav4/ApplicationGroups({group.Id})", token);
         request.Content = new StringContent(
-            """{"description":null}""",
+            $$$"""{"description":null,"rowversion":"{{{rowVersionBase64}}}"}""",
             System.Text.Encoding.UTF8,
             "application/json");
 
@@ -1417,6 +1446,397 @@ public class ODataControllerIntegrationTests : IClassFixture<ControllerTestFacto
         var response = await client.SendAsync(request);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    /// <summary>PatchApplication_WithoutRowVersion_Returns400</summary>
+    [Fact]
+    public async Task PatchApplication_WithoutRowVersion_Returns400()
+    {
+        var client = _factory.CreateClient();
+        var token = await ObtainTokenAsync(client);
+
+        var repo = _factory.Services.GetRequiredService<IApplicationRepository>();
+        var app = await repo.AddApplicationAsync(new Application { Name = "PatchNoRowVersionApp", BaseUrl = "https://patch-no-rowversion.example.com" });
+
+        var request = CreateRequest(HttpMethod.Patch, $"/odatav4/Applications({app.Id})", token);
+        request.Content = new StringContent(
+            """{"Name":"Changed"}""",
+            System.Text.Encoding.UTF8,
+            "application/json");
+
+        var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    /// <summary>PatchApplicationGroup_WithoutRowVersion_Returns400</summary>
+    [Fact]
+    public async Task PatchApplicationGroup_WithoutRowVersion_Returns400()
+    {
+        var client = _factory.CreateClient();
+        var token = await ObtainTokenAsync(client);
+
+        var repo = _factory.Services.GetRequiredService<IApplicationRepository>();
+        var group = await repo.AddGroupAsync(new ApplicationGroup { Name = "PatchNoRowVersionGroup" });
+
+        var request = CreateRequest(HttpMethod.Patch, $"/odatav4/ApplicationGroups({group.Id})", token);
+        request.Content = new StringContent(
+            """{"Name":"Changed"}""",
+            System.Text.Encoding.UTF8,
+            "application/json");
+
+        var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    /// <summary>PatchApplication_WithInvalidBase64RowVersion_Returns400</summary>
+    [Fact]
+    public async Task PatchApplication_WithInvalidBase64RowVersion_Returns400()
+    {
+        var client = _factory.CreateClient();
+        var token = await ObtainTokenAsync(client);
+
+        var repo = _factory.Services.GetRequiredService<IApplicationRepository>();
+        var app = await repo.AddApplicationAsync(new Application { Name = "PatchInvalidRowVersionApp", BaseUrl = "https://patch-invalid-rv.example.com" });
+
+        var request = CreateRequest(HttpMethod.Patch, $"/odatav4/Applications({app.Id})", token);
+        request.Content = new StringContent(
+            """{"Name":"Changed","rowversion":"!!!not-valid-base64!!!"}""",
+            System.Text.Encoding.UTF8,
+            "application/json");
+
+        var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    /// <summary>PatchApplicationGroup_WithInvalidBase64RowVersion_Returns400</summary>
+    [Fact]
+    public async Task PatchApplicationGroup_WithInvalidBase64RowVersion_Returns400()
+    {
+        var client = _factory.CreateClient();
+        var token = await ObtainTokenAsync(client);
+
+        var repo = _factory.Services.GetRequiredService<IApplicationRepository>();
+        var group = await repo.AddGroupAsync(new ApplicationGroup { Name = "PatchInvalidRowVersionGroup" });
+
+        var request = CreateRequest(HttpMethod.Patch, $"/odatav4/ApplicationGroups({group.Id})", token);
+        request.Content = new StringContent(
+            """{"Name":"Changed","rowversion":"!!!not-valid-base64!!!"}""",
+            System.Text.Encoding.UTF8,
+            "application/json");
+
+        var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    /// <summary>GetEndpoints_WithValidToken_Returns200</summary>
+    [Fact]
+    public async Task GetEndpoints_WithValidToken_Returns200()
+    {
+        var client = _factory.CreateClient();
+        var token = await ObtainTokenAsync(client);
+
+        var request = new HttpRequestMessage(HttpMethod.Get, "/odatav4/Endpoints");
+        request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+        request.Headers.Add("X-Storage-Mode", "Team");
+        var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    /// <summary>GetEndpointGroups_WithValidToken_Returns200</summary>
+    [Fact]
+    public async Task GetEndpointGroups_WithValidToken_Returns200()
+    {
+        var client = _factory.CreateClient();
+        var token = await ObtainTokenAsync(client);
+
+        var request = new HttpRequestMessage(HttpMethod.Get, "/odatav4/EndpointGroups");
+        request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+        request.Headers.Add("X-Storage-Mode", "Team");
+        var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    /// <summary>GetEndpoints_WithoutToken_Returns401</summary>
+    [Fact]
+    public async Task GetEndpoints_WithoutToken_Returns401()
+    {
+        var client = _factory.CreateClient();
+
+        var response = await client.GetAsync("/odatav4/Endpoints");
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    /// <summary>GetEndpointGroups_WithoutToken_Returns401</summary>
+    [Fact]
+    public async Task GetEndpointGroups_WithoutToken_Returns401()
+    {
+        var client = _factory.CreateClient();
+
+        var response = await client.GetAsync("/odatav4/EndpointGroups");
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    /// <summary>PatchEndpointGroup_WithParentGroupFromDifferentApplication_Returns400</summary>
+    [Fact]
+    public async Task PatchEndpointGroup_WithParentGroupFromDifferentApplication_Returns400()
+    {
+        var client = _factory.CreateClient();
+        var token = await ObtainTokenAsync(client);
+
+        var appRepo = _factory.Services.GetRequiredService<IApplicationRepository>();
+        var endpointRepo = _factory.Services.GetRequiredService<IEndpointRepository>();
+
+        var app1 = await appRepo.AddApplicationAsync(new Application { Name = "PatchEGCrossApp1", BaseUrl = "https://patch-eg-cross-app1.example.com" });
+        var app2 = await appRepo.AddApplicationAsync(new Application { Name = "PatchEGCrossApp2", BaseUrl = "https://patch-eg-cross-app2.example.com" });
+
+        var group = await endpointRepo.AddEndpointGroupAsync(new EndpointGroup { Name = "GroupForCross", ApplicationId = app1.Id });
+        var foreignParent = await endpointRepo.AddEndpointGroupAsync(new EndpointGroup { Name = "ForeignParent", ApplicationId = app2.Id });
+
+        var request = CreateRequest(HttpMethod.Patch, $"/odatav4/EndpointGroups({group.Id})", token);
+        request.Content = new StringContent(
+            $$$"""{"parentgroupid":{{{foreignParent.Id}}}}""",
+            System.Text.Encoding.UTF8,
+            "application/json");
+
+        var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    /// <summary>PostApplication_SetsOwnerFromAuthenticatedUser</summary>
+    [Fact]
+    public async Task PostApplication_SetsOwnerFromAuthenticatedUser()
+    {
+        var client = _factory.CreateClient();
+        var token = await ObtainTokenAsync(client);
+
+        var request = CreateRequest(HttpMethod.Post, "/odatav4/Applications", token);
+        request.Content = JsonContent.Create(new Application
+        {
+            Name = "OwnerSetByPostApp",
+            BaseUrl = "https://owner-set-post.example.com"
+        });
+
+        var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        var content = await response.Content.ReadAsStringAsync();
+        var saved = JsonSerializer.Deserialize<Application>(content, JsonOptions);
+        Assert.NotNull(saved);
+        Assert.NotNull(saved.Owner);
+        Assert.False(string.IsNullOrEmpty(saved.Owner));
+    }
+
+    /// <summary>PatchEndpoint_WithoutRowVersion_Returns400</summary>
+    [Fact]
+    public async Task PatchEndpoint_WithoutRowVersion_Returns400()
+    {
+        var client = _factory.CreateClient();
+        var token = await ObtainTokenAsync(client);
+
+        var appRepo = _factory.Services.GetRequiredService<IApplicationRepository>();
+        var endpointRepo = _factory.Services.GetRequiredService<IEndpointRepository>();
+
+        var app = await appRepo.AddApplicationAsync(new Application { Name = "PatchNoRvEndpointApp", BaseUrl = "https://patch-norv-endpoint.example.com" });
+        var endpoint = await endpointRepo.AddEndpointAsync(new Core.Models.Endpoint
+        {
+            Name = "GET NoRvEndpoint",
+            Method = Core.Enums.HttpMethod.GET,
+            RelativePath = "/norv",
+            ApplicationId = app.Id
+        });
+
+        var request = CreateRequest(HttpMethod.Patch, $"/odatav4/Endpoints({endpoint.Id})", token);
+        request.Content = new StringContent(
+            """{"Name":"Changed"}""",
+            System.Text.Encoding.UTF8,
+            "application/json");
+
+        var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    /// <summary>PatchEndpointGroup_WithoutRowVersion_Returns400</summary>
+    [Fact]
+    public async Task PatchEndpointGroup_WithoutRowVersion_Returns400()
+    {
+        var client = _factory.CreateClient();
+        var token = await ObtainTokenAsync(client);
+
+        var appRepo = _factory.Services.GetRequiredService<IApplicationRepository>();
+        var endpointRepo = _factory.Services.GetRequiredService<IEndpointRepository>();
+
+        var app = await appRepo.AddApplicationAsync(new Application { Name = "PatchNoRvEndpointGroupApp", BaseUrl = "https://patch-norv-endpointgroup.example.com" });
+        var group = await endpointRepo.AddEndpointGroupAsync(new EndpointGroup { Name = "PatchNoRvGroup", ApplicationId = app.Id });
+
+        var request = CreateRequest(HttpMethod.Patch, $"/odatav4/EndpointGroups({group.Id})", token);
+        request.Content = new StringContent(
+            """{"Name":"Changed"}""",
+            System.Text.Encoding.UTF8,
+            "application/json");
+
+        var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    /// <summary>PutApplication_WithForeignOwner_Returns403</summary>
+    [Fact]
+    public async Task PutApplication_WithForeignOwner_Returns403()
+    {
+        var client = _factory.CreateClient();
+        var token = await ObtainTokenAsync(client);
+
+        var repo = _factory.Services.GetRequiredService<IApplicationRepository>();
+        var app = await repo.AddApplicationAsync(new Application
+        {
+            Name = "ForeignOwnerApp",
+            BaseUrl = "https://foreign-owner.example.com",
+            Owner = "OTHER\\otheruser"
+        });
+        var saved = await repo.GetApplicationByIdAsync(app.Id);
+        Assert.NotNull(saved);
+
+        var request = CreateRequest(HttpMethod.Put, $"/odatav4/Applications({app.Id})", token);
+        request.Content = JsonContent.Create(new Application
+        {
+            Name = "ForeignOwnerAppChanged",
+            BaseUrl = "https://foreign-owner.example.com",
+            RowVersion = saved.RowVersion
+        });
+
+        var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    /// <summary>PatchApplication_WithForeignOwner_Returns403</summary>
+    [Fact]
+    public async Task PatchApplication_WithForeignOwner_Returns403()
+    {
+        var client = _factory.CreateClient();
+        var token = await ObtainTokenAsync(client);
+
+        var repo = _factory.Services.GetRequiredService<IApplicationRepository>();
+        var app = await repo.AddApplicationAsync(new Application
+        {
+            Name = "ForeignOwnerPatchApp",
+            BaseUrl = "https://foreign-owner-patch.example.com",
+            Owner = "OTHER\\otheruser"
+        });
+        var saved = await repo.GetApplicationByIdAsync(app.Id);
+        Assert.NotNull(saved);
+        var rowVersionBase64 = Convert.ToBase64String(saved.RowVersion);
+
+        var request = CreateRequest(HttpMethod.Patch, $"/odatav4/Applications({app.Id})", token);
+        request.Content = new StringContent(
+            $$$"""{"Name":"Changed","rowversion":"{{{rowVersionBase64}}}"}""",
+            System.Text.Encoding.UTF8,
+            "application/json");
+
+        var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    /// <summary>GetEndpoint_WithForeignOwner_Returns403</summary>
+    [Fact]
+    public async Task GetEndpoint_WithForeignOwner_Returns403()
+    {
+        var client = _factory.CreateClient();
+        var token = await ObtainTokenAsync(client);
+
+        var appRepo = _factory.Services.GetRequiredService<IApplicationRepository>();
+        var endpointRepo = _factory.Services.GetRequiredService<IEndpointRepository>();
+
+        var app = await appRepo.AddApplicationAsync(new Application
+        {
+            Name = "ForeignOwnerEndpointApp",
+            BaseUrl = "https://foreign-endpoint.example.com",
+            Owner = "OTHER\\otheruser"
+        });
+        var endpoint = await endpointRepo.AddEndpointAsync(new Core.Models.Endpoint
+        {
+            Name = "GET ForeignEndpoint",
+            Method = Core.Enums.HttpMethod.GET,
+            RelativePath = "/foreign",
+            ApplicationId = app.Id
+        });
+
+        var request = new HttpRequestMessage(HttpMethod.Get, $"/odatav4/Endpoints({endpoint.Id})");
+        request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+        request.Headers.Add("X-Storage-Mode", "User");
+
+        var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    /// <summary>GetEndpointGroup_WithForeignOwner_Returns403</summary>
+    [Fact]
+    public async Task GetEndpointGroup_WithForeignOwner_Returns403()
+    {
+        var client = _factory.CreateClient();
+        var token = await ObtainTokenAsync(client);
+
+        var appRepo = _factory.Services.GetRequiredService<IApplicationRepository>();
+        var endpointRepo = _factory.Services.GetRequiredService<IEndpointRepository>();
+
+        var app = await appRepo.AddApplicationAsync(new Application
+        {
+            Name = "ForeignOwnerEndpointGroupApp",
+            BaseUrl = "https://foreign-endpointgroup.example.com",
+            Owner = "OTHER\\otheruser"
+        });
+        var group = await endpointRepo.AddEndpointGroupAsync(new EndpointGroup
+        {
+            Name = "ForeignEndpointGroup",
+            ApplicationId = app.Id
+        });
+
+        var request = new HttpRequestMessage(HttpMethod.Get, $"/odatav4/EndpointGroups({group.Id})");
+        request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+        request.Headers.Add("X-Storage-Mode", "User");
+
+        var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    /// <summary>GetApplicationGroup_WithForeignOwner_Returns403</summary>
+    [Fact]
+    public async Task GetApplicationGroup_WithForeignOwner_Returns403()
+    {
+        var client = _factory.CreateClient();
+        var token = await ObtainTokenAsync(client);
+
+        var appRepo = _factory.Services.GetRequiredService<IApplicationRepository>();
+
+        var group = await appRepo.AddGroupAsync(new ApplicationGroup { Name = "ForeignOwnedGroup" });
+        await appRepo.AddApplicationAsync(new Application
+        {
+            Name = "ForeignGroupApp",
+            BaseUrl = "https://foreign-group.example.com",
+            Owner = "OTHER\\otheruser",
+            ApplicationGroupId = group.Id
+        });
+
+        var request = new HttpRequestMessage(HttpMethod.Get, $"/odatav4/ApplicationGroups({group.Id})");
+        request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+        request.Headers.Add("X-Storage-Mode", "User");
+
+        var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 
 }

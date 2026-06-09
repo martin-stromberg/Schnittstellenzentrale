@@ -42,7 +42,8 @@ internal static class ODataPatchHelper
                 case "rowversion":
                     if (prop.Value.ValueKind == JsonValueKind.String)
                     {
-                        try { target.RowVersion = Convert.FromBase64String(prop.Value.GetString()!); } catch (FormatException) { }
+                        try { target.RowVersion = Convert.FromBase64String(prop.Value.GetString()!); }
+                        catch (FormatException) { error = "Ungültiges RowVersion-Format."; return false; }
                     }
                     break;
             }
@@ -75,12 +76,25 @@ internal static class ODataPatchHelper
                 case "rowversion":
                     if (prop.Value.ValueKind == JsonValueKind.String)
                     {
-                        try { target.RowVersion = Convert.FromBase64String(prop.Value.GetString()!); } catch (FormatException) { }
+                        try { target.RowVersion = Convert.FromBase64String(prop.Value.GetString()!); }
+                        catch (FormatException) { error = "Ungültiges RowVersion-Format."; return false; }
                     }
                     break;
             }
         }
         return true;
+    }
+
+    /// <summary>Prüft ob die <c>RowVersion</c>-Eigenschaft im JSON-Patch vorhanden ist.</summary>
+    /// <returns><c>true</c> wenn die Eigenschaft vorhanden ist, sonst <c>false</c>.</returns>
+    public static bool ContainsRowVersion(JsonElement patch)
+    {
+        foreach (var prop in patch.EnumerateObject())
+        {
+            if (string.Equals(prop.Name, "rowversion", StringComparison.OrdinalIgnoreCase))
+                return true;
+        }
+        return false;
     }
 
     /// <summary>Liest eine optionale <c>RowVersion</c>-Eigenschaft aus einem JSON-Patch-Dokument.</summary>

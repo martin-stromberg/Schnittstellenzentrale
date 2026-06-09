@@ -590,6 +590,50 @@ Löscht einen Query-Parameter eines Endpunkts.
 
 ---
 
+## POST /api/applications/{id}/import
+
+Berechnet den Import-Diff für die angegebene Anwendung. Der Import-Service wird anhand des `InterfaceType` der Anwendung ausgewählt: `Rest` → `ISwaggerImportService`, `OData` → `IODataImportService`.
+
+**Authentifizierung:** Bearer-Token (aus `/authenticate`).
+
+**Request-Header:**
+
+| Header | Pflicht | Beschreibung |
+|--------|---------|--------------|
+| `Authorization` | Ja | `Bearer <token>` |
+
+**Pfadparameter:**
+
+| Parameter | Typ | Pflicht | Beschreibung |
+|-----------|-----|---------|--------------|
+| `id` | `int` | Ja | ID der Anwendung |
+
+**Request-Body:** keiner
+
+**Response: 200 OK** — `ImportDiff`-Objekt:
+
+```json
+{
+  "errorMessage": null,
+  "newEndpoints": [ ... ],
+  "changedEndpoints": [ ... ],
+  "removedEndpoints": [ ... ],
+  "bearerTokens": { "GET Products": "eyJ..." }
+}
+```
+
+**Response-Header:** `X-New-Token`
+
+**Fehler:**
+
+| Status | Ursache |
+|--------|---------|
+| 401 Unauthorized | Token fehlt, unbekannt oder abgelaufen |
+| 404 Not Found | Anwendung nicht gefunden |
+| 422 Unprocessable Entity | Der `InterfaceType` der Anwendung unterstützt keinen Import (weder `Rest` noch `OData`) |
+
+---
+
 ## POST /api/applications/{id}/odata-import/apply
 
 Wendet einen OData-Import-Diff serverseitig auf eine Anwendung an. Dieser Endpunkt wird normalerweise intern von `IApplicationApiClient.ApplyODataDiffAsync()` aufgerufen, kann aber auch von externen Clients für OData-Import-Workflows verwendet werden.

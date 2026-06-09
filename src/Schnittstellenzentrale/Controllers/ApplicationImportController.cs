@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 using Schnittstellenzentrale.Core.Enums;
 using Schnittstellenzentrale.Core.Interfaces;
 using Schnittstellenzentrale.Core.Models;
@@ -38,7 +39,7 @@ public class ApplicationImportController : ApiControllerBase
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
-    public async Task<IActionResult> ApplyODataDiffAsync(int id, [FromBody] ImportDiff diff)
+    public async Task<IActionResult> ApplyODataDiffAsync(int id, [FromBody][ValidateNever] ImportDiff diff)
     {
         var newToken = await ValidateTokenAndSetResponseHeaderAsync();
         if (newToken == null)

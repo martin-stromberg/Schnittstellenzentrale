@@ -40,7 +40,7 @@ public abstract class PlaywrightTestBase : IAsyncLifetime
         BaseUrl = _server.BaseAddress;
 
         _playwright = await Microsoft.Playwright.Playwright.CreateAsync();
-        _browser = await _playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions { Headless = true });
+        _browser = await _playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions { Headless = false });
         Context = await _browser.NewContextAsync(new BrowserNewContextOptions
         {
             Locale = "de-DE",

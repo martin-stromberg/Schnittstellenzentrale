@@ -117,17 +117,28 @@ Ist eine Anwendung vom Typ `OData`, erscheint in der `ApplicationContentView`-De
 
 | Quelle im CSDL | Erzeugte Endpunkte | HTTP-Methode |
 |----------------|--------------------|--------------|
-| `IEdmEntitySet` | Je ein Endpunkt pro Entity-Set | GET und POST |
-| `IEdmAction` (OData-Action) | Je ein Endpunkt pro Action | POST |
-| `IEdmFunction` (OData-Function) | Je ein Endpunkt pro Function | GET |
+| `IEdmEntitySet` | Fünf Endpunkte pro Entity-Set | GET, POST, PUT(`{key}`), PATCH(`{key}`), DELETE(`{key}`) |
+| `IEdmAction` (OData-Action) | Ein Endpunkt pro Action | POST |
+| `IEdmFunction` (OData-Function) | Ein Endpunkt pro Function | GET |
 
-Der `RelativePath` eines importierten Endpunkts entspricht dem Namen des Entity-Sets oder der Operation (z. B. `Products`, `Orders`). Eine Ordnerzuweisung findet nicht statt; importierte Endpunkte werden direkt unter der Anwendung angelegt.
+Der `RelativePath` eines importierten Endpunkts wird relativ zur `Application.BaseUrl` berechnet: Stimmt der Dienstpfad der Metadaten-URL (ohne `/$metadata`) mit der Basis-URL überein, wird nur der entityset-spezifische Pfadanteil als `RelativePath` übernommen. Enthält der Entity-Set-Name einen `{key}`-Platzhalter (für PUT, PATCH, DELETE), erscheint er im relativen Pfad als `{key}` (z. B. `Products({key})`).
+
+Nach dem Import werden alle Endpunkte eines Entity-Sets in eine gleichnamige Endpunktgruppe eingeordnet; die Gruppe wird bei Bedarf automatisch angelegt.
 
 Die Diff-Berechnung erfolgt über denselben `ImportDiffCalculator` wie beim Swagger-Import. Das Ergebnis zeigt neue, geänderte und zu entfernende Endpunkte. Nach Bestätigung durch den Anwender wendet `ODataImportService.ApplyDiffAsync` die Änderungen über `IEndpointRepository` an.
 
-**Unterschiede zum Swagger-Import:**
-- Keine Ordnerzuweisung via `EndpointGroupHelper` — OData-Entity-Sets sind flache Ressourcennamen ohne hierarchische Pfad-Segmente.
-- Keine Bearer-Token-Persistierung — das CSDL-Format enthält kein proprietäres `x-sz-bearer-token`-Feld. Authentifizierungseinstellungen müssen manuell gesetzt werden.
+### Propriäre CSDL-Annotationen
+
+Der `ODataImportService` liest folgende proprietäre Annotationen direkt aus dem CSDL-Dokument. Die Annotationen können sowohl inline im jeweiligen Element als auch in einem separaten `<Annotations>`-Block stehen:
+
+| Annotation | Zielfeld | Beschreibung |
+|------------|----------|--------------|
+| `x-sz-bearer-token` | `AuthenticationType = BearerToken` + Credential Manager | Token-Wert, der im Windows Credential Manager abgelegt wird |
+| `x-sz-auth-type` | `AuthenticationType` | Expliziter Authentifizierungstyp: `bearertoken`, `negotiate`, `basic`, `none` |
+| `x-sz-post-request-script` | `PostRequestScript` | JavaScript-Code, der nach dem HTTP-Request ausgeführt wird |
+| `x-sz-header-{name}` | `Headers` | Custom-Request-Header; der Teil nach `x-sz-header-` ist der Header-Name |
+
+Ist keine Annotation vorhanden, wird der Standardwert aus dem vorhandenen Bearer-Token der Anwendung abgeleitet: Existiert bereits ein Bearer-Token im Credential Manager, erhalten alle Endpunkte `AuthenticationType = BearerToken`; andernfalls `None`.
 
 **Fehlerverhalten:** Ist `InterfaceUrl` leer, wird eine leere `ImportDiff` ohne Fehlermeldung zurückgegeben und kein Dialog öffnet sich. Bei HTTP-Fehlern oder ungültigem XML wird eine inline-Fehlermeldung in der `ApplicationContentView` angezeigt; der Dialog öffnet sich nicht.
 

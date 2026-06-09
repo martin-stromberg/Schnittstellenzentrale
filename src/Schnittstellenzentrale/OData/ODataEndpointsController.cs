@@ -33,7 +33,14 @@ public class ODataEndpointsController : ODataControllerBase
     [HttpGet("Endpoints")]
     public async Task<IActionResult> Get()
     {
-        var endpoints = await _endpointRepository.GetAllEndpointsAsync();
+        var user = AuthenticatedUser;
+        if (user == null)
+            return Unauthorized();
+
+        var storageMode = ParseStorageMode();
+        var applications = await _applicationRepository.GetApplicationsAsync(storageMode, user);
+        var applicationIds = applications.Select(a => a.Id);
+        var endpoints = await _endpointRepository.GetEndpointsByApplicationIdsAsync(applicationIds);
         return Ok(endpoints.AsQueryable());
     }
 
@@ -42,9 +49,18 @@ public class ODataEndpointsController : ODataControllerBase
     [HttpGet("Endpoints({key})")]
     public async Task<IActionResult> Get(int key)
     {
+        var user = AuthenticatedUser;
+        if (user == null)
+            return Unauthorized();
+
         var endpoint = await _endpointRepository.GetEndpointByIdAsync(key);
         if (endpoint == null)
             return NotFound();
+
+        var storageMode = ParseStorageMode();
+        var applications = await _applicationRepository.GetApplicationsAsync(storageMode, user);
+        if (!applications.Any(a => a.Id == endpoint.ApplicationId))
+            return StatusCode(StatusCodes.Status403Forbidden);
 
         return Ok(endpoint);
     }
@@ -143,11 +159,12 @@ public class ODataEndpointsController : ODataControllerBase
             }
         }
 
-        ApplyPatch(patch, existing);
-
         var rowVersion = ODataPatchHelper.TryExtractRowVersion(patch);
-        if (rowVersion != null)
-            existing.RowVersion = rowVersion;
+        if (rowVersion == null)
+            return BadRequest("rowVersion is required for PATCH");
+
+        ApplyPatch(patch, existing);
+        existing.RowVersion = rowVersion;
 
         try
         {

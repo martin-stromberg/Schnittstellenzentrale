@@ -212,22 +212,23 @@ Aktualisiert einzelne Felder einer Anwendung (partielles Update).
 
 **Authentifizierung:** Bearer-Token.
 
-**Request-Body:** JSON-Objekt mit nur den zu ändernden Feldern (Feldnamen case-insensitiv):
+**Request-Body:** JSON-Objekt mit den zu ändernden Feldern und dem Pflichtfeld `rowVersion` (Feldnamen case-insensitiv):
 
 ```json
 {
   "description": "Aktualisierte Beschreibung",
-  "applicationGroupId": null
+  "applicationGroupId": null,
+  "rowVersion": "AAAAAAA="
 }
 ```
 
-Unterstützte Felder: `name`, `description`, `baseUrl`, `interfaceUrl`, `owner`, `applicationGroupId`, `subtitle`, `iconData`.
+Unterstützte Felder: `name`, `description`, `baseUrl`, `interfaceUrl`, `owner`, `applicationGroupId`, `subtitle`, `iconData`, `rowVersion` (Pflicht).
 
 **Null-Behandlung:** String-Felder (`name`, `description`, etc.) können explizit auf `null` gesetzt werden, um sie zu leeren. Numerische Felder wie `applicationGroupId` können auf `null` gesetzt werden. Der Wert `null` setzt das Feld auf seinen leeren Zustand oder `null`-Wert.
 
 **Type-Guards:** Numerische Felder wie `applicationGroupId` akzeptieren nur JSON-Number-Werte oder `null` — String-Werte oder Arrays werden mit 400 Bad Request abgewiesen.
 
-`id` und `rowVersion` werden auch im PATCH-Body ignoriert.
+`id` wird im PATCH-Body ignoriert.
 
 **Response: 200 OK** — aktualisiertes `Application`-Objekt
 
@@ -235,10 +236,11 @@ Unterstützte Felder: `name`, `description`, `baseUrl`, `interfaceUrl`, `owner`,
 
 | Status | Ursache |
 |--------|---------|
-| 400 Bad Request | Ein Feld hat einen ungültigen Datentyp (z. B. String statt Number) |
+| 400 Bad Request | `rowVersion` fehlt, hat ungültiges Base64-Format oder ein Feld hat einen ungültigen Datentyp |
 | 401 Unauthorized | Token fehlt, unbekannt oder abgelaufen |
 | 403 Forbidden | Anwendung ist eine Systemanwendung |
 | 404 Not Found | Anwendung nicht gefunden |
+| 409 Conflict | Die Anwendung wurde zwischenzeitlich von einem anderen Client geändert |
 
 ---
 
@@ -329,7 +331,7 @@ Ersetzt eine Anwendungsgruppe vollständig.
 
 Partielles Update einer Anwendungsgruppe.
 
-Unterstützte Felder: `name`, `description`, `subtitle`.
+Unterstützte Felder: `name`, `description`, `subtitle`, `iconData`, `rowVersion` (Pflicht).
 
 **Null-Behandlung:** `description` und `subtitle` können auf `null` gesetzt werden. Das Feld `name` akzeptiert nur String-Werte.
 
@@ -339,10 +341,11 @@ Unterstützte Felder: `name`, `description`, `subtitle`.
 
 | Status | Ursache |
 |--------|---------|
-| 400 Bad Request | Ein Feld hat einen ungültigen Datentyp |
+| 400 Bad Request | `rowVersion` fehlt oder ein Feld hat einen ungültigen Datentyp |
 | 401 Unauthorized | Token fehlt oder ist ungültig |
 | 403 Forbidden | Gruppe ist eine Systemgruppe |
 | 404 Not Found | Gruppe nicht gefunden |
+| 409 Conflict | Die Gruppe wurde zwischenzeitlich von einem anderen Client geändert |
 
 ---
 
@@ -358,9 +361,16 @@ Löscht eine Anwendungsgruppe.
 
 ## GET /odatav4/Endpoints
 
-Gibt alle Endpunkte aller Anwendungen (ohne Systemanwendungsfilterung) zurück.
+Gibt alle Endpunkte der Anwendungen zurück, die für den authentifizierten Benutzer im gewählten Speichermodus sichtbar sind.
 
 **Authentifizierung:** Bearer-Token.
+
+**Request-Header:**
+
+| Header | Pflicht | Beschreibung |
+|--------|---------|--------------|
+| `Authorization` | Ja | `Bearer <token>` |
+| `X-Storage-Mode` | Nein | `Team` oder `User` (Standard: `User`); filtert die Datensätze nach Speichermoduszugehörigkeit |
 
 **OData-Abfrageoptionen:** `$filter`, `$select`, `$expand`, `$orderby`, `$top`, `$skip`, `$count`
 
@@ -428,7 +438,7 @@ Ersetzt einen Endpunkt vollständig.
 
 Partielles Update eines Endpunkts.
 
-Unterstützte Felder: `name`, `relativePath`, `body`, `preRequestScript`, `postRequestScript`, `endpointGroupId`, `method`, `authenticationType`.
+Unterstützte Felder: `name`, `relativePath`, `body`, `preRequestScript`, `postRequestScript`, `endpointGroupId`, `method`, `authenticationType`, `rowVersion` (Pflicht).
 
 **Null-Behandlung:** String-Felder können auf `null` gesetzt werden. Das Feld `endpointGroupId` kann auf `null` gesetzt werden (um den Endpunkt aus einer Gruppe zu entfernen).
 
@@ -440,10 +450,11 @@ Unterstützte Felder: `name`, `relativePath`, `body`, `preRequestScript`, `postR
 
 | Status | Ursache |
 |--------|---------|
-| 400 Bad Request | Ein Feld hat einen ungültigen Datentyp |
+| 400 Bad Request | `rowVersion` fehlt, ein Feld hat einen ungültigen Datentyp, oder `endpointGroupId` gehört nicht zur selben Anwendung |
 | 401 Unauthorized | Token fehlt oder ist ungültig |
 | 403 Forbidden | Endpunkt gehört zu einer Systemanwendung |
 | 404 Not Found | Endpunkt nicht gefunden |
+| 409 Conflict | Der Endpunkt wurde zwischenzeitlich von einem anderen Client geändert |
 
 ---
 
@@ -459,9 +470,16 @@ Löscht einen Endpunkt.
 
 ## GET /odatav4/EndpointGroups
 
-Gibt alle Endpunktgruppen zurück.
+Gibt alle Endpunktgruppen der Anwendungen zurück, die für den authentifizierten Benutzer im gewählten Speichermodus sichtbar sind.
 
 **Authentifizierung:** Bearer-Token.
+
+**Request-Header:**
+
+| Header | Pflicht | Beschreibung |
+|--------|---------|--------------|
+| `Authorization` | Ja | `Bearer <token>` |
+| `X-Storage-Mode` | Nein | `Team` oder `User` (Standard: `User`); filtert die Datensätze nach Speichermoduszugehörigkeit |
 
 **OData-Abfrageoptionen:** `$filter`, `$select`, `$expand`, `$orderby`, `$top`, `$skip`, `$count`
 
@@ -525,7 +543,7 @@ Ersetzt eine Endpunktgruppe vollständig.
 
 Partielles Update einer Endpunktgruppe.
 
-Unterstützte Felder: `name`, `parentGroupId`.
+Unterstützte Felder: `name`, `parentGroupId`, `rowVersion` (Pflicht).
 
 **Null-Behandlung:** `parentGroupId` kann auf `null` gesetzt werden (um die Gruppe auf die oberste Ebene zu verschieben).
 
@@ -537,10 +555,11 @@ Unterstützte Felder: `name`, `parentGroupId`.
 
 | Status | Ursache |
 |--------|---------|
-| 400 Bad Request | Ein Feld hat einen ungültigen Datentyp |
+| 400 Bad Request | `rowVersion` fehlt, ein Feld hat einen ungültigen Datentyp, oder `parentGroupId` gehört nicht zur selben Anwendung |
 | 401 Unauthorized | Token fehlt oder ist ungültig |
 | 403 Forbidden | Gruppe gehört zu einer Systemanwendung |
 | 404 Not Found | Gruppe nicht gefunden |
+| 409 Conflict | Die Gruppe wurde zwischenzeitlich von einem anderen Client geändert |
 
 ---
 

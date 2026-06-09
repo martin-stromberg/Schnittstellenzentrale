@@ -12,12 +12,12 @@ namespace Schnittstellenzentrale.Tests.Components;
 /// <summary>bUnit-Tests für <see cref="ImportDialog"/> und <see cref="ODataImportDialog"/>.</summary>
 public class ImportDialogTests : BunitContext
 {
-    private readonly Mock<IODataImportService> _odataImportMock = new();
+    private readonly Mock<IApplicationApiClient> _apiClientMock = new();
 
     /// <summary>Initialisiert die Test-Services.</summary>
     public ImportDialogTests()
     {
-        Services.AddSingleton(_odataImportMock.Object);
+        Services.AddSingleton(_apiClientMock.Object);
         Services.AddSingleton(TestMockFactory.CreateFakeLocalizer());
     }
 
@@ -37,7 +37,7 @@ public class ImportDialogTests : BunitContext
     };
 
     /// <summary>
-    /// Eine Exception aus ODataImportService.ApplyDiffAsync wird als Fehlermeldung im Dialog angezeigt,
+    /// Eine Exception aus ApplyODataDiffAsync wird als Fehlermeldung im Dialog angezeigt,
     /// da ODataImportDialog die Exception nicht mehr fängt und ImportDialog sie verarbeitet.
     /// </summary>
     [Fact]
@@ -46,8 +46,8 @@ public class ImportDialogTests : BunitContext
         var app = CreateApplication();
         var diff = CreateDiff();
 
-        _odataImportMock
-            .Setup(s => s.ApplyDiffAsync(It.IsAny<ImportDiff>()))
+        _apiClientMock
+            .Setup(s => s.ApplyODataDiffAsync(It.IsAny<int>(), It.IsAny<ImportDiff>()))
             .ThrowsAsync(new InvalidOperationException("Service error"));
 
         var cut = Render<ODataImportDialog>(p =>
@@ -65,7 +65,7 @@ public class ImportDialogTests : BunitContext
 
     /// <summary>
     /// BearerTokens aus dem Diff werden beim Erstellen von selectedDiff in ImportDialog übernommen,
-    /// sodass ApplyDiffAsync die Credentials erhält.
+    /// sodass ApplyODataDiffAsync die Credentials erhält.
     /// </summary>
     [Fact]
     public async Task ImportDialog_ApplyAsync_BearerTokensCopiedToSelectedDiff()
@@ -75,9 +75,9 @@ public class ImportDialogTests : BunitContext
         var diff = CreateDiff(bearerTokens);
 
         ImportDiff? capturedDiff = null;
-        _odataImportMock
-            .Setup(s => s.ApplyDiffAsync(It.IsAny<ImportDiff>()))
-            .Callback<ImportDiff>(d => capturedDiff = d)
+        _apiClientMock
+            .Setup(s => s.ApplyODataDiffAsync(It.IsAny<int>(), It.IsAny<ImportDiff>()))
+            .Callback<int, ImportDiff>((id, d) => capturedDiff = d)
             .Returns(Task.CompletedTask);
 
         var onCloseCalled = false;

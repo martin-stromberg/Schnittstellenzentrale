@@ -174,6 +174,7 @@ public class ApplicationImportControllerIntegrationTests : IClassFixture<Applica
         _factory.ODataImportMock
             .Setup(s => s.ApplyDiffAsync(It.IsAny<ImportDiff>()))
             .Returns(Task.CompletedTask);
+        _factory.ODataImportMock.Invocations.Clear();
 
         var diff = new ImportDiff();
         var request = BuildRequest(HttpMethod.Post, $"/api/applications/{app.Id}/odata-import/apply", token);
@@ -234,6 +235,41 @@ public class ApplicationImportControllerIntegrationTests : IClassFixture<Applica
         var response = await client.SendAsync(request);
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    /// <summary>ApplyODataDiff_WithEndpointsHavingNullApplicationNavigation_Returns204</summary>
+    [Fact]
+    public async Task ApplyODataDiff_WithEndpointsHavingNullApplicationNavigation_Returns204()
+    {
+        var client = _factory.CreateClient();
+        var token = await _factory.ObtainTokenAsync(client);
+
+        var appRepo = _factory.Services.GetRequiredService<IApplicationRepository>();
+        var app = await appRepo.AddApplicationAsync(new Application
+        {
+            Name = "ODataApplyDiffWithNavProps",
+            BaseUrl = "https://odata-apply-navprops.example.com",
+            InterfaceUrl = "https://odata-apply-navprops.example.com/$metadata",
+            InterfaceType = InterfaceType.OData
+        });
+
+        _factory.ODataImportMock
+            .Setup(s => s.ApplyDiffAsync(It.IsAny<ImportDiff>()))
+            .Returns(Task.CompletedTask);
+
+        var diff = new ImportDiff
+        {
+            NewEndpoints =
+            [
+                new Core.Models.Endpoint { Name = "GET Products", RelativePath = "/Products", ApplicationId = app.Id },
+                new Core.Models.Endpoint { Name = "POST Products", RelativePath = "/Products", ApplicationId = app.Id }
+            ]
+        };
+        var request = BuildRequest(HttpMethod.Post, $"/api/applications/{app.Id}/odata-import/apply", token);
+        request.Content = System.Net.Http.Json.JsonContent.Create(diff);
+        var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
     }
 }
 

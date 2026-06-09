@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.OData.Edm;
 using Microsoft.OData.Edm.Csdl;
+using Schnittstellenzentrale.Core.Contracts;
 using Schnittstellenzentrale.Core.Enums;
 using Schnittstellenzentrale.Core.Helpers;
 using Schnittstellenzentrale.Core.Interfaces;
@@ -89,12 +90,13 @@ public class ODataImportService : IODataImportService
             var postScript = annotations?.GetValueOrDefault("x-sz-post-request-script");
             var annotationBearerToken = annotations?.GetValueOrDefault("x-sz-bearer-token");
             var bearerTokenValue = annotationBearerToken ?? existingBearerTokenValue;
+            var headers = annotations?.Where(e => e.Key.StartsWith("x-sz-header-")).Select(e => new KeyValuePair<string, string>(e.Value.Split(':').First(), e.Value.Split(':').Last())).ToDictionary(h => h.Key, h => h.Value);
 
-            AddEndpoint(importedEndpoints, bearerTokens, $"GET {entitySet.Name}", Core.Enums.HttpMethod.GET, relativePath, application.Id, authType, bearerTokenValue, postScript: postScript);
-            AddEndpoint(importedEndpoints, bearerTokens, $"POST {entitySet.Name}", Core.Enums.HttpMethod.POST, relativePath, application.Id, authType, bearerTokenValue, postScript: postScript);
-            AddEndpoint(importedEndpoints, bearerTokens, $"PUT {entitySet.Name}", Core.Enums.HttpMethod.PUT, relativePathWithKey, application.Id, authType, bearerTokenValue, postScript: postScript);
-            AddEndpoint(importedEndpoints, bearerTokens, $"PATCH {entitySet.Name}", Core.Enums.HttpMethod.PATCH, relativePathWithKey, application.Id, authType, bearerTokenValue, postScript: postScript);
-            AddEndpoint(importedEndpoints, bearerTokens, $"DELETE {entitySet.Name}", Core.Enums.HttpMethod.DELETE, relativePathWithKey, application.Id, authType, bearerTokenValue, postScript: postScript);
+            AddEndpoint(importedEndpoints, bearerTokens, $"GET {entitySet.Name}", Core.Enums.HttpMethod.GET, relativePath, application.Id, authType, bearerTokenValue, postScript: postScript, headers: headers);
+            AddEndpoint(importedEndpoints, bearerTokens, $"POST {entitySet.Name}", Core.Enums.HttpMethod.POST, relativePath, application.Id, authType, bearerTokenValue, postScript: postScript, headers: headers);
+            AddEndpoint(importedEndpoints, bearerTokens, $"PUT {entitySet.Name}", Core.Enums.HttpMethod.PUT, relativePathWithKey, application.Id, authType, bearerTokenValue, postScript: postScript, headers: headers);
+            AddEndpoint(importedEndpoints, bearerTokens, $"PATCH {entitySet.Name}", Core.Enums.HttpMethod.PATCH, relativePathWithKey, application.Id, authType, bearerTokenValue, postScript: postScript, headers: headers);
+            AddEndpoint(importedEndpoints, bearerTokens, $"DELETE {entitySet.Name}", Core.Enums.HttpMethod.DELETE, relativePathWithKey, application.Id, authType, bearerTokenValue, postScript: postScript, headers: headers);
         }
 
         foreach (var operation in model.SchemaElements.OfType<IEdmOperation>())
@@ -119,7 +121,7 @@ public class ODataImportService : IODataImportService
     /// <inheritdoc/>
     public async Task ApplyDiffAsync(ImportDiff diff)
     {
-        var groupLookup = new Dictionary<string, EndpointGroup>();
+        var groupLookup = new Dictionary<(string Name, int ApplicationId), EndpointGroup>();
 
         var applicationIds = diff.NewEndpoints.Select(e => e.ApplicationId)
             .Concat(diff.ChangedEndpoints.Select(e => e.ApplicationId))
@@ -130,7 +132,7 @@ public class ODataImportService : IODataImportService
         {
             var existingGroups = await _endpointRepository.GetEndpointGroupsAsync(applicationId);
             foreach (var g in existingGroups.Where(g => g.ParentGroupId == null))
-                groupLookup.TryAdd(g.Name, g);
+                groupLookup.TryAdd((g.Name, g.ApplicationId), g);
         }
 
         foreach (var endpoint in diff.NewEndpoints)
@@ -138,7 +140,8 @@ public class ODataImportService : IODataImportService
             var groupName = ExtractEntitySetName(endpoint.Name);
             if (groupName != null)
             {
-                if (!groupLookup.TryGetValue(groupName, out var group))
+                var lookupKey = (groupName, endpoint.ApplicationId);
+                if (!groupLookup.TryGetValue(lookupKey, out var group))
                 {
                     group = await _endpointRepository.AddEndpointGroupAsync(new EndpointGroup
                     {
@@ -146,7 +149,7 @@ public class ODataImportService : IODataImportService
                         ApplicationId = endpoint.ApplicationId,
                         ParentGroupId = null
                     });
-                    groupLookup[groupName] = group;
+                    groupLookup[lookupKey] = group;
                 }
                 endpoint.EndpointGroupId = group.Id;
             }
@@ -159,7 +162,8 @@ public class ODataImportService : IODataImportService
             var groupName = ExtractEntitySetName(endpoint.Name);
             if (groupName != null)
             {
-                if (!groupLookup.TryGetValue(groupName, out var group))
+                var lookupKey = (groupName, endpoint.ApplicationId);
+                if (!groupLookup.TryGetValue(lookupKey, out var group))
                 {
                     group = await _endpointRepository.AddEndpointGroupAsync(new EndpointGroup
                     {
@@ -167,7 +171,7 @@ public class ODataImportService : IODataImportService
                         ApplicationId = endpoint.ApplicationId,
                         ParentGroupId = null
                     });
-                    groupLookup[groupName] = group;
+                    groupLookup[lookupKey] = group;
                 }
                 endpoint.EndpointGroupId = group.Id;
             }
@@ -211,7 +215,9 @@ public class ODataImportService : IODataImportService
 
     private static string? ExtractEntitySetName(string endpointName)
     {
-        // Annahme: Endpunktnamen haben das Format "<METHODE> <EntitySetName>", d.h. kein Leerzeichen im EntitySetName.
+        // Endpunktnamen haben das Format "<METHODE> <EntitySetName>" (z. B. "GET Products").
+        // Operationen ohne Leerzeichen-Präfix (z. B. "Authenticate") liefern null zurück —
+        // diese Endpunkte erhalten keine EndpointGroupId und erscheinen immer ungrouped.
         var spaceIndex = endpointName.IndexOf(' ');
         if (spaceIndex < 0)
             return null;
@@ -228,7 +234,8 @@ public class ODataImportService : IODataImportService
         int applicationId,
         AuthenticationType authType,
         string? bearerTokenValue,
-        string? postScript = null)
+        string? postScript = null,
+        IReadOnlyDictionary<string, string> headers = null)
     {
         var endpoint = new Core.Models.Endpoint
         {
@@ -237,7 +244,8 @@ public class ODataImportService : IODataImportService
             RelativePath = relativePath,
             ApplicationId = applicationId,
             AuthenticationType = authType,
-            PostRequestScript = postScript
+            PostRequestScript = postScript,
+            Headers = headers?.Select(h => new EndpointHeader { Key = h.Key, Value = h.Value }).ToList() ?? new List<EndpointHeader>()
         };
         endpoints.Add(endpoint);
         if (bearerTokenValue != null)
@@ -372,8 +380,11 @@ public class ODataImportService : IODataImportService
         return interfaceUrl;
     }
 
-    private static string BuildRelativePath(string baseUrl, string serviceUrl, string entityName)
+    private static string BuildRelativePath(string? baseUrl, string serviceUrl, string entityName)
     {
+        if (string.IsNullOrEmpty(baseUrl))
+            return entityName;
+
         var normalizedBase = baseUrl.TrimEnd('/') + "/";
         var normalizedService = serviceUrl.TrimEnd('/') + "/";
         var fullEndpointUrl = normalizedService + entityName;

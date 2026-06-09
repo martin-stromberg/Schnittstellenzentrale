@@ -21,6 +21,7 @@ public class EndpointExecutionService : IEndpointExecutionService
     private const string DefaultContentType = "application/json";
     private const int MaxCallDepth = 2;
     private static readonly Regex DoubleBracePlaceholderRegex = new(@"\{\{([^}]+)\}\}", RegexOptions.Compiled);
+    private static readonly Regex TrippleBracePlaceholderRegex = new(@"\{\{\{([^}]+)\}\}\}", RegexOptions.Compiled);
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ICredentialService _credentialService;
     private readonly IActiveEnvironmentService _activeEnvironmentService;
@@ -31,6 +32,10 @@ public class EndpointExecutionService : IEndpointExecutionService
     private readonly IActivityLogService _activityLogService;
     private readonly IHistoryService _historyService;
     private readonly ILogger<EndpointExecutionService> _logger;
+    private readonly IStorageModeService _storageModeService;
+
+    private Dictionary<string, string> _internalVariables = null;
+
 
     /// <summary>Initialisiert eine neue Instanz des <see cref="EndpointExecutionService"/>.</summary>
     public EndpointExecutionService(
@@ -43,6 +48,7 @@ public class EndpointExecutionService : IEndpointExecutionService
         ISignalRNotificationService signalRNotificationService,
         IActivityLogService activityLogService,
         IHistoryService historyService,
+        IStorageModeService storageModeService,
         ILogger<EndpointExecutionService> logger)
     {
         _httpClientFactory = httpClientFactory;
@@ -54,6 +60,7 @@ public class EndpointExecutionService : IEndpointExecutionService
         _signalRNotificationService = signalRNotificationService;
         _activityLogService = activityLogService;
         _historyService = historyService;
+        _storageModeService = storageModeService;
         _logger = logger;
     }
 
@@ -61,6 +68,14 @@ public class EndpointExecutionService : IEndpointExecutionService
     public async Task<EndpointExecutionResult> ExecuteAsync(Core.Models.Endpoint endpoint)
     {
         return await ExecuteAsync(endpoint, new Dictionary<int, int>());
+    }
+
+    private IReadOnlyDictionary<string, string> GetInternalVariables()
+    {
+        return _internalVariables ?? (_internalVariables = new Dictionary<string, string>()
+        {
+            { "Mode", _storageModeService.CurrentMode.ToString() }
+        });
     }
 
     private async Task<EndpointExecutionResult> ExecuteAsync(Core.Models.Endpoint endpoint, Dictionary<int, int> callDepth)
@@ -210,8 +225,9 @@ public class EndpointExecutionService : IEndpointExecutionService
         ScriptType scriptType = ScriptType.PreRequest)
     {
         var variables = _activeEnvironmentService.ActiveVariables;
-        var baseUrl = ResolvePlaceholders(endpoint.Application?.BaseUrl ?? string.Empty, variables);
-        var relativePath = ResolvePlaceholders(endpoint.RelativePath, variables);
+        var internalVariables = GetInternalVariables();
+        var baseUrl = ResolvePlaceholders(endpoint.Application?.BaseUrl ?? string.Empty, variables, internalVariables);
+        var relativePath = ResolvePlaceholders(endpoint.RelativePath, variables, internalVariables);
 
         var requestData = new ScriptRequestData
         {
@@ -293,12 +309,12 @@ public class EndpointExecutionService : IEndpointExecutionService
     private HttpRequestMessage BuildRequest(Core.Models.Endpoint endpoint)
     {
         var variables = _activeEnvironmentService.ActiveVariables;
-
-        var baseUrl = ResolvePlaceholders(endpoint.Application.BaseUrl, variables);
-        var relativePath = ResolvePlaceholders(endpoint.RelativePath, variables);
+        var internalVariables = GetInternalVariables();
+        var baseUrl = ResolvePlaceholders(endpoint.Application!.BaseUrl, variables, internalVariables);
+        var relativePath = ResolvePlaceholders(endpoint.RelativePath, variables, internalVariables);
 
         var resolvedQueryParameters = endpoint.QueryParameters
-            .Select(p => (ResolvePlaceholders(p.Key, variables), ResolvePlaceholders(p.Value, variables)));
+            .Select(p => (ResolvePlaceholders(p.Key, variables, internalVariables), ResolvePlaceholders(p.Value, variables, internalVariables)));
 
         var resolvedPath = EndpointUrlBuilder.Resolve(relativePath, resolvedQueryParameters);
 
@@ -320,12 +336,12 @@ public class EndpointExecutionService : IEndpointExecutionService
 
         foreach (var header in endpoint.Headers)
             request.Headers.TryAddWithoutValidation(
-                ResolvePlaceholders(header.Key, variables),
-                ResolvePlaceholders(header.Value, variables));
+                ResolvePlaceholders(header.Key, variables, internalVariables),
+                ResolvePlaceholders(header.Value, variables, internalVariables));
 
         var resolvedBody = string.IsNullOrEmpty(endpoint.Body)
             ? endpoint.Body
-            : ResolvePlaceholders(endpoint.Body, variables);
+            : ResolvePlaceholders(endpoint.Body, variables, internalVariables);
 
         if (!string.IsNullOrEmpty(resolvedBody))
         {
@@ -338,16 +354,22 @@ public class EndpointExecutionService : IEndpointExecutionService
         return request;
     }
 
-    private static string ResolvePlaceholders(string input, IReadOnlyDictionary<string, string> variables)
+    private static string ResolvePlaceholders(string input, IReadOnlyDictionary<string, string> variables, IReadOnlyDictionary<string, string> internalVariables)
     {
         if (string.IsNullOrEmpty(input))
             return input ?? string.Empty;
 
-        return DoubleBracePlaceholderRegex.Replace(input, match =>
+        var returnInput = TrippleBracePlaceholderRegex.Replace(input, match =>
+        {
+            var name = match.Groups[1].Value;
+            return internalVariables.TryGetValue(name, out var value) ? value : (variables.TryGetValue(name, out var value2) ? value2 : string.Empty);
+        });
+        returnInput = DoubleBracePlaceholderRegex.Replace(returnInput, match =>
         {
             var name = match.Groups[1].Value;
             return variables.TryGetValue(name, out var value) ? value : string.Empty;
         });
+        return returnInput;
     }
 
     private async Task<EndpointExecutionResult> ExecuteEndpointByNameAsync(int applicationId, string name, Dictionary<int, int> callDepth)
@@ -402,7 +424,8 @@ public class EndpointExecutionService : IEndpointExecutionService
                 var token = _credentialService.GetPassword(target);
                 if (!string.IsNullOrEmpty(token))
                 {
-                    var resolvedToken = ResolvePlaceholders(token, _activeEnvironmentService.ActiveVariables);
+                    var internalVariables = GetInternalVariables();
+                    var resolvedToken = ResolvePlaceholders(token, _activeEnvironmentService.ActiveVariables, internalVariables);
                     request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", resolvedToken);
                 }
                 break;
