@@ -102,7 +102,8 @@
             {
                 NewEndpoints = _selectedNew.ToList(),
                 ChangedEndpoints = _selectedChanged.ToList(),
-                RemovedEndpoints = _selectedRemoved.ToList()
+                RemovedEndpoints = _selectedRemoved.ToList(),
+                BearerTokens = Diff.BearerTokens
             };
 
             await OnApply.InvokeAsync(selectedDiff);

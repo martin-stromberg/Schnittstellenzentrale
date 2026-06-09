@@ -587,3 +587,117 @@ Löscht einen Query-Parameter eines Endpunkts.
 | Status | Ursache |
 |--------|---------|
 | 401 Unauthorized | Token fehlt, unbekannt oder abgelaufen |
+
+---
+
+## POST /api/applications/{id}/import
+
+Berechnet den Import-Diff für die angegebene Anwendung. Der Import-Service wird anhand des `InterfaceType` der Anwendung ausgewählt: `Rest` → `ISwaggerImportService`, `OData` → `IODataImportService`.
+
+**Authentifizierung:** Bearer-Token (aus `/authenticate`).
+
+**Request-Header:**
+
+| Header | Pflicht | Beschreibung |
+|--------|---------|--------------|
+| `Authorization` | Ja | `Bearer <token>` |
+
+**Pfadparameter:**
+
+| Parameter | Typ | Pflicht | Beschreibung |
+|-----------|-----|---------|--------------|
+| `id` | `int` | Ja | ID der Anwendung |
+
+**Request-Body:** keiner
+
+**Response: 200 OK** — `ImportDiff`-Objekt:
+
+```json
+{
+  "errorMessage": null,
+  "newEndpoints": [ ... ],
+  "changedEndpoints": [ ... ],
+  "removedEndpoints": [ ... ],
+  "bearerTokens": { "GET Products": "eyJ..." }
+}
+```
+
+**Response-Header:** `X-New-Token`
+
+**Fehler:**
+
+| Status | Ursache |
+|--------|---------|
+| 401 Unauthorized | Token fehlt, unbekannt oder abgelaufen |
+| 404 Not Found | Anwendung nicht gefunden |
+| 422 Unprocessable Entity | Der `InterfaceType` der Anwendung unterstützt keinen Import (weder `Rest` noch `OData`) |
+
+---
+
+## POST /api/applications/{id}/odata-import/apply
+
+Wendet einen OData-Import-Diff serverseitig auf eine Anwendung an. Dieser Endpunkt wird normalerweise intern von `IApplicationApiClient.ApplyODataDiffAsync()` aufgerufen, kann aber auch von externen Clients für OData-Import-Workflows verwendet werden.
+
+**Authentifizierung:** Bearer-Token (aus `/authenticate`).
+
+**Request-Header:**
+
+| Header | Pflicht | Beschreibung |
+|--------|---------|--------------|
+| `Authorization` | Ja | `Bearer <token>` |
+
+**Pfadparameter:**
+
+| Parameter | Typ | Pflicht | Beschreibung |
+|-----------|-----|---------|--------------|
+| `id` | `int` | Ja | ID der Anwendung |
+
+**Request-Body:** `ImportDiff`-Objekt mit der Struktur:
+
+```json
+{
+  "errorMessage": null,
+  "newEndpoints": [
+    {
+      "id": 0,
+      "name": "GET Products",
+      "method": "Get",
+      "relativePath": "/api/products",
+      "applicationId": 42,
+      "authenticationType": "BearerToken",
+      "rowVersion": []
+    }
+  ],
+  "changedEndpoints": [],
+  "removedEndpoints": [],
+  "bearerTokens": {
+    "Products": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+  }
+}
+```
+
+| Feld | Typ | Beschreibung |
+|------|-----|--------------|
+| `errorMessage` | `string?` | Fehlermeldung aus dem Import-Scan; wird ignoriert bei Anwendung des Diffs |
+| `newEndpoints` | `Endpoint[]` | Neue Endpunkte zum Einfügen |
+| `changedEndpoints` | `Endpoint[]` | Zu ändernde Endpunkte |
+| `removedEndpoints` | `Endpoint[]` | Zu löschende Endpunkte (nach ID) |
+| `bearerTokens` | `Dictionary<string, string>` | Token-Zuordnung: Key ist Endpunkt-Name oder Entity-Set-Name, Value ist Token-String |
+
+**Response: 204 No Content**
+
+Der Diff wird vollständig angewendet:
+- Neue Endpunkte werden eingefügt (mit entsprechenden Gruppen nach Entity-Set-Namen).
+- Bestehende Endpunkte werden aktualisiert.
+- Endpunkte, die nur auf der Datenbank-Seite existieren, werden gelöscht.
+- Bearer-Tokens aus dem `bearerTokens`-Dictionary werden persistiert, wenn der zugehörige Endpunkt die Authentifizierung auf `BearerToken` setzt.
+
+**Response-Header:** `X-New-Token`
+
+**Fehler:**
+
+| Status | Ursache |
+|--------|---------|
+| 401 Unauthorized | Token fehlt, unbekannt oder abgelaufen |
+| 404 Not Found | Anwendung nicht gefunden |
+| 422 Unprocessable Entity | Die Anwendung hat den Interface-Typ `OData` nicht; nur OData-Anwendungen unterstützen diesen Import-Endpunkt |

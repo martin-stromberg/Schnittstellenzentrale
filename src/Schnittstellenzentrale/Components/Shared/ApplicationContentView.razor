@@ -1,5 +1,4 @@
 @inject IApplicationService ApplicationService
-@inject ISwaggerImportService SwaggerImportService
 @inject IHealthCheckService HealthCheckService
 @inject IApplicationApiClient ApplicationApiClient
 @inject IStringLocalizer<SharedResources> L
@@ -30,14 +29,26 @@
                 {
                     <button type="button" class="sz-btn sz-btn-outline sz-btn-sm" @onclick="OpenSwaggerImportAsync">@L["ApplicationContentView_Button_SwaggerImport"]</button>
                 }
+                @if (Application.InterfaceType == Core.Enums.InterfaceType.OData && !string.IsNullOrEmpty(Application.InterfaceUrl))
+                {
+                    <button type="button" class="sz-btn sz-btn-outline sz-btn-sm" @onclick="OpenODataImportAsync">@L["ApplicationContentView_Button_ODataImport"]</button>
+                }
                 <button type="button" class="sz-btn sz-btn-outline sz-btn-sm" @onclick="RunHealthCheckAsync">@L["ApplicationContentView_Button_HealthCheck"]</button>
             </div>
+            @if (!string.IsNullOrEmpty(_errorMessage))
+            {
+                <div class="sz-alert sz-alert-danger">@_errorMessage</div>
+            }
         </div>
     </section>
 
     @if (_showSwaggerImport && _swaggerDiff != null)
     {
         <SwaggerImportDialog Diff="_swaggerDiff" Application="Application" OnClose="CloseSwaggerImport" />
+    }
+    @if (_showODataImport && _odataDiff != null)
+    {
+        <ODataImportDialog Diff="_odataDiff" Application="Application" OnClose="CloseODataImport" />
     }
     @if (_showHealthCheck)
     {
@@ -91,8 +102,11 @@
 
     private int _endpointCount;
     private bool _showSwaggerImport;
+    private bool _showODataImport;
     private bool _showHealthCheck;
     private ImportDiff? _swaggerDiff;
+    private ImportDiff? _odataDiff;
+    private string? _errorMessage;
     private bool? _healthCheckResult;
 
     protected override async Task OnParametersSetAsync()
@@ -121,8 +135,28 @@
 
     private async Task OpenSwaggerImportAsync()
     {
-        _swaggerDiff = await SwaggerImportService.ImportAsync(Application);
+        _errorMessage = null;
+        var result = await ApplicationApiClient.ImportMetadataAsync(Application.Id);
+        if (result.ErrorMessage != null)
+        {
+            _errorMessage = result.ErrorMessage;
+            return;
+        }
+        _swaggerDiff = result;
         _showSwaggerImport = true;
+    }
+
+    private async Task OpenODataImportAsync()
+    {
+        _errorMessage = null;
+        var result = await ApplicationApiClient.ImportMetadataAsync(Application.Id);
+        if (result.ErrorMessage != null)
+        {
+            _errorMessage = result.ErrorMessage;
+            return;
+        }
+        _odataDiff = result;
+        _showODataImport = true;
     }
 
     private async Task RunHealthCheckAsync()
@@ -132,6 +166,7 @@
     }
 
     private void CloseSwaggerImport() => _showSwaggerImport = false;
+    private void CloseODataImport() => _showODataImport = false;
     private void CloseHealthCheck() => _showHealthCheck = false;
 
     private async Task OnHealthCheckRemove()

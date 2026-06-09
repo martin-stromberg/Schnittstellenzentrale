@@ -43,7 +43,7 @@ public class SignalRSyncTests : PlaywrightTestBase
         await Page.Locator(".sz-topbar-select").SelectOptionAsync("Team");
         await _pageB.Locator(".sz-topbar-select").SelectOptionAsync("Team");
 
-        await Page.GetByRole(AriaRole.Button, new() { Name = "Neue Anwendung" }).ClickAsync();
+        await Page.GetByRole(AriaRole.Button, new() { Name = "+ Neue Anwendung" }).ClickAsync();
         await Page.GetByLabel("Name").FillAsync("SignalR-Sync-Test");
         await Page.GetByLabel("Basis-URL").FillAsync("http://signalr-test.example.com");
         await Page.GetByRole(AriaRole.Button, new() { Name = "Speichern" }).ClickAsync();

@@ -41,7 +41,11 @@ public abstract class PlaywrightTestBase : IAsyncLifetime
 
         _playwright = await Microsoft.Playwright.Playwright.CreateAsync();
         _browser = await _playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions { Headless = false });
-        Context = await _browser.NewContextAsync();
+        Context = await _browser.NewContextAsync(new BrowserNewContextOptions
+        {
+            Locale = "de-DE",
+            ExtraHTTPHeaders = new Dictionary<string, string> { ["Accept-Language"] = "de-DE,de;q=0.9" }
+        });
 
         await Context.Tracing.StartAsync(new TracingStartOptions
         {
@@ -59,9 +63,17 @@ public abstract class PlaywrightTestBase : IAsyncLifetime
     protected virtual Task OnInitializedAsync() => Task.CompletedTask;
 
     /// <summary>Legt einen weiteren Browser-Kontext mit aktiviertem Tracing an.</summary>
-    protected async Task<IBrowserContext> CreateAdditionalContextAsync()
+    protected Task<IBrowserContext> CreateAdditionalContextAsync()
+        => CreateAdditionalContextAsync("de-DE", "de-DE,de;q=0.9");
+
+    /// <summary>Legt einen weiteren Browser-Kontext mit der angegebenen Locale und aktiviertem Tracing an.</summary>
+    protected async Task<IBrowserContext> CreateAdditionalContextAsync(string locale, string acceptLanguage)
     {
-        var context = await _browser.NewContextAsync();
+        var context = await _browser.NewContextAsync(new BrowserNewContextOptions
+        {
+            Locale = locale,
+            ExtraHTTPHeaders = new Dictionary<string, string> { ["Accept-Language"] = acceptLanguage }
+        });
         await context.Tracing.StartAsync(new TracingStartOptions
         {
             Screenshots = true,

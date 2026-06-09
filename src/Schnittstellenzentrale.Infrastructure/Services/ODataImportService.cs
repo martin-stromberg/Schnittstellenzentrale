@@ -1,28 +1,37 @@
-#pragma warning disable CS1591
 using Microsoft.Extensions.Logging;
 using Microsoft.OData.Edm;
 using Microsoft.OData.Edm.Csdl;
+using Schnittstellenzentrale.Core.Contracts;
+using Schnittstellenzentrale.Core.Enums;
+using Schnittstellenzentrale.Core.Helpers;
 using Schnittstellenzentrale.Core.Interfaces;
 using Schnittstellenzentrale.Core.Models;
 using System.Xml;
+using System.Xml.Linq;
 
 namespace Schnittstellenzentrale.Infrastructure.Services;
 
+/// <summary>Importiert Endpunkte aus einem OData v4-CSDL-Metadaten-Dokument.</summary>
 public class ODataImportService : IODataImportService
 {
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly IEndpointRepository _endpointRepository;
+    private readonly ICredentialService _credentialService;
     private readonly ILogger<ODataImportService> _logger;
 
-    public ODataImportService(IHttpClientFactory httpClientFactory, IEndpointRepository endpointRepository, ILogger<ODataImportService> logger)
+    /// <summary>Initialisiert eine neue Instanz von <see cref="ODataImportService"/>.</summary>
+    public ODataImportService(IHttpClientFactory httpClientFactory, IEndpointRepository endpointRepository, ICredentialService credentialService, ILogger<ODataImportService> logger)
     {
         _httpClientFactory = httpClientFactory;
         _endpointRepository = endpointRepository;
+        _credentialService = credentialService;
         _logger = logger;
     }
 
+    /// <inheritdoc/>
     public async Task<ImportDiff> ImportAsync(Core.Models.Application application)
     {
+        ArgumentNullException.ThrowIfNull(application);
         if (string.IsNullOrEmpty(application.InterfaceUrl))
             return new ImportDiff();
 
@@ -31,6 +40,11 @@ public class ODataImportService : IODataImportService
         {
             var client = _httpClientFactory.CreateClient();
             xmlContent = await client.GetStringAsync(application.InterfaceUrl);
+        }
+        catch (OperationCanceledException ex)
+        {
+            _logger.LogWarning(ex, "OData-Import abgebrochen für Anwendung {ApplicationId}", application.Id);
+            return new ImportDiff { ErrorMessage = $"Abruf der Metadaten wurde abgebrochen: {ex.Message}" };
         }
         catch (HttpRequestException ex)
         {
@@ -56,51 +70,343 @@ public class ODataImportService : IODataImportService
             return new ImportDiff { ErrorMessage = $"Fehler beim Parsen der Metadaten: {ex.Message}" };
         }
 
+        var serviceUrl = ResolveServiceUrl(application.InterfaceUrl);
+        var existingBearerTokenValue = ReadExistingBearerToken(application.Id);
+        var defaultAuthType = existingBearerTokenValue != null ? AuthenticationType.BearerToken : AuthenticationType.None;
+
+        var entitySetAnnotations = ParseEntitySetAnnotations(xmlContent);
+        var operationAnnotations = ParseOperationAnnotations(xmlContent);
+
         var importedEndpoints = new List<Core.Models.Endpoint>();
+        var bearerTokens = new Dictionary<string, string>();
 
         foreach (var entitySet in model.EntityContainer?.EntitySets() ?? Enumerable.Empty<IEdmEntitySet>())
         {
-            importedEndpoints.Add(new Core.Models.Endpoint
-            {
-                Name = $"GET {entitySet.Name}",
-                Method = Core.Enums.HttpMethod.GET,
-                RelativePath = entitySet.Name,
-                ApplicationId = application.Id
-            });
-            importedEndpoints.Add(new Core.Models.Endpoint
-            {
-                Name = $"POST {entitySet.Name}",
-                Method = Core.Enums.HttpMethod.POST,
-                RelativePath = entitySet.Name,
-                ApplicationId = application.Id
-            });
+            var relativePath = BuildRelativePath(application.BaseUrl, serviceUrl, entitySet.Name);
+            var relativePathWithKey = BuildRelativePath(application.BaseUrl, serviceUrl, $"{entitySet.Name}({{key}})");
+
+            entitySetAnnotations.TryGetValue(entitySet.Name, out var annotations);
+            var authType = ResolveAuthType(annotations, defaultAuthType);
+            var postScript = annotations?.GetValueOrDefault("x-sz-post-request-script");
+            var annotationBearerToken = annotations?.GetValueOrDefault("x-sz-bearer-token");
+            var bearerTokenValue = annotationBearerToken ?? existingBearerTokenValue;
+            var headers = annotations?.Where(e => e.Key.StartsWith("x-sz-header-")).Select(e => new KeyValuePair<string, string>(e.Value.Split(':').First(), e.Value.Split(':').Last())).ToDictionary(h => h.Key, h => h.Value);
+
+            AddEndpoint(importedEndpoints, bearerTokens, $"GET {entitySet.Name}", Core.Enums.HttpMethod.GET, relativePath, application.Id, authType, bearerTokenValue, postScript: postScript, headers: headers);
+            AddEndpoint(importedEndpoints, bearerTokens, $"POST {entitySet.Name}", Core.Enums.HttpMethod.POST, relativePath, application.Id, authType, bearerTokenValue, postScript: postScript, headers: headers);
+            AddEndpoint(importedEndpoints, bearerTokens, $"PUT {entitySet.Name}", Core.Enums.HttpMethod.PUT, relativePathWithKey, application.Id, authType, bearerTokenValue, postScript: postScript, headers: headers);
+            AddEndpoint(importedEndpoints, bearerTokens, $"PATCH {entitySet.Name}", Core.Enums.HttpMethod.PATCH, relativePathWithKey, application.Id, authType, bearerTokenValue, postScript: postScript, headers: headers);
+            AddEndpoint(importedEndpoints, bearerTokens, $"DELETE {entitySet.Name}", Core.Enums.HttpMethod.DELETE, relativePathWithKey, application.Id, authType, bearerTokenValue, postScript: postScript, headers: headers);
         }
 
         foreach (var operation in model.SchemaElements.OfType<IEdmOperation>())
         {
             var method = operation is IEdmAction ? Core.Enums.HttpMethod.POST : Core.Enums.HttpMethod.GET;
-            importedEndpoints.Add(new Core.Models.Endpoint
-            {
-                Name = operation.Name,
-                Method = method,
-                RelativePath = operation.Name,
-                ApplicationId = application.Id
-            });
+            var relativePath = BuildRelativePath(application.BaseUrl, serviceUrl, $"{operation.Name}()");
+
+            operationAnnotations.TryGetValue(operation.Name, out var opAnnotations);
+            var opAuthType = ResolveAuthType(opAnnotations, defaultAuthType);
+            var opPostScript = opAnnotations?.GetValueOrDefault("x-sz-post-request-script");
+            var opAnnotationBearerToken = opAnnotations?.GetValueOrDefault("x-sz-bearer-token");
+            var opBearerTokenValue = opAnnotationBearerToken ?? existingBearerTokenValue;
+
+            AddEndpoint(importedEndpoints, bearerTokens, operation.Name, method, relativePath, application.Id, opAuthType, opBearerTokenValue, postScript: opPostScript);
         }
 
         var existingEndpoints = await _endpointRepository.GetEndpointsAsync(application.Id);
-        return ImportDiffCalculator.Calculate(existingEndpoints, importedEndpoints);
+
+        return ImportDiffCalculator.Calculate(existingEndpoints, importedEndpoints).WithBearerTokens(bearerTokens);
     }
 
+    /// <inheritdoc/>
     public async Task ApplyDiffAsync(ImportDiff diff)
     {
+        var groupLookup = new Dictionary<(string Name, int ApplicationId), EndpointGroup>();
+
+        var applicationIds = diff.NewEndpoints.Select(e => e.ApplicationId)
+            .Concat(diff.ChangedEndpoints.Select(e => e.ApplicationId))
+            .Where(id => id != 0)
+            .Distinct();
+
+        foreach (var applicationId in applicationIds)
+        {
+            var existingGroups = await _endpointRepository.GetEndpointGroupsAsync(applicationId);
+            foreach (var g in existingGroups.Where(g => g.ParentGroupId == null))
+                groupLookup.TryAdd((g.Name, g.ApplicationId), g);
+        }
+
         foreach (var endpoint in diff.NewEndpoints)
+        {
+            var groupName = ExtractEntitySetName(endpoint.Name);
+            if (groupName != null)
+            {
+                var lookupKey = (groupName, endpoint.ApplicationId);
+                if (!groupLookup.TryGetValue(lookupKey, out var group))
+                {
+                    group = await _endpointRepository.AddEndpointGroupAsync(new EndpointGroup
+                    {
+                        Name = groupName,
+                        ApplicationId = endpoint.ApplicationId,
+                        ParentGroupId = null
+                    });
+                    groupLookup[lookupKey] = group;
+                }
+                endpoint.EndpointGroupId = group.Id;
+            }
+
             await _endpointRepository.AddEndpointAsync(endpoint);
+        }
 
         foreach (var endpoint in diff.ChangedEndpoints)
+        {
+            var groupName = ExtractEntitySetName(endpoint.Name);
+            if (groupName != null)
+            {
+                var lookupKey = (groupName, endpoint.ApplicationId);
+                if (!groupLookup.TryGetValue(lookupKey, out var group))
+                {
+                    group = await _endpointRepository.AddEndpointGroupAsync(new EndpointGroup
+                    {
+                        Name = groupName,
+                        ApplicationId = endpoint.ApplicationId,
+                        ParentGroupId = null
+                    });
+                    groupLookup[lookupKey] = group;
+                }
+                endpoint.EndpointGroupId = group.Id;
+            }
+
             await _endpointRepository.UpdateEndpointAsync(endpoint);
+        }
 
         foreach (var endpoint in diff.RemovedEndpoints)
             await _endpointRepository.DeleteEndpointAsync(endpoint.Id);
+
+        SaveBearerTokenOnce(diff);
     }
+
+    private void SaveBearerTokenOnce(ImportDiff diff)
+    {
+        var allEndpoints = diff.NewEndpoints.Concat(diff.ChangedEndpoints);
+        var writtenTargets = new HashSet<string>();
+        foreach (var endpoint in allEndpoints)
+        {
+            if (endpoint.AuthenticationType != AuthenticationType.BearerToken)
+                continue;
+
+            var key = EndpointKeyHelper.BuildKey(endpoint);
+            if (!diff.BearerTokens.TryGetValue(key, out var tokenValue))
+                continue;
+
+            var credentialTarget = CredentialTargetHelper.Build(endpoint.ApplicationId, AuthenticationType.BearerToken);
+            if (!writtenTargets.Add(credentialTarget))
+                continue;
+
+            try
+            {
+                _credentialService.SavePassword(credentialTarget, string.Empty, tokenValue);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Credential Manager konnte für Anwendung {ApplicationId} nicht beschrieben werden.", endpoint.ApplicationId);
+            }
+        }
+    }
+
+    private static string? ExtractEntitySetName(string endpointName)
+    {
+        // Endpunktnamen haben das Format "<METHODE> <EntitySetName>" (z. B. "GET Products").
+        // Operationen ohne Leerzeichen-Präfix (z. B. "Authenticate") liefern null zurück —
+        // diese Endpunkte erhalten keine EndpointGroupId und erscheinen immer ungrouped.
+        var spaceIndex = endpointName.IndexOf(' ');
+        if (spaceIndex < 0)
+            return null;
+        var name = endpointName[(spaceIndex + 1)..];
+        return string.IsNullOrEmpty(name) ? null : name;
+    }
+
+    private static void AddEndpoint(
+        List<Core.Models.Endpoint> endpoints,
+        Dictionary<string, string> bearerTokens,
+        string name,
+        Core.Enums.HttpMethod method,
+        string relativePath,
+        int applicationId,
+        AuthenticationType authType,
+        string? bearerTokenValue,
+        string? postScript = null,
+        IReadOnlyDictionary<string, string> headers = null)
+    {
+        var endpoint = new Core.Models.Endpoint
+        {
+            Name = name,
+            Method = method,
+            RelativePath = relativePath,
+            ApplicationId = applicationId,
+            AuthenticationType = authType,
+            PostRequestScript = postScript,
+            Headers = headers?.Select(h => new EndpointHeader { Key = h.Key, Value = h.Value }).ToList() ?? new List<EndpointHeader>()
+        };
+        endpoints.Add(endpoint);
+        if (bearerTokenValue != null)
+            bearerTokens[EndpointKeyHelper.BuildKey(endpoint)] = bearerTokenValue;
+    }
+
+    private static AuthenticationType ResolveAuthType(Dictionary<string, string>? annotations, AuthenticationType defaultAuthType)
+    {
+        if (annotations == null)
+            return defaultAuthType;
+
+        if (!annotations.TryGetValue("x-sz-auth-type", out var authTypeStr))
+            return defaultAuthType;
+
+        return authTypeStr.ToLowerInvariant() switch
+        {
+            "bearertoken" or "bearer" => AuthenticationType.BearerToken,
+            "negotiate" => AuthenticationType.Negotiate,
+            "basic" => AuthenticationType.Basic,
+            "none" => AuthenticationType.None,
+            _ => defaultAuthType
+        };
+    }
+
+    private static Dictionary<string, Dictionary<string, string>> ParseEntitySetAnnotations(string xmlContent)
+        => ParseAnnotationsForElement(xmlContent, "EntitySet");
+
+    private static Dictionary<string, Dictionary<string, string>> ParseOperationAnnotations(string xmlContent)
+    {
+        var actions = ParseAnnotationsForElement(xmlContent, "Action");
+        var functions = ParseAnnotationsForElement(xmlContent, "Function");
+        foreach (var kvp in functions)
+            actions.TryAdd(kvp.Key, kvp.Value);
+        return actions;
+    }
+
+    private static Dictionary<string, Dictionary<string, string>> ParseAnnotationsForElement(string xmlContent, string elementLocalName)
+    {
+        var result = new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase);
+        try
+        {
+            var xdoc = XDocument.Parse(xmlContent);
+            var ns = XNamespace.Get("http://docs.oasis-open.org/odata/ns/edm");
+
+            foreach (var element in xdoc.Descendants(ns + elementLocalName))
+            {
+                var name = element.Attribute("Name")?.Value;
+                if (string.IsNullOrEmpty(name))
+                    continue;
+
+                var annotations = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                foreach (var annotation in element.Elements(ns + "Annotation"))
+                    MergeAnnotation(annotations, annotation);
+                if (annotations.Count > 0)
+                    result[name] = annotations;
+            }
+
+            foreach (var annotationsElement in xdoc.Descendants(ns + "Annotations"))
+            {
+                var target = annotationsElement.Attribute("Target")?.Value;
+                if (string.IsNullOrEmpty(target))
+                    continue;
+
+                var name = ExtractNameFromAnnotationsTarget(target, elementLocalName);
+                if (string.IsNullOrEmpty(name))
+                    continue;
+
+                if (!result.TryGetValue(name, out var annotations))
+                {
+                    annotations = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                    result[name] = annotations;
+                }
+                foreach (var annotation in annotationsElement.Elements(ns + "Annotation"))
+                    MergeAnnotation(annotations, annotation);
+                if (annotations.Count == 0)
+                    result.Remove(name);
+            }
+        }
+        catch (XmlException)
+        {
+            // Annotationen sind optional — Parsing-Fehler werden ignoriert
+        }
+        catch (InvalidOperationException)
+        {
+            // Annotationen sind optional — LINQ-Traversal-Fehler werden ignoriert
+        }
+        return result;
+    }
+
+    private static void MergeAnnotation(Dictionary<string, string> annotations, XElement annotation)
+    {
+        var term = annotation.Attribute("Term")?.Value;
+        if (string.IsNullOrEmpty(term))
+            return;
+        var termKey = term.Contains('.') ? term[(term.LastIndexOf('.') + 1)..] : term;
+        var value = annotation.Attribute("String")?.Value ?? annotation.Value;
+        if (!string.IsNullOrEmpty(value))
+            annotations[termKey] = value;
+    }
+
+    private static string? ExtractNameFromAnnotationsTarget(string target, string elementLocalName)
+    {
+        // Target examples:
+        //   EntitySet/Action:  "Default.Container/Applications"   → entityLocalName=EntitySet → "Applications"
+        //   Action:            "Default.Authenticate()"            → elementLocalName=Action   → "Authenticate"
+        //   Function:          "Default.GetStatus()"               → elementLocalName=Function → "GetStatus"
+        if (elementLocalName is "Action" or "Function")
+        {
+            // Ends with "()" — strip namespace prefix and "()"
+            if (!target.EndsWith("()", StringComparison.Ordinal))
+                return null;
+            var withoutParens = target[..^2];
+            var dotIndex = withoutParens.LastIndexOf('.');
+            return dotIndex >= 0 ? withoutParens[(dotIndex + 1)..] : withoutParens;
+        }
+
+        if (elementLocalName == "EntitySet")
+        {
+            // Contains "/" — part after last "/" is the entity set name
+            var slashIndex = target.LastIndexOf('/');
+            return slashIndex >= 0 ? target[(slashIndex + 1)..] : null;
+        }
+
+        return null;
+    }
+
+    private static string ResolveServiceUrl(string interfaceUrl)
+    {
+        const string metadataSuffix = "/$metadata";
+        if (interfaceUrl.EndsWith(metadataSuffix, StringComparison.OrdinalIgnoreCase))
+            return interfaceUrl[..^metadataSuffix.Length];
+        return interfaceUrl;
+    }
+
+    private static string BuildRelativePath(string? baseUrl, string serviceUrl, string entityName)
+    {
+        if (string.IsNullOrEmpty(baseUrl))
+            return entityName;
+
+        var normalizedBase = baseUrl.TrimEnd('/') + "/";
+        var normalizedService = serviceUrl.TrimEnd('/') + "/";
+        var fullEndpointUrl = normalizedService + entityName;
+
+        if (fullEndpointUrl.StartsWith(normalizedBase, StringComparison.OrdinalIgnoreCase))
+            return fullEndpointUrl[normalizedBase.Length..];
+
+        return entityName;
+    }
+
+    private string? ReadExistingBearerToken(int applicationId)
+    {
+        try
+        {
+            var target = CredentialTargetHelper.Build(applicationId, AuthenticationType.BearerToken);
+            return _credentialService.GetPassword(target);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Credential Manager konnte für Anwendung {ApplicationId} nicht gelesen werden.", applicationId);
+            return null;
+        }
+    }
+
 }

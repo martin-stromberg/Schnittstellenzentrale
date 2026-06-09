@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Schnittstellenzentrale.Core.Models;
 using Schnittstellenzentrale.Infrastructure.Services;
 
@@ -82,5 +83,30 @@ public class ImportDiffCalculatorTests
         Assert.NotNull(changed);
         Assert.Null(changed.PreRequestScript);
         Assert.Null(changed.PostRequestScript);
+    }
+
+    /// <summary>Calculate_WhenExistingEndpointHasHeadersWithBackReference_ChangedEndpointIsSerializableWithoutCircularReference</summary>
+    [Fact]
+    public void Calculate_WhenExistingEndpointHasHeadersWithBackReference_ChangedEndpointIsSerializableWithoutCircularReference()
+    {
+        var existingEndpoint = new Endpoint { Id = 1, Name = "getItems", Method = Core.Enums.HttpMethod.GET, RelativePath = "/items", ApplicationId = 1 };
+        var header = new EndpointHeader { Key = "X-Test", Value = "v", EndpointId = 1 };
+        header.Endpoint = existingEndpoint; // simulates EF Core relationship fixup
+        existingEndpoint.Headers.Add(header);
+
+        var existing = new List<Endpoint> { existingEndpoint };
+        var imported = new List<Endpoint>
+        {
+            new() { Name = "newName", Method = Core.Enums.HttpMethod.GET, RelativePath = "/items", ApplicationId = 1 }
+        };
+
+        var diff = ImportDiffCalculator.Calculate(existing, imported);
+
+        var changed = diff.ChangedEndpoints.FirstOrDefault(e => e.RelativePath == "/items");
+        Assert.NotNull(changed);
+        Assert.Single(changed.Headers);
+        Assert.Null(changed.Headers.First().Endpoint); // back-reference must not be copied
+        var json = JsonSerializer.Serialize(diff); // must not throw
+        Assert.NotNull(json);
     }
 }

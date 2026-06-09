@@ -388,6 +388,69 @@ public class ApplicationApiClient : IApplicationApiClient
     }
 
     /// <inheritdoc/>
+    public async Task<ImportDiff> ImportMetadataAsync(int applicationId)
+    {
+        var baseUrl = GetBaseUrl();
+        var storageMode = _storageModeService.CurrentMode;
+
+        var httpResponse = await ExecuteWithTokenAsync(
+            t => BuildRequestWithBody(HttpMethod.Post, $"{baseUrl}/api/applications/{applicationId}/import", (object?)null, storageMode, t));
+
+        if (httpResponse.StatusCode == System.Net.HttpStatusCode.UnprocessableEntity)
+        {
+            var errorBody = await TryReadErrorMessageAsync(httpResponse);
+            return new ImportDiff { ErrorMessage = errorBody ?? "Interface-Typ nicht unterstützt" };
+        }
+
+        if (!httpResponse.IsSuccessStatusCode)
+        {
+            var errorBody = await TryReadErrorMessageAsync(httpResponse);
+            return new ImportDiff { ErrorMessage = errorBody ?? $"HTTP-Fehler: {(int)httpResponse.StatusCode} {httpResponse.ReasonPhrase}" };
+        }
+
+        return await httpResponse.Content.ReadFromJsonAsync<ImportDiff>()
+            ?? throw new InvalidOperationException("Response deserialization returned null.");
+    }
+
+    private static async Task<string?> TryReadErrorMessageAsync(HttpResponseMessage response)
+    {
+        try
+        {
+            var body = await response.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>();
+            if (body.TryGetProperty("errorMessage", out var prop))
+                return prop.GetString();
+        }
+        catch
+        {
+            // Body ist optional — Parsing-Fehler werden ignoriert
+        }
+        return null;
+    }
+
+    /// <inheritdoc/>
+    public async Task ApplyODataDiffAsync(int applicationId, ImportDiff diff)
+    {
+        var baseUrl = GetBaseUrl();
+        var storageMode = _storageModeService.CurrentMode;
+
+        //foreach (var endpoint in diff.NewEndpoints)
+        //    foreach (var header in endpoint.Headers)
+        //    {
+        //        header.Endpoint = endpoint;
+        //        header.EndpointId = endpoint.Id;
+        //    }
+
+        var httpResponse = await ExecuteWithTokenAsync(
+            t => BuildRequestWithBody(HttpMethod.Post, $"{baseUrl}/api/applications/{applicationId}/odata-import/apply", diff, storageMode, t));
+
+        if (!httpResponse.IsSuccessStatusCode)
+        {
+            var errorBody = await TryReadErrorMessageAsync(httpResponse);
+            throw new InvalidOperationException(errorBody ?? $"HTTP-Fehler: {(int)httpResponse.StatusCode} {httpResponse.ReasonPhrase}");
+        }
+    }
+
+    /// <inheritdoc/>
     public async Task<SystemEnvironment?> GetEnvironmentByIdAsync(int id)
     {
         var baseUrl = GetBaseUrl();

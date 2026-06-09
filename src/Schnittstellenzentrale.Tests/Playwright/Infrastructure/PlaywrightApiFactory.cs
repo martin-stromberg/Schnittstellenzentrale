@@ -7,6 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
+using Moq;
 using Schnittstellenzentrale.Core.Interfaces;
 using Schnittstellenzentrale.Core.Models;
 using Schnittstellenzentrale.Infrastructure.Data;
@@ -65,6 +66,17 @@ internal sealed class PlaywrightApiFactory : WebApplicationFactory<Program>
             // Tokens hier ohne eigenen TokenStore-Abgleich gültig sind.
             services.RemoveAll<ITokenStore>();
             services.AddSingleton<ITokenStore, PermissiveTokenStore>();
+
+            // SwaggerImportService: der HTTP-Fetch von swagger.json hängt im Playwright-Test-Environment.
+            var swaggerMock = new Mock<ISwaggerImportService>();
+            swaggerMock.Setup(s => s.ImportAsync(It.IsAny<Application>()))
+                .ReturnsAsync(new ImportDiff
+                {
+                    NewEndpoints = [new Endpoint { Name = "GET /api/test", Method = Core.Enums.HttpMethod.GET, RelativePath = "/api/test", ApplicationId = 0 }]
+                });
+            swaggerMock.Setup(s => s.ApplyDiffAsync(It.IsAny<ImportDiff>())).Returns(Task.CompletedTask);
+            services.RemoveAll<ISwaggerImportService>();
+            services.AddScoped(_ => swaggerMock.Object);
         });
     }
 

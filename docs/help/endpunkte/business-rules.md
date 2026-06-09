@@ -196,6 +196,74 @@
 
 ---
 
+## OData-Import: Ordnerzuweisung nach Entity-Set-Namen
+
+**Beschreibung:** Beim Anwenden eines OData-Import-Diffs werden importierte Endpunkte automatisch einer Endpunktgruppe zugewiesen, deren Name dem Entity-Set-Namen entspricht. Existiert die Gruppe noch nicht, wird sie angelegt.
+
+**Bedingungen:**
+- `ODataImportService.ApplyDiffAsync` wird aufgerufen.
+- Der Endpunkt-Name folgt dem Schema `"<METHODE> <EntitySetName>"` (z. B. `"GET Products"`).
+
+**Verhalten:**
+- `ExtractEntitySetName` extrahiert den Entity-Set-Namen aus dem Endpunkt-Namen (Teil nach dem ersten Leerzeichen).
+- Existiert noch keine Gruppe mit diesem Namen für die Anwendung: `IEndpointRepository.AddEndpointGroupAsync` wird aufgerufen.
+- Der `endpoint.EndpointGroupId` wird auf die ID der gefundenen oder neu angelegten Gruppe gesetzt.
+- Endpunkte ohne Leerzeichen im Namen (OData-Operationen wie `Authenticate`) erhalten keine Gruppe (`EndpointGroupId = null`).
+
+**Umsetzung:** `ODataImportService.ApplyDiffAsync` — `groupLookup`-Dictionary pro Anwendung verhindert doppelte Gruppenanlage innerhalb desselben Imports.
+
+---
+
+## OData-Import: Bearer-Token-Persistierung über CSDL-Annotation
+
+**Beschreibung:** Beim OData-Import wird ein Bearer-Token im Windows Credential Manager gespeichert, wenn die CSDL-Definition die proprietäre Annotation `x-sz-bearer-token` enthält oder bereits ein Token für die Anwendung im Credential Manager vorliegt.
+
+**Bedingungen:**
+- `ODataImportService.ApplyDiffAsync` wird aufgerufen.
+- Mindestens ein Endpunkt im Diff hat `AuthenticationType == BearerToken` und einen Eintrag im `BearerTokens`-Dictionary.
+
+**Verhalten:**
+- Für jeden Endpunkt mit `BearerToken` und vorhandenem Token-Wert im Dictionary wird `ICredentialService.SavePassword` aufgerufen.
+- Der Credential-Target wird über `CredentialTargetHelper.Build(applicationId, BearerToken)` gebildet; alle Endpunkte einer Anwendung teilen denselben Target.
+- Fehler beim Credential-Zugriff werden per `_logger.LogWarning` protokolliert und brechen den Import nicht ab.
+- Ist keine `x-sz-bearer-token`-Annotation vorhanden und kein bestehender Token im Credential Manager: alle Endpunkte erhalten `AuthenticationType = None`.
+
+**Umsetzung:** `ODataImportService.SaveBearerTokenOnce` — schreibt den Token genau einmal pro Anwendung (verhindert redundante Credential-Manager-Zugriffe bei mehreren Endpunkten).
+
+---
+
+## OData-Import: Leere InterfaceUrl ergibt leere ImportDiff ohne Fehler
+
+**Beschreibung:** Ist `Application.InterfaceUrl` leer oder `null`, gibt `ODataImportService.ImportAsync` eine leere `ImportDiff` zurück — ohne `ErrorMessage` und ohne HTTP-Anfrage.
+
+**Bedingungen:**
+- `string.IsNullOrEmpty(application.InterfaceUrl)` ergibt `true`.
+
+**Verhalten:**
+- Sofortige Rückgabe von `new ImportDiff()`.
+- Der Dialog öffnet sich nicht (da keine Endpunkte abgeleitet werden können).
+- Keine Fehlermeldung in der `ApplicationContentView`.
+
+**Umsetzung:** `ODataImportService.ImportAsync` — Early-Return-Guard vor dem HTTP-Aufruf.
+
+---
+
+## OData-Import: Fehler beim Metadatenabruf verhindert Dialog
+
+**Beschreibung:** HTTP-Fehler oder ein ungültiges CSDL-Dokument führen dazu, dass der Import-Dialog nicht geöffnet wird; die Fehlermeldung erscheint stattdessen in der `ApplicationContentView`.
+
+**Bedingungen:**
+- `HttpRequestException`, `XmlException` oder eine sonstige Exception während des Abrufs oder Parsings.
+
+**Verhalten:**
+- `ImportDiff.ErrorMessage` ist nicht `null`.
+- `ApplicationContentView.OpenODataImportAsync()` prüft `result.ErrorMessage != null` und setzt `_errorMessage` statt `_showODataImport = true`.
+- Der Dialog `ODataImportDialog` wird nicht eingeblendet.
+
+**Umsetzung:** `ApplicationContentView.OpenODataImportAsync()` — explizite Fehlerprüfung vor dem Öffnen des Dialogs.
+
+---
+
 ## Swagger-Import: Erweiterungsfelder steuern Skripte und Authentifizierung
 
 **Beschreibung:** Beim Import einer Swagger/OpenAPI-Definition werden Skripte und `AuthenticationType` ausschließlich über die OpenAPI-Erweiterungsfelder der einzelnen Operationen gesteuert — es gibt keine hartcodierten Sonderfälle nach Pfad, Endpunktname oder Position in der Swagger-Definition.

@@ -12,7 +12,7 @@ public class Endpoint
     public BodyMode BodyMode { get; set; }
     public AuthenticationType AuthenticationType { get; set; }
     public int ApplicationId { get; set; }
-    public Application Application { get; set; } = null!;
+    public Application? Application { get; set; }
     public int? EndpointGroupId { get; set; }
     public EndpointGroup? EndpointGroup { get; set; }
     public byte[] RowVersion { get; set; } = [];
