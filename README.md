@@ -10,7 +10,7 @@ Blazor Server-Anwendung zur zentralen Verwaltung lokaler Webservice-Endpunkte. S
 
 ## Features
 
-- **Workspaces** – Anwendungen in Sammlungen organisieren, Endpunkte anlegen und direkt ausführen; das letzte Ergebnis bleibt beim Wechsel zwischen Endpunkten pro Sitzung sichtbar
+- **Workspaces** – Anwendungen in Sammlungen organisieren, Endpunkte anlegen und direkt ausführen; laufende Anfragen zeigen sofort einen Status, und das letzte Ergebnis bleibt beim Wechsel zwischen Endpunkten pro Sitzung sichtbar
 - **Environments** – Systemumgebungen mit Variablentabellen verwalten
 - **History** – Vollständige Aufrufhistorie mit Zeitraumfilter und Top-5-Auswertung je Anwendung
 - **Import** – Endpunkte aus Swagger/OpenAPI- oder OData-`$metadata`-Definitionen importieren (Diff-Vorschau mit selektiver Übernahme); der jeweilige Import-Button erscheint in der Anwendungsdetailansicht, sobald eine passende Interface-URL hinterlegt ist

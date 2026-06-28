@@ -59,6 +59,8 @@ Geben Sie den JavaScript-Code in das mehrzeilige Eingabefeld ein. Sie können de
 
 Klicken Sie auf **Anfrage senden**. Wenn noch ungespeicherte Änderungen vorhanden sind, werden diese automatisch gespeichert, bevor die Anfrage abgeschickt wird.
 
+Während die Anfrage läuft, zeigt die Endpunkt-Seite einen Statushinweis an. Der Button **Anfrage senden** ist in dieser Zeit deaktiviert, damit dieselbe Anfrage nicht parallel mehrfach gestartet wird.
+
 Die tatsächlich gesendete URL enthält:
 - Den Pfad mit allen ersetzten Platzhaltern.
 - Alle regulären Query-Parameter als `?key=value`-Anhang.

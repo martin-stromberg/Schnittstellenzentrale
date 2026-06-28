@@ -107,7 +107,11 @@ Beteiligte Komponenten:
 
 ### 1. Auslöser
 
-`EndpointPage.SendRequestAsync()` lädt zunächst den aktuellen Endpunkt per `IApplicationApiClient.GetEndpointByIdAsync(_model.Id)`, um sicherzustellen, dass Header, Query-Parameter und `RowVersion` aktuell sind. Anschließend ruft es `ExecutionService.ExecuteAsync(refreshed)` mit dem frisch geladenen Objekt auf.
+`EndpointPage.SendRequestAsync()` setzt vor dem ersten `await` einen endpoint-bezogenen Ausführungszustand. Der aktuell sichtbare Endpunkt zeigt dadurch sofort einen Statushinweis; der Senden-Button ist für diesen Endpunkt deaktiviert. Der Zustand wird in `finally` wieder entfernt.
+
+Bei ungespeicherten Änderungen speichert `SendRequestAsync()` zuerst. Falls der Anwender während dieses Speicherns zu einem anderen Endpunkt wechselt, wird der ursprünglich gestartete Versand abgebrochen und nicht auf den neu sichtbaren Endpunkt umgelenkt. Wird ein neuer Endpunkt beim Speichern erstmals mit einer ID versehen, wird diese gespeicherte ID für den anschließenden Lade- und Ausführungsschritt verwendet.
+
+Danach lädt `SendRequestAsync()` den aktuellen Endpunkt per `IApplicationApiClient.GetEndpointByIdAsync(...)`, um sicherzustellen, dass Header, Query-Parameter und `RowVersion` aktuell sind. Anschließend ruft es `ExecutionService.ExecuteAsync(refreshed)` mit dem frisch geladenen Objekt auf. Das Ergebnis wird unter der gestarteten Endpunkt-ID im `EndpointExecutionResultCache` gespeichert und nur dann in `_result` übernommen, wenn die Komponente weiterhin denselben Endpunkt anzeigt.
 
 ### 2. Rekursionsschutz-Initialisierung
 

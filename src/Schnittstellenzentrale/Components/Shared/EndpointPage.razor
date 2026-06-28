@@ -41,8 +41,16 @@
                 }
             </select>
             <input class="sz-input sz-endpoint-path-input" placeholder="@L["EndpointPage_Placeholder_Path"]" value="@ResolveDisplayUrl()" @oninput="OnPathChanged" @onblur="OnPathBlur" />
-            <button class="sz-btn-primary sz-btn-send" @onclick="SendRequestAsync">@L["EndpointPage_SendButton"]</button>
+            <button class="sz-btn-primary sz-btn-send" @onclick="SendRequestAsync" disabled="@IsVisibleEndpointExecuting">@L["EndpointPage_SendButton"]</button>
         </div>
+
+        @if (IsVisibleEndpointExecuting)
+        {
+            <div class="sz-endpoint-execution-status" role="status" aria-live="polite">
+                <span class="sz-endpoint-execution-status__indicator" aria-hidden="true"></span>
+                <span>@L["EndpointPage_Execution_Running"]</span>
+            </div>
+        }
     </div>
 
     <div class="sz-endpoint-tabs-bar">
@@ -144,6 +152,7 @@
     private List<RequestHeadersPanel.HeaderEntry> _headers = [];
     private List<RequestQueryParamsPanel.QueryParamEntry> _queryParameters = [];
     private bool _isDirty;
+    private readonly HashSet<int> _executingEndpointIds = [];
     private bool _showConcurrencyWarning;
     private string? _errorMessage;
     private EndpointExecutionResult? _result;
@@ -155,6 +164,7 @@
     private IDisposable? _locationChangingRegistration;
     private bool _beforeUnloadActive;
     private int _lastLoadedEndpointId;
+    private bool IsVisibleEndpointExecuting => _executingEndpointIds.Contains(_model.Id);
 
     protected override void OnInitialized()
     {
@@ -475,28 +485,59 @@
 
     private async Task SendRequestAsync()
     {
-        if (_isDirty)
-        {
-            await SaveAsync();
-            if (_isDirty)
-                return;
-        }
+        var executingEndpointParameter = Endpoint;
+        var executingEndpointId = _model.Id;
+        var executingApplication = _model.Application;
+        var executingApplicationId = _model.ApplicationId;
 
-        var refreshed = await ApplicationApiClient.GetEndpointByIdAsync(_model.Id);
-        if (refreshed == null)
-        {
-            _errorMessage = L["EndpointPage_Error_LoadFailed"];
+        if (!_executingEndpointIds.Add(executingEndpointId))
             return;
+
+        await InvokeAsync(StateHasChanged);
+
+        try
+        {
+            if (_isDirty)
+            {
+                await SaveAsync();
+                if (_isDirty)
+                    return;
+
+                if (!ReferenceEquals(Endpoint, executingEndpointParameter))
+                    return;
+
+                if (executingEndpointId != _model.Id)
+                {
+                    _executingEndpointIds.Remove(executingEndpointId);
+                    executingEndpointId = _model.Id;
+                    _executingEndpointIds.Add(executingEndpointId);
+                    await InvokeAsync(StateHasChanged);
+                }
+            }
+
+            var refreshed = await ApplicationApiClient.GetEndpointByIdAsync(executingEndpointId);
+            if (refreshed == null)
+            {
+                if (_model.Id == executingEndpointId)
+                    _errorMessage = L["EndpointPage_Error_LoadFailed"];
+                return;
+            }
+
+            // Application-Navigation wird vom API-DTO nicht befüllt; aus dem lokal geladenen Modell übernehmen.
+            // Wenn der Endpunkt über die Baumliste geöffnet wurde, ist Application dort nicht geladen — dann nachladen.
+            refreshed.Application = executingApplication
+                ?? await ApplicationApiClient.GetApplicationByIdAsync(executingApplicationId);
+
+            var result = await ExecutionService.ExecuteAsync(refreshed);
+            ExecutionResultCache.Set(executingEndpointId, result);
+
+            if (_model.Id == executingEndpointId)
+                _result = result;
         }
-
-        // Application-Navigation wird vom API-DTO nicht befüllt; aus dem lokal geladenen Modell übernehmen.
-        // Wenn der Endpunkt über die Baumliste geöffnet wurde, ist Application dort nicht geladen — dann nachladen.
-        refreshed.Application = _model.Application
-            ?? await ApplicationApiClient.GetApplicationByIdAsync(refreshed.ApplicationId);
-
-        var result = await ExecutionService.ExecuteAsync(refreshed);
-        _result = result;
-        ExecutionResultCache.Set(_model.Id, result);
+        finally
+        {
+            _executingEndpointIds.Remove(executingEndpointId);
+        }
     }
 
     private string ResolveDisplayUrl()
