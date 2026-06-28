@@ -5,6 +5,7 @@ using Schnittstellenzentrale.Components.Shared;
 using Schnittstellenzentrale.Core.Enums;
 using Schnittstellenzentrale.Core.Interfaces;
 using Schnittstellenzentrale.Core.Models;
+using Schnittstellenzentrale.Infrastructure.Services;
 using Schnittstellenzentrale.Tests.Helpers;
 using Endpoint = Schnittstellenzentrale.Core.Models.Endpoint;
 
@@ -33,6 +34,7 @@ public class EndpointPageTests : BunitContext
         Services.AddSingleton(_signalRMock.Object);
         Services.AddSingleton(_credentialMock.Object);
         Services.AddSingleton(_activeEnvironmentMock.Object);
+        Services.AddSingleton<IEndpointExecutionResultCache, EndpointExecutionResultCache>();
         Services.AddSingleton(TestMockFactory.CreateFakeLocalizer());
 
         var jsModule = JSInterop.SetupModule("./endpoint-page.js");
@@ -45,10 +47,12 @@ public class EndpointPageTests : BunitContext
     private static Core.Models.Endpoint CreateEndpoint(
         string? body = null,
         string relPath = "/test",
-        RequestQueryParamsPanel.QueryParamEntry[]? queryParameters = null) => new()
+        RequestQueryParamsPanel.QueryParamEntry[]? queryParameters = null,
+        int id = 1,
+        string name = "Test") => new()
     {
-        Id = 1,
-        Name = "Test",
+        Id = id,
+        Name = name,
         RelativePath = relPath,
         Method = Core.Enums.HttpMethod.GET,
         Body = body,
@@ -58,6 +62,13 @@ public class EndpointPageTests : BunitContext
         QueryParameters = queryParameters?
             .Select(p => new EndpointQueryParameter { Key = p.Key, Value = p.Value })
             .ToList() ?? []
+    };
+
+    private static EndpointExecutionResult CreateResult(string responseBody) => new()
+    {
+        StatusCode = 200,
+        ResponseBody = responseBody,
+        ResponseHeaders = new Dictionary<string, string>()
     };
 
     /// <summary>Ohne Anfrageergebnis ist der Antwortbereich nicht sichtbar.</summary>
@@ -112,6 +123,66 @@ public class EndpointPageTests : BunitContext
         cut.Find("button.sz-btn-send").Click();
 
         Assert.Contains("404", cut.Find(".sz-endpoint-response").TextContent);
+    }
+
+    /// <summary>Beim Rueckwechsel auf einen Endpunkt wird dessen letztes Anfrageergebnis wieder angezeigt.</summary>
+    [Fact]
+    public void Endpunktwechsel_StelltLetztesErgebnisWiederHer()
+    {
+        var endpointA = CreateEndpoint(id: 1, name: "Endpoint A", relPath: "/a");
+        var endpointB = CreateEndpoint(id: 2, name: "Endpoint B", relPath: "/b");
+        _apiClientMock.Setup(r => r.GetEndpointByIdAsync(endpointA.Id)).ReturnsAsync(endpointA);
+        _executionMock
+            .Setup(e => e.ExecuteAsync(It.IsAny<Core.Models.Endpoint>()))
+            .ReturnsAsync(CreateResult("response-a"));
+
+        var cut = Render<EndpointPage>(p => p.Add(x => x.Endpoint, endpointA));
+        cut.Find("button.sz-btn-send").Click();
+        Render<EndpointPage>(p => p.Add(x => x.Endpoint, endpointB));
+        var restored = Render<EndpointPage>(p => p.Add(x => x.Endpoint, endpointA));
+
+        Assert.Contains("response-a", restored.Find("pre").TextContent);
+    }
+
+    /// <summary>Ein Endpunkt ohne eigenes Ergebnis zeigt kein gecachtes Ergebnis eines anderen Endpunkts.</summary>
+    [Fact]
+    public void Endpunktwechsel_ZeigtKeinFremdesErgebnis()
+    {
+        var endpointA = CreateEndpoint(id: 1, name: "Endpoint A", relPath: "/a");
+        var endpointB = CreateEndpoint(id: 2, name: "Endpoint B", relPath: "/b");
+        _apiClientMock.Setup(r => r.GetEndpointByIdAsync(endpointA.Id)).ReturnsAsync(endpointA);
+        _executionMock
+            .Setup(e => e.ExecuteAsync(It.IsAny<Core.Models.Endpoint>()))
+            .ReturnsAsync(CreateResult("response-a"));
+
+        var cut = Render<EndpointPage>(p => p.Add(x => x.Endpoint, endpointA));
+        cut.Find("button.sz-btn-send").Click();
+        var endpointBView = Render<EndpointPage>(p => p.Add(x => x.Endpoint, endpointB));
+
+        Assert.Empty(endpointBView.FindAll(".sz-endpoint-response"));
+        Assert.DoesNotContain("response-a", endpointBView.Markup);
+    }
+
+    /// <summary>Eine erneute Ausfuehrung ersetzt das gespeicherte Ergebnis fuer denselben Endpunkt.</summary>
+    [Fact]
+    public void ErneuteAusfuehrung_AktualisiertGespeichertesErgebnis()
+    {
+        var endpointA = CreateEndpoint(id: 1, name: "Endpoint A", relPath: "/a");
+        var endpointB = CreateEndpoint(id: 2, name: "Endpoint B", relPath: "/b");
+        _apiClientMock.Setup(r => r.GetEndpointByIdAsync(endpointA.Id)).ReturnsAsync(endpointA);
+        _executionMock
+            .SetupSequence(e => e.ExecuteAsync(It.IsAny<Core.Models.Endpoint>()))
+            .ReturnsAsync(CreateResult("old-response"))
+            .ReturnsAsync(CreateResult("new-response"));
+
+        var cut = Render<EndpointPage>(p => p.Add(x => x.Endpoint, endpointA));
+        cut.Find("button.sz-btn-send").Click();
+        cut.Find("button.sz-btn-send").Click();
+        Render<EndpointPage>(p => p.Add(x => x.Endpoint, endpointB));
+        var restored = Render<EndpointPage>(p => p.Add(x => x.Endpoint, endpointA));
+
+        Assert.Contains("new-response", restored.Find("pre").TextContent);
+        Assert.DoesNotContain("old-response", restored.Markup);
     }
 
     /// <summary>Die Body-Textarea zeigt den gespeicherten Body-Inhalt des Endpunkts an.</summary>

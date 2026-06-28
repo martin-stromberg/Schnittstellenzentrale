@@ -1,5 +1,6 @@
 @inject IApplicationApiClient ApplicationApiClient
 @inject IEndpointExecutionService ExecutionService
+@inject IEndpointExecutionResultCache ExecutionResultCache
 @inject IJSRuntime JSRuntime
 @inject NavigationManager NavigationManager
 @inject IStorageModeService StorageModeService
@@ -168,7 +169,7 @@
             LoadModelFromParameter();
             _isDirty = false;
             _errorMessage = null;
-            _result = null;
+            _result = ExecutionResultCache.Get(Endpoint.Id);
             await DisableBeforeUnloadGuardAsync();
             UnregisterLocationChanging();
         }
@@ -493,7 +494,9 @@
         refreshed.Application = _model.Application
             ?? await ApplicationApiClient.GetApplicationByIdAsync(refreshed.ApplicationId);
 
-        _result = await ExecutionService.ExecuteAsync(refreshed);
+        var result = await ExecutionService.ExecuteAsync(refreshed);
+        _result = result;
+        ExecutionResultCache.Set(_model.Id, result);
     }
 
     private string ResolveDisplayUrl()
