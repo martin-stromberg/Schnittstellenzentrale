@@ -82,6 +82,21 @@
 
 ---
 
+## OData-PATCH erfordert RowVersion (Optimistic Concurrency)
+
+**Beschreibung:** Alle vier PATCH-Endpunkte der OData-API erfordern `rowVersion` im Request-Body, um gleichzeitige Änderungen von mehreren Clients zu erkennen und zu verhindern, dass Änderungen unbemerkt überschrieben werden.
+
+**Bedingungen:** Betrifft `PATCH /odatav4/Applications({key})`, `PATCH /odatav4/ApplicationGroups({key})`, `PATCH /odatav4/Endpoints({key})` und `PATCH /odatav4/EndpointGroups({key})`.
+
+**Verhalten:**
+- `rowVersion` fehlt im Body: `400 Bad Request`.
+- `rowVersion` ist vorhanden, stimmt aber nicht mit dem gespeicherten Wert überein (Concurrency-Konflikt): `409 Conflict`.
+- `rowVersion` stimmt überein: Änderungen werden übernommen, Response `200 OK` mit dem aktualisierten Objekt.
+
+**Umsetzung:** `ODataPatchHelper.ContainsRowVersion` / `TryExtractRowVersion` — Prüfung vor der Datenbankoperation; `DbUpdateConcurrencyException` wird in den OData-Controllern abgefangen und in `409 Conflict` überführt.
+
+---
+
 ## Thread-Sicherheit im TokenStore
 
 **Beschreibung:** `TokenStore` ist als Singleton registriert und wird unter gleichzeitigen Requests zugreifbar. Das interne Dictionary muss daher thread-sicher sein.

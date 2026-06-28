@@ -18,7 +18,7 @@ public class ApplicationCrudTests : PlaywrightTestBase
         await Page.WaitForLoadStateAsync(LoadState.NetworkIdle);
         await Page.Locator(".sz-topbar-tab", new() { HasText = "Workspaces" }).ClickAsync();
 
-        await Page.GetByRole(Microsoft.Playwright.AriaRole.Button, new() { Name = "Neue Anwendung" }).ClickAsync();
+        await Page.GetByRole(Microsoft.Playwright.AriaRole.Button, new() { Name = "+ Neue Anwendung" }).ClickAsync();
 
         await Page.GetByLabel("Name").FillAsync("Testanwendung");
         await Page.GetByLabel("Basis-URL").FillAsync("http://test.example.com");
@@ -36,7 +36,7 @@ public class ApplicationCrudTests : PlaywrightTestBase
         await Page.WaitForLoadStateAsync(LoadState.NetworkIdle);
         await Page.Locator(".sz-topbar-tab", new() { HasText = "Workspaces" }).ClickAsync();
 
-        await Page.GetByRole(Microsoft.Playwright.AriaRole.Button, new() { Name = "Neue Anwendung" }).ClickAsync();
+        await Page.GetByRole(Microsoft.Playwright.AriaRole.Button, new() { Name = "+ Neue Anwendung" }).ClickAsync();
         await Page.GetByLabel("Name").FillAsync("Umbenennung-Test");
         await Page.GetByLabel("Basis-URL").FillAsync("http://test.example.com");
         await Page.GetByRole(Microsoft.Playwright.AriaRole.Button, new() { Name = "Speichern" }).ClickAsync();
@@ -65,7 +65,7 @@ public class ApplicationCrudTests : PlaywrightTestBase
         await Page.WaitForLoadStateAsync(LoadState.NetworkIdle);
         await Page.Locator(".sz-topbar-tab", new() { HasText = "Workspaces" }).ClickAsync();
 
-        await Page.GetByRole(Microsoft.Playwright.AriaRole.Button, new() { Name = "Neue Anwendung" }).ClickAsync();
+        await Page.GetByRole(Microsoft.Playwright.AriaRole.Button, new() { Name = "+ Neue Anwendung" }).ClickAsync();
         await Page.GetByLabel("Name").FillAsync("Zu-loeschende-Anwendung");
         await Page.GetByLabel("Basis-URL").FillAsync("http://test.example.com");
         await Page.GetByRole(Microsoft.Playwright.AriaRole.Button, new() { Name = "Speichern" }).ClickAsync();

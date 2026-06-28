@@ -1,4 +1,4 @@
-@inject IODataImportService ODataImportService
+@inject IApplicationApiClient ApiClient
 @inject IStringLocalizer<SharedResources> L
 
 <ImportDialog Title="@L["ODataImportDialog_Title"]" Diff="Diff" Application="Application" OnApply="ApplyAsync" OnClose="OnClose" />
@@ -10,6 +10,6 @@
 
     private async Task ApplyAsync(ImportDiff diff)
     {
-        await ODataImportService.ApplyDiffAsync(diff);
+        await ApiClient.ApplyODataDiffAsync(Application.Id, diff);
     }
 }

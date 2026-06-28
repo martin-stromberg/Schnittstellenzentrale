@@ -12,11 +12,11 @@ public class GroupCrudTests : PlaywrightTestBase
 
     private async Task<string> CreateGroupWithApplicationAsync(string groupName, string appName)
     {
-        await Page.GetByRole(AriaRole.Button, new() { Name = "Neue Sammlung" }).ClickAsync();
+        await Page.GetByRole(AriaRole.Button, new() { Name = "+ Neue Sammlung" }).ClickAsync();
         await Page.GetByLabel("Name").FillAsync(groupName);
         await Page.GetByRole(AriaRole.Button, new() { Name = "Speichern" }).ClickAsync();
 
-        await Page.GetByRole(AriaRole.Button, new() { Name = "Neue Anwendung" }).ClickAsync();
+        await Page.Locator(".sz-workspaces-sidebar").GetByRole(AriaRole.Button, new() { Name = "+ Neue Anwendung" }).ClickAsync();
         await Page.GetByLabel("Name").FillAsync(appName);
         await Page.GetByLabel("Basis-URL").FillAsync("http://test.example.com");
         await Page.GetByRole(AriaRole.Button, new() { Name = "Speichern" }).ClickAsync();
@@ -79,7 +79,7 @@ public class GroupCrudTests : PlaywrightTestBase
         await Page.GotoAsync(BaseUrl);
         await Page.WaitForLoadStateAsync(LoadState.NetworkIdle);
 
-        await Page.GetByRole(AriaRole.Button, new() { Name = "Neue Sammlung" }).ClickAsync();
+        await Page.GetByRole(AriaRole.Button, new() { Name = "+ Neue Sammlung" }).ClickAsync();
         await Page.GetByLabel("Name").FillAsync("Abbrechen-Gruppe");
         await Page.GetByRole(AriaRole.Button, new() { Name = "Speichern" }).ClickAsync();
 
@@ -99,7 +99,7 @@ public class GroupCrudTests : PlaywrightTestBase
         await Page.GotoAsync(BaseUrl);
         await Page.WaitForLoadStateAsync(LoadState.NetworkIdle);
 
-        await Page.GetByRole(AriaRole.Button, new() { Name = "Neue Sammlung" }).ClickAsync();
+        await Page.GetByRole(AriaRole.Button, new() { Name = "+ Neue Sammlung" }).ClickAsync();
         await Page.GetByLabel("Name").FillAsync("Umbenennen-Gruppe-Alt");
         await Page.GetByRole(AriaRole.Button, new() { Name = "Speichern" }).ClickAsync();
 

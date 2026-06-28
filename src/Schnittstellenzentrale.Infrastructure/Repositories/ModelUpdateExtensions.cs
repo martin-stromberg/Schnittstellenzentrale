@@ -7,6 +7,9 @@ internal static class ModelUpdateExtensions
     internal static void ApplyUpdate(this ApplicationGroup existing, ApplicationGroup source)
     {
         existing.Name = source.Name;
+        existing.Description = source.Description;
+        existing.Subtitle = source.Subtitle;
+        existing.IconData = source.IconData;
     }
 
     internal static void ApplyUpdate(this Application existing, Application source)

@@ -7,4 +7,5 @@ public interface IStorageModeService
     StorageMode CurrentMode { get; }
     event Action? OnModeChanged;
     void SetMode(StorageMode mode);
+    Task InitializeAsync();
 }

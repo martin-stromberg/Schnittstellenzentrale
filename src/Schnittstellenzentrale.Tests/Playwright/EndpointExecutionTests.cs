@@ -113,8 +113,8 @@ public class EndpointExecutionTests : PlaywrightTestBase
 
         // Auf den bereits registrierten Authenticate-Endpunkt klicken
         var authenticateBtn = Page.Locator(".sz-tree-item-btn", new() { HasText = "POST /authenticate" });
-        await Assertions.Expect(authenticateBtn).ToBeVisibleAsync();
-        await authenticateBtn.ClickAsync();
+        await Assertions.Expect(authenticateBtn.First).ToBeVisibleAsync();
+        await authenticateBtn.First.ClickAsync();
 
         await Page.GetByRole(AriaRole.Button, new() { Name = "Anfrage senden" }).ClickAsync();
 

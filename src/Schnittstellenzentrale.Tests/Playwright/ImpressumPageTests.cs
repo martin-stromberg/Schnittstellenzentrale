@@ -53,8 +53,8 @@ public class ImpressumPageWithFileTests : PlaywrightTestBase
         var page = Page.Locator(".sz-impressum-page");
         await Assertions.Expect(page).ToBeVisibleAsync();
 
-        // Heading aus Lokalisierung (EN-Fallback oder DE)
-        var heading = Page.Locator(".sz-impressum-page h1");
+        // Heading aus Lokalisierung (EN-Fallback oder DE) — erster h1 ist der lokalisierte Seitentitel
+        var heading = Page.Locator(".sz-impressum-page h1").First;
         await Assertions.Expect(heading).ToBeVisibleAsync();
 
         // Gerenderter Markdown-Inhalt aus der Testdatei (eindeutig, nicht die Seitenüberschrift)

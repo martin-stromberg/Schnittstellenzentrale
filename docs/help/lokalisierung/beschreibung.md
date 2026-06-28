@@ -41,7 +41,7 @@ Alle Razor-Komponenten unter `Components/Layout/` und `Components/Shared/` nutze
 - Kontext-Menüs: `ApplicationContextMenu`, `ApplicationGroupContextMenu`, `EndpointContextMenu`, `EndpointGroupContextMenu`
 - Editoren: `ApplicationEditor`, `ApplicationGroupEditor`, `EnvironmentEditor`, `EnvironmentManagementOverlay`, `EnvironmentsSidebar`
 - Dialoge: `ConfirmDeleteApplicationDialog`, `ConfirmDeleteGroupDialog`, `ConfirmDeleteEndpointGroupDialog`, `RenameGroupDialog`, `RenameEndpointGroupDialog`, `CreateEndpointGroupDialog`, `ConcurrencyWarningDialog`, `HealthCheckDialog`, `ImportDialog`
-- Seiten/Views: `EndpointPage`, `EmptyContentView`, `EnvironmentContentView`, `ApplicationGroupTree`, `ApplicationCard`, `ContentHeader`, `LinksManager`, `RequestAuthPanel`, `EnvironmentSelector`, `WorkspacesSidebar`
+- Seiten/Views: `EndpointPage`, `EmptyContentView`, `EnvironmentContentView`, `ApplicationGroupTree`, `ApplicationContentView`, `ContentHeader`, `LinksManager`, `RequestAuthPanel`, `EnvironmentSelector`, `WorkspacesSidebar`
 
 ## Einschränkungen
 

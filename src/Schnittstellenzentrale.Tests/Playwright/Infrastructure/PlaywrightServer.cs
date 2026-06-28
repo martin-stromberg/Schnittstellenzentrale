@@ -1,3 +1,4 @@
+using System.Globalization;
 using AngleSharp;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Builder;
@@ -51,6 +52,10 @@ public class PlaywrightServer : IAsyncLifetime
     /// <inheritdoc/>
     public virtual async Task InitializeAsync()
     {
+        // Alle Server-Threads rendern Blazor-Komponenten auf Deutsch, unabhängig vom System-Locale der Testmaschine.
+        CultureInfo.DefaultThreadCurrentCulture = new CultureInfo("de-DE");
+        CultureInfo.DefaultThreadCurrentUICulture = new CultureInfo("de-DE");
+
         // Eindeutiger Name verhindert Kollisionen zwischen parallelen Test-Collections.
         // Die Anchor-Verbindung bleibt offen, damit SQLite die In-Memory-DB nicht verwirft.
         var dbName = Guid.NewGuid().ToString("N");
@@ -111,6 +116,14 @@ public class PlaywrightServer : IAsyncLifetime
                 swaggerMock.Setup(s => s.ApplyDiffAsync(It.IsAny<ImportDiff>())).Returns(Task.CompletedTask);
                 services.RemoveAll<ISwaggerImportService>();
                 services.AddScoped(_ => swaggerMock.Object);
+
+                // Icon-Upload-Limit auf 512 KB setzen (Standardwert), da appsettings.json 5 MB konfiguriert
+                services.PostConfigure<Schnittstellenzentrale.Infrastructure.Services.UploadSettings>(o => o.MaxIconSizeBytes = 524288);
+
+                // Impressum-Pfad auf einen garantiert nicht vorhandenen Pfad setzen, damit
+                // ImpressumService.IsAvailable() false zurückgibt und der Sidebar-Link ausgeblendet bleibt.
+                var noImpressumPath = Path.Combine(Path.GetTempPath(), $"no-impressum-{Guid.NewGuid():N}.md");
+                services.PostConfigure<Schnittstellenzentrale.Infrastructure.Services.ImpressumSettings>(o => o.FilePath = noImpressumPath);
 
                 ConfigureTestServices(services);
             });

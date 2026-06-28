@@ -96,6 +96,9 @@ public class EndpointExecutionIntegrationTests : IAsyncLifetime
         historyServiceMock.Setup(h => h.AddEntryAsync(It.IsAny<Core.Models.EndpointCallHistoryEntry>()))
             .Returns(Task.CompletedTask);
 
+        var storageModeService = new Mock<IStorageModeService>();
+        storageModeService.Setup(h => h.CurrentMode).Returns(StorageMode.Team);
+
         var executionService = new EndpointExecutionService(
             httpClientFactoryMock.Object,
             credentialServiceMock.Object,
@@ -106,6 +109,7 @@ public class EndpointExecutionIntegrationTests : IAsyncLifetime
             new Mock<ISignalRNotificationService>().Object,
             new Mock<IActivityLogService>().Object,
             historyServiceMock.Object,
+            storageModeService.Object,
             NullLogger<EndpointExecutionService>.Instance);
 
         // Act

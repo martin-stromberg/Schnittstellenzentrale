@@ -1,28 +1,35 @@
+using Microsoft.Extensions.DependencyInjection;
+using Schnittstellenzentrale.Infrastructure.Services;
+
 namespace Schnittstellenzentrale.Tests.Playwright.Infrastructure;
 
 /// <summary>
-/// Variante von <see cref="PlaywrightServer"/>, die vor dem App-Start sowohl eine
-/// <c>impressum.md</c>-Fallback-Datei als auch eine sprachspezifische <c>impressum.de.md</c>-Datei
-/// im <see cref="AppContext.BaseDirectory"/> anlegt.
+/// Variante von <see cref="PlaywrightServer"/>, die eine sprachspezifische
+/// <c>impressum.de.md</c>-Datei in einem eindeutigen temporären Verzeichnis anlegt
+/// und <see cref="ImpressumSettings.FilePath"/> auf die Fallback-Basisdatei zeigt.
+/// Dadurch wird im Test verifiziert, dass bei aktivem Deutsch-Locale die
+/// sprachspezifische Datei bevorzugt wird.
 /// </summary>
 public class PlaywrightImpressumLanguageServer : PlaywrightServer
 {
     /// <inheritdoc/>
     protected override string BindUrl => "http://127.0.0.1:5102";
 
+    private string? _tempDir;
     private string? _fallbackFilePath;
-    private string? _germanFilePath;
 
     /// <inheritdoc/>
     public override async Task InitializeAsync()
     {
-        _fallbackFilePath = Path.Combine(AppContext.BaseDirectory, "impressum.md");
-        _germanFilePath = Path.Combine(AppContext.BaseDirectory, "impressum.de.md");
+        _tempDir = Path.Combine(Path.GetTempPath(), $"sz-impressum-lang-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(_tempDir);
+        _fallbackFilePath = Path.Combine(_tempDir, "impressum.md");
+        var germanFilePath = Path.Combine(_tempDir, "impressum.de.md");
 
         await File.WriteAllTextAsync(_fallbackFilePath,
             "# Impressum\n\nDies ist das Fallback-Impressum.");
-        await File.WriteAllTextAsync(_germanFilePath,
-            "# Impressum\n\nDies ist das deutsche Impressum.");
+        await File.WriteAllTextAsync(germanFilePath,
+            "# Impressum\n\nDies ist ein deutsches Impressum.");
 
         try
         {
@@ -30,12 +37,17 @@ public class PlaywrightImpressumLanguageServer : PlaywrightServer
         }
         catch
         {
-            if (File.Exists(_fallbackFilePath))
-                File.Delete(_fallbackFilePath);
-            if (File.Exists(_germanFilePath))
-                File.Delete(_germanFilePath);
+            Cleanup();
             throw;
         }
+    }
+
+    /// <inheritdoc/>
+    protected override void ConfigureTestServices(IServiceCollection services)
+    {
+        base.ConfigureTestServices(services);
+        var filePath = _fallbackFilePath!;
+        services.PostConfigure<ImpressumSettings>(o => o.FilePath = filePath);
     }
 
     /// <inheritdoc/>
@@ -47,10 +59,13 @@ public class PlaywrightImpressumLanguageServer : PlaywrightServer
         }
         finally
         {
-            if (_fallbackFilePath != null && File.Exists(_fallbackFilePath))
-                File.Delete(_fallbackFilePath);
-            if (_germanFilePath != null && File.Exists(_germanFilePath))
-                File.Delete(_germanFilePath);
+            Cleanup();
         }
+    }
+
+    private void Cleanup()
+    {
+        if (_tempDir != null && Directory.Exists(_tempDir))
+            Directory.Delete(_tempDir, recursive: true);
     }
 }

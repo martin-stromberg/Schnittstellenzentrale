@@ -5,6 +5,7 @@ using Schnittstellenzentrale.Components.Shared;
 using Schnittstellenzentrale.Core.Enums;
 using Schnittstellenzentrale.Core.Interfaces;
 using Schnittstellenzentrale.Core.Models;
+using Schnittstellenzentrale.Infrastructure.Services;
 using Schnittstellenzentrale.Tests.Helpers;
 using Endpoint = Schnittstellenzentrale.Core.Models.Endpoint;
 
@@ -33,6 +34,7 @@ public class EndpointPageTests : BunitContext
         Services.AddSingleton(_signalRMock.Object);
         Services.AddSingleton(_credentialMock.Object);
         Services.AddSingleton(_activeEnvironmentMock.Object);
+        Services.AddSingleton<IEndpointExecutionResultCache, EndpointExecutionResultCache>();
         Services.AddSingleton(TestMockFactory.CreateFakeLocalizer());
 
         var jsModule = JSInterop.SetupModule("./endpoint-page.js");
@@ -45,10 +47,12 @@ public class EndpointPageTests : BunitContext
     private static Core.Models.Endpoint CreateEndpoint(
         string? body = null,
         string relPath = "/test",
-        RequestQueryParamsPanel.QueryParamEntry[]? queryParameters = null) => new()
+        RequestQueryParamsPanel.QueryParamEntry[]? queryParameters = null,
+        int id = 1,
+        string name = "Test") => new()
     {
-        Id = 1,
-        Name = "Test",
+        Id = id,
+        Name = name,
         RelativePath = relPath,
         Method = Core.Enums.HttpMethod.GET,
         Body = body,
@@ -58,6 +62,13 @@ public class EndpointPageTests : BunitContext
         QueryParameters = queryParameters?
             .Select(p => new EndpointQueryParameter { Key = p.Key, Value = p.Value })
             .ToList() ?? []
+    };
+
+    private static EndpointExecutionResult CreateResult(string responseBody) => new()
+    {
+        StatusCode = 200,
+        ResponseBody = responseBody,
+        ResponseHeaders = new Dictionary<string, string>()
     };
 
     /// <summary>Ohne Anfrageergebnis ist der Antwortbereich nicht sichtbar.</summary>
@@ -112,6 +123,239 @@ public class EndpointPageTests : BunitContext
         cut.Find("button.sz-btn-send").Click();
 
         Assert.Contains("404", cut.Find(".sz-endpoint-response").TextContent);
+    }
+
+    /// <summary>Während einer laufenden Anfrage ist der Status sichtbar und der Senden-Button deaktiviert.</summary>
+    [Fact]
+    public void LaufendeAnfrage_ZeigtStatusUndDeaktiviertSendenButton()
+    {
+        var endpoint = CreateEndpoint();
+        var executionTask = new TaskCompletionSource<EndpointExecutionResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+        _apiClientMock.Setup(r => r.GetEndpointByIdAsync(endpoint.Id)).ReturnsAsync(endpoint);
+        _executionMock
+            .Setup(e => e.ExecuteAsync(It.IsAny<Endpoint>()))
+            .Returns(executionTask.Task);
+
+        var cut = Render<EndpointPage>(p => p.Add(x => x.Endpoint, endpoint));
+        cut.Find("button.sz-btn-send").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            var status = cut.Find(".sz-endpoint-execution-status");
+            Assert.Contains("EndpointPage_Execution_Running", status.TextContent);
+            Assert.True(cut.Find("button.sz-btn-send").HasAttribute("disabled"));
+        });
+
+        executionTask.SetResult(CreateResult("response"));
+        cut.WaitForAssertion(() => Assert.Empty(cut.FindAll(".sz-endpoint-execution-status")));
+    }
+
+    /// <summary>Nach Abschluss der Anfrage verschwindet der laufende Status und das Ergebnis wird angezeigt.</summary>
+    [Fact]
+    public void AbgeschlosseneAnfrage_BlendetStatusAusUndZeigtErgebnis()
+    {
+        var endpoint = CreateEndpoint();
+        var executionTask = new TaskCompletionSource<EndpointExecutionResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+        _apiClientMock.Setup(r => r.GetEndpointByIdAsync(endpoint.Id)).ReturnsAsync(endpoint);
+        _executionMock
+            .Setup(e => e.ExecuteAsync(It.IsAny<Endpoint>()))
+            .Returns(executionTask.Task);
+
+        var cut = Render<EndpointPage>(p => p.Add(x => x.Endpoint, endpoint));
+        cut.Find("button.sz-btn-send").Click();
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".sz-endpoint-execution-status")));
+
+        executionTask.SetResult(CreateResult("completed-response"));
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Empty(cut.FindAll(".sz-endpoint-execution-status"));
+            Assert.Contains("completed-response", cut.Find(".sz-endpoint-response").TextContent);
+            Assert.False(cut.Find("button.sz-btn-send").HasAttribute("disabled"));
+        });
+    }
+
+    /// <summary>Ein nach Endpunktwechsel abgeschlossenes Ergebnis wird nicht dem aktuell sichtbaren Endpunkt zugeordnet.</summary>
+    [Fact]
+    public void LaufendeAnfrage_NachEndpunktwechsel_UeberschreibtSichtbarenEndpunktNicht()
+    {
+        var endpointA = CreateEndpoint(id: 1, name: "Endpoint A", relPath: "/a");
+        var endpointB = CreateEndpoint(id: 2, name: "Endpoint B", relPath: "/b");
+        var executionTask = new TaskCompletionSource<EndpointExecutionResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+        _apiClientMock.Setup(r => r.GetEndpointByIdAsync(endpointA.Id)).ReturnsAsync(endpointA);
+        _executionMock
+            .Setup(e => e.ExecuteAsync(It.Is<Endpoint>(endpoint => endpoint.Id == endpointA.Id)))
+            .Returns(executionTask.Task);
+
+        var cut = Render<EndpointPage>(p => p.Add(x => x.Endpoint, endpointA));
+        cut.Find("button.sz-btn-send").Click();
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".sz-endpoint-execution-status")));
+
+        cut.Render(p => p.Add(x => x.Endpoint, endpointB));
+
+        Assert.Empty(cut.FindAll(".sz-endpoint-execution-status"));
+        Assert.False(cut.Find("button.sz-btn-send").HasAttribute("disabled"));
+
+        executionTask.SetResult(CreateResult("response-a"));
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Empty(cut.FindAll(".sz-endpoint-response"));
+            Assert.DoesNotContain("response-a", cut.Markup);
+            Assert.Null(Services.GetRequiredService<IEndpointExecutionResultCache>().Get(endpointB.Id));
+        });
+    }
+
+    /// <summary>Ein Endpunktwechsel während des automatischen Speicherns startet keine Anfrage für den neu sichtbaren Endpunkt.</summary>
+    [Fact]
+    public void LaufendeAnfrage_EndpunktwechselWaehrendSpeichern_StartetKeineFalscheAnfrage()
+    {
+        var endpointA = CreateEndpoint(id: 1, name: "Endpoint A", relPath: "/a");
+        var endpointB = CreateEndpoint(id: 2, name: "Endpoint B", relPath: "/b");
+        var saveTask = new TaskCompletionSource<Endpoint>(TaskCreationOptions.RunContinuationsAsynchronously);
+        _apiClientMock
+            .Setup(r => r.UpdateEndpointAsync(It.Is<Endpoint>(endpoint => endpoint.Id == endpointA.Id)))
+            .Returns(saveTask.Task);
+
+        var cut = Render<EndpointPage>(p => p.Add(x => x.Endpoint, endpointA));
+        cut.Find(".sz-endpoint-name-input").Input("Endpoint A changed");
+        cut.Find("button.sz-btn-send").Click();
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".sz-endpoint-execution-status")));
+
+        cut.Render(p => p.Add(x => x.Endpoint, endpointB));
+        saveTask.SetResult(endpointA);
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Empty(cut.FindAll(".sz-endpoint-execution-status"));
+            Assert.Empty(cut.FindAll(".sz-endpoint-response"));
+            Assert.False(cut.Find("button.sz-btn-send").HasAttribute("disabled"));
+            _executionMock.Verify(e => e.ExecuteAsync(It.IsAny<Endpoint>()), Times.Never);
+            Assert.Null(Services.GetRequiredService<IEndpointExecutionResultCache>().Get(endpointB.Id));
+        });
+    }
+
+    /// <summary>Ein neu gespeicherter Endpunkt wird nach Vergabe der ID mit dieser ID geladen, ausgeführt und gecacht.</summary>
+    [Fact]
+    public void LaufendeAnfrage_NeuerEndpunkt_VerwendetGespeicherteId()
+    {
+        var newEndpoint = CreateEndpoint(id: 0, name: "New Endpoint", relPath: "/new");
+        var savedEndpoint = CreateEndpoint(id: 3, name: "New Endpoint", relPath: "/new");
+        var executionTask = new TaskCompletionSource<EndpointExecutionResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+        _apiClientMock
+            .Setup(r => r.AddEndpointAsync(It.Is<Endpoint>(endpoint => endpoint.Id == 0)))
+            .ReturnsAsync(savedEndpoint);
+        _apiClientMock
+            .Setup(r => r.GetEndpointByIdAsync(savedEndpoint.Id))
+            .ReturnsAsync(savedEndpoint);
+        _executionMock
+            .Setup(e => e.ExecuteAsync(It.Is<Endpoint>(endpoint => endpoint.Id == savedEndpoint.Id)))
+            .Returns(executionTask.Task);
+
+        var cut = Render<EndpointPage>(p => p.Add(x => x.Endpoint, newEndpoint));
+        cut.Find(".sz-endpoint-name-input").Input("New Endpoint changed");
+        cut.Find("button.sz-btn-send").Click();
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".sz-endpoint-execution-status")));
+
+        executionTask.SetResult(CreateResult("created-response"));
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Empty(cut.FindAll(".sz-endpoint-execution-status"));
+            Assert.Contains("created-response", cut.Find(".sz-endpoint-response").TextContent);
+            Assert.NotNull(Services.GetRequiredService<IEndpointExecutionResultCache>().Get(savedEndpoint.Id));
+        });
+    }
+
+    /// <summary>Bei fachlichem Ausführungsfehler verschwindet der laufende Status und der Fehler wird angezeigt.</summary>
+    [Fact]
+    public void FehlerhafteAnfrage_BlendetStatusAusUndZeigtFehler()
+    {
+        var endpoint = CreateEndpoint();
+        const string errorMessage = "Request failed";
+        var executionTask = new TaskCompletionSource<EndpointExecutionResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+        _apiClientMock.Setup(r => r.GetEndpointByIdAsync(endpoint.Id)).ReturnsAsync(endpoint);
+        _executionMock
+            .Setup(e => e.ExecuteAsync(It.IsAny<Endpoint>()))
+            .Returns(executionTask.Task);
+
+        var cut = Render<EndpointPage>(p => p.Add(x => x.Endpoint, endpoint));
+        cut.Find("button.sz-btn-send").Click();
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".sz-endpoint-execution-status")));
+
+        executionTask.SetResult(new EndpointExecutionResult
+        {
+            Success = false,
+            ErrorMessage = errorMessage,
+            ResponseHeaders = new Dictionary<string, string>()
+        });
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Empty(cut.FindAll(".sz-endpoint-execution-status"));
+            Assert.Contains(errorMessage, cut.Find(".sz-endpoint-response").TextContent);
+            Assert.False(cut.Find("button.sz-btn-send").HasAttribute("disabled"));
+        });
+    }
+
+    /// <summary>Beim Rueckwechsel auf einen Endpunkt wird dessen letztes Anfrageergebnis wieder angezeigt.</summary>
+    [Fact]
+    public void Endpunktwechsel_StelltLetztesErgebnisWiederHer()
+    {
+        var endpointA = CreateEndpoint(id: 1, name: "Endpoint A", relPath: "/a");
+        var endpointB = CreateEndpoint(id: 2, name: "Endpoint B", relPath: "/b");
+        _apiClientMock.Setup(r => r.GetEndpointByIdAsync(endpointA.Id)).ReturnsAsync(endpointA);
+        _executionMock
+            .Setup(e => e.ExecuteAsync(It.IsAny<Core.Models.Endpoint>()))
+            .ReturnsAsync(CreateResult("response-a"));
+
+        var cut = Render<EndpointPage>(p => p.Add(x => x.Endpoint, endpointA));
+        cut.Find("button.sz-btn-send").Click();
+        Render<EndpointPage>(p => p.Add(x => x.Endpoint, endpointB));
+        var restored = Render<EndpointPage>(p => p.Add(x => x.Endpoint, endpointA));
+
+        Assert.Contains("response-a", restored.Find("pre").TextContent);
+    }
+
+    /// <summary>Ein Endpunkt ohne eigenes Ergebnis zeigt kein gecachtes Ergebnis eines anderen Endpunkts.</summary>
+    [Fact]
+    public void Endpunktwechsel_ZeigtKeinFremdesErgebnis()
+    {
+        var endpointA = CreateEndpoint(id: 1, name: "Endpoint A", relPath: "/a");
+        var endpointB = CreateEndpoint(id: 2, name: "Endpoint B", relPath: "/b");
+        _apiClientMock.Setup(r => r.GetEndpointByIdAsync(endpointA.Id)).ReturnsAsync(endpointA);
+        _executionMock
+            .Setup(e => e.ExecuteAsync(It.IsAny<Core.Models.Endpoint>()))
+            .ReturnsAsync(CreateResult("response-a"));
+
+        var cut = Render<EndpointPage>(p => p.Add(x => x.Endpoint, endpointA));
+        cut.Find("button.sz-btn-send").Click();
+        var endpointBView = Render<EndpointPage>(p => p.Add(x => x.Endpoint, endpointB));
+
+        Assert.Empty(endpointBView.FindAll(".sz-endpoint-response"));
+        Assert.DoesNotContain("response-a", endpointBView.Markup);
+    }
+
+    /// <summary>Eine erneute Ausfuehrung ersetzt das gespeicherte Ergebnis fuer denselben Endpunkt.</summary>
+    [Fact]
+    public void ErneuteAusfuehrung_AktualisiertGespeichertesErgebnis()
+    {
+        var endpointA = CreateEndpoint(id: 1, name: "Endpoint A", relPath: "/a");
+        var endpointB = CreateEndpoint(id: 2, name: "Endpoint B", relPath: "/b");
+        _apiClientMock.Setup(r => r.GetEndpointByIdAsync(endpointA.Id)).ReturnsAsync(endpointA);
+        _executionMock
+            .SetupSequence(e => e.ExecuteAsync(It.IsAny<Core.Models.Endpoint>()))
+            .ReturnsAsync(CreateResult("old-response"))
+            .ReturnsAsync(CreateResult("new-response"));
+
+        var cut = Render<EndpointPage>(p => p.Add(x => x.Endpoint, endpointA));
+        cut.Find("button.sz-btn-send").Click();
+        cut.Find("button.sz-btn-send").Click();
+        Render<EndpointPage>(p => p.Add(x => x.Endpoint, endpointB));
+        var restored = Render<EndpointPage>(p => p.Add(x => x.Endpoint, endpointA));
+
+        Assert.Contains("new-response", restored.Find("pre").TextContent);
+        Assert.DoesNotContain("old-response", restored.Markup);
     }
 
     /// <summary>Die Body-Textarea zeigt den gespeicherten Body-Inhalt des Endpunkts an.</summary>

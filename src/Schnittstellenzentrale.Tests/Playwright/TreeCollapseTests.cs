@@ -17,12 +17,12 @@ public class TreeCollapseTests : PlaywrightTestBase
         await Page.GotoAsync(BaseUrl);
         await Page.WaitForLoadStateAsync(LoadState.NetworkIdle);
 
-        await Page.GetByRole(Microsoft.Playwright.AriaRole.Button, new() { Name = "Neue Sammlung" }).ClickAsync();
+        await Page.GetByRole(Microsoft.Playwright.AriaRole.Button, new() { Name = "+ Neue Sammlung" }).ClickAsync();
         await Page.GetByLabel("Name").FillAsync("Collapse-Test-Gruppe");
         await Page.GetByRole(Microsoft.Playwright.AriaRole.Button, new() { Name = "Speichern" }).ClickAsync();
         await Microsoft.Playwright.Assertions.Expect(Page.Locator(".sz-alert-danger")).Not.ToBeVisibleAsync();
 
-        await Page.GetByRole(Microsoft.Playwright.AriaRole.Button, new() { Name = "Neue Anwendung" }).ClickAsync();
+        await Page.Locator(".sz-workspaces-sidebar").GetByRole(Microsoft.Playwright.AriaRole.Button, new() { Name = "+ Neue Anwendung" }).ClickAsync();
         await Page.GetByLabel("Name").FillAsync("Anwendung-In-Gruppe");
         await Page.GetByLabel("Basis-URL").FillAsync("http://test.example.com");
         await Page.GetByRole(Microsoft.Playwright.AriaRole.Button, new() { Name = "Speichern" }).ClickAsync();
@@ -47,7 +47,7 @@ public class TreeCollapseTests : PlaywrightTestBase
         await Page.GotoAsync(BaseUrl);
         await Page.WaitForLoadStateAsync(LoadState.NetworkIdle);
 
-        await Page.GetByRole(Microsoft.Playwright.AriaRole.Button, new() { Name = "Neue Anwendung" }).ClickAsync();
+        await Page.GetByRole(Microsoft.Playwright.AriaRole.Button, new() { Name = "+ Neue Anwendung" }).ClickAsync();
         await Page.GetByLabel("Name").FillAsync("Expand-Test-Anwendung");
         await Page.GetByLabel("Basis-URL").FillAsync("http://test.example.com");
         await Page.GetByRole(Microsoft.Playwright.AriaRole.Button, new() { Name = "Speichern" }).ClickAsync();
@@ -69,7 +69,7 @@ public class TreeCollapseTests : PlaywrightTestBase
         await Page.GotoAsync(BaseUrl);
         await Page.WaitForLoadStateAsync(LoadState.NetworkIdle);
 
-        await Page.GetByRole(Microsoft.Playwright.AriaRole.Button, new() { Name = "Neue Anwendung" }).ClickAsync();
+        await Page.GetByRole(Microsoft.Playwright.AriaRole.Button, new() { Name = "+ Neue Anwendung" }).ClickAsync();
         await Page.GetByLabel("Name").FillAsync("Select-Test-Anwendung");
         await Page.GetByLabel("Basis-URL").FillAsync("http://test.example.com");
         await Page.GetByRole(Microsoft.Playwright.AriaRole.Button, new() { Name = "Speichern" }).ClickAsync();
@@ -89,7 +89,7 @@ public class TreeCollapseTests : PlaywrightTestBase
         await Page.GotoAsync(BaseUrl);
         await Page.WaitForLoadStateAsync(LoadState.NetworkIdle);
 
-        await Page.GetByRole(Microsoft.Playwright.AriaRole.Button, new() { Name = "Neue Anwendung" }).ClickAsync();
+        await Page.GetByRole(Microsoft.Playwright.AriaRole.Button, new() { Name = "+ Neue Anwendung" }).ClickAsync();
         await Page.GetByLabel("Name").FillAsync("Collapse-App-Test");
         await Page.GetByLabel("Basis-URL").FillAsync("http://test.example.com");
         await Page.GetByRole(Microsoft.Playwright.AriaRole.Button, new() { Name = "Speichern" }).ClickAsync();

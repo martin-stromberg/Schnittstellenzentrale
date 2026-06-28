@@ -123,6 +123,8 @@ public class EndpointExecutionServiceTests
         var signalRMock = signalRNotificationServiceMock ?? CreateEmptySignalRNotificationServiceMock();
         var logMock = activityLogServiceMock ?? TestMockFactory.CreateActivityLogServiceMock();
         var historyMock = historyServiceMock ?? CreateEmptyHistoryServiceMock();
+        var storageModeService = new Mock<IStorageModeService>();
+        storageModeService.Setup(h => h.CurrentMode).Returns(StorageMode.Team);
 
         var service = new EndpointExecutionService(
             factoryMock.Object,
@@ -134,6 +136,7 @@ public class EndpointExecutionServiceTests
             signalRMock.Object,
             logMock.Object,
             historyMock.Object,
+            storageModeService.Object,
             NullLogger<EndpointExecutionService>.Instance);
         return (service, handlerMock, factoryMock);
     }

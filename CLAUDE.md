@@ -16,6 +16,7 @@ Alle Datenentitäten (Anwendungsgruppen, Anwendungen, Endpunktgruppen, Endpunkte
 
 Explizite Ausnahme: `SystemEndpointSyncService` verwendet `IEndpointRepository` direkt beim Startup-Abgleich, da zu diesem Zeitpunkt kein zuverlässiger HTTP-Roundtrip möglich ist.
 
+
 ## Tests
 
 - Unit-Tests: `dotnet test --filter "FullyQualifiedName!~Playwright"`

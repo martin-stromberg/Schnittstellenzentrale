@@ -773,4 +773,204 @@ public class ApplicationApiClientTests
                 r.Method == HttpMethod.Delete),
             ItExpr.IsAny<CancellationToken>());
     }
+
+    /// <summary>GetEnvironmentByIdAsync_ReturnsEnvironment_WhenFound</summary>
+    [Fact]
+    public async Task GetEnvironmentByIdAsync_ReturnsEnvironment_WhenFound()
+    {
+        var authToken = Guid.NewGuid().ToString();
+        var newToken = Guid.NewGuid().ToString();
+        var responseBody = new SystemEnvironmentResponse
+        {
+            Id = 7,
+            Name = "Produktion",
+            Mode = 0,
+            Owner = null,
+            Description = "Produktionsumgebung",
+            Variables = [new EnvironmentVariableResponse { Id = 1, Name = "KEY", Value = "val", IsValueMasked = false }]
+        };
+        var json = JsonSerializer.Serialize(responseBody);
+
+        var (apiClient, handlerMock, _) = CreateClient(authToken, newToken, HttpStatusCode.OK, json);
+
+        var result = await apiClient.GetEnvironmentByIdAsync(7);
+
+        Assert.NotNull(result);
+        Assert.Equal(7, result.Id);
+        Assert.Equal("Produktion", result.Name);
+        Assert.Single(result.Variables);
+        Assert.Equal("KEY", result.Variables.First().Name);
+
+        handlerMock.Protected().Verify(
+            "SendAsync",
+            Times.Once(),
+            ItExpr.Is<HttpRequestMessage>(r =>
+                r.RequestUri!.AbsolutePath == "/api/system-environments/7" &&
+                r.Method == HttpMethod.Get),
+            ItExpr.IsAny<CancellationToken>());
+    }
+
+    /// <summary>GetEnvironmentByIdAsync_ReturnsNull_WhenNotFound</summary>
+    [Fact]
+    public async Task GetEnvironmentByIdAsync_ReturnsNull_WhenNotFound()
+    {
+        var authToken = Guid.NewGuid().ToString();
+        var newToken = Guid.NewGuid().ToString();
+
+        var (apiClient, handlerMock, _) = CreateClient(authToken, newToken, HttpStatusCode.NotFound, "");
+
+        var result = await apiClient.GetEnvironmentByIdAsync(999);
+
+        Assert.Null(result);
+
+        handlerMock.Protected().Verify(
+            "SendAsync",
+            Times.Once(),
+            ItExpr.Is<HttpRequestMessage>(r =>
+                r.RequestUri!.AbsolutePath == "/api/system-environments/999" &&
+                r.Method == HttpMethod.Get),
+            ItExpr.IsAny<CancellationToken>());
+    }
+
+    /// <summary>ImportMetadataAsync_SendsCorrectPostRequestAndReturnsDiff</summary>
+    [Fact]
+    public async Task ImportMetadataAsync_SendsCorrectPostRequestAndReturnsDiff()
+    {
+        var authToken = Guid.NewGuid().ToString();
+        var newToken = Guid.NewGuid().ToString();
+        var diff = new ImportDiff
+        {
+            NewEndpoints = [new Endpoint { Id = 1, Name = "GET Items", RelativePath = "/items", ApplicationId = 5 }]
+        };
+        var responseJson = JsonSerializer.Serialize(diff);
+
+        var (apiClient, handlerMock, tokenStoreMock) = CreateClient(authToken, newToken, HttpStatusCode.OK, responseJson);
+
+        var result = await apiClient.ImportMetadataAsync(5);
+
+        Assert.NotNull(result);
+        Assert.Single(result.NewEndpoints);
+        Assert.Equal("GET Items", result.NewEndpoints[0].Name);
+
+        tokenStoreMock.Verify(s => s.CreateTokenAsync("testuser"), Times.Once());
+
+        handlerMock.Protected().Verify(
+            "SendAsync",
+            Times.Once(),
+            ItExpr.Is<HttpRequestMessage>(r =>
+                r.RequestUri!.AbsolutePath == "/api/applications/5/import" &&
+                r.Method == HttpMethod.Post &&
+                r.Headers.Authorization != null &&
+                r.Headers.Authorization.Parameter == authToken &&
+                r.Headers.Contains("X-Storage-Mode")),
+            ItExpr.IsAny<CancellationToken>());
+    }
+
+    /// <summary>ImportMetadataAsync_On422_ReturnsImportDiffWithErrorMessage</summary>
+    [Fact]
+    public async Task ImportMetadataAsync_On422_ReturnsImportDiffWithErrorMessage()
+    {
+        var authToken = Guid.NewGuid().ToString();
+        var newToken = Guid.NewGuid().ToString();
+        var errorBody = JsonSerializer.Serialize(new { errorMessage = "Interface-Typ nicht unterstützt" });
+
+        var (apiClient, _, _) = CreateClient(authToken, newToken, HttpStatusCode.UnprocessableEntity, errorBody);
+
+        var result = await apiClient.ImportMetadataAsync(5);
+
+        Assert.NotNull(result);
+        Assert.NotNull(result.ErrorMessage);
+        Assert.False(string.IsNullOrEmpty(result.ErrorMessage));
+    }
+
+    /// <summary>ImportMetadataAsync_On401_ReturnsImportDiffWithErrorMessage</summary>
+    [Fact]
+    public async Task ImportMetadataAsync_On401_ReturnsImportDiffWithErrorMessage()
+    {
+        var authToken = Guid.NewGuid().ToString();
+        var newToken = Guid.NewGuid().ToString();
+
+        var (apiClient, _, _) = CreateClient(authToken, newToken, HttpStatusCode.Unauthorized, "{}");
+
+        var result = await apiClient.ImportMetadataAsync(5);
+
+        Assert.NotNull(result);
+        Assert.NotNull(result.ErrorMessage);
+        Assert.False(string.IsNullOrEmpty(result.ErrorMessage));
+    }
+
+    /// <summary>ImportMetadataAsync_On404_ReturnsImportDiffWithErrorMessage</summary>
+    [Fact]
+    public async Task ImportMetadataAsync_On404_ReturnsImportDiffWithErrorMessage()
+    {
+        var authToken = Guid.NewGuid().ToString();
+        var newToken = Guid.NewGuid().ToString();
+
+        var (apiClient, _, _) = CreateClient(authToken, newToken, HttpStatusCode.NotFound, "{}");
+
+        var result = await apiClient.ImportMetadataAsync(5);
+
+        Assert.NotNull(result);
+        Assert.NotNull(result.ErrorMessage);
+        Assert.False(string.IsNullOrEmpty(result.ErrorMessage));
+    }
+
+    /// <summary>ImportMetadataAsync_On500_ReturnsImportDiffWithErrorMessage</summary>
+    [Fact]
+    public async Task ImportMetadataAsync_On500_ReturnsImportDiffWithErrorMessage()
+    {
+        var authToken = Guid.NewGuid().ToString();
+        var newToken = Guid.NewGuid().ToString();
+
+        var (apiClient, _, _) = CreateClient(authToken, newToken, HttpStatusCode.InternalServerError, "{}");
+
+        var result = await apiClient.ImportMetadataAsync(5);
+
+        Assert.NotNull(result);
+        Assert.NotNull(result.ErrorMessage);
+        Assert.False(string.IsNullOrEmpty(result.ErrorMessage));
+    }
+
+    /// <summary>ApplyODataDiffAsync_SendsCorrectPostRequest</summary>
+    [Fact]
+    public async Task ApplyODataDiffAsync_SendsCorrectPostRequest()
+    {
+        var authToken = Guid.NewGuid().ToString();
+        var newToken = Guid.NewGuid().ToString();
+
+        var (apiClient, handlerMock, tokenStoreMock) = CreateClient(authToken, newToken, HttpStatusCode.NoContent, "");
+
+        var diff = new ImportDiff
+        {
+            NewEndpoints = [new Endpoint { Name = "GET Items", RelativePath = "/items", ApplicationId = 7 }]
+        };
+
+        await apiClient.ApplyODataDiffAsync(7, diff);
+
+        tokenStoreMock.Verify(s => s.CreateTokenAsync("testuser"), Times.Once());
+
+        handlerMock.Protected().Verify(
+            "SendAsync",
+            Times.Once(),
+            ItExpr.Is<HttpRequestMessage>(r =>
+                r.RequestUri!.AbsolutePath == "/api/applications/7/odata-import/apply" &&
+                r.Method == HttpMethod.Post &&
+                r.Headers.Authorization != null &&
+                r.Headers.Authorization.Parameter == authToken &&
+                r.Headers.Contains("X-Storage-Mode")),
+            ItExpr.IsAny<CancellationToken>());
+    }
+
+    /// <summary>ApplyODataDiffAsync_On500_ThrowsInvalidOperationException</summary>
+    [Fact]
+    public async Task ApplyODataDiffAsync_On500_ThrowsInvalidOperationException()
+    {
+        var authToken = Guid.NewGuid().ToString();
+        var newToken = Guid.NewGuid().ToString();
+
+        var (apiClient, _, _) = CreateClient(authToken, newToken, HttpStatusCode.InternalServerError, "{}");
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            apiClient.ApplyODataDiffAsync(5, new ImportDiff()));
+    }
 }

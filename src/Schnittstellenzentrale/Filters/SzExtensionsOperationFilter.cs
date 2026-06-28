@@ -9,6 +9,7 @@ public class SzExtensionsOperationFilter : IOperationFilter
 {
     private const string PostRequestScriptKey = "x-sz-post-request-script";
     private const string BearerTokenKey = "x-sz-bearer-token";
+    private const string HeaderTokenKey = "x-sz-header";
 
     private const string AuthenticateScript =
         "sz.environment.set('schnittstellenzentrale.authToken', sz.response.body.asJson().token);";

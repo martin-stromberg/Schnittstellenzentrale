@@ -80,8 +80,8 @@ internal static class ImportDiffCalculator
             ApplicationId = imported.ApplicationId,
             EndpointGroupId = existing.EndpointGroupId,
             RowVersion = existing.RowVersion,
-            Headers = existing.Headers,
-            QueryParameters = existing.QueryParameters,
+            Headers = existing.Headers.Select(h => new EndpointHeader { Key = h.Key, Value = h.Value }).ToList(),
+            QueryParameters = existing.QueryParameters.Select(p => new EndpointQueryParameter { Key = p.Key, Value = p.Value }).ToList(),
             PreRequestScript = imported.PreRequestScript,
             PostRequestScript = imported.PostRequestScript
         };

@@ -59,6 +59,8 @@ Geben Sie den JavaScript-Code in das mehrzeilige Eingabefeld ein. Sie können de
 
 Klicken Sie auf **Anfrage senden**. Wenn noch ungespeicherte Änderungen vorhanden sind, werden diese automatisch gespeichert, bevor die Anfrage abgeschickt wird.
 
+Während die Anfrage läuft, zeigt die Endpunkt-Seite einen Statushinweis an. Der Button **Anfrage senden** ist in dieser Zeit deaktiviert, damit dieselbe Anfrage nicht parallel mehrfach gestartet wird.
+
 Die tatsächlich gesendete URL enthält:
 - Den Pfad mit allen ersetzten Platzhaltern.
 - Alle regulären Query-Parameter als `?key=value`-Anhang.
@@ -74,8 +76,47 @@ Unterhalb der Endpunkt-Seite erscheint der Antwortbereich mit:
 
 Wurde ein Skript ausgeführt und ist dabei ein Fehler aufgetreten, erscheint eine Fehlermeldung im Antwortbereich. Bei einem Pre-Skript-Fehler wird keine Antwort angezeigt, da der HTTP-Request nicht gesendet wurde.
 
+Wenn Sie zu einem anderen Endpunkt wechseln und später zu diesem Endpunkt zurückkehren, bleibt das zuletzt angezeigte Anfrageergebnis innerhalb der aktuellen Sitzung sichtbar. Jeder Endpunkt merkt sich dabei sein eigenes letztes Ergebnis.
+
 ---
 
 ## Ergebnis
 
-Nach dem Senden sehen Sie den HTTP-Statuscode und den Antwort-Body der Anfrage. Der gespeicherte Endpunkt enthält den bereinigten Pfad (ohne Query-String) sowie alle Parameter als separate Einträge. Enthält der Endpunkt Skripte, werden diese bei jedem Senden automatisch ausgeführt.
+Nach dem Senden sehen Sie den HTTP-Statuscode und den Antwort-Body der Anfrage. Beim Wechsel zwischen Endpunkten wird pro Endpunkt das letzte Ergebnis der aktuellen Sitzung wieder angezeigt. Der gespeicherte Endpunkt enthält den bereinigten Pfad (ohne Query-String) sowie alle Parameter als separate Einträge. Enthält der Endpunkt Skripte, werden diese bei jedem Senden automatisch ausgeführt.
+
+---
+
+## OData-Endpunkte importieren
+
+### Voraussetzungen
+
+- Eine Anwendung vom Typ **OData** ist angelegt.
+- Im Feld **Metadaten-URL** (Schnittstellen-URL) der Anwendung ist die URL des CSDL-Dokuments eingetragen (üblicherweise `https://host/service/$metadata`).
+
+### 1. Anwendung auswählen
+
+Klicken Sie im Navigationsbaum auf die OData-Anwendung. Die Detailansicht öffnet sich rechts.
+
+### 2. OData-Import starten
+
+Klicken Sie auf die Schaltfläche **OData-Import** im Kopfbereich der Detailansicht. Die Schnittstellenzentrale ruft das CSDL-Dokument von der eingetragenen Metadaten-URL ab.
+
+> **Hinweis:** Ist kein CSDL-Dokument erreichbar oder enthält die URL kein gültiges XML, erscheint eine Fehlermeldung in der Detailansicht. Der Import-Dialog öffnet sich nicht.
+
+### 3. Import-Vorschau prüfen
+
+Ein Dialog **OData-Import-Vorschau** zeigt die erkannten Unterschiede:
+
+- **Neu** — Endpunkte, die im CSDL vorhanden sind, aber noch nicht in der Datenbank.
+- **Geändert** — bestehende Endpunkte, bei denen sich Methode, Pfad oder Name geändert haben.
+- **Entfernt** — Endpunkte, die in der Datenbank vorhanden sind, im CSDL aber nicht mehr auftauchen.
+
+### 4. Übernehmen oder Abbrechen
+
+Klicken Sie auf **Übernehmen**, um die angezeigten Änderungen zu speichern, oder auf **Abbrechen**, um den Import ohne Änderungen zu beenden.
+
+### Ergebnis
+
+Nach dem Übernehmen erscheinen die importierten Endpunkte direkt unterhalb der Anwendung im Navigationsbaum (ohne Ordner). Sie können danach wie gewöhnliche Endpunkte bearbeitet, ausgeführt und gelöscht werden.
+
+> **Hinweis:** Authentifizierungseinstellungen werden beim OData-Import nicht automatisch gesetzt. Falls die OData-Endpunkte eine Authentifizierung erfordern, muss diese nach dem Import für jeden Endpunkt manuell konfiguriert werden.
