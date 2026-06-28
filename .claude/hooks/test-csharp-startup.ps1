@@ -33,6 +33,22 @@ function Test-Startup {
     $csproj = $Project.FullName
     $dir   = $Project.DirectoryName
 
+    # --- Port-Check: App läuft bereits (z.B. in Visual Studio) ---
+    $appPort = $null
+    $portMatch = Select-String -Path $csproj -Pattern 'applicationUrl.*:(\d{4,5})' -ErrorAction SilentlyContinue
+    if (-not $portMatch) {
+        $launchSettings = Join-Path $dir 'Properties\launchSettings.json'
+        if (Test-Path $launchSettings) {
+            $portMatch = Select-String -Path $launchSettings -Pattern ':(\d{4,5})' -ErrorAction SilentlyContinue
+        }
+    }
+    if ($portMatch) {
+        $appPort = [int]($portMatch.Matches[0].Groups[1].Value)
+    }
+    if ($appPort -and (Test-NetConnection -ComputerName localhost -Port $appPort -InformationLevel Quiet -ErrorAction SilentlyContinue -WarningAction SilentlyContinue)) {
+        return [PSCustomObject]@{ Name = $name; Success = $true; Reason = "Läuft bereits auf Port $appPort (übersprungen)"; Detail = '' }
+    }
+
     # --- Build ---
     $buildOut = & dotnet build $csproj --no-incremental -v quiet 2>&1 | Out-String
     if ($LASTEXITCODE -ne 0) {
@@ -50,12 +66,12 @@ function Test-Startup {
     $proc    = $null
 
     try {
-        $proc = Start-Process pwsh `
-            -ArgumentList "-NoProfile -Command `"dotnet run --project '$csproj' --no-build`"" `
+        $proc = Start-Process dotnet `
+            -ArgumentList "run --project `"$csproj`" --no-build" `
             -WorkingDirectory $dir `
             -RedirectStandardOutput $outFile `
             -RedirectStandardError  $errFile `
-            -PassThru -NoNewWindow
+            -PassThru -WindowStyle Hidden
 
         $webSignals  = 'Application started', 'Now listening on:', 'Content root path:'
         $deadline    = [DateTime]::UtcNow.AddSeconds($TimeoutSec)
