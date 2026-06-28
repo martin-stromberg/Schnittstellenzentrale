@@ -446,6 +446,10 @@
     <value>Anfrage senden</value>
     <comment>EndpointPage: Button zum Ausführen der HTTP-Anfrage</comment>
   </data>
+  <data name="EndpointPage_Execution_Running" xml:space="preserve">
+    <value>Anfrage wird ausgeführt...</value>
+    <comment>EndpointPage: Statustext während eine Endpunkt-Anfrage ausgeführt wird</comment>
+  </data>
   <data name="EndpointPage_Error_NameEmpty" xml:space="preserve">
     <value>Der Name darf nicht leer sein.</value>
     <comment>EndpointPage: Inline-Warnung wenn das Namensfeld leer ist</comment>

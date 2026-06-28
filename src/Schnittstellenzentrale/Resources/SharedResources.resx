@@ -446,6 +446,10 @@
     <value>Send Request</value>
     <comment>EndpointPage: button to execute the HTTP request for this endpoint</comment>
   </data>
+  <data name="EndpointPage_Execution_Running" xml:space="preserve">
+    <value>Request is running...</value>
+    <comment>EndpointPage: status text shown while an endpoint request is running</comment>
+  </data>
   <data name="EndpointPage_Error_NameEmpty" xml:space="preserve">
     <value>The name must not be empty.</value>
     <comment>EndpointPage: inline warning shown when the endpoint name input is blank</comment>
