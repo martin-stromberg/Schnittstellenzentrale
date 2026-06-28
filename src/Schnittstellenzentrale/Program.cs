@@ -122,6 +122,7 @@ public partial class Program {
         builder.Services.AddSingleton<IHealthCheckService, HealthCheckService>();
         builder.Services.AddScoped<IEndpointScriptRunner, EndpointScriptRunner>();
         builder.Services.AddScoped<IEndpointExecutionService, EndpointExecutionService>();
+        builder.Services.AddScoped<IEndpointExecutionResultCache, EndpointExecutionResultCache>();
         builder.Services.AddScoped<ISwaggerImportService, SwaggerImportService>();
         builder.Services.AddScoped<IODataImportService, ODataImportService>();
         builder.Services.AddSingleton<ICredentialService, WindowsCredentialService>();

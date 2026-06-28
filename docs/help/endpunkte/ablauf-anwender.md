@@ -74,11 +74,13 @@ Unterhalb der Endpunkt-Seite erscheint der Antwortbereich mit:
 
 Wurde ein Skript ausgeführt und ist dabei ein Fehler aufgetreten, erscheint eine Fehlermeldung im Antwortbereich. Bei einem Pre-Skript-Fehler wird keine Antwort angezeigt, da der HTTP-Request nicht gesendet wurde.
 
+Wenn Sie zu einem anderen Endpunkt wechseln und später zu diesem Endpunkt zurückkehren, bleibt das zuletzt angezeigte Anfrageergebnis innerhalb der aktuellen Sitzung sichtbar. Jeder Endpunkt merkt sich dabei sein eigenes letztes Ergebnis.
+
 ---
 
 ## Ergebnis
 
-Nach dem Senden sehen Sie den HTTP-Statuscode und den Antwort-Body der Anfrage. Der gespeicherte Endpunkt enthält den bereinigten Pfad (ohne Query-String) sowie alle Parameter als separate Einträge. Enthält der Endpunkt Skripte, werden diese bei jedem Senden automatisch ausgeführt.
+Nach dem Senden sehen Sie den HTTP-Statuscode und den Antwort-Body der Anfrage. Beim Wechsel zwischen Endpunkten wird pro Endpunkt das letzte Ergebnis der aktuellen Sitzung wieder angezeigt. Der gespeicherte Endpunkt enthält den bereinigten Pfad (ohne Query-String) sowie alle Parameter als separate Einträge. Enthält der Endpunkt Skripte, werden diese bei jedem Senden automatisch ausgeführt.
 
 ---
 
