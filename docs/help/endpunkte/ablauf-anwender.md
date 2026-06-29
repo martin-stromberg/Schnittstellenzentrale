@@ -53,7 +53,7 @@ Wenn Sie vor oder nach dem HTTP-Request JavaScript-Code ausführen möchten, wec
 
 Geben Sie den JavaScript-Code in das mehrzeilige Eingabefeld ein. Sie können den Code direkt eintippen — ein Syntaxcheck findet erst zur Laufzeit statt.
 
-> **Hinweis:** Das `sz`-Objekt stellt folgende Funktionen bereit: `sz.environment.get(name)`, `sz.environment.set(name, value)`, `sz.request.*`, `sz.response.*` (nur im Post-Skript) und `sz.execute(name)` zum Aufrufen anderer Endpunkte.
+> **Hinweis:** Das `sz`-Objekt stellt folgende Funktionen bereit: `sz.environment.get(name)`, `sz.environment.set(name, value)`, `sz.request.*`, `sz.response.*` (nur im Post-Skript), `sz.execute(name)` zum synchronen Aufrufen anderer Endpunkte und `sz.repeat()` zum Wiederholen des aktuellen Endpunkts nach einem erfolgreichen Authenticate-Aufruf.
 
 ### 7. Anfrage senden
 

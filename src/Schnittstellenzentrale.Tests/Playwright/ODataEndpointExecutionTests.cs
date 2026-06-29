@@ -1,4 +1,8 @@
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Playwright;
+using Schnittstellenzentrale.Core.Enums;
+using Schnittstellenzentrale.Core.Interfaces;
+using Schnittstellenzentrale.Core.Models;
 using Schnittstellenzentrale.Tests.Playwright.Infrastructure;
 
 namespace Schnittstellenzentrale.Tests.Playwright;
@@ -10,8 +14,13 @@ namespace Schnittstellenzentrale.Tests.Playwright;
 [Collection("PlaywrightODataEndpoint")]
 public class ODataEndpointExecutionTests : PlaywrightTestBase
 {
+    private readonly PlaywrightODataEndpointServer _server;
+
     /// <summary>Initialisiert den Test mit dem OData-Endpunkt-Server.</summary>
-    public ODataEndpointExecutionTests(PlaywrightODataEndpointServer server) : base(server) { }
+    public ODataEndpointExecutionTests(PlaywrightODataEndpointServer server) : base(server)
+    {
+        _server = server;
+    }
 
     /// <summary>
     /// Vollständiger Ablauf: eigene OData-API registrieren, Metadaten importieren,
@@ -42,7 +51,7 @@ public class ODataEndpointExecutionTests : PlaywrightTestBase
         // Baum aufklappen
         var appRow = Page.Locator(".sz-tree-row")
             .Filter(new() { Has = Page.Locator(".sz-tree-item-btn", new() { HasText = "SZ-OData-E2E" }) });
-        var appChevron = appRow.Locator(".sz-tree-chevron-btn");
+        var appChevron = appRow.First.Locator(".sz-tree-chevron-btn").First;
         await appChevron.ClickAsync();
         await appChevron.ClickAsync();
 
@@ -67,7 +76,7 @@ public class ODataEndpointExecutionTests : PlaywrightTestBase
 
         var applicationGroupsChevron = Page.Locator(".sz-tree-row")
             .Filter(new() { Has = Page.Locator(".sz-tree-item-label", new() { HasText = "ApplicationGroups" }) })
-            .Locator(".sz-tree-chevron-btn");
+            .First.Locator(".sz-tree-chevron-btn").First;
         await applicationGroupsChevron.ClickAsync();
 
         await Page.Locator(".sz-tree-item-btn", new() { HasText = "GET ApplicationGroups" }).First.ClickAsync();
@@ -87,7 +96,7 @@ public class ODataEndpointExecutionTests : PlaywrightTestBase
 
         var applicationsChevron = Page.Locator(".sz-tree-row")
             .Filter(new() { Has = Page.Locator(".sz-tree-item-label", new() { HasText = "Applications" }) })
-            .Locator(".sz-tree-chevron-btn");
+            .First.Locator(".sz-tree-chevron-btn").First;
         await applicationsChevron.ClickAsync();
 
         await Page.Locator(".sz-tree-item-btn", new() { HasText = "GET Applications" }).First.ClickAsync();
@@ -133,28 +142,12 @@ public class ODataEndpointExecutionTests : PlaywrightTestBase
         await Page.GetByRole(AriaRole.Button, new() { Name = "Speichern" }).ClickAsync();
         await Assertions.Expect(Page.Locator(".sz-tree-item-btn", new() { HasText = "Filter-Test-App" })).ToBeVisibleAsync();
 
-        var filterAppRow = Page.Locator(".sz-tree-row")
-            .Filter(new() { Has = Page.Locator(".sz-tree-item-btn", new() { HasText = "Filter-Test-App" }) });
-
-        await filterAppRow.Locator("[data-testid=\"context-menu-toggle\"]").ClickAsync();
-        await Page.GetByRole(AriaRole.Button, new() { Name = "Endpunkt anlegen" }).ClickAsync();
-        await Page.Locator(".sz-endpoint-name-input").FillAsync("Test-Endpunkt-Alpha");
-        await Page.Locator(".sz-endpoint-name-row").GetByRole(AriaRole.Button, new() { Name = "Speichern" }).ClickAsync();
-
-        await filterAppRow.Locator("[data-testid=\"context-menu-toggle\"]").ClickAsync();
-        await Page.GetByRole(AriaRole.Button, new() { Name = "Endpunkt anlegen" }).ClickAsync();
-        await Page.Locator(".sz-endpoint-name-input").FillAsync("Test-Endpunkt-Beta");
-        await Page.Locator(".sz-endpoint-name-row").GetByRole(AriaRole.Button, new() { Name = "Speichern" }).ClickAsync();
-
-        await filterAppRow.Locator("[data-testid=\"context-menu-toggle\"]").ClickAsync();
-        await Page.GetByRole(AriaRole.Button, new() { Name = "Endpunkt anlegen" }).ClickAsync();
-        await Page.Locator(".sz-endpoint-name-input").FillAsync("Andere-Schnittstelle");
-        await Page.Locator(".sz-endpoint-name-row").GetByRole(AriaRole.Button, new() { Name = "Speichern" }).ClickAsync();
+        await SeedFilterEndpointsAsync();
 
         // ── Authenticate ausführen, damit der Bearer-Token im Environment steht ──
         var appRow = Page.Locator(".sz-tree-row")
             .Filter(new() { Has = Page.Locator(".sz-tree-item-btn", new() { HasText = "SZ-OData-E2E" }) });
-        var appChevron = appRow.Locator(".sz-tree-chevron-btn");
+        var appChevron = appRow.First.Locator(".sz-tree-chevron-btn").First;
         await appChevron.ClickAsync();
         await appChevron.ClickAsync();
 
@@ -170,7 +163,7 @@ public class ODataEndpointExecutionTests : PlaywrightTestBase
 
         var endpointsChevron = Page.Locator(".sz-tree-row")
             .Filter(new() { Has = Page.Locator(".sz-tree-item-label", new() { HasText = "Endpoints" }) })
-            .Locator(".sz-tree-chevron-btn");
+            .First.Locator(".sz-tree-chevron-btn").First;
         await endpointsChevron.ClickAsync();
 
         await Page.Locator(".sz-tree-item-btn", new() { HasText = "GET Endpoints" }).First.ClickAsync();
@@ -198,5 +191,25 @@ public class ODataEndpointExecutionTests : PlaywrightTestBase
         await Assertions.Expect(responseBody).ToContainTextAsync("Test-Endpunkt-Alpha");
         await Assertions.Expect(responseBody).ToContainTextAsync("Test-Endpunkt-Beta");
         await Assertions.Expect(responseBody).Not.ToContainTextAsync("Andere-Schnittstelle");
+    }
+
+    private async Task SeedFilterEndpointsAsync()
+    {
+        await using var scope = _server.Services.CreateAsyncScope();
+        var applicationRepository = scope.ServiceProvider.GetRequiredService<IApplicationRepository>();
+        var endpointRepository = scope.ServiceProvider.GetRequiredService<IEndpointRepository>();
+        var apps = await applicationRepository.GetUngroupedApplicationsAsync(StorageMode.Team, @"TEST\testuser");
+        var filterApp = apps.Single(a => a.Name == "Filter-Test-App");
+
+        foreach (var name in new[] { "Test-Endpunkt-Alpha", "Test-Endpunkt-Beta", "Andere-Schnittstelle" })
+        {
+            await endpointRepository.AddEndpointAsync(new Endpoint
+            {
+                Name = name,
+                Method = Core.Enums.HttpMethod.GET,
+                RelativePath = $"/fixtures/{Uri.EscapeDataString(name)}",
+                ApplicationId = filterApp.Id
+            });
+        }
     }
 }

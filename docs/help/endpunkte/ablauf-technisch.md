@@ -213,12 +213,25 @@ Beteiligte Komponenten:
 2. `EndpointScriptRunner` ruft den `ExecuteEndpoint`-Callback im `ScriptContext` auf via `Task.Run(...).GetAwaiter().GetResult()`.
 3. `EndpointExecutionService` sucht via `IEndpointRepository.GetEndpointByNameAsync(applicationId, name)` nach dem Endpunkt. Bei 0 oder mehreren Treffern wird ein Fehler zurückgegeben.
 4. `ExecuteAsync` wird rekursiv mit dem bestehenden `callDepth` aufgerufen. Der Rekursionsschutz greift bei `callDepth[id] >= 2`.
-5. Das Ergebnis wird als JavaScript-Objekt zurückgegeben: `{ success, statusCode, responseBody, errorMessage }`.
+5. Das Ergebnis wird als Boolean zurückgegeben: `true` bei Erfolg, sonst `false`.
 
 Beteiligte Komponenten:
 - `EndpointScriptRunner` — synchroner Callback-Aufruf
 - `EndpointExecutionService.ExecuteEndpoint`-Callback — Endpunkt-Lookup und rekursiver Aufruf
 - `IEndpointRepository.GetEndpointByNameAsync()` — Namens-Lookup
+
+## Ablauf: `sz.repeat()` im Skript
+
+1. Das Skript ruft `sz.repeat()` auf.
+2. `EndpointScriptRunner` setzt im `ScriptContext` ein Repeat-Signal für den aktuell ausgeführten Endpunkt.
+3. `EndpointExecutionService` wertet das Signal nach dem erfolgreichen Abschluss des Skripts aus und startet den aktuellen Endpunkt erneut.
+4. Die Wiederholung ist nur gültig, wenn der unmittelbar vorherige `sz.execute("Authenticate")`-Aufruf erfolgreich war.
+5. Für den Authenticate-Endpunkt selbst wird kein Repeat ausgelöst; die bestehende Rekursionsprüfung bleibt aktiv.
+
+Beteiligte Komponenten:
+- `EndpointScriptRunner` — Repeat-Signal aus dem Skriptkontext
+- `EndpointExecutionService` — Wiederholung des aktuellen Endpunkts
+- `ScriptContext` — transportiert das Repeat-Signal zwischen Skript und Ausführung
 
 ---
 
@@ -478,6 +491,8 @@ flowchart TD
 - Post-Skript-Fehler hängen die Fehlermeldung an ein ansonsten vollständiges `EndpointExecutionResult` an.
 - `EndpointScriptRunner` begrenzt die Skriptlaufzeit auf `ScriptTimeoutMs = 5000 ms` und den Arbeitsspeicher auf 4 MB.
 - `sz.environment.set()` propagiert Exceptions aus `UpdateVariableAsync` oder `NotifyEnvironmentChangedAsync` ohne Behandlung; das Skript schlägt damit fehl und das `EndpointExecutionResult` enthält die Fehlermeldung.
+- `sz.execute(name)` gibt nur `true` oder `false` zurück; ein nicht eindeutiger Endpunktname führt zu `false`.
+- `sz.repeat()` ist nur direkt nach einem erfolgreichen `sz.execute("Authenticate")` wirksam und wird für Authenticate selbst ignoriert.
 - Einträge mit leerem `Key` werden in `BuildRequest()` und in `ResolveDisplayUrl()` übersprungen.
 - Import-Fehler beim Laden oder Parsen des Swagger-JSONs erzeugen ein `ImportDiff { ErrorMessage = ... }` und verhindern jede weitere Verarbeitung.
 - Fehler beim Schreiben in den Windows Credential Manager werden per `_logger.LogWarning` protokolliert; die restlichen Endpunkte des Imports werden trotzdem persistiert.

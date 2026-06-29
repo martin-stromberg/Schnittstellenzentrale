@@ -120,7 +120,7 @@
 
 ## Rekursionsschutz für `sz.execute()`
 
-**Beschreibung:** `sz.execute()` kann nicht beliebig tief rekursiv aufgerufen werden; ein Endpunkt darf im selben Aufrufbaum höchstens zweimal ausgeführt werden.
+**Beschreibung:** `sz.execute(name)` kann nicht beliebig tief rekursiv aufgerufen werden; ein Endpunkt darf im selben Aufrufbaum höchstens zweimal ausgeführt werden. Der Aufruf gibt nur `true` oder `false` zurück.
 
 **Bedingungen:**
 - Ein Skript ruft `sz.execute(name)` auf, und der Zielendpunkt ruft seinerseits `sz.execute()` mit demselben oder einem anderen Endpunkt auf.
@@ -130,6 +130,22 @@
 - Der `CallDepth`-Zähler lebt im `ScriptContext` (nicht als Instanzfeld), damit parallele Requests sich nicht gegenseitig beeinflussen.
 
 **Umsetzung:** `EndpointExecutionService.ExecuteAsync(endpoint, callDepth)` — verhindert Endlosrekursionen ohne globalen Zustand.
+
+---
+
+## Wiederholung nach Authenticate
+
+**Beschreibung:** `sz.repeat()` wiederholt den aktuell ausgeführten Endpunkt nur dann, wenn unmittelbar zuvor ein `sz.execute("Authenticate")` erfolgreich war. Für den Authenticate-Endpunkt selbst wird keine Wiederholung ausgelöst.
+
+**Bedingungen:**
+- Ein Skript ruft `sz.execute("Authenticate")` auf und erhält `true` zurück.
+- Anschließend wird `sz.repeat()` im selben Skriptlauf aufgerufen.
+
+**Verhalten:**
+- Der aktuelle Endpunkt wird erneut ausgeführt.
+- Für andere `sz.execute(...)`-Aufrufe wird kein Repeat ausgelöst.
+
+**Umsetzung:** `EndpointExecutionService` wertet ein Repeat-Signal nur für den aktuellen Endpunkt und nur nach erfolgreichem Authenticate-Aufruf aus.
 
 ---
 

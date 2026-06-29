@@ -79,7 +79,10 @@ Das Interface `IEndpointScriptRunner` (implementiert durch `EndpointScriptRunner
 | `sz.response.body.asJson()` | `object \| null` | Antwort-Body als JSON (nur im Post-Skript). |
 | `sz.response.body.asXml()` | `object \| null` | Antwort-Body als XML (nur im Post-Skript). |
 | `sz.response.headers` | `object` | Antwort-Header (nur im Post-Skript). |
-| `sz.execute(name)` | `object` | Führt den Endpunkt mit dem angegebenen Namen in der gleichen Anwendung aus; gibt `{ success, statusCode, responseBody, errorMessage }` zurück. |
+| `sz.execute(name)` | `boolean` | Führt den Endpunkt mit dem angegebenen Namen in der gleichen Anwendung aus; gibt `true` bei Erfolg und sonst `false` zurück. |
+| `sz.repeat()` | `void` | Wiederholt den aktuellen Endpunkt nur nach einem unmittelbar erfolgreichen `sz.execute("Authenticate")`. |
+
+> `sz.repeat()` ist für den Authenticate-Endpunkt selbst nicht vorgesehen.
 
 ---
 
