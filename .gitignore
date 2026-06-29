@@ -449,3 +449,6 @@ assemblyinfo.cs
 
 # DataProtection key
 key-*.xml
+
+# Softwareschmiede
+issue.md

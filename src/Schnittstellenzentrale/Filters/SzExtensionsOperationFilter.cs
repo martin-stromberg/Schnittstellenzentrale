@@ -15,7 +15,7 @@ public class SzExtensionsOperationFilter : IOperationFilter
         "sz.environment.set('schnittstellenzentrale.authToken', sz.response.body.asJson().token);";
 
     private const string TokenRefreshScript =
-        "var headerName = 'X-New-Token';\nvar newToken = sz.response.headers[headerName];\nsz.environment.set('schnittstellenzentrale.authToken', newToken);";
+        "if (sz.response.statusCode === 401) {\n  if (sz.execute('Authenticate')) {\n    sz.repeat();\n  }\n} else {\n  var headerName = 'X-New-Token';\n  var newToken = sz.response.headers[headerName];\n  if (newToken) {\n    sz.environment.set('schnittstellenzentrale.authToken', newToken);\n  }\n}";
 
     /// <inheritdoc/>
     public void Apply(OpenApiOperation operation, OperationFilterContext context)

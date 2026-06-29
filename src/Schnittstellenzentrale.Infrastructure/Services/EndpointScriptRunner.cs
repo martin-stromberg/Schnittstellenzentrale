@@ -126,18 +126,13 @@ public class EndpointScriptRunner : IEndpointScriptRunner
                     ErrorMessage = $"sz.execute fehlgeschlagen: {inner.Message}"
                 };
             }
-            var resultObj = new JsObject(engine);
-            resultObj.FastSetDataProperty("success", result.Success ? JsBoolean.True : JsBoolean.False);
-            resultObj.FastSetDataProperty("statusCode", result.StatusCode.HasValue
-                ? JsValue.FromObject(engine, result.StatusCode.Value)
-                : JsValue.Null);
-            resultObj.FastSetDataProperty("responseBody", result.ResponseBody != null
-                ? JsValue.FromObject(engine, result.ResponseBody)
-                : JsValue.Null);
-            resultObj.FastSetDataProperty("errorMessage", result.ErrorMessage != null
-                ? JsValue.FromObject(engine, result.ErrorMessage)
-                : JsValue.Null);
-            return resultObj;
+            return result.Success ? JsBoolean.True : JsBoolean.False;
+        }));
+
+        sz.FastSetDataProperty("repeat", JsValue.FromObject(engine, () =>
+        {
+            context.RequestRepeat();
+            return JsValue.Undefined;
         }));
 
         engine.SetValue("sz", sz);
@@ -237,6 +232,9 @@ public class EndpointScriptRunner : IEndpointScriptRunner
     {
         var resp = new JsObject(engine);
 
+        resp.FastSetDataProperty("statusCode", response.StatusCode.HasValue
+            ? JsValue.FromObject(engine, response.StatusCode.Value)
+            : JsValue.Null);
         resp.FastSetDataProperty("body", BuildBodyObject(engine, response));
         resp.FastSetDataProperty("headers", BuildHeadersObject(engine, response.Headers));
 

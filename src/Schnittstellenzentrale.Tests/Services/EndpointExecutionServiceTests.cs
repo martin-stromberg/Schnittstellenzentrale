@@ -762,6 +762,225 @@ public class EndpointExecutionServiceTests
         Assert.NotNull(result.ErrorMessage);
     }
 
+    /// <summary>SzRepeat_WiederholtAktuellenEndpunktNachErfolgreichemAuthenticate</summary>
+    [Fact]
+    public async Task SzRepeat_WiederholtAktuellenEndpunktNachErfolgreichemAuthenticate()
+    {
+        var authenticateEndpoint = CreateEndpoint(
+            relPath: "/Authenticate()",
+            name: "Authenticate",
+            id: 2,
+            method: Core.Enums.HttpMethod.POST);
+
+        var repoMock = new Mock<IEndpointRepository>();
+        repoMock.Setup(r => r.GetEndpointByNameAsync(1, "Authenticate"))
+            .ReturnsAsync(new List<Core.Models.Endpoint> { authenticateEndpoint });
+
+        var scriptRunner = new EndpointScriptRunner(
+            CreateEmptyEnvironmentRepositoryMock().Object,
+            CreateEmptySignalRNotificationServiceMock().Object,
+            TestMockFactory.CreateActivityLogServiceMock().Object);
+
+        var (service, handlerMock, _) = CreateService(
+            _credMock,
+            endpointRepositoryMock: repoMock,
+            realScriptRunner: scriptRunner);
+
+        var resourceCalls = 0;
+        var authenticateCalls = 0;
+        handlerMock.Protected()
+            .Setup<Task<HttpResponseMessage>>("SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>())
+            .Returns<HttpRequestMessage, CancellationToken>((request, _) =>
+            {
+                if (request.RequestUri!.AbsolutePath.Contains("Authenticate", StringComparison.OrdinalIgnoreCase))
+                {
+                    authenticateCalls++;
+                    return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+                    {
+                        Content = new StringContent("""{"token":"new"}""")
+                    });
+                }
+
+                resourceCalls++;
+                var statusCode = resourceCalls == 1 ? HttpStatusCode.Unauthorized : HttpStatusCode.OK;
+                return Task.FromResult(new HttpResponseMessage(statusCode)
+                {
+                    Content = new StringContent("{}")
+                });
+            });
+
+        var endpoint = CreateEndpoint(
+            relPath: "/resource",
+            name: "Ressource",
+            postRequestScript: "if (sz.response.statusCode === 401) { if (sz.execute('Authenticate')) { sz.repeat(); } }");
+
+        var result = await service.ExecuteAsync(endpoint);
+
+        Assert.True(result.Success);
+        Assert.Equal(200, result.StatusCode);
+        Assert.Equal(2, resourceCalls);
+        Assert.Equal(1, authenticateCalls);
+    }
+
+    /// <summary>SzRepeat_NachWeiteremExecuteWiederholtNicht</summary>
+    [Fact]
+    public async Task SzRepeat_NachWeiteremExecuteWiederholtNicht()
+    {
+        var authenticateEndpoint = CreateEndpoint(
+            relPath: "/Authenticate()",
+            name: "Authenticate",
+            id: 2,
+            method: Core.Enums.HttpMethod.POST);
+        var otherEndpoint = CreateEndpoint(
+            relPath: "/other",
+            name: "Other",
+            id: 3);
+
+        var repoMock = new Mock<IEndpointRepository>();
+        repoMock.Setup(r => r.GetEndpointByNameAsync(1, "Authenticate"))
+            .ReturnsAsync(new List<Core.Models.Endpoint> { authenticateEndpoint });
+        repoMock.Setup(r => r.GetEndpointByNameAsync(1, "Other"))
+            .ReturnsAsync(new List<Core.Models.Endpoint> { otherEndpoint });
+
+        var scriptRunner = new EndpointScriptRunner(
+            CreateEmptyEnvironmentRepositoryMock().Object,
+            CreateEmptySignalRNotificationServiceMock().Object,
+            TestMockFactory.CreateActivityLogServiceMock().Object);
+
+        var (service, handlerMock, _) = CreateService(
+            _credMock,
+            endpointRepositoryMock: repoMock,
+            realScriptRunner: scriptRunner);
+
+        var resourceCalls = 0;
+        var authenticateCalls = 0;
+        var otherCalls = 0;
+        handlerMock.Protected()
+            .Setup<Task<HttpResponseMessage>>("SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>())
+            .Returns<HttpRequestMessage, CancellationToken>((request, _) =>
+            {
+                var path = request.RequestUri!.AbsolutePath;
+                if (path.Contains("Authenticate", StringComparison.OrdinalIgnoreCase))
+                {
+                    authenticateCalls++;
+                    return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+                    {
+                        Content = new StringContent("""{"token":"new"}""")
+                    });
+                }
+
+                if (path.Contains("other", StringComparison.OrdinalIgnoreCase))
+                {
+                    otherCalls++;
+                    return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+                    {
+                        Content = new StringContent("{}")
+                    });
+                }
+
+                resourceCalls++;
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.Unauthorized)
+                {
+                    Content = new StringContent("{}")
+                });
+            });
+
+        var endpoint = CreateEndpoint(
+            relPath: "/resource",
+            name: "Ressource",
+            postRequestScript: "sz.execute('Authenticate'); sz.execute('Other'); sz.repeat();");
+
+        var result = await service.ExecuteAsync(endpoint);
+
+        Assert.False(result.Success);
+        Assert.Equal(401, result.StatusCode);
+        Assert.Equal(1, resourceCalls);
+        Assert.Equal(1, authenticateCalls);
+        Assert.Equal(1, otherCalls);
+    }
+
+    /// <summary>SzRepeat_OhneErfolgreichenAuthenticateAufruf_WiederholtNicht</summary>
+    [Fact]
+    public async Task SzRepeat_OhneErfolgreichenAuthenticateAufruf_WiederholtNicht()
+    {
+        var scriptRunner = new EndpointScriptRunner(
+            CreateEmptyEnvironmentRepositoryMock().Object,
+            CreateEmptySignalRNotificationServiceMock().Object,
+            TestMockFactory.CreateActivityLogServiceMock().Object);
+
+        var (service, handlerMock, _) = CreateService(
+            _credMock,
+            responseCode: HttpStatusCode.Unauthorized,
+            realScriptRunner: scriptRunner);
+
+        var calls = 0;
+        handlerMock.Protected()
+            .Setup<Task<HttpResponseMessage>>("SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>())
+            .Returns<HttpRequestMessage, CancellationToken>((_, _) =>
+            {
+                calls++;
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.Unauthorized)
+                {
+                    Content = new StringContent("{}")
+                });
+            });
+
+        var endpoint = CreateEndpoint(
+            relPath: "/resource",
+            name: "Ressource",
+            postRequestScript: "sz.repeat();");
+
+        var result = await service.ExecuteAsync(endpoint);
+
+        Assert.False(result.Success);
+        Assert.Equal(401, result.StatusCode);
+        Assert.Equal(1, calls);
+    }
+
+    /// <summary>SzRepeat_WiederholtAuthenticateEndpunktNicht</summary>
+    [Fact]
+    public async Task SzRepeat_WiederholtAuthenticateEndpunktNicht()
+    {
+        var scriptRunner = new EndpointScriptRunner(
+            CreateEmptyEnvironmentRepositoryMock().Object,
+            CreateEmptySignalRNotificationServiceMock().Object,
+            TestMockFactory.CreateActivityLogServiceMock().Object);
+
+        var (service, handlerMock, _) = CreateService(
+            _credMock,
+            realScriptRunner: scriptRunner);
+
+        var calls = 0;
+        handlerMock.Protected()
+            .Setup<Task<HttpResponseMessage>>("SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>())
+            .Returns<HttpRequestMessage, CancellationToken>((_, _) =>
+            {
+                calls++;
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent("{}")
+                });
+            });
+
+        var endpoint = CreateEndpoint(
+            relPath: "/Authenticate()",
+            name: "Authenticate",
+            postRequestScript: "sz.repeat();");
+
+        var result = await service.ExecuteAsync(endpoint);
+
+        Assert.True(result.Success);
+        Assert.Equal(1, calls);
+    }
+
     /// <summary>EndpunktOhneSkript_VerhaeltSichWieBisher</summary>
     [Fact]
     public async Task EndpunktOhneSkript_VerhaeltSichWieBisher()

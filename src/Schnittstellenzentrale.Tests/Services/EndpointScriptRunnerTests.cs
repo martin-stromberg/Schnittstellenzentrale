@@ -21,7 +21,8 @@ public class EndpointScriptRunnerTests
 
     private static ScriptContext CreateContext(
         IActiveEnvironmentService? envService = null,
-        ScriptResponseData? response = null)
+        ScriptResponseData? response = null,
+        Func<string, Task<EndpointExecutionResult>>? executeEndpoint = null)
     {
         var envMock = envService ?? CreateEmptyEnvironmentService();
         return new ScriptContext
@@ -36,7 +37,7 @@ public class EndpointScriptRunnerTests
             },
             Response = response,
             CallDepth = new Dictionary<int, int>(),
-            ExecuteEndpoint = _ => Task.FromResult(new EndpointExecutionResult { Success = true })
+            ExecuteEndpoint = executeEndpoint ?? (_ => Task.FromResult(new EndpointExecutionResult { Success = true }))
         };
     }
 
@@ -218,6 +219,96 @@ public class EndpointScriptRunnerTests
             context);
 
         Assert.True(result.Success);
+    }
+
+    /// <summary>SzResponseStatusCode_GibtStatuscodeZurueck</summary>
+    [Fact]
+    public async Task SzResponseStatusCode_GibtStatuscodeZurueck()
+    {
+        var runner = CreateRunner();
+        var response = new ScriptResponseData
+        {
+            StatusCode = 401,
+            Body = "{}",
+            Headers = new Dictionary<string, string>()
+        };
+        var context = CreateContext(response: response);
+
+        var result = await runner.ExecuteAsync(
+            "if (sz.response.statusCode !== 401) throw new Error('Status falsch: ' + sz.response.statusCode);",
+            context);
+
+        Assert.True(result.Success);
+    }
+
+    /// <summary>SzExecute_GibtBooleanZurueck</summary>
+    [Fact]
+    public async Task SzExecute_GibtBooleanZurueck()
+    {
+        var runner = CreateRunner();
+        var context = CreateContext(executeEndpoint: _ => Task.FromResult(new EndpointExecutionResult { Success = true }));
+
+        var result = await runner.ExecuteAsync(
+            "var executed = sz.execute('Authenticate'); if (executed !== true) throw new Error('kein Boolean true'); if (executed.success !== undefined) throw new Error('alte Objektform');",
+            context);
+
+        Assert.True(result.Success);
+    }
+
+    /// <summary>SzExecute_GibtFalseBeiFehlerZurueck</summary>
+    [Fact]
+    public async Task SzExecute_GibtFalseBeiFehlerZurueck()
+    {
+        var runner = CreateRunner();
+        var context = CreateContext(executeEndpoint: _ => Task.FromResult(new EndpointExecutionResult { Success = false }));
+
+        var result = await runner.ExecuteAsync(
+            "var executed = sz.execute('Authenticate'); if (executed !== false) throw new Error('kein Boolean false');",
+            context);
+
+        Assert.True(result.Success);
+    }
+
+    /// <summary>SzRepeat_SetztRepeatSignalWennErlaubtUndAuthenticateErfolgreichWar</summary>
+    [Fact]
+    public async Task SzRepeat_SetztRepeatSignalWennErlaubtUndAuthenticateErfolgreichWar()
+    {
+        var runner = CreateRunner();
+        var context = CreateContext();
+        context.CanRepeat = true;
+        context.RecordExecuteEndpointResult(wasSuccessfulAuthenticateEndpoint: true);
+
+        var result = await runner.ExecuteAsync("sz.repeat();", context);
+
+        Assert.True(result.Success);
+        Assert.True(context.RepeatRequested);
+    }
+
+    /// <summary>SzRepeat_IgnoriertSignalWennNichtErlaubt</summary>
+    [Fact]
+    public async Task SzRepeat_IgnoriertSignalWennNichtErlaubt()
+    {
+        var runner = CreateRunner();
+        var context = CreateContext();
+
+        var result = await runner.ExecuteAsync("sz.repeat();", context);
+
+        Assert.True(result.Success);
+        Assert.False(context.RepeatRequested);
+    }
+
+    /// <summary>SzRepeat_IgnoriertSignalOhneErfolgreichenAuthenticateAufruf</summary>
+    [Fact]
+    public async Task SzRepeat_IgnoriertSignalOhneErfolgreichenAuthenticateAufruf()
+    {
+        var runner = CreateRunner();
+        var context = CreateContext();
+        context.CanRepeat = true;
+
+        var result = await runner.ExecuteAsync("sz.repeat();", context);
+
+        Assert.True(result.Success);
+        Assert.False(context.RepeatRequested);
     }
 
     /// <summary>SzEnvironmentSet_MitAktiverSystemumgebung_PersistiertVariable</summary>

@@ -11,6 +11,9 @@ public class ScriptResponseData
     /// <summary>Der Antwort-Body (optional).</summary>
     public string? Body { get; set; }
 
+    /// <summary>HTTP-Statuscode der Antwort, falls vorhanden.</summary>
+    public int? StatusCode { get; set; }
+
     /// <summary>Die Antwort-Header.</summary>
     public IDictionary<string, string> Headers { get; set; } = new Dictionary<string, string>();
 

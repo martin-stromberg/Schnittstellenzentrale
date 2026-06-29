@@ -15,7 +15,7 @@ public static class ODataEdmModelBuilder
     private const string SzHeaderTokenTerm = "x-sz-header-";
     private const string SzModeHeaderTokenTerm = $"{SzHeaderTokenTerm}mode";
     private const string AuthenticateScript = "sz.environment.set('schnittstellenzentrale.authToken', sz.response.body.asJson().Token);";
-    private const string EntitySetScript = "var headerName = 'X-New-Token'; var newToken = sz.response.headers[headerName]; sz.environment.set('schnittstellenzentrale.authToken', newToken);";
+    private const string EntitySetScript = "if (sz.response.statusCode === 401) { if (sz.execute('Authenticate')) { sz.repeat(); } } else { var headerName = 'X-New-Token'; var newToken = sz.response.headers[headerName]; if (newToken) { sz.environment.set('schnittstellenzentrale.authToken', newToken); } }";
     private const string BearerTokenVariable = "{{schnittstellenzentrale.authToken}}";
 
     /// <summary>Erzeugt und gibt das fertige <see cref="IEdmModel"/> zurück.</summary>

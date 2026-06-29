@@ -133,6 +133,45 @@ public class SwaggerImportServiceTests
         Assert.Equal("sz.environment.set('x', sz.response.body.raw);", diff.NewEndpoints[0].PostRequestScript);
     }
 
+    /// <summary>Import_GeneratedStandardScript_UsesActualAuthenticateEndpointName</summary>
+    [Fact]
+    public async Task Import_GeneratedStandardScript_UsesActualAuthenticateEndpointName()
+    {
+        const string swagger = """
+            {
+              "openapi": "3.0.0",
+              "info": { "title": "Test", "version": "1.0" },
+              "paths": {
+                "/authenticate": {
+                  "post": {
+                    "operationId": "Auth_AuthenticateAsync",
+                    "x-sz-post-request-script": "sz.environment.set('schnittstellenzentrale.authToken', sz.response.body.asJson().token);",
+                    "responses": { "200": { "description": "OK" } }
+                  }
+                },
+                "/items": {
+                  "get": {
+                    "operationId": "getItems",
+                    "x-sz-bearer-token": "{{schnittstellenzentrale.authToken}}",
+                    "x-sz-post-request-script": "if (sz.response.statusCode === 401) {\n  if (sz.execute('Authenticate')) {\n    sz.repeat();\n  }\n}",
+                    "responses": { "200": { "description": "OK" } }
+                  }
+                }
+              }
+            }
+            """;
+        var repoMock = new Mock<IEndpointRepository>();
+        repoMock.Setup(r => r.GetEndpointsAsync(It.IsAny<int>())).ReturnsAsync([]);
+        var service = CreateService(swagger, repoMock);
+        var app = CreateTestApplication();
+
+        var diff = await service.ImportAsync(app);
+
+        var itemEndpoint = diff.NewEndpoints.Single(e => e.Name == "getItems");
+        Assert.Contains("sz.execute('Auth_AuthenticateAsync')", itemEndpoint.PostRequestScript);
+        Assert.DoesNotContain("sz.execute('Authenticate')", itemEndpoint.PostRequestScript);
+    }
+
     /// <summary>Import_WithPreRequestScript_SetsPreRequestScriptOnEndpoint</summary>
     [Fact]
     public async Task Import_WithPreRequestScript_SetsPreRequestScriptOnEndpoint()

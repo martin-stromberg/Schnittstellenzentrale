@@ -140,6 +140,7 @@ public class EndpointExecutionService : IEndpointExecutionService
                 var responseData = new ScriptResponseData
                 {
                     Body = result.ResponseBody,
+                    StatusCode = result.StatusCode,
                     Headers = result.ResponseHeaders ?? new Dictionary<string, string>()
                 };
                 var postContext = BuildScriptContext(endpoint, callDepth, response: responseData, scriptType: ScriptType.PostRequest);
@@ -150,6 +151,10 @@ public class EndpointExecutionService : IEndpointExecutionService
                     result.ErrorMessage = string.IsNullOrEmpty(result.ErrorMessage)
                         ? postResult.ErrorMessage
                         : $"{result.ErrorMessage}\n{postResult.ErrorMessage}";
+                }
+                else if (postContext.RepeatRequested)
+                {
+                    return await ExecuteAsync(endpoint, callDepth);
                 }
             }
 
@@ -237,16 +242,25 @@ public class EndpointExecutionService : IEndpointExecutionService
             Body = endpoint.Body
         };
 
-        return new ScriptContext
+        var context = new ScriptContext
         {
             EnvironmentService = _activeEnvironmentService,
             Request = requestData,
             Response = response,
             CallDepth = callDepth,
-            ExecuteEndpoint = name => ExecuteEndpointByNameAsync(endpoint.ApplicationId, name, callDepth),
             EndpointName = endpoint.Name,
-            ScriptType = scriptType
+            ScriptType = scriptType,
+            CanRepeat = scriptType == ScriptType.PostRequest && !IsAuthenticateEndpoint(endpoint)
         };
+
+        context.ExecuteEndpoint = async name =>
+        {
+            var scriptResult = await ExecuteEndpointByNameForScriptAsync(endpoint.ApplicationId, name, callDepth);
+            context.RecordExecuteEndpointResult(scriptResult.Result.Success && scriptResult.WasAuthenticateEndpoint);
+            return scriptResult.Result;
+        };
+
+        return context;
     }
 
     private async Task<EndpointExecutionResult> ExecuteWithAuthAsync(Core.Models.Endpoint endpoint)
@@ -372,22 +386,38 @@ public class EndpointExecutionService : IEndpointExecutionService
         return returnInput;
     }
 
-    private async Task<EndpointExecutionResult> ExecuteEndpointByNameAsync(int applicationId, string name, Dictionary<int, int> callDepth)
+    private async Task<(EndpointExecutionResult Result, bool WasAuthenticateEndpoint)> ExecuteEndpointByNameForScriptAsync(
+        int applicationId,
+        string name,
+        Dictionary<int, int> callDepth)
     {
         var matches = await _endpointRepository.GetEndpointByNameAsync(applicationId, name);
         if (matches.Count == 0)
-            return new EndpointExecutionResult
+            return (new EndpointExecutionResult
             {
                 Success = false,
                 ErrorMessage = $"sz.execute: Kein Endpunkt mit dem Namen \"{name}\" gefunden."
-            };
+            }, false);
         if (matches.Count > 1)
-            return new EndpointExecutionResult
+            return (new EndpointExecutionResult
             {
                 Success = false,
                 ErrorMessage = $"sz.execute: Mehrdeutiger Endpunktname \"{name}\" — {matches.Count} Treffer gefunden."
-            };
-        return await ExecuteAsync(matches[0], callDepth);
+            }, false);
+
+        var targetEndpoint = matches[0];
+        return (await ExecuteAsync(targetEndpoint, callDepth), IsAuthenticateEndpoint(targetEndpoint));
+    }
+
+    private static bool IsAuthenticateEndpoint(Core.Models.Endpoint endpoint)
+    {
+        if (endpoint.Name.Equals("Authenticate", StringComparison.OrdinalIgnoreCase)
+            || endpoint.Name.Equals("POST /authenticate", StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        var path = endpoint.RelativePath.Trim().Trim('/').Trim();
+        return path.Equals("authenticate", StringComparison.OrdinalIgnoreCase)
+            || path.Equals("Authenticate()", StringComparison.OrdinalIgnoreCase);
     }
 
     private static string MaskSensitiveData(string text, IEnumerable<EnvironmentVariable> variables)

@@ -76,5 +76,9 @@ public class ODataImportServiceRealMetadataTests
         Assert.Contains(newEndpointNames, n => n.Contains("Endpoints") && n.Contains("POST"));
         Assert.Contains(newEndpointNames, n => n.Contains("EndpointGroups") && n.Contains("GET"));
         Assert.Contains(newEndpointNames, n => n.Contains("EndpointGroups") && n.Contains("POST"));
+
+        var applicationGet = diff.NewEndpoints.First(e => e.Name == "GET Applications");
+        Assert.Contains("sz.execute('Authenticate')", applicationGet.PostRequestScript);
+        Assert.Contains("sz.repeat()", applicationGet.PostRequestScript);
     }
 }

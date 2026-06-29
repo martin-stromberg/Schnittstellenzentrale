@@ -75,7 +75,8 @@ Innerhalb der Skripte steht ein `sz`-API-Objekt bereit:
 - `sz.request.url` / `sz.request.method` / `sz.request.headers` — Zugriff auf die Request-Daten.
 - `sz.request.body.raw` / `sz.request.body.asJson()` / `sz.request.body.asXml()` — Zugriff auf den Request-Body.
 - `sz.response.body.raw` / `sz.response.body.asJson()` / `sz.response.body.asXml()` / `sz.response.headers` — im Post-Skript: Zugriff auf die HTTP-Antwort.
-- `sz.execute(name)` — führt einen anderen Endpunkt der gleichen Anwendung synchron aus und gibt dessen Ergebnis zurück (`success`, `statusCode`, `responseBody`, `errorMessage`).
+- `sz.execute(name)` — führt einen anderen Endpunkt der gleichen Anwendung synchron aus und gibt einen Boolean zurück: `true` bei erfolgreicher Ausführung, sonst `false`.
+- `sz.repeat()` — wiederholt den aktuell ausgeführten Endpunkt, wenn der unmittelbar vorherige `sz.execute("Authenticate")`-Aufruf erfolgreich war.
 
 Endpunkte ohne Skript verhalten sich unverändert wie bisher.
 
@@ -93,8 +94,9 @@ sz.environment.set("token", body.access_token);
 
 Pre-Request-Skript:
 ```javascript
-var result = sz.execute("Login");
-sz.environment.set("bearer", result.responseBody);
+if (sz.execute("Authenticate")) {
+    sz.repeat();
+}
 ```
 
 ## Swagger-Import mit Erweiterungsfeldern
@@ -150,4 +152,6 @@ Ist keine Annotation vorhanden, wird der Standardwert aus dem vorhandenen Bearer
 - Ein im extrahierten Query-String vorhandener Key, der bereits manuell angelegt wurde, überschreibt den vorhandenen Wert nicht — der bestehende Eintrag bleibt erhalten.
 - Skripte haben ein Ausführungs-Timeout von 5 Sekunden; Endlosschleifen werden nach dieser Zeit abgebrochen.
 - `sz.environment.set()` persistiert die Änderung in der Datenbank, wenn eine Systemumgebung aktiv ist. Schlägt die Datenbankoperation oder die SignalR-Benachrichtigung fehl, wird das Post-Request-Skript als fehlgeschlagen gewertet. Ist keine Systemumgebung aktiv, ist die Änderung nur für die Laufzeit des Requests im Arbeitsspeicher vorhanden.
-- `sz.execute()` schlägt fehl, wenn der angegebene Name innerhalb der Anwendung nicht eindeutig ist (mehrere Treffer). Ein Rekursionsschutz verhindert, dass derselbe Endpunkt mehr als zweimal im gleichen Aufrufbaum aufgerufen wird.
+- `sz.execute(name)` liefert nur einen Boolean zurück und schlägt fehl, wenn der angegebene Name innerhalb der Anwendung nicht eindeutig ist (mehrere Treffer).
+- `sz.repeat()` ist nur direkt nach einem erfolgreichen `sz.execute("Authenticate")` wirksam. Für den Authenticate-Endpunkt selbst ist keine Wiederholung vorgesehen.
+- Ein Rekursionsschutz verhindert, dass derselbe Endpunkt mehr als zweimal im gleichen Aufrufbaum aufgerufen wird.
