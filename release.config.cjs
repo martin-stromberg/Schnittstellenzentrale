@@ -40,7 +40,9 @@ module.exports = {
     [
       '@semantic-release/github',
       {
-        assets
+        assets,
+        successComment: false,
+        failComment: false
       }
     ]
   ]
