@@ -1,0 +1,105 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build and publish release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install release dependencies
+        run: npm ci
+
+      - name: Resolve release version
+        id: version
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+            if [[ ! "${GITHUB_REF_NAME}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              echo "Unsupported release tag '${GITHUB_REF_NAME}'. Expected vX.Y.Z." >&2
+              exit 1
+            fi
+
+            echo "should_release=true" >> "${GITHUB_OUTPUT}"
+            echo "version=${GITHUB_REF_NAME#v}" >> "${GITHUB_OUTPUT}"
+            echo "tag=${GITHUB_REF_NAME}" >> "${GITHUB_OUTPUT}"
+          else
+            npm run release:probe
+          fi
+
+      - name: Restore
+        if: steps.version.outputs.should_release == 'true'
+        run: dotnet restore Schnittstellenzentrale.slnx
+
+      - name: Test
+        if: steps.version.outputs.should_release == 'true'
+        run: dotnet test Schnittstellenzentrale.slnx -c Release --no-restore --filter "FullyQualifiedName!~Playwright" -p:SkipPlaywrightInstall=true
+
+      - name: Publish
+        if: steps.version.outputs.should_release == 'true'
+        run: dotnet publish src/Schnittstellenzentrale/Schnittstellenzentrale.csproj -c Release -o artifacts/publish --no-restore
+
+      - name: Create ZIP
+        if: steps.version.outputs.should_release == 'true'
+        shell: pwsh
+        run: |
+          $version = '${{ steps.version.outputs.version }}'
+          New-Item -ItemType Directory -Force -Path artifacts/release | Out-Null
+          Compress-Archive -Path artifacts/publish/* -DestinationPath "artifacts/release/Schnittstellenzentrale-v$version.zip" -Force
+
+      - name: Upload workflow artifact
+        if: steps.version.outputs.should_release == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: Schnittstellenzentrale-v${{ steps.version.outputs.version }}
+          path: artifacts/release/Schnittstellenzentrale-v${{ steps.version.outputs.version }}.zip
+
+      - name: Publish semantic release
+        if: steps.version.outputs.should_release == 'true' && github.ref_type != 'tag'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_ASSET_PATH: artifacts/release/Schnittstellenzentrale-v${{ steps.version.outputs.version }}.zip
+        run: npm run release
+
+      - name: Publish tag release
+        if: steps.version.outputs.should_release == 'true' && github.ref_type == 'tag'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ steps.version.outputs.tag }}
+          RELEASE_VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          zip_path="artifacts/release/Schnittstellenzentrale-v${RELEASE_VERSION}.zip"
+
+          if gh release view "${RELEASE_TAG}" >/dev/null 2>&1; then
+            gh release upload "${RELEASE_TAG}" "${zip_path}" --clobber
+          else
+            gh release create "${RELEASE_TAG}" "${zip_path}" --title "${RELEASE_TAG}" --generate-notes
+          fi

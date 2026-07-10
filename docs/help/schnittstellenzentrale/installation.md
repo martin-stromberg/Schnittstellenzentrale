@@ -3,14 +3,14 @@
 ## Voraussetzungen
 
 - Windows Server oder Windows-Arbeitsstation mit IIS
-- .NET 9.0 Runtime (ASP.NET Core)
+- .NET 10.0 Runtime (ASP.NET Core)
 - Windows-Authentifizierung im IIS aktiviert (`Windows Authentication` Feature)
 - Anonyme Authentifizierung im IIS deaktiviert
 - SQLite (keine weitere Installation nötig) oder SQL Server
 
 ## Installationsschritte
 
-1. Anwendung im IIS-Verzeichnis publizieren (`dotnet publish` oder Visual Studio Publish).
+1. Bevorzugt das ZIP-Asset `Schnittstellenzentrale-vX.Y.Z.zip` aus dem passenden GitHub Release herunterladen und in das IIS-Verzeichnis entpacken. Alternativ Anwendung im IIS-Verzeichnis publizieren (`dotnet publish` oder Visual Studio Publish).
 2. In IIS einen neuen Site oder Anwendungspool anlegen; .NET CLR-Version auf „Kein verwalteter Code" setzen (Kestrel), Framework auf `No Managed Code`.
 3. Im IIS-Manager für die Site die **Windows-Authentifizierung aktivieren** und **Anonyme Authentifizierung deaktivieren**.
 4. `appsettings.json` im Veröffentlichungsverzeichnis anpassen (siehe Konfiguration unten).
