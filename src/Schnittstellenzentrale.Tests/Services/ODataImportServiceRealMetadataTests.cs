@@ -21,7 +21,7 @@ public class ODataImportServiceRealMetadataTests
         var model = ODataEdmModelBuilder.Build();
         var sb = new StringBuilder();
         using var xmlWriter = XmlWriter.Create(sb, new XmlWriterSettings { Indent = true });
-        CsdlWriter.TryWriteCsdl(model, xmlWriter, CsdlTarget.OData, out _);
+        CsdlWriter.TryWriteCsdl(model, xmlWriter, out _);
         xmlWriter.Flush();
         return sb.ToString();
     }

@@ -2,7 +2,7 @@
 
 ## Voraussetzungen
 
-- .NET 9.0 SDK
+- .NET 10.0 SDK
 - PowerShell (`pwsh`) — wird für das `playwright.ps1`-Skript benötigt, das Playwright-Browser installiert
 - Internetzugang beim ersten Build (Playwright lädt den Chromium-Browser herunter)
 
@@ -79,10 +79,10 @@ Damit Traces bei Fehlern als Build-Artefakte verfügbar sind, muss ein Upload-Sc
   if: failure()
   with:
     name: playwright-traces
-    path: src/Schnittstellenzentrale.Tests/bin/Debug/net9.0/playwright-traces/
+    path: src/Schnittstellenzentrale.Tests/bin/Debug/net10.0/playwright-traces/
 ```
 
-> **Hinweis:** Der genaue Pfad hängt von der Konfiguration und dem Arbeitsverzeichnis des CI-Runners ab. Die Datei wird vom Testprozess relativ zu seinem Arbeitsverzeichnis geschrieben, das in der Regel `bin/Debug/net9.0/` entspricht.
+> **Hinweis:** Der genaue Pfad hängt von der Konfiguration und dem Arbeitsverzeichnis des CI-Runners ab. Die Datei wird vom Testprozess relativ zu seinem Arbeitsverzeichnis geschrieben, das in der Regel `bin/Debug/net10.0/` entspricht.
 
 ## Überprüfung
 
