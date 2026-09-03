@@ -1,0 +1,207 @@
+name: PR CI for Staging
+
+# Set up fresh for this repo (ci-target-schema.md section 10 step 13) - there was no prior
+# pr.yml/test.yml to split. Job structure follows the cross-project hybrid model (section 4.2):
+# static-checks and build-and-test run in parallel with no needs: dependency between them.
+# detect-backmerge below is copied from Rezepte's own thorough merge-parent + tree-diff check
+# (already the most thorough variant across all projects, see ci-target-schema.md section
+# 10 step 9 / section 4.2) - it is the template the other projects are copying, not something
+# to weaken here.
+
+on:
+  pull_request:
+    branches:
+      - staging
+    types:
+      - opened
+      - synchronize
+      - reopened
+
+concurrency:
+  group: pr-staging-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  checks: write
+
+jobs:
+  detect-backmerge:
+    runs-on: ubuntu-latest
+    outputs:
+      is_backmerge: ${{ steps.check.outputs.is_backmerge }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Check whether this PR is a pure back-merge from main
+        id: check
+        run: |
+          git fetch origin main:refs/remotes/origin/main --no-tags
+
+          main_sha="$(git rev-parse origin/main)"
+          is_main_merge_parent=false
+          for parent in $(git show -s --format=%P HEAD); do
+            if [[ "$parent" == "$main_sha" ]]; then
+              is_main_merge_parent=true
+              break
+            fi
+          done
+
+          if [[ "$is_main_merge_parent" == "true" ]]; then
+            echo "is_backmerge=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::Back-merge from main detected - CI checks will be skipped."
+          elif git diff --quiet origin/main HEAD; then
+            echo "is_backmerge=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::Pure back-merge from main detected (tree identical) - CI checks will be skipped."
+          else
+            echo "is_backmerge=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  static-checks:
+    name: static checks
+    needs: detect-backmerge
+    if: needs.detect-backmerge.outputs.is_backmerge != 'true'
+    # Hybrid job model (ci-target-schema.md section 4.2): runs in parallel with build-and-test,
+    # with no needs: between them, so a format/security/lint failure is visible within seconds
+    # instead of waiting for the multi-minute build+test run to finish. windows-latest matches
+    # this app's genuinely Windows-only production runtime (Negotiate/Windows Authentication,
+    # Serilog EventLog sink) - see build-and-package/action.yml.
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore Schnittstellenzentrale.slnx
+        shell: pwsh
+
+      - name: Format check
+        # Gate 1. --severity error restricts this to whitespace/style plus genuine analyzer
+        # errors - analyzer-level warnings are Gate 3's concern; without this flag, plain
+        # `dotnet format --verify-no-changes` also fails on any warning-level analyzer
+        # diagnostic.
+        run: dotnet format Schnittstellenzentrale.slnx --verify-no-changes --no-restore --severity error
+        shell: pwsh
+
+      - name: Security scan
+        # Gate 2 - shared composite action, see .github/actions/security-scan.
+        uses: ./.github/actions/security-scan
+        with:
+          solution-path: Schnittstellenzentrale.slnx
+          artifact-name: vulnerable-packages-pr
+
+      - name: Static analysis
+        # Gate 3. A fresh -t:Rebuild with this exact flag during the migration surfaced 13 real
+        # issues (nullable-reference bugs, an ambiguous/broken XML-doc cref, and Windows-only
+        # API calls not guarded for CA1416) - all fixed in source rather than suppressed here,
+        # plus one narrowly justified #pragma warning disable EF1001 at its point of use in
+        # ProviderFilteredMigrationsAssemblies.cs (deliberate, documented internal-EF-API usage
+        # with no supported alternative). No WarningsNotAsErrors exclusions are needed for this
+        # gate.
+        run: dotnet build Schnittstellenzentrale.slnx --configuration Release --no-restore -p:TreatWarningsAsErrors=true
+        shell: pwsh
+
+  build-and-test:
+    name: build & test
+    needs: detect-backmerge
+    if: needs.detect-backmerge.outputs.is_backmerge != 'true'
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore Schnittstellenzentrale.slnx
+        shell: pwsh
+
+      - name: Build
+        # Also triggers Schnittstellenzentrale.Tests' own InstallPlaywright MSBuild target
+        # (AfterTargets="Build"), which installs the Chromium browser used by the Playwright
+        # step below - no separate "install Playwright browsers" step is needed here, unlike
+        # FinanceManager/Rezepte's npm-based Playwright setup.
+        run: dotnet build Schnittstellenzentrale.slnx --configuration Release --no-restore
+        shell: pwsh
+
+      - name: Test
+        # Gate 4 (blocking): this repo's own established default test command (see CLAUDE.md)
+        # excludes the Playwright suite; collects coverage, since this is the blocking test
+        # category that feeds the coverage threshold below (ci-target-schema.md section 4.5).
+        run: dotnet test Schnittstellenzentrale.slnx --configuration Release --no-build --filter "FullyQualifiedName!~Playwright" --collect:"XPlat Code Coverage" --logger "trx;LogFileName=test-results.trx" --logger "console;verbosity=normal"
+        shell: pwsh
+
+      - name: Test Playwright
+        # Best-effort (continue-on-error), matching FinanceManager's E2E-category treatment:
+        # browser-driven tests are not always reliable on GitHub-hosted runners, so they don't
+        # block PRs on their own. Coverage is still collected and merged into the threshold
+        # check below when this step succeeds, since a large share of the Blazor component
+        # tree is exercised only through these UI-driven tests rather than bUnit - excluding it
+        # outright would make the 70% threshold effectively uncheckable against this repo's
+        # real coverage.
+        continue-on-error: true
+        run: dotnet test Schnittstellenzentrale.slnx --configuration Release --no-build --filter "FullyQualifiedName~Playwright" --collect:"XPlat Code Coverage" --logger "trx;LogFileName=test-results-playwright.trx" --logger "console;verbosity=normal"
+        shell: pwsh
+
+      - name: Install ReportGenerator
+        run: dotnet tool install -g dotnet-reportgenerator-globaltool --version 5.5.11
+        shell: pwsh
+
+      - name: Generate coverage report
+        run: reportgenerator "-reports:src/Schnittstellenzentrale.Tests/TestResults/**/coverage.cobertura.xml" "-targetdir:coverage-report" "-reporttypes:TextSummary"
+        shell: pwsh
+
+      - name: Enforce coverage threshold
+        # Gate 5: hard 70% line-coverage minimum (ci-target-schema.md section 4.5).
+        env:
+          COVERAGE_THRESHOLD: '70'
+        run: |
+          $summary = Get-Content coverage-report/Summary.txt -Raw
+          if ($summary -notmatch "Line coverage:\s*([\d.,]+)%") {
+            throw "Could not determine line coverage from the generated report."
+          }
+          $lineCoverage = [double]($matches[1] -replace ',', '.')
+          $threshold = [double]$env:COVERAGE_THRESHOLD
+          Write-Host "Line coverage: $lineCoverage% (threshold: $threshold%)"
+          if ($lineCoverage -lt $threshold) {
+            throw "Code coverage $lineCoverage% is below the required threshold of $threshold%."
+          }
+        shell: pwsh
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage-report-pr
+          path: coverage-report/
+          retention-days: 14
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-results-pr
+          path: |
+            src/Schnittstellenzentrale.Tests/TestResults/*.trx
+          retention-days: 14
+
+  back-merge-skip:
+    needs: detect-backmerge
+    if: needs.detect-backmerge.outputs.is_backmerge == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Back-merge detected
+        run: echo "Back-merge PR from main detected. Redundant checks are skipped."
