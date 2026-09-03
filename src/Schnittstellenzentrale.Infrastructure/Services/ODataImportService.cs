@@ -235,7 +235,7 @@ public class ODataImportService : IODataImportService
         AuthenticationType authType,
         string? bearerTokenValue,
         string? postScript = null,
-        IReadOnlyDictionary<string, string> headers = null)
+        IReadOnlyDictionary<string, string>? headers = null)
     {
         var endpoint = new Core.Models.Endpoint
         {
