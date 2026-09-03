@@ -311,8 +311,8 @@ public class ApplicationApiClient : IApplicationApiClient
             PreRequestScript = endpoint.PreRequestScript,
             PostRequestScript = endpoint.PostRequestScript,
             RowVersion = endpoint.RowVersion,
-            Headers = [..endpoint.Headers.Select(h => new UpdateEndpointKeyValueItem { Key = h.Key, Value = h.Value })],
-            QueryParameters = [..endpoint.QueryParameters.Select(q => new UpdateEndpointKeyValueItem { Key = q.Key, Value = q.Value })]
+            Headers = [.. endpoint.Headers.Select(h => new UpdateEndpointKeyValueItem { Key = h.Key, Value = h.Value })],
+            QueryParameters = [.. endpoint.QueryParameters.Select(q => new UpdateEndpointKeyValueItem { Key = q.Key, Value = q.Value })]
         };
 
         var response = await SendWithTokenAsync<EndpointResponse>(
