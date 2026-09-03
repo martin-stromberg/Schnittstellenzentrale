@@ -34,7 +34,7 @@ public class EndpointExecutionService : IEndpointExecutionService
     private readonly ILogger<EndpointExecutionService> _logger;
     private readonly IStorageModeService _storageModeService;
 
-    private Dictionary<string, string> _internalVariables = null;
+    private Dictionary<string, string>? _internalVariables = null;
 
 
     /// <summary>Initialisiert eine neue Instanz des <see cref="EndpointExecutionService"/>.</summary>
@@ -276,6 +276,12 @@ public class EndpointExecutionService : IEndpointExecutionService
 
     private async Task<EndpointExecutionResult> ExecuteImpersonatedAsync(Core.Models.Endpoint endpoint)
     {
+        // Windows-Identitäts-Impersonation ist nur unter Windows verfügbar; diese Anwendung
+        // läuft ausschließlich dort (siehe appsettings-Serilog-EventLog-Sink / IIS-Betrieb). Die
+        // explizite Prüfung dokumentiert diese Voraussetzung und erfüllt zugleich CA1416.
+        if (!OperatingSystem.IsWindows())
+            throw new PlatformNotSupportedException($"{nameof(ExecuteImpersonatedAsync)} requires Windows (WindowsIdentity impersonation).");
+
         using var windowsIdentity = WindowsIdentity.GetCurrent();
 
         return await WindowsIdentity.RunImpersonatedAsync(windowsIdentity.AccessToken, async () =>

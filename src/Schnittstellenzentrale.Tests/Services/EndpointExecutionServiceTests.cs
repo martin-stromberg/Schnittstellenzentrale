@@ -36,20 +36,20 @@ public class EndpointExecutionServiceTests
         string? postRequestScript = null,
         string name = "Test",
         int id = 1) => new()
-    {
-        Id = id,
-        Name = name,
-        Method = method,
-        RelativePath = relPath,
-        AuthenticationType = authType,
-        ApplicationId = 1,
-        Application = CreateApp(),
-        Headers = headers ?? [],
-        QueryParameters = queryParameters ?? [],
-        Body = body,
-        PreRequestScript = preRequestScript,
-        PostRequestScript = postRequestScript
-    };
+        {
+            Id = id,
+            Name = name,
+            Method = method,
+            RelativePath = relPath,
+            AuthenticationType = authType,
+            ApplicationId = 1,
+            Application = CreateApp(),
+            Headers = headers ?? [],
+            QueryParameters = queryParameters ?? [],
+            Body = body,
+            PreRequestScript = preRequestScript,
+            PostRequestScript = postRequestScript
+        };
 
     private static Mock<IActiveEnvironmentService> CreateEmptyActiveEnvironmentMock()
     {
@@ -620,7 +620,8 @@ public class EndpointExecutionServiceTests
             .Callback<string, ScriptContext>((_, ctx) =>
                 ctx.EnvironmentService.SetActiveEnvironment(new Core.Models.SystemEnvironment
                 {
-                    Id = 1, Name = "Test",
+                    Id = 1,
+                    Name = "Test",
                     Variables = [new Core.Models.EnvironmentVariable { Name = "host", Value = "changed" }]
                 }))
             .ReturnsAsync(new ScriptExecutionResult { Success = true });
@@ -642,7 +643,7 @@ public class EndpointExecutionServiceTests
         Assert.NotNull(sentUri);
         Assert.Contains("/changed/test", sentUri!.PathAndQuery);
         Assert.DoesNotContain("original", sentUri.PathAndQuery);
-        scriptMock.Verify(r => r.ExecuteAsync(endpoint.PreRequestScript, It.IsAny<ScriptContext>()), Times.Once);
+        scriptMock.Verify(r => r.ExecuteAsync(endpoint.PreRequestScript!, It.IsAny<ScriptContext>()), Times.Once);
     }
 
     /// <summary>PreScript_Fehler_BlockiertHttpRequest_FehlerMeldungImErgebnis</summary>
@@ -681,7 +682,7 @@ public class EndpointExecutionServiceTests
 
         Assert.True(result.Success);
         scriptMock.Verify(r => r.ExecuteAsync(
-            endpoint.PostRequestScript,
+            endpoint.PostRequestScript!,
             It.Is<ScriptContext>(ctx => ctx.Response != null && ctx.Response.Body!.Contains("token"))),
             Times.Once);
     }

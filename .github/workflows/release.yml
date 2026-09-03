@@ -1,105 +1,174 @@
 name: Release
 
+# Adapted to the target schema (ci-target-schema.md sections 4.6/4.7/4.10/6.1) from the
+# previous, already-working release.yml built by an earlier, now-superseded effort. That
+# version already had the right trigger shape (push to main + vX.Y.Z tags) and a working
+# semantic-release/npm setup, but published framework-dependent (no --self-contained), had no
+# update manifest, and its scripts/resolve-release-version.mjs was only a semantic-release
+# dry-run probe with no asset-repair or manual-tag-release logic. This version replaces that
+# probe with the generalized asset-repair mechanism from FinanceManager/Rezepte (see
+# scripts/resolve-release-version.mjs) and adds self-contained win-x64 publishing plus the
+# Rezepte-format update manifest via .github/actions/build-and-package.
+
 on:
   push:
-    branches:
-      - main
-    tags:
-      - 'v*.*.*'
+    branches: [main]
+    tags: ['v*.*.*']
 
 permissions:
   contents: write
+  issues: write
+  pull-requests: write
+
+# Prevents parallel release runs (e.g. a fast merge to main followed shortly after by a
+# manually pushed tag): resolve-release-version.mjs decides on a single target tag/version by
+# querying the GitHub API and existing tags - without serialization, two concurrent runs could
+# race for the same version or fail to create the release.
+concurrency:
+  group: release
+  cancel-in-progress: false
 
 jobs:
   release:
-    name: Build and publish release
     runs-on: windows-latest
+    timeout-minutes: 30
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - name: Check out repository
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
+          fetch-tags: true
 
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: 10.0.x
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
 
       - name: Install release dependencies
         run: npm ci
 
       - name: Resolve release version
+        # Generalized asset-repair mechanism (ci-target-schema.md section 4.10): classifies
+        # this run as automatic (branch push to main, version via semantic-release --dry-run)
+        # or manual (a pushed vX.Y.Z tag), then checks whether a GitHub release for the
+        # resolved tag already exists and whether it already has all expected assets. Missing
+        # assets are repaired in place instead of duplicating the release. Only "main" pushes
+        # are treated as automatic here - staging pushes go through staging-ci.yml
+        # ("Pre-Release") instead. See scripts/resolve-release-version.mjs.
         id: version
-        shell: bash
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/resolve-release-version.mjs
+
+      - name: Check out release tag for asset repair
+        # Only relevant for the repair path: a previous run created the tag/release but was
+        # interrupted before all assets were uploaded. This checks out the exact tagged
+        # commit so the rebuilt asset matches the already-published release, instead of
+        # rebuilding from whatever commit triggered this run.
+        if: steps.version.outputs.released == 'true' && steps.version.outputs.release_action == 'upload-existing'
+        env:
+          RELEASE_TAG: ${{ steps.version.outputs.tag }}
         run: |
-          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
-            if [[ ! "${GITHUB_REF_NAME}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-              echo "Unsupported release tag '${GITHUB_REF_NAME}'. Expected vX.Y.Z." >&2
-              exit 1
-            fi
+          git checkout --detach "$env:RELEASE_TAG"
+          if ($LASTEXITCODE -ne 0) {
+            throw "Could not check out release tag '$env:RELEASE_TAG'."
+          }
 
-            echo "should_release=true" >> "${GITHUB_OUTPUT}"
-            echo "version=${GITHUB_REF_NAME#v}" >> "${GITHUB_OUTPUT}"
-            echo "tag=${GITHUB_REF_NAME}" >> "${GITHUB_OUTPUT}"
-          else
-            npm run release:probe
-          fi
+          $expectedCommit = git rev-parse "$env:RELEASE_TAG^{commit}"
+          if ($LASTEXITCODE -ne 0) {
+            throw "Could not resolve release tag '$env:RELEASE_TAG' to a commit."
+          }
 
-      - name: Restore
-        if: steps.version.outputs.should_release == 'true'
-        run: dotnet restore Schnittstellenzentrale.slnx
+          $checkedOutCommit = git rev-parse HEAD
+          if ($LASTEXITCODE -ne 0 -or $checkedOutCommit -ne $expectedCommit) {
+            throw "Release tag checkout did not resolve to the tagged commit."
+          }
 
-      - name: Test
-        if: steps.version.outputs.should_release == 'true'
-        run: dotnet test Schnittstellenzentrale.slnx -c Release --no-restore --filter "FullyQualifiedName!~Playwright" -p:SkipPlaywrightInstall=true
-
-      - name: Publish
-        if: steps.version.outputs.should_release == 'true'
-        run: dotnet publish src/Schnittstellenzentrale/Schnittstellenzentrale.csproj -c Release -o artifacts/publish --no-restore
-
-      - name: Create ZIP
-        if: steps.version.outputs.should_release == 'true'
-        shell: pwsh
+      - name: Release gate - tests
+        # Safety net now that there is no dedicated PR-gate workflow directly against main
+        # (ci-target-schema.md section 11, item 2): PRs against main can only come from
+        # staging, which was already fully validated by pr-staging-ci.yml/staging-ci.yml, so
+        # this re-run mainly guards against a race between that validation and the actual
+        # merge or tag push. Runs for both automatic and manual-tag releases, but not for the
+        # asset-repair path, which only needs to rebuild an already-validated release. Uses
+        # this repo's own established test filter (excludes Playwright; see CLAUDE.md) rather
+        # than a full E2E re-run, matching this release gate's narrower safety-net role.
+        if: steps.version.outputs.released == 'true' && steps.version.outputs.release_action == 'create'
         run: |
-          $version = '${{ steps.version.outputs.version }}'
-          New-Item -ItemType Directory -Force -Path artifacts/release | Out-Null
-          Compress-Archive -Path artifacts/publish/* -DestinationPath "artifacts/release/Schnittstellenzentrale-v$version.zip" -Force
+          dotnet restore Schnittstellenzentrale.slnx
+          dotnet test Schnittstellenzentrale.slnx -c Release --filter "FullyQualifiedName!~Playwright" -p:SkipPlaywrightInstall=true
 
-      - name: Upload workflow artifact
-        if: steps.version.outputs.should_release == 'true'
-        uses: actions/upload-artifact@v4
+      - name: Generate release notes for update manifest
+        id: notes
+        if: steps.version.outputs.released == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          $json = gh api repos/${{ github.repository }}/releases/generate-notes -f tag_name="$env:RELEASE_TAG"
+          $notes = ($json | ConvertFrom-Json).body
+          $notesPath = Join-Path $PWD "release-notes.md"
+          Set-Content -LiteralPath $notesPath -Value $notes -Encoding UTF8
+          "notes_path=release-notes.md" | Add-Content -Path $env:GITHUB_OUTPUT
+
+          $delimiter = "NOTES_EOF_$([guid]::NewGuid().ToString('N'))"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "notes<<$delimiter"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value $notes
+          Add-Content -Path $env:GITHUB_OUTPUT -Value $delimiter
+
+      - name: Build and package
+        id: build
+        if: steps.version.outputs.released == 'true'
+        uses: ./.github/actions/build-and-package
         with:
-          name: Schnittstellenzentrale-v${{ steps.version.outputs.version }}
-          path: artifacts/release/Schnittstellenzentrale-v${{ steps.version.outputs.version }}.zip
+          release-version: ${{ steps.version.outputs.version }}
+          release-tag: ${{ steps.version.outputs.tag }}
+          release-notes: ${{ steps.notes.outputs.notes }}
 
-      - name: Publish semantic release
-        if: steps.version.outputs.should_release == 'true' && github.ref_type != 'tag'
+      - name: Create automatic GitHub release
+        # Goes through semantic-release's own publish pipeline (releasePlugins in
+        # release.config.cjs: commit-analyzer, verify-release-version, release-notes-generator,
+        # then @semantic-release/github, which creates the tag, the GitHub release and uploads
+        # the assets listed below).
+        if: steps.version.outputs.released == 'true' && steps.version.outputs.release_action == 'create' && steps.version.outputs.release_kind == 'automatic'
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          RELEASE_ASSET_PATH: artifacts/release/Schnittstellenzentrale-v${{ steps.version.outputs.version }}.zip
+          GITHUB_TOKEN: ${{ github.token }}
+          RELEASE_ASSET_PATHS: ${{ steps.build.outputs.asset-paths }}
+          RELEASE_MANIFEST_PATH: ${{ steps.build.outputs.manifest-path }}
+          RELEASE_VERSION: ${{ steps.version.outputs.version }}
         run: npm run release
 
-      - name: Publish tag release
-        if: steps.version.outputs.should_release == 'true' && github.ref_type == 'tag'
-        shell: bash
+      - name: Create manual-tag GitHub release
+        # Manual and asset-repair releases intentionally stay on gh CLI rather than
+        # softprops/action-gh-release: this repo's previous release.yml already used gh CLI
+        # exclusively for this, and FinanceManager's finished implementation (the closer
+        # structural template here - both are windows-latest/PowerShell app projects) settled
+        # on the same approach (ci-target-schema.md section 6.4 pins
+        # softprops/action-gh-release only "if used" - it isn't, here).
+        if: steps.version.outputs.released == 'true' && steps.version.outputs.release_action == 'create' && steps.version.outputs.release_kind == 'manual'
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_ASSET_PATHS: ${{ steps.build.outputs.asset-paths }}
+          RELEASE_MANIFEST_PATH: ${{ steps.build.outputs.manifest-path }}
           RELEASE_TAG: ${{ steps.version.outputs.tag }}
-          RELEASE_VERSION: ${{ steps.version.outputs.version }}
         run: |
-          zip_path="artifacts/release/Schnittstellenzentrale-v${RELEASE_VERSION}.zip"
+          $assets = @($env:RELEASE_ASSET_PATHS -split ';') + @($env:RELEASE_MANIFEST_PATH)
+          gh release create "$env:RELEASE_TAG" @assets --title "$env:RELEASE_TAG" --notes-file "${{ steps.notes.outputs.notes_path }}" --verify-tag
 
-          if gh release view "${RELEASE_TAG}" >/dev/null 2>&1; then
-            gh release upload "${RELEASE_TAG}" "${zip_path}" --clobber
-          else
-            gh release create "${RELEASE_TAG}" "${zip_path}" --title "${RELEASE_TAG}" --generate-notes
-          fi
+      - name: Upload asset to existing GitHub release
+        if: steps.version.outputs.released == 'true' && steps.version.outputs.release_action == 'upload-existing'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_ASSET_PATHS: ${{ steps.build.outputs.asset-paths }}
+          RELEASE_MANIFEST_PATH: ${{ steps.build.outputs.manifest-path }}
+          RELEASE_TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          $assets = @($env:RELEASE_ASSET_PATHS -split ';') + @($env:RELEASE_MANIFEST_PATH)
+          gh release upload "$env:RELEASE_TAG" @assets --clobber

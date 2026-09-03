@@ -18,7 +18,8 @@ using Microsoft.AspNetCore.DataProtection;
 
 
 /// <summary>Einstiegspunkt der Anwendung (für Integrationstests als partielle Klasse zugänglich).</summary>
-public partial class Program {
+public partial class Program
+{
     /// <summary>
     /// Einstiegsmethode der Anwendung
     /// </summary>

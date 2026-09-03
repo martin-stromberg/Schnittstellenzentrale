@@ -12,7 +12,7 @@ public class WindowsCurrentUserService : ICurrentUserService
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
     /// <summary>
-    /// Initialisiert eine neue Instanz von <see cref="WindowsCurrentUserService"/>. Das übergebenen <see cref="IHttpContextAccessor"/> wird nicht verwendet, da die Windows-Identität direkt über <see cref="WindowsIdentity.GetCurrent"/> abgerufen wird.
+    /// Initialisiert eine neue Instanz von <see cref="WindowsCurrentUserService"/>. Das übergebenen <see cref="IHttpContextAccessor"/> wird nicht verwendet, da die Windows-Identität direkt über <see cref="WindowsIdentity.GetCurrent()"/> abgerufen wird.
     /// </summary>
     /// <param name="httpContextAccessor">Der HTTP-Kontext-Accessor, der für die Ermittlung des aktuellen Benutzers verwendet werden kann.</param>
     public WindowsCurrentUserService(IHttpContextAccessor httpContextAccessor)
@@ -28,6 +28,13 @@ public class WindowsCurrentUserService : ICurrentUserService
         var identity = _httpContextAccessor.HttpContext?.User?.Identity;
         if (identity?.IsAuthenticated == true && !string.IsNullOrEmpty(identity.Name))
             return identity.Name;
+
+        // Falls kein authentifizierter HTTP-Kontext vorliegt, wird die Windows-Identität des
+        // aktuellen Prozesses verwendet. Dieser Dienst wird ausschließlich unter Windows
+        // betrieben (siehe appsettings-Serilog-EventLog-Sink / IIS-Betrieb); die explizite
+        // Prüfung dokumentiert diese Voraussetzung und erfüllt zugleich CA1416.
+        if (!OperatingSystem.IsWindows())
+            throw new PlatformNotSupportedException($"{nameof(WindowsCurrentUserService)} requires Windows when no authenticated HTTP context is available.");
 
         using var windowsIdentity = WindowsIdentity.GetCurrent();
         return windowsIdentity.Name;
