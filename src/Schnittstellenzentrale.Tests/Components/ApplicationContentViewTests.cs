@@ -166,4 +166,47 @@ public class ApplicationContentViewTests : BunitContext
         Assert.Contains("Swagger nicht erreichbar", cut.Markup);
         Assert.Empty(cut.FindComponents<SwaggerImportDialog>());
     }
+
+    /// <summary>OpenSwaggerImportAsync verarbeitet einen zusätzlichen Fehlerzustand ohne Dialogöffnung.</summary>
+    [Fact]
+    public async Task OpenSwaggerImport_OnAdditionalErrorState_HandlesGracefully()
+    {
+        var app = CreateRestApplication();
+        _apiClientMock
+            .Setup(s => s.ImportMetadataAsync(app.Id))
+            .ReturnsAsync(new ImportDiff { ErrorMessage = "Zusätzlicher Swagger-Fehler" });
+
+        var cut = Render<ApplicationContentView>(p => p.Add(x => x.Application, app));
+        var button = cut.FindAll("button")
+            .Single(b => b.TextContent.Contains("ApplicationContentView_Button_SwaggerImport"));
+
+        await cut.InvokeAsync(() => button.Click());
+
+        Assert.Contains("Zusätzlicher Swagger-Fehler", cut.Markup);
+        Assert.Empty(cut.FindComponents<SwaggerImportDialog>());
+    }
+
+    /// <summary>OpenODataImportAsync öffnet nach einem initialen Fehler beim zweiten erfolgreichen Versuch den Dialog.</summary>
+    [Fact]
+    public async Task OpenODataImport_OnAdditionalSuccessPath_HandlesGracefully()
+    {
+        var dependencies = TestMockFactory.CreateCoverageScenarioDependencies();
+        var app = dependencies.ODataApplication;
+        _apiClientMock
+            .SetupSequence(s => s.ImportMetadataAsync(app.Id))
+            .ReturnsAsync(new ImportDiff { ErrorMessage = "Temporärer OData-Fehler" })
+            .ReturnsAsync(new ImportDiff());
+
+        var cut = Render<ApplicationContentView>(p => p.Add(x => x.Application, app));
+        var button = cut.FindAll("button")
+            .Single(b => b.TextContent.Contains("ApplicationContentView_Button_ODataImport"));
+
+        await cut.InvokeAsync(() => button.Click());
+        Assert.Contains("Temporärer OData-Fehler", cut.Markup);
+
+        await cut.InvokeAsync(() => button.Click());
+
+        Assert.DoesNotContain("Temporärer OData-Fehler", cut.Markup);
+        Assert.Single(cut.FindComponents<ODataImportDialog>());
+    }
 }
