@@ -35,4 +35,54 @@ public static class TestMockFactory
             .Returns<string, object[]>((key, args) => new LocalizedString(key, string.Format(key, args)));
         return mock.Object;
     }
+
+    /// <summary>Erstellt gemeinsame Mocks und Testdaten für Coverage-orientierte UI-Fehlerszenarien.</summary>
+    public static CoverageTestFactory CreateCoverageScenarioDependencies()
+    {
+        var applicationApiClientMock = new Mock<IApplicationApiClient>();
+        applicationApiClientMock
+            .Setup(c => c.GetEndpointsAsync(It.IsAny<int>(), It.IsAny<int?>()))
+            .ReturnsAsync([]);
+
+        var applicationServiceMock = new Mock<IApplicationService>();
+
+        var environmentRepositoryMock = new Mock<ISystemEnvironmentRepository>();
+        environmentRepositoryMock
+            .Setup(r => r.GetEnvironmentsAsync(It.IsAny<StorageMode>(), It.IsAny<string?>()))
+            .ReturnsAsync([]);
+
+        var activeEnvironmentServiceMock = new Mock<IActiveEnvironmentService>();
+        activeEnvironmentServiceMock
+            .Setup(s => s.ActiveEnvironment)
+            .Returns((SystemEnvironment?)null);
+
+        var restApplication = new Application
+        {
+            Id = 100,
+            Name = "Coverage REST",
+            BaseUrl = "https://example.test",
+            InterfaceType = InterfaceType.Rest,
+            InterfaceUrl = "https://example.test/swagger/v1/swagger.json"
+        };
+
+        var odataApplication = new Application
+        {
+            Id = 101,
+            Name = "Coverage OData",
+            BaseUrl = "https://example.test",
+            InterfaceType = InterfaceType.OData,
+            InterfaceUrl = "https://example.test/$metadata"
+        };
+
+        var selectedEnvironment = CreateEnv(12, "Coverage-Environment");
+
+        return new CoverageTestFactory(
+            applicationApiClientMock,
+            applicationServiceMock,
+            environmentRepositoryMock,
+            activeEnvironmentServiceMock,
+            restApplication,
+            odataApplication,
+            selectedEnvironment);
+    }
 }
