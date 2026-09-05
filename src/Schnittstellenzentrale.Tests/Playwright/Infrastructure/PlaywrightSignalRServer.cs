@@ -21,7 +21,7 @@ public class PlaywrightSignalRServer : PlaywrightServer
     }
 
     /// <summary>
-    /// Stellt den <see cref="ApiNotificationProxy"/> auf den echten <see cref="IHubContext{EndpointHub}"/>
+    /// Stellt den <see cref="PlaywrightServer.ApiNotificationProxy"/> auf den echten <see cref="IHubContext{EndpointHub}"/>
     /// des Kestrel-Servers um, damit API-Controller-Notifications die verbundenen Browser erreichen.
     /// </summary>
     protected override Task OnAfterStartAsync()

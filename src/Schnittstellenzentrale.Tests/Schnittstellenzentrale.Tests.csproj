@@ -10,6 +10,11 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- Direct override to pull in AngleSharp >= 1.5.0: bunit 2.7.2 transitively resolves the
+         vulnerable AngleSharp 1.4.0 (GHSA-pgww-w46g-26qg, moderate, mXSS via annotation-xml HTML
+         integration point), which fails the security-scan quality gate. NuGet's nearest-wins
+         resolution picks this direct reference over the transitive one. -->
+    <PackageReference Include="AngleSharp" Version="1.5.0" />
     <PackageReference Include="bunit" Version="2.7.2" />
     <PackageReference Include="coverlet.collector" Version="10.0.0">
       <PrivateAssets>all</PrivateAssets>

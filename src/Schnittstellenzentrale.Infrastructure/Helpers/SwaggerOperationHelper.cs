@@ -155,7 +155,7 @@ public static class SwaggerOperationHelper
             .Where(p => p.In == ParameterLocation.Header)
             .Select(p => new EndpointHeader
             {
-                Key = p.Name,
+                Key = p.Name ?? string.Empty,
                 Value = ExtractDefaultValue(p)
             })
             .ToList();

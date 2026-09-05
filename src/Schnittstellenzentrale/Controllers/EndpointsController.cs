@@ -189,11 +189,13 @@ public class EndpointsController : ApiControllerBase
             });
 
         var updated = await _endpointRepository.GetEndpointByIdAsync(id);
+        if (updated == null)
+            return NotFound();
 
         if (context.StorageMode == StorageMode.Team)
             await _signalRNotificationService.NotifyEndpointChangedAsync(updated.Id, updated.ApplicationId);
 
-        return Ok(MapToResponse(updated!));
+        return Ok(MapToResponse(updated));
     }
 
     /// <summary>

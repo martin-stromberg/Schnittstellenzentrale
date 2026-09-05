@@ -73,7 +73,7 @@ public class SystemEndpointSyncServiceTests
     {
         var doc = DocumentWithPaths(operations);
         foreach (var pathItem in doc.Paths.Values)
-            foreach (var operation in pathItem.Operations.Values)
+            foreach (var operation in pathItem.Operations?.Values ?? Enumerable.Empty<OpenApiOperation>())
                 (operation.Security ??= []).Add(new OpenApiSecurityRequirement
                 {
                     { new OpenApiSecuritySchemeReference("Negotiate", null), new List<string>() }

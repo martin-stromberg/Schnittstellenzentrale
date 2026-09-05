@@ -50,19 +50,19 @@ public class EndpointPageTests : BunitContext
         RequestQueryParamsPanel.QueryParamEntry[]? queryParameters = null,
         int id = 1,
         string name = "Test") => new()
-    {
-        Id = id,
-        Name = name,
-        RelativePath = relPath,
-        Method = Core.Enums.HttpMethod.GET,
-        Body = body,
-        ApplicationId = 1,
-        Application = new Application { Id = 1, Name = "App", BaseUrl = "http://example.com" },
-        Headers = [],
-        QueryParameters = queryParameters?
+        {
+            Id = id,
+            Name = name,
+            RelativePath = relPath,
+            Method = Core.Enums.HttpMethod.GET,
+            Body = body,
+            ApplicationId = 1,
+            Application = new Application { Id = 1, Name = "App", BaseUrl = "http://example.com" },
+            Headers = [],
+            QueryParameters = queryParameters?
             .Select(p => new EndpointQueryParameter { Key = p.Key, Value = p.Value })
             .ToList() ?? []
-    };
+        };
 
     private static EndpointExecutionResult CreateResult(string responseBody) => new()
     {

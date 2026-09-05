@@ -36,7 +36,7 @@ public class ODataApplicationGroupsController : ODataControllerBase
         {
             var systemGroup = await _applicationRepository.GetSystemGroupAsync();
             if (systemGroup != null && !groups.Any(g => g.Id == systemGroup.Id))
-                groups = [..groups, systemGroup];
+                groups = [.. groups, systemGroup];
         }
 
         return Ok(groups.AsQueryable());
