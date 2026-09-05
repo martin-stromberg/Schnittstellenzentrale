@@ -14,10 +14,10 @@ description: >
 
 inputs:
   release-version:
-    description: Version without a leading v, written into release-metadata.json and update.json.
+    description: Version without a leading v, written into update.json.
     required: true
   release-tag:
-    description: Release tag (e.g. v1.2.3 or v1.2.3-rc.1), written into release-metadata.json and used to build the asset download URL.
+    description: Release tag (e.g. v1.2.3 or v1.2.3-rc.1), used to build the asset download URL.
     required: true
   release-notes:
     description: Release notes text to embed in update.json's releaseNotes field.
@@ -58,15 +58,6 @@ runs:
         if ($LASTEXITCODE -ne 0) {
           throw "Publish failed for win-x64."
         }
-
-        $metadata = @{
-          version = $env:RELEASE_VERSION
-          publishedAt = (Get-Date).ToUniversalTime().ToString("O")
-          commitSha = $env:GITHUB_SHA
-          repository = $env:GITHUB_REPOSITORY
-          runtimeIdentifier = "win-x64"
-        } | ConvertTo-Json
-        Set-Content -LiteralPath (Join-Path $output "release-metadata.json") -Value $metadata -Encoding UTF8
 
         if (-not (Test-Path publish -PathType Container)) {
           throw "The publish directory was not created."
