@@ -1,5 +1,6 @@
 # Schnittstellenzentrale
 
+[![Release](https://img.shields.io/github/actions/workflow/status/martin-stromberg/Schnittstellenzentrale/release.yml?label=Release)](https://github.com/martin-stromberg/Schnittstellenzentrale/actions/workflows/release.yml)
 ![.NET](https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet&logoColor=white)
 ![Blazor](https://img.shields.io/badge/Blazor-Server-512BD4?logo=blazor&logoColor=white)
 ![EF Core](https://img.shields.io/badge/EF_Core-10-512BD4?logo=dotnet&logoColor=white)
@@ -174,6 +175,12 @@ dotnet test --filter "FullyQualifiedName!~Playwright"
 dotnet test --filter "FullyQualifiedName~Playwright"
 ```
 
+**Coverage-Lauf** (lokale Abfrage der Line-Coverage inklusive der Playwright-Tests):
+
+```
+dotnet test Schnittstellenzentrale.slnx --collect:"XPlat Code Coverage"
+```
+
 Beim ersten Build nach dem Klonen lädt das MSBuild-Target `InstallPlaywright` den Chromium-Browser herunter. Zum Überspringen in CI-Umgebungen:
 
 ```
@@ -186,8 +193,8 @@ Trace-Dateien der Playwright-Tests werden nach jedem Lauf unter `playwright-trac
 npx playwright show-trace playwright-traces/ApplicationCrudTests.zip
 ```
 
-Abgedeckte E2E-Szenarien: Startseite, Anwendungs-CRUD, Endpunkt-Ausführung, Swagger-Import, OData-Import, Health-Check, Speichermoduswechsel, SignalR-Echtzeitsynchronisation.
+Das Repository nutzt ein lokales Qualitätsgate für 70 % Line Coverage; die bUnit- und Playwright-Tests werden gezielt erweitert, damit der CI-Lauf stabil durchläuft. Abgedeckte E2E-Szenarien: Startseite, Anwendungs-CRUD, Endpunkt-Ausführung, Swagger-Import, OData-Import, Health-Check, Speichermoduswechsel, SignalR-Echtzeitsynchronisation.
 
-## Lizenz
+## Rechtliches
 
-Dieses Projekt steht unter der [MIT-Lizenz](LICENSE). Hinweise zu Betreiberpflichten (Impressum, Datenschutz, gesetzliche Anforderungen) finden sich in [LEGAL.md](LEGAL.md).
+Rechtliche Hinweise und die Lizenzbeschreibung liegen in [LEGAL.md](LEGAL.md). Im Repository-Stamm ist keine separate `LICENSE`-Datei hinterlegt.

@@ -161,4 +161,49 @@ public class EnvironmentSelectorTests : BunitContext
         Assert.Equal(expectedKey, removeItemCalls[0].Arguments.ElementAt(0));
         _activeEnvMock.Verify(s => s.SetActiveEnvironment(null), Times.Once);
     }
+
+    /// <summary>RefreshAsync bleibt stabil, wenn das Repository nach einer Aktualisierung eine leere Liste liefert.</summary>
+    [Fact]
+    public async Task RefreshAsync_WhenRepositoryReturnsEmptyList_HandlesGracefully()
+    {
+        var env = TestMockFactory.CreateEnv(8, "QA");
+        _envRepoMock
+            .SetupSequence(r => r.GetEnvironmentsAsync(It.IsAny<StorageMode>(), It.IsAny<string?>()))
+            .ReturnsAsync([env])
+            .ReturnsAsync([]);
+
+        var cut = Render<EnvironmentSelector>();
+        Assert.Contains(cut.FindAll("option"), o => o.TextContent == "QA");
+
+        await cut.InvokeAsync(() => cut.Instance.RefreshAsync());
+
+        var options = cut.FindAll("option");
+        Assert.Single(options);
+        Assert.Equal("EnvironmentSelector_NoEnvironmentOption", options[0].TextContent);
+    }
+
+    /// <summary>Bei gelöschter Auswahl wird der Zustand zurückgesetzt und der Storage-Key bereinigt.</summary>
+    [Fact]
+    public async Task ApplySelectionAsync_WhenSelectionIsDeleted_ResetsState()
+    {
+        var dependencies = TestMockFactory.CreateCoverageScenarioDependencies();
+        var env = dependencies.SelectedEnvironment;
+
+        _envRepoMock
+            .SetupSequence(r => r.GetEnvironmentsAsync(It.IsAny<StorageMode>(), It.IsAny<string?>()))
+            .ReturnsAsync([env])
+            .ReturnsAsync([]);
+
+        var cut = Render<EnvironmentSelector>();
+        await cut.InvokeAsync(() => cut.Instance.RefreshAsync());
+
+        var expectedKey = LocalStorageKeys.SelectedEnvironmentId(StorageMode.Team);
+        await cut.InvokeAsync(() => cut.Find("select").Change(env.Id.ToString()));
+
+        var removeItemCalls = JSInterop.Invocations
+            .Where(i => i.Identifier == "localStorage.removeItem")
+            .ToList();
+        Assert.Contains(removeItemCalls, c => Equals(c.Arguments.ElementAt(0), expectedKey));
+        _activeEnvMock.Verify(s => s.SetActiveEnvironment(null), Times.Once);
+    }
 }

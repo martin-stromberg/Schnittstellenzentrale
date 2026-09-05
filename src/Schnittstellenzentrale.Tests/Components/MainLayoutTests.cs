@@ -219,4 +219,31 @@ public class MainLayoutTests : BunitContext
             .ToList();
         Assert.Contains(getItemInvocations, i => i.Arguments.ElementAt(0) is string s && s == userKey);
     }
+
+    /// <summary>Beim Moduswechsel wird für die Wiederherstellung der Schlüssel des aktuellen Modus verwendet.</summary>
+    [Fact]
+    public async Task RestoreEnvironment_WhenModeChanges_UsesCurrentKey()
+    {
+        var userKey = LocalStorageKeys.SelectedEnvironmentId(StorageMode.User);
+        JSInterop.Setup<string?>("localStorage.getItem", _ => true).SetResult(null);
+
+        var currentMode = StorageMode.Team;
+        _storageMock.Setup(s => s.CurrentMode).Returns(() => currentMode);
+        _storageMock.Setup(s => s.SetMode(It.IsAny<StorageMode>()))
+            .Callback<StorageMode>(mode =>
+            {
+                currentMode = mode;
+                _storageMock.Raise(s => s.OnModeChanged += null);
+            });
+
+        var cut = Render<AppShell>(p => p.Add(x => x.Body, (RenderFragment)(_ => { })));
+        JSInterop.Setup<string?>("localStorage.getItem", inv => inv.Arguments.ElementAt(0) is string key && key == userKey).SetResult(null);
+
+        await cut.InvokeAsync(() => cut.Find("select.sz-topbar-select").Change(StorageMode.User.ToString()));
+
+        var getItemInvocations = JSInterop.Invocations
+            .Where(i => i.Identifier == "localStorage.getItem")
+            .ToList();
+        Assert.Contains(getItemInvocations, invocation => invocation.Arguments.ElementAt(0) is string key && key == userKey);
+    }
 }

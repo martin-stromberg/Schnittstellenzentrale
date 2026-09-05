@@ -2,7 +2,7 @@
 
 ## Zweck
 
-Die Playwright-Tests sind browsergesteuerte End-to-End-Regressionstests für die Schnittstellenzentrale. Sie ergänzen die vorhandenen Unit- und Integrationstests um eine vollständige UI-Ebene: Ein echter Chromium-Browser interagiert mit der laufenden Anwendung und stellt sicher, dass die sieben wichtigsten Benutzerabläufe funktionieren — von der Startseite über CRUD-Operationen bis hin zur SignalR-Echtzeitsynchronisation.
+Die Playwright-Tests sind browsergesteuerte End-to-End-Regressionstests für die Schnittstellenzentrale. Sie ergänzen die vorhandenen Unit- und Integrationstests um eine vollständige UI-Ebene und sichern zugleich die CI-Qualitätssicherung gegen ein fehlschlagendes Coverage-Gate ab.
 
 ## Funktionsweise
 
@@ -21,6 +21,18 @@ Playwright steuert einen headless Chromium-Browser und navigiert die Benutzerobe
 | `HealthCheckTests` | Health-Check-Dialog öffnen und Status-Meldung prüfen |
 | `StorageModeTests` | Speichermodus zwischen „Team" und „User" wechseln |
 | `SignalRSyncTests` | Zwei Browser-Kontexte: Browser A legt Anwendung an, Browser B empfängt die Änderung per SignalR ohne Reload |
+
+## Coverage-Gate und UI-Abdeckung
+
+Das Feature „Coverage Gate schlägt fehl“ ist kein produktiver Funktionszuwachs, sondern eine Stabilisierung der bestehenden Qualitätssicherung. Die Zielvorgabe bleibt ein globales Line-Coverage von mindestens `70 %`; die Umsetzung fokussiert sich auf bisher un- oder unterabgedeckte UI- und State-Pfade, damit der CI-Lauf regelfest bleibt.
+
+Die relevanten Ergänzungen befinden sich in `src/Schnittstellenzentrale.Tests/Components/` und betreffen insbesondere:
+
+- `ApplicationContentViewTests` — Abdeckung von Swagger-/OData-Import-Fehlern, erfolgreichem Import und zusätzlichen Branches.
+- `EnvironmentSelectorTests` — Abdeckung für leere Listen, gelöschte Auswahl, lokale Speicherung und Null-Fälle bei fehlenden Umgebungen.
+- `AppShellTests` — Sicherung der Initialisierungsreihenfolge und der Wiederherstellung aus `localStorage` bei unvollständigem State.
+- `MainLayoutTests` — Prüfung von Moduswechseln, Speicherrecovery und korrektem Wiederherstellen der aktiven Umgebung.
+- `TestMockFactory.CreateCoverageScenarioDependencies` — zentrale Hilfsfunktion für gemeinsame Mocks und Daten in Coverage-Testszenarien.
 
 ## Besonderheiten
 

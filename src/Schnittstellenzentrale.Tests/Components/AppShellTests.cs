@@ -102,4 +102,20 @@ public class AppShellTests : BunitContext
         Assert.True(localStorageCallCountBeforeInit.Value == 0,
             "localStorage.getItem darf zum Zeitpunkt von InitializeAsync noch nicht aufgerufen worden sein.");
     }
+
+    /// <summary>OnAfterRenderAsync läuft bei unvollständigem Storage-State ohne Fehler durch.</summary>
+    [Fact]
+    public async Task OnAfterRender_WhenStorageStateIsIncomplete_ContinuesWithoutError()
+    {
+        JSInterop.Setup<string?>("localStorage.getItem", _ => true).SetResult("not-an-integer");
+
+        var exception = await Record.ExceptionAsync(async () =>
+        {
+            var cut = Render<AppShell>(p => p.Add(x => x.Body, (RenderFragment)(_ => { })));
+            await cut.InvokeAsync(() => { });
+        });
+
+        Assert.Null(exception);
+        _activeEnvMock.Verify(s => s.SetActiveEnvironment(null), Times.AtLeastOnce);
+    }
 }

@@ -4,6 +4,48 @@
 
 Die Playwright-Tests starten die Anwendung als echten Kestrel-Server über `WebApplicationFactory<Program>`, setzen vor jedem Test die Datenbank zurück und steuern dann einen headless Chromium-Browser über die Playwright .NET-API. Die Infrastruktur gliedert sich in vier Klassen: `PlaywrightTestFactory`, `PlaywrightSignalRFactory`, `PlaywrightTestBase` und `TestDatabaseSeeder`.
 
+## Coverage-Gate-Stabilisierung
+
+Das konkrete Feature „Coverage Gate schlägt fehl“ wird in den bUnit-Komponententests umgesetzt. Der Ablauf dient weniger der Funktionslogik, sondern der Wiederholbarkeit des CI-Gates.
+
+### 1. Coverage-Lücken identifizieren
+
+Die Ausgangsbasis ist ein lokaler Lauf oder das CI-Artifact mit dem Line-Coverage-Report. Kandidaten sind Komponenten mit 0 % oder deutlich unter 70 % Abdeckung, etwa `ApplicationContentView`, `EnvironmentSelector`, `AppShell` und `MainLayout`.
+
+Beteiligte Komponenten:
+- `dotnet test Schnittstellenzentrale.slnx --collect:"XPlat Code Coverage"` — führt die lokale Coverage-Erfassung aus.
+- `TestMockFactory.CreateCoverageScenarioDependencies` — liefert wiederverwendbare Mocks und Testdaten für kritische Zustände.
+
+### 2. Fehler- und State-Pfade absichern
+
+Für jede betroffene UI-Komponente wird ein kompakter bUnit-Test ergänzt:
+
+- `ApplicationContentViewTests` prüft OData-/Swagger-Importfehler, Erfolgs- und Wiederholungszustände.
+- `EnvironmentSelectorTests` prüft leere Listen, gelöschte Auswahl und `localStorage`-Sauberkeit.
+- `AppShellTests` prüft Initialisierungsreihenfolge und unvollständige Storage-Zustände.
+- `MainLayoutTests` prüft Moduswechsel, Wiederherstellung der aktiven Umgebung und `localStorage`-Recovery.
+
+### 3. Coverage-Lauf wiederholen
+
+Der relevante Nachweis ist der wiederholte lokale Lauf:
+
+```bash
+dotnet test Schnittstellenzentrale.slnx --collect:"XPlat Code Coverage"
+```
+
+Erst wenn die globale Line-Coverage die feste 70-%-Schwelle überschreitet, gilt das Feature als abgeschlossen. Ein zusätzliches E2E-Setup bleibt optional und dient nur dann dem Ziel, wenn die UI-Abdeckung durch bUnit-Tests allein nicht ausreicht.
+
+```mermaid
+flowchart TD
+    A[Coverage-Report oder lokaler Lauf] --> B[0-%/niedrige UI-Komponenten priorisieren]
+    B --> C[bUnit-Tests ergänzen]
+    C --> D[State-, Fehler- und Wiederherstellungsfälle prüfen]
+    D --> E[dotnet test ... --collect:"XPlat Code Coverage"]
+    E --> F{>= 70 % Line Coverage?}
+    F -- Ja --> G[CI-Gate stabil]
+    F -- Nein --> B
+```
+
 ---
 
 ## Ablauf: Testserver-Start (einmalig pro Collection)

@@ -8,17 +8,29 @@
 
 ## Tests ausführen
 
-```
+```bash
 dotnet test src/Schnittstellenzentrale.Tests/Schnittstellenzentrale.Tests.csproj
 ```
 
 Alternativ für die gesamte Solution:
 
-```
+```bash
 dotnet test
 ```
 
 Der erste Build nach dem Klonen des Repositories lädt automatisch den Chromium-Browser herunter (MSBuild-Target `InstallPlaywright`). Dieser Schritt kann einige Minuten dauern.
+
+## Coverage-Gate prüfen
+
+Für die lokale Qualitätsprüfung wird der globale Coverage-Lauf ausgeführt:
+
+```bash
+dotnet test Schnittstellenzentrale.slnx --collect:"XPlat Code Coverage"
+```
+
+Die Qualitätssicherung prüft dabei die globale Line-Coverage und erwartet mindestens `70 %`. Die Umsetzung bettet sich in die bestehenden UI-Tests ein, ohne die Schwelle im Code zu verändern. Relevante Abdeckungsbereiche sind zustandsabhängige Komponenten wie `ApplicationContentView`, `EnvironmentSelector`, `AppShell` und `MainLayout`, die mit gezielten bUnit-Tests abgesichert werden.
+
+> **Hinweis:** Für die CI-Stabilisierung ist die Abdeckung der UI- und State-Pfade wichtiger als die Anzahl der Playwright-Flows. `bUnit` wird aufgrund der geringeren Laufzeit und höheren Reproduzierbarkeit daher bevorzugt.
 
 ## Playwright-Browser-Installation (MSBuild-Automatisierung)
 
@@ -34,7 +46,7 @@ Das Testprojekt enthält ein MSBuild-Target, das nach jedem Build automatisch `p
 
 Das Target läuft standardmäßig bei jedem Build. Um den Installationsschritt zu überspringen — z. B. in CI-Umgebungen, in denen der Browser bereits gecacht ist — kann der Schalter gesetzt werden:
 
-```
+```bash
 dotnet build -p:SkipPlaywrightInstall=true
 dotnet test -p:SkipPlaywrightInstall=true
 ```
@@ -51,7 +63,7 @@ Nach jedem Testlauf werden Trace-Dateien im Verzeichnis `playwright-traces/` rel
 
 Trace öffnen mit dem Playwright Trace Viewer:
 
-```
+```bash
 npx playwright show-trace playwright-traces/ApplicationCrudTests.zip
 ```
 
@@ -88,12 +100,12 @@ Damit Traces bei Fehlern als Build-Artefakte verfügbar sind, muss ein Upload-Sc
 
 Nach `dotnet test` sollte die Ausgabe zeigen:
 
-```
+```text
 Passed! - Failed: 0, Passed: 11, Skipped: 0
 ```
 
 Die elf Playwright-Tests verteilen sich auf sieben Testklassen. Wenn Playwright-Tests einzeln übersprungen oder gefiltert werden sollen, kann der xUnit-Trait-Filter verwendet werden:
 
-```
+```bash
 dotnet test --filter "FullyQualifiedName~Playwright"
 ```
