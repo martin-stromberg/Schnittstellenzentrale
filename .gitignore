@@ -452,3 +452,5 @@ key-*.xml
 
 # Softwareschmiede
 issue.md
+/.agents/*
+/AGENTS.md

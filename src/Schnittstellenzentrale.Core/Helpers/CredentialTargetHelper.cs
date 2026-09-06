@@ -6,6 +6,9 @@ namespace Schnittstellenzentrale.Core.Helpers;
 public static class CredentialTargetHelper
 {
     /// <summary>Gibt den Credential-Target-String für eine Anwendung und einen Authentifizierungstyp zurück.</summary>
+    /// <param name="applicationId">ID der Anwendung.</param>
+    /// <param name="authenticationType">Authentifizierungstyp.</param>
+    /// <returns>Credential-Target-String im Format <c>Schnittstellenzentrale:{id}:{typ}</c>.</returns>
     public static string Build(int applicationId, AuthenticationType authenticationType)
         => $"Schnittstellenzentrale:{applicationId}:{authenticationType}";
 }

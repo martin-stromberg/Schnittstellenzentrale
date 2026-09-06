@@ -14,6 +14,8 @@ public class ODataApplicationsController : ODataControllerBase
     private readonly IApplicationRepository _applicationRepository;
 
     /// <summary>Initialisiert eine neue Instanz von <see cref="ODataApplicationsController"/>.</summary>
+    /// <param name="tokenStore">Der Token-Store.</param>
+    /// <param name="applicationRepository">Das Repository für Anwendungen.</param>
     public ODataApplicationsController(ITokenStore tokenStore, IApplicationRepository applicationRepository)
         : base(tokenStore)
     {
@@ -21,6 +23,7 @@ public class ODataApplicationsController : ODataControllerBase
     }
 
     /// <summary>Gibt alle Anwendungen zurück.</summary>
+    /// <returns>Das Ergebnis.</returns>
     [EnableQuery]
     [HttpGet("Applications")]
     public async Task<IActionResult> Get()
@@ -35,6 +38,8 @@ public class ODataApplicationsController : ODataControllerBase
     }
 
     /// <summary>Gibt eine einzelne Anwendung per ID zurück.</summary>
+    /// <param name="key">Der Schlüssel der Entität.</param>
+    /// <returns>Das Ergebnis.</returns>
     [EnableQuery]
     [HttpGet("Applications({key})")]
     public async Task<IActionResult> Get(int key)
@@ -56,6 +61,8 @@ public class ODataApplicationsController : ODataControllerBase
     }
 
     /// <summary>Legt eine neue Anwendung an.</summary>
+    /// <param name="entity">Die zu verarbeitende Entität.</param>
+    /// <returns>Das Ergebnis.</returns>
     [HttpPost("Applications")]
     public async Task<IActionResult> Post([FromBody] Application entity)
     {
@@ -74,6 +81,9 @@ public class ODataApplicationsController : ODataControllerBase
     }
 
     /// <summary>Ersetzt eine Anwendung vollständig.</summary>
+    /// <param name="key">Der Schlüssel der Entität.</param>
+    /// <param name="entity">Die zu verarbeitende Entität.</param>
+    /// <returns>Das Ergebnis.</returns>
     [HttpPut("Applications({key})")]
     public async Task<IActionResult> Put(int key, [FromBody] Application entity)
     {
@@ -110,6 +120,9 @@ public class ODataApplicationsController : ODataControllerBase
     }
 
     /// <summary>Aktualisiert eine Anwendung partiell.</summary>
+    /// <param name="key">Der Schlüssel der Entität.</param>
+    /// <param name="patch">Das JSON-Patch-Dokument.</param>
+    /// <returns>Das Ergebnis.</returns>
     [HttpPatch("Applications({key})")]
     public async Task<IActionResult> Patch(int key, [FromBody] JsonElement patch)
     {
@@ -147,6 +160,8 @@ public class ODataApplicationsController : ODataControllerBase
     }
 
     /// <summary>Löscht eine Anwendung.</summary>
+    /// <param name="key">Der Schlüssel der Entität.</param>
+    /// <returns>Das Ergebnis.</returns>
     [HttpDelete("Applications({key})")]
     public async Task<IActionResult> Delete(int key)
     {

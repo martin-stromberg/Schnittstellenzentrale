@@ -17,6 +17,9 @@ public class ApplicationsController : ApiControllerBase
     private readonly ISignalRNotificationService _signalRNotificationService;
 
     /// <summary>Initialisiert eine neue Instanz von <see cref="ApplicationsController"/>.</summary>
+    /// <param name="tokenStore">Der Token-Store.</param>
+    /// <param name="applicationRepository">Das Repository für Anwendungen.</param>
+    /// <param name="signalRNotificationService">Der SignalR-Benachrichtigungs-Service.</param>
     public ApplicationsController(
         ITokenStore tokenStore,
         IApplicationRepository applicationRepository,
@@ -30,9 +33,10 @@ public class ApplicationsController : ApiControllerBase
     /// <summary>
     /// Returns all applications for the given storage mode and owner.
     /// </summary>
-    /// <remarks>Requires the <c>X-Storage-Mode</c> and <c>X-Owner</c> request headers.</remarks>
+    /// <returns>Das Ergebnis.</returns>
     /// <response code="200">List of applications.</response>
     /// <response code="401">Missing or invalid bearer token.</response>
+    /// <remarks>Requires the <c>X-Storage-Mode</c> and <c>X-Owner</c> request headers.</remarks>
     [HttpGet]
     [RequiresContextHeaders(includeOwner: true)]
     [ProducesResponseType(typeof(IList<ApplicationResponse>), StatusCodes.Status200OK)]
@@ -52,9 +56,10 @@ public class ApplicationsController : ApiControllerBase
     /// <summary>
     /// Returns all applications that are not assigned to any group.
     /// </summary>
-    /// <remarks>Requires the <c>X-Storage-Mode</c> and <c>X-Owner</c> request headers.</remarks>
+    /// <returns>Das Ergebnis.</returns>
     /// <response code="200">List of ungrouped applications.</response>
     /// <response code="401">Missing or invalid bearer token.</response>
+    /// <remarks>Requires the <c>X-Storage-Mode</c> and <c>X-Owner</c> request headers.</remarks>
     [HttpGet("ungrouped")]
     [RequiresContextHeaders(includeOwner: true)]
     [ProducesResponseType(typeof(IList<ApplicationResponse>), StatusCodes.Status200OK)]
@@ -75,6 +80,7 @@ public class ApplicationsController : ApiControllerBase
     /// Returns a single application by ID.
     /// </summary>
     /// <param name="id">The application ID.</param>
+    /// <returns>Das Ergebnis.</returns>
     /// <response code="200">The requested application.</response>
     /// <response code="401">Missing or invalid bearer token.</response>
     /// <response code="404">Application not found.</response>
@@ -99,6 +105,7 @@ public class ApplicationsController : ApiControllerBase
     /// Creates a new application.
     /// </summary>
     /// <param name="request">The application to create.</param>
+    /// <returns>Das Ergebnis.</returns>
     /// <response code="201">Application created successfully.</response>
     /// <response code="400">Invalid request body.</response>
     /// <response code="401">Missing or invalid bearer token.</response>
@@ -132,6 +139,7 @@ public class ApplicationsController : ApiControllerBase
     /// </summary>
     /// <param name="id">The application ID.</param>
     /// <param name="request">The updated application data.</param>
+    /// <returns>Das Ergebnis.</returns>
     /// <response code="200">Updated application.</response>
     /// <response code="400">Invalid request body.</response>
     /// <response code="401">Missing or invalid bearer token.</response>
@@ -171,6 +179,7 @@ public class ApplicationsController : ApiControllerBase
     /// Deletes an application.
     /// </summary>
     /// <param name="id">The application ID.</param>
+    /// <returns>Das Ergebnis.</returns>
     /// <response code="204">Application deleted successfully.</response>
     /// <response code="401">Missing or invalid bearer token.</response>
     /// <response code="404">Application not found.</response>

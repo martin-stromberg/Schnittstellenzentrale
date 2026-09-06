@@ -284,34 +284,86 @@ public class SystemEntryInitializerTests
     private sealed class ThrowingApplicationRepository : IApplicationRepository
     {
         /// <summary>GetSystemGroupAsync</summary>
+        /// <returns>Ein Task, der mit einer <see cref="InvalidOperationException"/> fehlschlägt.</returns>
         public Task<Schnittstellenzentrale.Core.Models.ApplicationGroup?> GetSystemGroupAsync() =>
-            throw new InvalidOperationException("Simulierter Datenbankfehler");
+            Task.FromException<Schnittstellenzentrale.Core.Models.ApplicationGroup?>(
+                new InvalidOperationException("Simulierter Datenbankfehler"));
 
         /// <summary>GetGroupsAsync</summary>
-        public Task<System.Collections.Generic.IList<Schnittstellenzentrale.Core.Models.ApplicationGroup>> GetGroupsAsync(Schnittstellenzentrale.Core.Enums.StorageMode storageMode, string owner) => throw new NotImplementedException();
+        /// <param name="storageMode">Der Speichermodus der Abfrage.</param>
+        /// <param name="owner">Der Besitzer-Kontext der Abfrage.</param>
+        /// <returns>Eine leere Gruppenliste.</returns>
+        public Task<System.Collections.Generic.IList<Schnittstellenzentrale.Core.Models.ApplicationGroup>> GetGroupsAsync(Schnittstellenzentrale.Core.Enums.StorageMode storageMode, string owner) =>
+            Task.FromResult<System.Collections.Generic.IList<Schnittstellenzentrale.Core.Models.ApplicationGroup>>(new List<Schnittstellenzentrale.Core.Models.ApplicationGroup>());
+
         /// <summary>GetGroupByIdAsync</summary>
-        public Task<Schnittstellenzentrale.Core.Models.ApplicationGroup?> GetGroupByIdAsync(int id) => throw new NotImplementedException();
+        /// <param name="id">Die ID der Gruppe.</param>
+        /// <returns>Immer <c>null</c>.</returns>
+        public Task<Schnittstellenzentrale.Core.Models.ApplicationGroup?> GetGroupByIdAsync(int id) =>
+            Task.FromResult<Schnittstellenzentrale.Core.Models.ApplicationGroup?>(null);
+
         /// <summary>AddGroupAsync</summary>
-        public Task<Schnittstellenzentrale.Core.Models.ApplicationGroup> AddGroupAsync(Schnittstellenzentrale.Core.Models.ApplicationGroup group) => throw new NotImplementedException();
+        /// <param name="group">Die hinzuzufügende Gruppe.</param>
+        /// <returns>Die übergebene Gruppe.</returns>
+        public Task<Schnittstellenzentrale.Core.Models.ApplicationGroup> AddGroupAsync(Schnittstellenzentrale.Core.Models.ApplicationGroup group) =>
+            Task.FromResult(group);
+
         /// <summary>UpdateGroupAsync</summary>
-        public Task<Schnittstellenzentrale.Core.Models.ApplicationGroup> UpdateGroupAsync(Schnittstellenzentrale.Core.Models.ApplicationGroup group) => throw new NotImplementedException();
+        /// <param name="group">Die zu aktualisierende Gruppe.</param>
+        /// <returns>Die übergebene Gruppe.</returns>
+        public Task<Schnittstellenzentrale.Core.Models.ApplicationGroup> UpdateGroupAsync(Schnittstellenzentrale.Core.Models.ApplicationGroup group) =>
+            Task.FromResult(group);
+
         /// <summary>DeleteGroupAsync</summary>
-        public Task DeleteGroupAsync(int id) => throw new NotImplementedException();
+        /// <param name="id">Die ID der Gruppe.</param>
+        /// <returns>Ein abgeschlossener Task.</returns>
+        public Task DeleteGroupAsync(int id) => Task.CompletedTask;
+
         /// <summary>GetApplicationsAsync</summary>
-        public Task<System.Collections.Generic.IList<Schnittstellenzentrale.Core.Models.Application>> GetApplicationsAsync(Schnittstellenzentrale.Core.Enums.StorageMode storageMode, string owner) => throw new NotImplementedException();
+        /// <param name="storageMode">Der Speichermodus der Abfrage.</param>
+        /// <param name="owner">Der Besitzer-Kontext der Abfrage.</param>
+        /// <returns>Eine leere Anwendungsliste.</returns>
+        public Task<System.Collections.Generic.IList<Schnittstellenzentrale.Core.Models.Application>> GetApplicationsAsync(Schnittstellenzentrale.Core.Enums.StorageMode storageMode, string owner) =>
+            Task.FromResult<System.Collections.Generic.IList<Schnittstellenzentrale.Core.Models.Application>>(new List<Schnittstellenzentrale.Core.Models.Application>());
+
         /// <summary>GetUngroupedApplicationsAsync</summary>
-        public Task<System.Collections.Generic.IList<Schnittstellenzentrale.Core.Models.Application>> GetUngroupedApplicationsAsync(Schnittstellenzentrale.Core.Enums.StorageMode storageMode, string owner) => throw new NotImplementedException();
+        /// <param name="storageMode">Der Speichermodus der Abfrage.</param>
+        /// <param name="owner">Der Besitzer-Kontext der Abfrage.</param>
+        /// <returns>Eine leere Anwendungsliste.</returns>
+        public Task<System.Collections.Generic.IList<Schnittstellenzentrale.Core.Models.Application>> GetUngroupedApplicationsAsync(Schnittstellenzentrale.Core.Enums.StorageMode storageMode, string owner) =>
+            Task.FromResult<System.Collections.Generic.IList<Schnittstellenzentrale.Core.Models.Application>>(new List<Schnittstellenzentrale.Core.Models.Application>());
+
         /// <summary>GetApplicationByIdAsync</summary>
-        public Task<Schnittstellenzentrale.Core.Models.Application?> GetApplicationByIdAsync(int id) => throw new NotImplementedException();
+        /// <param name="id">Die ID der Anwendung.</param>
+        /// <returns>Immer <c>null</c>.</returns>
+        public Task<Schnittstellenzentrale.Core.Models.Application?> GetApplicationByIdAsync(int id) =>
+            Task.FromResult<Schnittstellenzentrale.Core.Models.Application?>(null);
+
         /// <summary>AddApplicationAsync</summary>
-        public Task<Schnittstellenzentrale.Core.Models.Application> AddApplicationAsync(Schnittstellenzentrale.Core.Models.Application application) => throw new NotImplementedException();
+        /// <param name="application">Die hinzuzufügende Anwendung.</param>
+        /// <returns>Die übergebene Anwendung.</returns>
+        public Task<Schnittstellenzentrale.Core.Models.Application> AddApplicationAsync(Schnittstellenzentrale.Core.Models.Application application) =>
+            Task.FromResult(application);
+
         /// <summary>UpdateApplicationAsync</summary>
-        public Task<Schnittstellenzentrale.Core.Models.Application> UpdateApplicationAsync(Schnittstellenzentrale.Core.Models.Application application) => throw new NotImplementedException();
+        /// <param name="application">Die zu aktualisierende Anwendung.</param>
+        /// <returns>Die übergebene Anwendung.</returns>
+        public Task<Schnittstellenzentrale.Core.Models.Application> UpdateApplicationAsync(Schnittstellenzentrale.Core.Models.Application application) =>
+            Task.FromResult(application);
+
         /// <summary>DeleteApplicationAsync</summary>
-        public Task DeleteApplicationAsync(int id) => throw new NotImplementedException();
+        /// <param name="id">Die ID der Anwendung.</param>
+        /// <returns>Ein abgeschlossener Task.</returns>
+        public Task DeleteApplicationAsync(int id) => Task.CompletedTask;
+
         /// <summary>GetApplicationCountByGroupAsync</summary>
-        public Task<int> GetApplicationCountByGroupAsync(int groupId) => throw new NotImplementedException();
+        /// <param name="groupId">Die ID der Gruppe.</param>
+        /// <returns>Immer 0.</returns>
+        public Task<int> GetApplicationCountByGroupAsync(int groupId) => Task.FromResult(0);
+
         /// <summary>GetEndpointCountByGroupAsync</summary>
-        public Task<int> GetEndpointCountByGroupAsync(int groupId) => throw new NotImplementedException();
+        /// <param name="groupId">Die ID der Gruppe.</param>
+        /// <returns>Immer 0.</returns>
+        public Task<int> GetEndpointCountByGroupAsync(int groupId) => Task.FromResult(0);
     }
 }

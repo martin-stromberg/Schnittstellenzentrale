@@ -9,6 +9,7 @@ public class LocalizationTests : IClassFixture<ControllerTestFactory>
     private readonly ControllerTestFactory _factory;
 
     /// <summary>Initialisiert LocalizationTests.</summary>
+    /// <param name="factory">Die von xUnit injizierte <see cref="ControllerTestFactory"/>.</param>
     public LocalizationTests(ControllerTestFactory factory)
     {
         _factory = factory;

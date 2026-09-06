@@ -16,6 +16,7 @@ public class ODataControllerIntegrationTests : IClassFixture<ControllerTestFacto
     private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNameCaseInsensitive = true };
 
     /// <summary>Initialisiert ODataControllerIntegrationTests.</summary>
+    /// <param name="factory">Die von xUnit injizierte <see cref="ControllerTestFactory"/>.</param>
     public ODataControllerIntegrationTests(ControllerTestFactory factory)
     {
         _factory = factory;

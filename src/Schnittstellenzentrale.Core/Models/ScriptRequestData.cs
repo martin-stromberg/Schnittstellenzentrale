@@ -15,12 +15,14 @@ public class ScriptRequestData
     public string Method { get; set; } = string.Empty;
 
     /// <summary>Die Request-Header.</summary>
+    /// <value>Dictionary der Request-Header.</value>
     public IDictionary<string, string> Headers { get; set; } = new Dictionary<string, string>();
 
     /// <summary>Der Request-Body (optional).</summary>
     public string? Body { get; set; }
 
     /// <summary>Parst den Body als JSON und gibt ein traversierbares Objekt zurück.</summary>
+    /// <returns>Traversierbares Objekt oder <c>null</c>, wenn kein Body vorhanden ist.</returns>
     public object? AsJson()
     {
         if (string.IsNullOrEmpty(Body))
@@ -37,6 +39,7 @@ public class ScriptRequestData
     }
 
     /// <summary>Parst den Body als XML und gibt eine verschachtelte Objektstruktur zurück.</summary>
+    /// <returns>Verschachtelte Objektstruktur oder <c>null</c>, wenn kein Body vorhanden ist.</returns>
     public object? AsXml()
     {
         if (string.IsNullOrEmpty(Body))

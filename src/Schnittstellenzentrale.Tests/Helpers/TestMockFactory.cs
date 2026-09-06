@@ -11,12 +11,16 @@ namespace Schnittstellenzentrale.Tests.Helpers;
 public static class TestMockFactory
 {
     /// <summary>Erstellt einen leeren <see cref="IActivityLogService"/>-Mock.</summary>
+    /// <returns>Der konfigurierte Mock.</returns>
     public static Mock<IActivityLogService> CreateActivityLogServiceMock()
     {
         return new Mock<IActivityLogService>();
     }
 
     /// <summary>Erstellt eine <see cref="SystemEnvironment"/>-Testinstanz mit den angegebenen Werten.</summary>
+    /// <param name="id">Die ID der Testumgebung.</param>
+    /// <param name="name">Der Name der Testumgebung.</param>
+    /// <returns>Die erstellte Testumgebung.</returns>
     public static SystemEnvironment CreateEnv(int id, string name) => new()
     {
         Id = id,
@@ -26,6 +30,7 @@ public static class TestMockFactory
     };
 
     /// <summary>Erstellt einen <see cref="IStringLocalizer{SharedResources}"/>, der jeden Schlüssel unverändert als Wert zurückgibt.</summary>
+    /// <returns>Der Fake-Localizer.</returns>
     public static IStringLocalizer<SharedResources> CreateFakeLocalizer()
     {
         var mock = new Mock<IStringLocalizer<SharedResources>>();
@@ -37,6 +42,7 @@ public static class TestMockFactory
     }
 
     /// <summary>Erstellt gemeinsame Mocks und Testdaten für Coverage-orientierte UI-Fehlerszenarien.</summary>
+    /// <returns>Die vorbereitete <see cref="CoverageTestFactory"/>.</returns>
     public static CoverageTestFactory CreateCoverageScenarioDependencies()
     {
         var applicationApiClientMock = new Mock<IApplicationApiClient>();

@@ -15,9 +15,11 @@ public class ScriptResponseData
     public int? StatusCode { get; set; }
 
     /// <summary>Die Antwort-Header.</summary>
+    /// <value>Dictionary der Antwort-Header.</value>
     public IDictionary<string, string> Headers { get; set; } = new Dictionary<string, string>();
 
     /// <summary>Parst den Body als JSON und gibt ein traversierbares Objekt zurück.</summary>
+    /// <returns>Traversierbares Objekt oder <c>null</c>, wenn kein Body vorhanden ist.</returns>
     public object? AsJson()
     {
         if (string.IsNullOrEmpty(Body))
@@ -34,6 +36,7 @@ public class ScriptResponseData
     }
 
     /// <summary>Parst den Body als XML und gibt eine verschachtelte Objektstruktur zurück.</summary>
+    /// <returns>Verschachtelte Objektstruktur oder <c>null</c>, wenn kein Body vorhanden ist.</returns>
     public object? AsXml()
     {
         if (string.IsNullOrEmpty(Body))

@@ -38,6 +38,17 @@ public class EndpointExecutionService : IEndpointExecutionService
 
 
     /// <summary>Initialisiert eine neue Instanz des <see cref="EndpointExecutionService"/>.</summary>
+    /// <param name="httpClientFactory">Fabrik zum Erzeugen von HttpClients.</param>
+    /// <param name="credentialService">Dienst zum Auflösen von Anmeldeinformationen.</param>
+    /// <param name="activeEnvironmentService">Dienst für die aktive Systemumgebung.</param>
+    /// <param name="scriptRunner">Runner für Pre-/Post-Request-Skripte.</param>
+    /// <param name="endpointRepository">Repository für Endpunkte.</param>
+    /// <param name="environmentRepository">Repository für Systemumgebungen.</param>
+    /// <param name="signalRNotificationService">Dienst für SignalR-Benachrichtigungen.</param>
+    /// <param name="activityLogService">Dienst für das Aktivitätsprotokoll.</param>
+    /// <param name="historyService">Dienst für die Aufrufhistorie.</param>
+    /// <param name="storageModeService">Dienst für den aktuellen Speichermodus.</param>
+    /// <param name="logger">Logger für Diagnosemeldungen.</param>
     public EndpointExecutionService(
         IHttpClientFactory httpClientFactory,
         ICredentialService credentialService,

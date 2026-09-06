@@ -14,6 +14,7 @@ public abstract class ODataControllerBase : ControllerBase, IAsyncActionFilter
     private readonly ITokenStore _tokenStore;
 
     /// <summary>Initialisiert eine neue Instanz von <see cref="ODataControllerBase"/>.</summary>
+    /// <param name="tokenStore">Der Token-Store.</param>
     protected ODataControllerBase(ITokenStore tokenStore)
     {
         _tokenStore = tokenStore;
@@ -24,6 +25,7 @@ public abstract class ODataControllerBase : ControllerBase, IAsyncActionFilter
         HttpContext.Items.TryGetValue("ODataAuthenticatedUser", out var user) ? (string)user! : null;
 
     /// <summary>Liest den <c>X-Storage-Mode</c>-Header und gibt den entsprechenden <see cref="Core.Enums.StorageMode"/> zurück.</summary>
+    /// <returns>Der Speichermodus.</returns>
     protected Core.Enums.StorageMode ParseStorageMode()
     {
         var storageModeHeader = HttpContext.Request.Headers["X-Storage-Mode"].ToString();

@@ -1,23 +1,29 @@
-#pragma warning disable CS1591
 using Microsoft.JSInterop;
 using Schnittstellenzentrale.Core.Enums;
 using Schnittstellenzentrale.Core.Interfaces;
 
 namespace Schnittstellenzentrale.Infrastructure.Services;
 
+/// <summary>Implementiert <see cref="IThemeService"/> mit <c>localStorage</c>-Persistierung über ein JS-Modul.</summary>
 public class ThemeService : IThemeService
 {
     private readonly IJSRuntime _jsRuntime;
     private IJSObjectReference? _module;
 
+    /// <inheritdoc/>
     public ColorScheme CurrentScheme { get; private set; } = ColorScheme.Light;
+
+    /// <inheritdoc/>
     public event Action? OnThemeChanged;
 
+    /// <summary>Initialisiert eine neue Instanz von <see cref="ThemeService"/>.</summary>
+    /// <param name="jsRuntime">JS-Runtime für den Zugriff auf das Theme-Modul.</param>
     public ThemeService(IJSRuntime jsRuntime)
     {
         _jsRuntime = jsRuntime;
     }
 
+    /// <inheritdoc/>
     public async Task SetTheme(ColorScheme scheme)
     {
         if (!Enum.IsDefined(typeof(ColorScheme), scheme))
@@ -29,6 +35,7 @@ public class ThemeService : IThemeService
         OnThemeChanged?.Invoke();
     }
 
+    /// <inheritdoc/>
     public async Task InitializeAsync()
     {
         var module = await GetModuleAsync();

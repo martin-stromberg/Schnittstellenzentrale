@@ -12,6 +12,7 @@ public class AuthControllerIntegrationTests : IClassFixture<ControllerTestFactor
     private readonly ControllerTestFactory _factory;
 
     /// <summary>Initialisiert AuthControllerIntegrationTests.</summary>
+    /// <param name="factory">Die von xUnit injizierte <see cref="ControllerTestFactory"/>.</param>
     public AuthControllerIntegrationTests(ControllerTestFactory factory)
     {
         _factory = factory;

@@ -17,6 +17,10 @@ public class SwaggerImportService : ISwaggerImportService
     private readonly ILogger<SwaggerImportService> _logger;
 
     /// <summary>Initialisiert eine neue Instanz von <see cref="SwaggerImportService"/>.</summary>
+    /// <param name="httpClientFactory">Fabrik zum Erzeugen von HttpClients.</param>
+    /// <param name="endpointRepository">Repository für Endpunkte.</param>
+    /// <param name="credentialService">Dienst zum Auflösen von Anmeldeinformationen.</param>
+    /// <param name="logger">Logger für Diagnosemeldungen.</param>
     public SwaggerImportService(IHttpClientFactory httpClientFactory, IEndpointRepository endpointRepository, ICredentialService credentialService, ILogger<SwaggerImportService> logger)
     {
         _httpClientFactory = httpClientFactory;

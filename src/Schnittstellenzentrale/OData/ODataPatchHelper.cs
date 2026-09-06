@@ -7,6 +7,9 @@ namespace Schnittstellenzentrale.OData;
 internal static class ODataPatchHelper
 {
     /// <summary>Wendet einen JSON-Patch auf eine <see cref="Application"/> an.</summary>
+    /// <param name="patch">Das JSON-Patch-Dokument.</param>
+    /// <param name="target">Das Zielobjekt.</param>
+    /// <param name="error">Die Fehlermeldung.</param>
     /// <returns><c>true</c> wenn erfolgreich; <c>false</c> mit Fehlermeldung bei ungültigem Feldwert.</returns>
     public static bool TryApplyPatch(JsonElement patch, Application target, out string? error)
     {
@@ -52,6 +55,9 @@ internal static class ODataPatchHelper
     }
 
     /// <summary>Wendet einen JSON-Patch auf eine <see cref="ApplicationGroup"/> an.</summary>
+    /// <param name="patch">Das JSON-Patch-Dokument.</param>
+    /// <param name="target">Das Zielobjekt.</param>
+    /// <param name="error">Die Fehlermeldung.</param>
     /// <returns><c>true</c> wenn erfolgreich; <c>false</c> mit Fehlermeldung bei ungültigem Feldwert.</returns>
     public static bool TryApplyPatch(JsonElement patch, ApplicationGroup target, out string? error)
     {
@@ -86,6 +92,7 @@ internal static class ODataPatchHelper
     }
 
     /// <summary>Prüft ob die <c>RowVersion</c>-Eigenschaft im JSON-Patch vorhanden ist.</summary>
+    /// <param name="patch">Das JSON-Patch-Dokument.</param>
     /// <returns><c>true</c> wenn die Eigenschaft vorhanden ist, sonst <c>false</c>.</returns>
     public static bool ContainsRowVersion(JsonElement patch)
     {
@@ -98,6 +105,7 @@ internal static class ODataPatchHelper
     }
 
     /// <summary>Liest eine optionale <c>RowVersion</c>-Eigenschaft aus einem JSON-Patch-Dokument.</summary>
+    /// <param name="patch">Das JSON-Patch-Dokument.</param>
     /// <returns>Das decodierte Byte-Array oder <c>null</c>, wenn die Eigenschaft fehlt oder ungültig ist.</returns>
     public static byte[]? TryExtractRowVersion(JsonElement patch)
     {
@@ -113,6 +121,9 @@ internal static class ODataPatchHelper
     }
 
     /// <summary>Liest den <c>IconData</c>-Wert aus einem JSON-Patch und setzt ihn auf dem Zielobjekt.</summary>
+    /// <param name="prop">Die Eigenschaft.</param>
+    /// <param name="setter">Der Setter.</param>
+    /// <param name="error">Die Fehlermeldung.</param>
     /// <returns><c>true</c> wenn erfolgreich; <c>false</c> mit Fehlermeldung bei ungültigem Base64.</returns>
     public static bool TryApplyIconData(JsonElement prop, Action<byte[]?> setter, out string? error)
     {

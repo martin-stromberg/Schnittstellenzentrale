@@ -8,10 +8,13 @@ public static class EndpointUrlBuilder
     /// verbleibende Parameter werden als Query-String angehängt.
     /// Einträge mit leerem Key werden übersprungen.
     /// </summary>
+    /// <param name="path">Pfad-Template mit Platzhaltern im Format <c>{name}</c>.</param>
+    /// <param name="parameters">Liste der Parameter als Key/Value-Paare.</param>
     /// <param name="keepEmptyPlaceholders">
     /// Wenn <c>true</c>, werden Platzhalter mit leerem Wert nicht ersetzt (Anzeige-Modus).
     /// Wenn <c>false</c> (Standard), wird ein leerer Wert als leerer String eingesetzt (Request-Modus).
     /// </param>
+    /// <returns>Aufgelöste URL inklusive Query-String.</returns>
     public static string Resolve(string path, IEnumerable<(string Key, string Value)> parameters, bool keepEmptyPlaceholders = false)
     {
         var queryParams = new List<(string Key, string Value)>();

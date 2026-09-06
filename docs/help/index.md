@@ -24,3 +24,4 @@
 ## Qualität und Tests
 
 - [Playwright-Tests](playwright-tests/index.md) — Die Testinfrastruktur stellt browserbasierte E2E-Prüfungen und die Absicherung des Coverage-Gates für das UI-Verhalten bereit.
+- [Git-Hooks](git-hooks/index.md) — Versionierte Git-Hooks unter `.githooks/` prüfen lokale Qualitätsregeln beim Commit und Push.

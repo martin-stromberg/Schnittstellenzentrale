@@ -1,4 +1,3 @@
-#pragma warning disable CS1591
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Schnittstellenzentrale.Core.Interfaces;
@@ -6,6 +5,7 @@ using Schnittstellenzentrale.Core.Models;
 
 namespace Schnittstellenzentrale.Infrastructure.Services;
 
+/// <summary>Implementierung von <see cref="IHealthCheckService"/>: prüft die Erreichbarkeit von Anwendungen per HTTP mit Cooldown.</summary>
 public class HealthCheckService : IHealthCheckService
 {
     private readonly IHttpClientFactory _httpClientFactory;
@@ -14,6 +14,10 @@ public class HealthCheckService : IHealthCheckService
     private readonly Dictionary<int, DateTime> _lastCheckTimes = new();
     private readonly object _lock = new();
 
+    /// <summary>Initialisiert eine neue Instanz von <see cref="HealthCheckService"/>.</summary>
+    /// <param name="httpClientFactory">Fabrik zum Erzeugen von HttpClients.</param>
+    /// <param name="configuration">Anwendungskonfiguration (Cooldown unter <c>HealthCheck:CooldownSeconds</c>).</param>
+    /// <param name="logger">Logger für Diagnosemeldungen.</param>
     public HealthCheckService(IHttpClientFactory httpClientFactory, IConfiguration configuration, ILogger<HealthCheckService> logger)
     {
         _httpClientFactory = httpClientFactory;
@@ -21,6 +25,7 @@ public class HealthCheckService : IHealthCheckService
         _cooldownSeconds = configuration.GetValue<int>("HealthCheck:CooldownSeconds", 60);
     }
 
+    /// <inheritdoc/>
     public async Task<bool?> CheckAsync(Application application)
     {
         lock (_lock)

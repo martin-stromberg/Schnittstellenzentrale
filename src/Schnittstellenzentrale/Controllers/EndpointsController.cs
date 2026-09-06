@@ -16,6 +16,9 @@ public class EndpointsController : ApiControllerBase
     private readonly ISignalRNotificationService _signalRNotificationService;
 
     /// <summary>Initialisiert eine neue Instanz von <see cref="EndpointsController"/>.</summary>
+    /// <param name="tokenStore">Der Token-Store.</param>
+    /// <param name="endpointRepository">Das Repository für Endpunkte.</param>
+    /// <param name="signalRNotificationService">Der SignalR-Benachrichtigungs-Service.</param>
     public EndpointsController(
         ITokenStore tokenStore,
         IEndpointRepository endpointRepository,
@@ -31,6 +34,7 @@ public class EndpointsController : ApiControllerBase
     /// </summary>
     /// <param name="applicationId">The application ID.</param>
     /// <param name="groupId">Optional endpoint group ID to filter by.</param>
+    /// <returns>Das Ergebnis.</returns>
     /// <response code="200">List of endpoints.</response>
     /// <response code="401">Missing or invalid bearer token.</response>
     [HttpGet]
@@ -64,6 +68,7 @@ public class EndpointsController : ApiControllerBase
     /// Returns a single endpoint by ID.
     /// </summary>
     /// <param name="id">The endpoint ID.</param>
+    /// <returns>Das Ergebnis.</returns>
     /// <response code="200">The requested endpoint.</response>
     /// <response code="401">Missing or invalid bearer token.</response>
     /// <response code="404">Endpoint not found.</response>
@@ -89,6 +94,7 @@ public class EndpointsController : ApiControllerBase
     /// Creates a new endpoint.
     /// </summary>
     /// <param name="request">The endpoint to create.</param>
+    /// <returns>Das Ergebnis.</returns>
     /// <response code="201">Endpoint created successfully.</response>
     /// <response code="400">Invalid request body.</response>
     /// <response code="401">Missing or invalid bearer token.</response>
@@ -130,6 +136,7 @@ public class EndpointsController : ApiControllerBase
     /// </summary>
     /// <param name="id">The endpoint ID.</param>
     /// <param name="request">The updated endpoint data.</param>
+    /// <returns>Das Ergebnis.</returns>
     /// <response code="200">Updated endpoint.</response>
     /// <response code="400">Invalid request body.</response>
     /// <response code="401">Missing or invalid bearer token.</response>
@@ -202,6 +209,7 @@ public class EndpointsController : ApiControllerBase
     /// Deletes an endpoint.
     /// </summary>
     /// <param name="id">The endpoint ID.</param>
+    /// <returns>Das Ergebnis.</returns>
     /// <response code="204">Endpoint deleted successfully.</response>
     /// <response code="401">Missing or invalid bearer token.</response>
     /// <response code="404">Endpoint not found.</response>
@@ -233,6 +241,7 @@ public class EndpointsController : ApiControllerBase
     /// Adds a header to an endpoint.
     /// </summary>
     /// <param name="request">The header to add.</param>
+    /// <returns>Das Ergebnis.</returns>
     /// <response code="201">Header added successfully.</response>
     /// <response code="400">Invalid request body.</response>
     /// <response code="401">Missing or invalid bearer token.</response>
@@ -262,6 +271,7 @@ public class EndpointsController : ApiControllerBase
     /// Deletes a header from an endpoint.
     /// </summary>
     /// <param name="id">The header ID.</param>
+    /// <returns>Das Ergebnis.</returns>
     /// <response code="204">Header deleted successfully.</response>
     /// <response code="401">Missing or invalid bearer token.</response>
     /// <response code="404">Header not found.</response>
@@ -288,6 +298,7 @@ public class EndpointsController : ApiControllerBase
     /// Adds a query parameter to an endpoint.
     /// </summary>
     /// <param name="request">The query parameter to add.</param>
+    /// <returns>Das Ergebnis.</returns>
     /// <response code="201">Query parameter added successfully.</response>
     /// <response code="400">Invalid request body.</response>
     /// <response code="401">Missing or invalid bearer token.</response>
@@ -317,6 +328,7 @@ public class EndpointsController : ApiControllerBase
     /// Deletes a query parameter from an endpoint.
     /// </summary>
     /// <param name="id">The query parameter ID.</param>
+    /// <returns>Das Ergebnis.</returns>
     /// <response code="204">Query parameter deleted successfully.</response>
     /// <response code="401">Missing or invalid bearer token.</response>
     /// <response code="404">Query parameter not found.</response>

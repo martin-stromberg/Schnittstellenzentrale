@@ -1,4 +1,3 @@
-#pragma warning disable CS1591
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Schnittstellenzentrale.Core.Contracts;
@@ -16,6 +15,8 @@ public class AuthController : ControllerBase
 {
     private readonly ITokenStore _tokenStore;
 
+    /// <summary>Initialisiert eine neue Instanz von <see cref="AuthController"/>.</summary>
+    /// <param name="tokenStore">Der Token-Store.</param>
     public AuthController(ITokenStore tokenStore)
     {
         _tokenStore = tokenStore;

@@ -14,6 +14,8 @@ public class ODataApplicationGroupsController : ODataControllerBase
     private readonly IApplicationRepository _applicationRepository;
 
     /// <summary>Initialisiert eine neue Instanz von <see cref="ODataApplicationGroupsController"/>.</summary>
+    /// <param name="tokenStore">Der Token-Store.</param>
+    /// <param name="applicationRepository">Das Repository für Anwendungen.</param>
     public ODataApplicationGroupsController(ITokenStore tokenStore, IApplicationRepository applicationRepository)
         : base(tokenStore)
     {
@@ -21,6 +23,7 @@ public class ODataApplicationGroupsController : ODataControllerBase
     }
 
     /// <summary>Gibt alle Anwendungsgruppen zurück.</summary>
+    /// <returns>Das Ergebnis.</returns>
     [EnableQuery]
     [HttpGet("ApplicationGroups")]
     public async Task<IActionResult> Get()
@@ -43,6 +46,8 @@ public class ODataApplicationGroupsController : ODataControllerBase
     }
 
     /// <summary>Gibt eine einzelne Anwendungsgruppe per ID zurück.</summary>
+    /// <param name="key">Der Schlüssel der Entität.</param>
+    /// <returns>Das Ergebnis.</returns>
     [EnableQuery]
     [HttpGet("ApplicationGroups({key})")]
     public async Task<IActionResult> Get(int key)
@@ -67,6 +72,8 @@ public class ODataApplicationGroupsController : ODataControllerBase
     }
 
     /// <summary>Legt eine neue Anwendungsgruppe an.</summary>
+    /// <param name="entity">Die zu verarbeitende Entität.</param>
+    /// <returns>Das Ergebnis.</returns>
     [HttpPost("ApplicationGroups")]
     public async Task<IActionResult> Post([FromBody] ApplicationGroup entity)
     {
@@ -83,6 +90,9 @@ public class ODataApplicationGroupsController : ODataControllerBase
     }
 
     /// <summary>Ersetzt eine Anwendungsgruppe vollständig.</summary>
+    /// <param name="key">Der Schlüssel der Entität.</param>
+    /// <param name="entity">Die zu verarbeitende Entität.</param>
+    /// <returns>Das Ergebnis.</returns>
     [HttpPut("ApplicationGroups({key})")]
     public async Task<IActionResult> Put(int key, [FromBody] ApplicationGroup entity)
     {
@@ -107,6 +117,9 @@ public class ODataApplicationGroupsController : ODataControllerBase
     }
 
     /// <summary>Aktualisiert eine Anwendungsgruppe partiell.</summary>
+    /// <param name="key">Der Schlüssel der Entität.</param>
+    /// <param name="patch">Das JSON-Patch-Dokument.</param>
+    /// <returns>Das Ergebnis.</returns>
     [HttpPatch("ApplicationGroups({key})")]
     public async Task<IActionResult> Patch(int key, [FromBody] JsonElement patch)
     {
@@ -135,6 +148,8 @@ public class ODataApplicationGroupsController : ODataControllerBase
     }
 
     /// <summary>Löscht eine Anwendungsgruppe.</summary>
+    /// <param name="key">Der Schlüssel der Entität.</param>
+    /// <returns>Das Ergebnis.</returns>
     [HttpDelete("ApplicationGroups({key})")]
     public async Task<IActionResult> Delete(int key)
     {

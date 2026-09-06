@@ -82,6 +82,8 @@ public class ControllerTestFactory : WebApplicationFactory<Program>
     }
 
     /// <summary>Ruft <c>POST /authenticate</c> auf und gibt den zurückgelieferten Bearer-Token zurück.</summary>
+    /// <param name="client">Der gegen die Test-Factory konfigurierte <see cref="HttpClient"/>.</param>
+    /// <returns>Der ausgestellte Bearer-Token.</returns>
     public async Task<string> ObtainTokenAsync(HttpClient client)
     {
         var response = await client.PostAsync("/authenticate", null);

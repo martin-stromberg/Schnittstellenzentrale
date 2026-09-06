@@ -6,6 +6,7 @@ namespace Schnittstellenzentrale.Infrastructure.Services;
 /// <summary>
 /// Sendet SignalR-Benachrichtigungen über den angegebenen Hub an verbundene Clients.
 /// </summary>
+/// <typeparam name="THub">Typ des SignalR-Hubs, über den gesendet wird.</typeparam>
 public class SignalRNotificationService<THub> : ISignalRNotificationService
     where THub : Hub
 {
@@ -14,6 +15,7 @@ public class SignalRNotificationService<THub> : ISignalRNotificationService
     /// <summary>
     /// Initialisiert eine neue Instanz des <see cref="SignalRNotificationService{THub}"/>.
     /// </summary>
+    /// <param name="hubContext">Hub-Kontext zum Senden der Benachrichtigungen.</param>
     public SignalRNotificationService(IHubContext<THub> hubContext)
     {
         _hubContext = hubContext;
@@ -30,6 +32,7 @@ public class SignalRNotificationService<THub> : ISignalRNotificationService
     /// <summary>
     /// Benachrichtigt alle Clients in der Gruppe <c>application:{applicationId}</c> über eine Änderung der Anwendung.
     /// </summary>
+    /// <param name="applicationId">ID der geänderten Anwendung.</param>
     public async Task NotifyApplicationChangedAsync(int applicationId)
     {
         await _hubContext.Clients.Group($"application:{applicationId}")
@@ -39,6 +42,7 @@ public class SignalRNotificationService<THub> : ISignalRNotificationService
     /// <summary>
     /// Benachrichtigt alle Clients in der Gruppe <c>group:{groupId}</c> über eine Änderung der Anwendungsgruppe.
     /// </summary>
+    /// <param name="groupId">ID der geänderten Anwendungsgruppe.</param>
     public async Task NotifyGroupChangedAsync(int groupId)
     {
         await _hubContext.Clients.Group($"group:{groupId}")
@@ -48,6 +52,8 @@ public class SignalRNotificationService<THub> : ISignalRNotificationService
     /// <summary>
     /// Sendet ein <c>EndpointChanged</c>-Event an die SignalR-Gruppe der Anwendung.
     /// </summary>
+    /// <param name="endpointId">ID des geänderten Endpunkts.</param>
+    /// <param name="applicationId">ID der zugehörigen Anwendung.</param>
     public async Task NotifyEndpointChangedAsync(int endpointId, int applicationId)
     {
         await _hubContext.Clients.Group($"application:{applicationId}")
@@ -57,6 +63,8 @@ public class SignalRNotificationService<THub> : ISignalRNotificationService
     /// <summary>
     /// Sendet ein <c>EndpointGroupChanged</c>-Event an die SignalR-Gruppe der Anwendung.
     /// </summary>
+    /// <param name="endpointGroupId">ID der geänderten Endpunktgruppe.</param>
+    /// <param name="applicationId">ID der zugehörigen Anwendung.</param>
     public async Task NotifyEndpointGroupChangedAsync(int endpointGroupId, int applicationId)
     {
         await _hubContext.Clients.Group($"application:{applicationId}")

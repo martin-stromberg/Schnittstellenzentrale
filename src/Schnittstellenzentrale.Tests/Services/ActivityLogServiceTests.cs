@@ -66,6 +66,30 @@ public class ActivityLogServiceTests
         Assert.Empty(service.Entries);
     }
 
+    /// <summary>Log_SpeichertEintraegeAllerKategorien_MitKorrekterKategorie</summary>
+    /// <param name="category">Die zu protokollierende <see cref="ActivityLogCategory"/>.</param>
+    [Theory]
+    [InlineData(ActivityLogCategory.EntityCreated)]
+    [InlineData(ActivityLogCategory.EntityModified)]
+    [InlineData(ActivityLogCategory.EntityMoved)]
+    [InlineData(ActivityLogCategory.ContextSwitched)]
+    [InlineData(ActivityLogCategory.EndpointExecuted)]
+    [InlineData(ActivityLogCategory.ScriptExecuted)]
+    [InlineData(ActivityLogCategory.ScriptConsoleOutput)]
+    [InlineData(ActivityLogCategory.HttpError)]
+    [InlineData(ActivityLogCategory.InternalError)]
+    public void Log_SpeichertEintragMitKategorie(ActivityLogCategory category)
+    {
+        var service = CreateService();
+
+        service.Log(category, $"Nachricht für {category}", $"Details für {category}");
+
+        var entry = Assert.Single(service.Entries);
+        Assert.Equal(category, entry.Category);
+        Assert.Equal($"Nachricht für {category}", entry.Message);
+        Assert.Equal($"Details für {category}", entry.Details);
+    }
+
     /// <summary>Log_MaxEntries_AeltesteEintraegeWerdenEntfernt</summary>
     [Fact]
     public void Log_MaxEntries_AeltesteEintraegeWerdenEntfernt()

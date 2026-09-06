@@ -76,7 +76,7 @@ else
             {
                 // Bekannte Einschränkung: Nach einem JS-gesteuerten Resize wird OnPanelHeightChanged
                 // nicht erneut ausgelöst, da der JS-Code die neue Höhe nur in localStorage speichert,
-                // aber kein .NET-Callback aufruft. MainLayout._activityLogPanelHeight bleibt bis zum
+                // aber kein .NET-Callback aufruft. AppShell._activityLogPanelHeight bleibt bis zum
                 // nächsten Seitenaufruf veraltet.
                 await _jsModule.InvokeVoidAsync("initializePanelResize", _handleElement, _panelElement);
             }
