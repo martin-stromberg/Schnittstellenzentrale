@@ -10,24 +10,41 @@ public class AppDbContext : DbContext
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
     /// <summary>Anwendungsgruppen.</summary>
+    /// <typeparam name="ApplicationGroup">Entitätstyp der Anwendungsgruppe.</typeparam>
+    /// <value>DbSet der Anwendungsgruppen.</value>
     public DbSet<ApplicationGroup> ApplicationGroups => Set<ApplicationGroup>();
     /// <summary>Anwendungen.</summary>
+    /// <value>DbSet der Anwendungen.</value>
     public DbSet<Core.Models.Application> Applications => Set<Core.Models.Application>();
     /// <summary>Endpunktgruppen.</summary>
+    /// <typeparam name="EndpointGroup">Entitätstyp der Endpunktgruppe.</typeparam>
+    /// <value>DbSet der Endpunktgruppen.</value>
     public DbSet<EndpointGroup> EndpointGroups => Set<EndpointGroup>();
     /// <summary>Endpunkte.</summary>
+    /// <value>DbSet der Endpunkte.</value>
     public DbSet<Core.Models.Endpoint> Endpoints => Set<Core.Models.Endpoint>();
     /// <summary>Endpunkt-Header.</summary>
+    /// <typeparam name="EndpointHeader">Entitätstyp des Endpunkt-Headers.</typeparam>
+    /// <value>DbSet der Endpunkt-Header.</value>
     public DbSet<EndpointHeader> EndpointHeaders => Set<EndpointHeader>();
     /// <summary>Endpunkt-Abfrageparameter.</summary>
+    /// <typeparam name="EndpointQueryParameter">Entitätstyp des Abfrageparameters.</typeparam>
+    /// <value>DbSet der Endpunkt-Abfrageparameter.</value>
     public DbSet<EndpointQueryParameter> EndpointQueryParameters => Set<EndpointQueryParameter>();
     /// <summary>Systemumgebungen.</summary>
+    /// <value>DbSet der Systemumgebungen.</value>
     public DbSet<Core.Models.SystemEnvironment> SystemEnvironments => Set<Core.Models.SystemEnvironment>();
     /// <summary>Umgebungsvariablen.</summary>
+    /// <typeparam name="EnvironmentVariable">Entitätstyp der Umgebungsvariable.</typeparam>
+    /// <value>DbSet der Umgebungsvariablen.</value>
     public DbSet<EnvironmentVariable> EnvironmentVariables => Set<EnvironmentVariable>();
     /// <summary>Anwendungslinks.</summary>
+    /// <typeparam name="ApplicationLink">Entitätstyp des Anwendungslinks.</typeparam>
+    /// <value>DbSet der Anwendungslinks.</value>
     public DbSet<ApplicationLink> ApplicationLinks => Set<ApplicationLink>();
     /// <summary>Endpunkt-Aufrufhistorie.</summary>
+    /// <typeparam name="EndpointCallHistoryEntry">Entitätstyp des Historieneintrags.</typeparam>
+    /// <value>DbSet der Endpunkt-Aufrufhistorie.</value>
     public DbSet<EndpointCallHistoryEntry> EndpointCallHistory => Set<EndpointCallHistoryEntry>();
 
     /// <inheritdoc/>

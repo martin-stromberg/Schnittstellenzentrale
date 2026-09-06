@@ -12,6 +12,8 @@ public class ApplicationGroupService : IApplicationGroupService
     private readonly UploadSettings _uploadSettings;
 
     /// <summary>Initialisiert eine neue Instanz von <see cref="ApplicationGroupService"/>.</summary>
+    /// <param name="factory">Fabrik zum Erzeugen des DbContext.</param>
+    /// <param name="uploadSettings">Konfigurierte Upload-Einstellungen.</param>
     public ApplicationGroupService(IDbContextFactory<AppDbContext> factory, IOptions<UploadSettings> uploadSettings)
     {
         _factory = factory;

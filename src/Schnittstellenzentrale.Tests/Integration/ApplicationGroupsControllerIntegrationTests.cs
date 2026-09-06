@@ -14,6 +14,7 @@ public class ApplicationGroupsControllerIntegrationTests : IClassFixture<Control
     private readonly ControllerTestFactory _factory;
 
     /// <summary>Initialisiert den Test mit der gemeinsamen Controller-Factory.</summary>
+    /// <param name="factory">Die von xUnit injizierte <see cref="ControllerTestFactory"/>.</param>
     public ApplicationGroupsControllerIntegrationTests(ControllerTestFactory factory)
     {
         _factory = factory;

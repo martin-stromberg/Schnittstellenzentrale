@@ -15,6 +15,9 @@ public class ODataEndpointsController : ODataControllerBase
     private readonly IApplicationRepository _applicationRepository;
 
     /// <summary>Initialisiert eine neue Instanz von <see cref="ODataEndpointsController"/>.</summary>
+    /// <param name="tokenStore">Der Token-Store.</param>
+    /// <param name="endpointRepository">Das Repository für Endpunkte.</param>
+    /// <param name="applicationRepository">Das Repository für Anwendungen.</param>
     public ODataEndpointsController(
         ITokenStore tokenStore,
         IEndpointRepository endpointRepository,
@@ -45,6 +48,8 @@ public class ODataEndpointsController : ODataControllerBase
     }
 
     /// <summary>Gibt einen einzelnen Endpunkt per ID zurück.</summary>
+    /// <param name="key">Der Schlüssel der Entität.</param>
+    /// <returns>Das Ergebnis.</returns>
     [EnableQuery]
     [HttpGet("Endpoints({key})")]
     public async Task<IActionResult> Get(int key)
@@ -66,6 +71,8 @@ public class ODataEndpointsController : ODataControllerBase
     }
 
     /// <summary>Legt einen neuen Endpunkt an.</summary>
+    /// <param name="entity">Die zu verarbeitende Entität.</param>
+    /// <returns>Das Ergebnis.</returns>
     [HttpPost("Endpoints")]
     public async Task<IActionResult> Post([FromBody] Endpoint entity)
     {
@@ -84,6 +91,9 @@ public class ODataEndpointsController : ODataControllerBase
     }
 
     /// <summary>Ersetzt einen Endpunkt vollständig.</summary>
+    /// <param name="key">Der Schlüssel der Entität.</param>
+    /// <param name="entity">Die zu verarbeitende Entität.</param>
+    /// <returns>Das Ergebnis.</returns>
     [HttpPut("Endpoints({key})")]
     public async Task<IActionResult> Put(int key, [FromBody] Endpoint entity)
     {
@@ -125,6 +135,9 @@ public class ODataEndpointsController : ODataControllerBase
     }
 
     /// <summary>Aktualisiert einen Endpunkt partiell.</summary>
+    /// <param name="key">Der Schlüssel der Entität.</param>
+    /// <param name="patch">Das JSON-Patch-Dokument.</param>
+    /// <returns>Das Ergebnis.</returns>
     [HttpPatch("Endpoints({key})")]
     public async Task<IActionResult> Patch(int key, [FromBody] JsonElement patch)
     {
@@ -209,6 +222,8 @@ public class ODataEndpointsController : ODataControllerBase
     }
 
     /// <summary>Löscht einen Endpunkt.</summary>
+    /// <param name="key">Der Schlüssel der Entität.</param>
+    /// <returns>Das Ergebnis.</returns>
     [HttpDelete("Endpoints({key})")]
     public async Task<IActionResult> Delete(int key)
     {

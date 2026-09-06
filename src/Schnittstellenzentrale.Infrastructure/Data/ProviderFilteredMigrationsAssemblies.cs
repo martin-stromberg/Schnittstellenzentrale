@@ -15,6 +15,11 @@ namespace Schnittstellenzentrale.Infrastructure.Data;
 #pragma warning disable EF1001
 
 /// <summary>Schränkt die sichtbaren Migrationen auf den SQLite-Namespace ein.</summary>
+/// <param name="currentContext">Aktueller DbContext.</param>
+/// <param name="options">DbContext-Optionen.</param>
+/// <param name="idGenerator">Generator für Migrations-IDs.</param>
+/// <param name="logger">Logger für Migrations-Diagnose.</param>
+/// <returns>Migrations-Assembly mit gefilterten SQLite-Migrationen.</returns>
 internal sealed class SqliteMigrationsAssembly(
     ICurrentDbContext currentContext,
     IDbContextOptions options,
@@ -32,6 +37,11 @@ internal sealed class SqliteMigrationsAssembly(
 }
 
 /// <summary>Schränkt die sichtbaren Migrationen auf den SQL-Server-Namespace ein.</summary>
+/// <param name="currentContext">Aktueller DbContext.</param>
+/// <param name="options">DbContext-Optionen.</param>
+/// <param name="idGenerator">Generator für Migrations-IDs.</param>
+/// <param name="logger">Logger für Migrations-Diagnose.</param>
+/// <returns>Migrations-Assembly mit gefilterten SQL-Server-Migrationen.</returns>
 internal sealed class SqlServerMigrationsAssembly(
     ICurrentDbContext currentContext,
     IDbContextOptions options,

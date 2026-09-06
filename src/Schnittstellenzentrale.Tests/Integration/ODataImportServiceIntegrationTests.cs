@@ -36,6 +36,7 @@ public class ODataImportServiceIntegrationTests : IClassFixture<ControllerTestFa
     private readonly ControllerTestFactory _factory;
 
     /// <summary>Initialisiert ODataImportServiceIntegrationTests.</summary>
+    /// <param name="factory">Die von xUnit injizierte <see cref="ControllerTestFactory"/>.</param>
     public ODataImportServiceIntegrationTests(ControllerTestFactory factory)
     {
         _factory = factory;

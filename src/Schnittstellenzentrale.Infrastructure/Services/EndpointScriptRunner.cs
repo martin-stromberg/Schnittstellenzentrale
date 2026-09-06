@@ -17,6 +17,9 @@ public class EndpointScriptRunner : IEndpointScriptRunner
     private readonly IActivityLogService _activityLogService;
 
     /// <summary>Initialisiert eine neue Instanz des <see cref="EndpointScriptRunner"/>.</summary>
+    /// <param name="environmentRepository">Repository für Systemumgebungen (Zugriff auf Umgebungsvariablen).</param>
+    /// <param name="signalRNotificationService">Dienst für SignalR-Benachrichtigungen.</param>
+    /// <param name="activityLogService">Dienst für das Aktivitätsprotokoll.</param>
     public EndpointScriptRunner(
         ISystemEnvironmentRepository environmentRepository,
         ISignalRNotificationService signalRNotificationService,

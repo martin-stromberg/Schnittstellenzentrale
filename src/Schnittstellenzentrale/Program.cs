@@ -31,6 +31,10 @@ public partial class Program
     }
 
     /// <summary>Erstellt und konfiguriert die WebApplication. Kann aus Tests aufgerufen werden.</summary>
+    /// <param name="args">Die Befehlszeilenargumente.</param>
+    /// <param name="options">Die Web-Application-Optionen.</param>
+    /// <param name="configureServices">Die Konfigurations-Methode für die Dienste.</param>
+    /// <returns>Das Ergebnis.</returns>
     public static async Task<WebApplication> BuildWebApplicationAsync(
         string[] args,
         WebApplicationOptions? options = null,
@@ -45,6 +49,12 @@ public partial class Program
         var builder = options is not null
             ? WebApplication.CreateBuilder(options)
             : WebApplication.CreateBuilder(args);
+
+        if (builder.Environment.EnvironmentName.Equals("Playwright", StringComparison.OrdinalIgnoreCase))
+        {
+            Microsoft.AspNetCore.Hosting.StaticWebAssets.StaticWebAssetsLoader
+                .UseStaticWebAssets(builder.Environment, builder.Configuration);
+        }
 
         builder.Host.UseSerilog();
 

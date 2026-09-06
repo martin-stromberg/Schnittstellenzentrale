@@ -13,6 +13,8 @@ public static class SystemEntryInitializer
     /// Stellt sicher, dass Systemgruppe und -anwendung in der Datenbank vorhanden sind
     /// und deren URLs dem konfigurierten <c>Api:BaseUrl</c>-Wert entsprechen.
     /// </summary>
+    /// <param name="services">Der Service-Provider.</param>
+    /// <param name="configuration">Die Konfiguration.</param>
     public static async Task InitializeAsync(IServiceProvider services, IConfiguration configuration)
     {
         using var scope = services.CreateScope();

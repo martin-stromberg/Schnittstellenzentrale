@@ -11,6 +11,7 @@ public class HistoryService : IHistoryService
     private readonly IDbContextFactory<AppDbContext> _factory;
 
     /// <summary>Initialisiert eine neue Instanz von <see cref="HistoryService"/>.</summary>
+    /// <param name="factory">Fabrik zum Erzeugen des DbContext.</param>
     public HistoryService(IDbContextFactory<AppDbContext> factory)
     {
         _factory = factory;

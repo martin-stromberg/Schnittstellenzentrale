@@ -4,6 +4,8 @@ namespace Schnittstellenzentrale.Core.Helpers;
 public static class HttpMethodBadgeHelper
 {
     /// <summary>Gibt die CSS-Klasse für das Badge der angegebenen HTTP-Methode zurück.</summary>
+    /// <param name="method">HTTP-Methode (z. B. GET, POST), optional.</param>
+    /// <returns>CSS-Klasse für das Methoden-Badge.</returns>
     public static string GetMethodBadgeClass(string? method) => method?.ToUpperInvariant() switch
     {
         "GET" => "sz-method-badge sz-method-badge--get",

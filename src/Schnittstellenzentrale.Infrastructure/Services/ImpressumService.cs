@@ -13,6 +13,7 @@ public class ImpressumService : IImpressumService
     private readonly string _baseName;
 
     /// <summary>Initialisiert den Service und löst den konfigurierten Dateipfad auf.</summary>
+    /// <param name="options">Konfigurierte Impressum-Einstellungen.</param>
     public ImpressumService(IOptions<ImpressumSettings> options)
     {
         var filePath = options.Value.FilePath;

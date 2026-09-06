@@ -12,6 +12,7 @@ public class ApplicationRepository : IApplicationRepository
     private readonly IDbContextFactory<AppDbContext> _factory;
 
     /// <summary>Initialisiert eine neue Instanz von <see cref="ApplicationRepository"/>.</summary>
+    /// <param name="factory">Fabrik zum Erzeugen des DbContext.</param>
     public ApplicationRepository(IDbContextFactory<AppDbContext> factory)
     {
         _factory = factory;

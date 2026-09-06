@@ -1,12 +1,13 @@
-#pragma warning disable CS1591
 using System.Runtime.InteropServices;
 using System.Text;
 using Schnittstellenzentrale.Core.Interfaces;
 
 namespace Schnittstellenzentrale.Infrastructure.Services;
 
+/// <summary>Implementierung von <see cref="ICredentialService"/> über die Windows-Credential-Manager-API (<c>advapi32.dll</c>).</summary>
 public class WindowsCredentialService : ICredentialService
 {
+    /// <inheritdoc/>
     public string? GetPassword(string target)
     {
         if (!NativeMethods.CredRead(target, NativeMethods.CRED_TYPE_GENERIC, 0, out var credentialPtr))
@@ -25,6 +26,7 @@ public class WindowsCredentialService : ICredentialService
         }
     }
 
+    /// <inheritdoc/>
     public void SavePassword(string target, string username, string password)
     {
         var passwordBytes = Encoding.Unicode.GetBytes(password);
@@ -48,6 +50,7 @@ public class WindowsCredentialService : ICredentialService
         }
     }
 
+    /// <inheritdoc/>
     public void DeletePassword(string target)
     {
         NativeMethods.CredDelete(target, NativeMethods.CRED_TYPE_GENERIC, 0);

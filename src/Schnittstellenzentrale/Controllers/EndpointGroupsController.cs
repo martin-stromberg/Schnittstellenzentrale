@@ -15,6 +15,9 @@ public class EndpointGroupsController : ApiControllerBase
     private readonly ISignalRNotificationService _signalRNotificationService;
 
     /// <summary>Initialisiert eine neue Instanz von <see cref="EndpointGroupsController"/>.</summary>
+    /// <param name="tokenStore">Der Token-Store.</param>
+    /// <param name="endpointRepository">Das Repository für Endpunkte.</param>
+    /// <param name="signalRNotificationService">Der SignalR-Benachrichtigungs-Service.</param>
     public EndpointGroupsController(
         ITokenStore tokenStore,
         IEndpointRepository endpointRepository,
@@ -29,6 +32,7 @@ public class EndpointGroupsController : ApiControllerBase
     /// Returns all endpoint groups for the given application.
     /// </summary>
     /// <param name="applicationId">The application ID.</param>
+    /// <returns>Das Ergebnis.</returns>
     /// <response code="200">List of endpoint groups.</response>
     /// <response code="401">Missing or invalid bearer token.</response>
     [HttpGet]
@@ -50,6 +54,7 @@ public class EndpointGroupsController : ApiControllerBase
     /// Returns a single endpoint group by ID.
     /// </summary>
     /// <param name="id">The endpoint group ID.</param>
+    /// <returns>Das Ergebnis.</returns>
     /// <response code="200">The requested endpoint group.</response>
     /// <response code="401">Missing or invalid bearer token.</response>
     /// <response code="404">Endpoint group not found.</response>
@@ -75,6 +80,7 @@ public class EndpointGroupsController : ApiControllerBase
     /// Creates a new endpoint group.
     /// </summary>
     /// <param name="request">The endpoint group to create.</param>
+    /// <returns>Das Ergebnis.</returns>
     /// <response code="201">Endpoint group created successfully.</response>
     /// <response code="400">Invalid request body.</response>
     /// <response code="401">Missing or invalid bearer token.</response>
@@ -109,6 +115,7 @@ public class EndpointGroupsController : ApiControllerBase
     /// </summary>
     /// <param name="id">The endpoint group ID.</param>
     /// <param name="request">The updated endpoint group data.</param>
+    /// <returns>Das Ergebnis.</returns>
     /// <response code="200">Updated endpoint group.</response>
     /// <response code="400">Invalid request body.</response>
     /// <response code="401">Missing or invalid bearer token.</response>
@@ -149,6 +156,7 @@ public class EndpointGroupsController : ApiControllerBase
     /// Deletes an endpoint group.
     /// </summary>
     /// <param name="id">The endpoint group ID.</param>
+    /// <returns>Das Ergebnis.</returns>
     /// <response code="204">Endpoint group deleted successfully.</response>
     /// <response code="401">Missing or invalid bearer token.</response>
     /// <response code="404">Endpoint group not found.</response>

@@ -14,17 +14,20 @@ public class ODataAuthController : ControllerBase
     private readonly ITokenStore _tokenStore;
 
     /// <summary>Initialisiert eine neue Instanz von <see cref="ODataAuthController"/>.</summary>
+    /// <param name="tokenStore">Der Token-Store.</param>
     public ODataAuthController(ITokenStore tokenStore)
     {
         _tokenStore = tokenStore;
     }
 
     /// <summary>Authentifiziert den aktuellen Windows-Benutzer und gibt einen Bearer-Token für die OData-API zurück (OData Unbound Action, POST).</summary>
+    /// <returns>Das Ergebnis.</returns>
     [HttpPost("Authenticate()")]
     [ODataAttributeRouting]
     public Task<IActionResult> AuthenticatePost() => AuthenticateAsync();
 
     /// <summary>Authentifiziert den aktuellen Windows-Benutzer und gibt einen Bearer-Token für die OData-API zurück (OData Unbound Function, GET).</summary>
+    /// <returns>Das Ergebnis.</returns>
     [HttpGet("Authenticate()")]
     public Task<IActionResult> AuthenticateGet() => AuthenticateAsync();
 

@@ -1,4 +1,3 @@
-#pragma warning disable CS1591
 using System.Security.Principal;
 using Microsoft.AspNetCore.Http;
 using Schnittstellenzentrale.Core.Interfaces;
@@ -22,7 +21,7 @@ public class WindowsCurrentUserService : ICurrentUserService
     /// <summary>
     /// Gibt den Namen des aktuell angemeldeten Benutzers zurück. Zunächst wird versucht, den Benutzernamen aus dem aktuellen HTTP-Kontext zu ermitteln. Wenn der Benutzer authentifiziert ist und einen Namen hat, wird dieser zurückgegeben. Andernfalls wird die Windows-Identität des aktuellen Prozesses abgerufen und deren Name zurückgegeben.
     /// </summary>
-    /// <returns></returns>
+    /// <returns>Name des aktuell angemeldeten Benutzers.</returns>
     public string GetCurrentUserName()
     {
         var identity = _httpContextAccessor.HttpContext?.User?.Identity;

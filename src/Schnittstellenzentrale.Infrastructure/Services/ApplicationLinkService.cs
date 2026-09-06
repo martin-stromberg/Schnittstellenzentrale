@@ -9,6 +9,7 @@ public class ApplicationLinkService : IApplicationLinkService
     private readonly IApplicationLinkRepository _repository;
 
     /// <summary>Initialisiert eine neue Instanz von <see cref="ApplicationLinkService"/>.</summary>
+    /// <param name="repository">Repository für Anwendungslinks.</param>
     public ApplicationLinkService(IApplicationLinkRepository repository)
     {
         _repository = repository;

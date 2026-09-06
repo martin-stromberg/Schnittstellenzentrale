@@ -12,6 +12,8 @@ public class SystemEnvironmentsController : ApiControllerBase
     private readonly ISystemEnvironmentRepository _repository;
 
     /// <summary>Initialisiert eine neue Instanz von <see cref="SystemEnvironmentsController"/>.</summary>
+    /// <param name="tokenStore">Der Token-Store.</param>
+    /// <param name="repository">Das Repository für Systemumgebungen.</param>
     public SystemEnvironmentsController(ITokenStore tokenStore, ISystemEnvironmentRepository repository)
         : base(tokenStore)
     {
@@ -20,6 +22,7 @@ public class SystemEnvironmentsController : ApiControllerBase
 
     /// <summary>Returns a single system environment by ID including its variables.</summary>
     /// <param name="id">The system environment ID.</param>
+    /// <returns>Das Ergebnis.</returns>
     /// <response code="200">The requested system environment.</response>
     /// <response code="401">Missing or invalid bearer token.</response>
     /// <response code="404">System environment not found.</response>

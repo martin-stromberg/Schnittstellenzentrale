@@ -22,6 +22,12 @@ public class ApplicationApiClient : IApplicationApiClient
     private string? _currentToken;
 
     /// <summary>Initialisiert eine neue Instanz von <see cref="ApplicationApiClient"/>.</summary>
+    /// <param name="httpClient">Der HTTP-Client.</param>
+    /// <param name="httpContextAccessor">Der HTTP-Kontext-Accessor.</param>
+    /// <param name="configuration">Die Konfiguration.</param>
+    /// <param name="tokenStore">Der Token-Store.</param>
+    /// <param name="storageModeService">Der Speichermodus-Service.</param>
+    /// <param name="currentUserService">Der aktuelle Benutzer-Service.</param>
     public ApplicationApiClient(
         HttpClient httpClient,
         IHttpContextAccessor httpContextAccessor,

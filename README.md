@@ -193,7 +193,22 @@ Trace-Dateien der Playwright-Tests werden nach jedem Lauf unter `playwright-trac
 npx playwright show-trace playwright-traces/ApplicationCrudTests.zip
 ```
 
-Das Repository nutzt ein lokales Qualitätsgate für 70 % Line Coverage; die bUnit- und Playwright-Tests werden gezielt erweitert, damit der CI-Lauf stabil durchläuft. Abgedeckte E2E-Szenarien: Startseite, Anwendungs-CRUD, Endpunkt-Ausführung, Swagger-Import, OData-Import, Health-Check, Speichermoduswechsel, SignalR-Echtzeitsynchronisation.
+Das Repository nutzt ein lokales Qualitätsgate für 70 % Line Coverage; die bUnit- und Playwright-Tests werden gezielt erweitert, damit der CI-Lauf stabil durchläuft. Abgedeckte E2E-Szenarien: Startseite, Anwendungs-CRUD, Endpunkt-Ausführung, Swagger-Import, OData-Import, Health-Check, Speichermoduswechsel, SignalR-Echtzeitsynchronisation, Aktivitätsprotokoll.
+
+## Git-Hooks
+
+Das Repository enthält versionierte Git-Hooks im Verzeichnis `.githooks/` (Voraussetzung: Python 3 und das .NET SDK). Einmalig pro Klon aktivieren:
+
+```
+.githooks\install-hooks.cmd    # Windows
+./.githooks/install-hooks.sh   # Linux/macOS
+```
+
+Das Skript setzt `core.hooksPath` auf `.githooks`. Alternativ manuell: `git config --local core.hooksPath .githooks`.
+
+**pre-commit** blockiert direkte Commits auf `main`/`staging` und prüft u. a. resx-Konsistenz und fehlende Übersetzungsschlüssel, XML-Dokumentation (`GenerateDocumentationFile`, CS1591 als Fehler, keine `#pragma warning disable` für XML-Doc-Codes, vollständige `<param>`/`<returns>`-Tags) sowie hartcodierte UI-Strings in Razor-Dateien. Weitere Checks (verwaiste Komponenten, Throw-Stubs, Enum-Testabdeckung) warnen beim Commit.
+
+**pre-push** blockiert direkte Pushes auf `main`/`staging` und prüft das gesamte Repository streng (`--all --strict`): keine `NotImplementedException`/Throw-only-Stubs, keine verwaisten Razor-Komponenten, alle `public`/`internal`-Enum-Werte müssen in Tests vorkommen.
 
 ## Rechtliches
 

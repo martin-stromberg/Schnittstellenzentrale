@@ -8,6 +8,13 @@ namespace Schnittstellenzentrale.Tests.Helpers;
 public sealed class CoverageTestFactory
 {
     /// <summary>Initialisiert die Instanz mit den vorbereiteten Mocks und Testdaten.</summary>
+    /// <param name="applicationApiClientMock">Mock für <see cref="IApplicationApiClient"/>.</param>
+    /// <param name="applicationServiceMock">Mock für <see cref="IApplicationService"/>.</param>
+    /// <param name="environmentRepositoryMock">Mock für <see cref="ISystemEnvironmentRepository"/>.</param>
+    /// <param name="activeEnvironmentServiceMock">Mock für <see cref="IActiveEnvironmentService"/>.</param>
+    /// <param name="restApplication">REST-Anwendung für Testszenarien.</param>
+    /// <param name="odataApplication">OData-Anwendung für Testszenarien.</param>
+    /// <param name="selectedEnvironment">Ausgewählte Umgebung für Testszenarien.</param>
     public CoverageTestFactory(
         Mock<IApplicationApiClient> applicationApiClientMock,
         Mock<IApplicationService> applicationServiceMock,

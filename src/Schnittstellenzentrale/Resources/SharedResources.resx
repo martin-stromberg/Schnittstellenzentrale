@@ -116,6 +116,10 @@
     <value>Help</value>
     <comment>TopBar: title attribute of the help icon link</comment>
   </data>
+  <data name="TopBar_Tooltip_ActivityLog" xml:space="preserve">
+    <value>Toggle activity log</value>
+    <comment>TopBar: title attribute of the activity-log toggle button</comment>
+  </data>
 
   <!-- EmptyContentView -->
   <data name="EmptyContentView_Hint" xml:space="preserve">
@@ -1135,12 +1139,6 @@
   <data name="RequestAuthPanel_Placeholder_BearerToken" xml:space="preserve">
     <value>Token</value>
     <comment>RequestAuthPanel: placeholder in the bearer token input</comment>
-  </data>
-
-  <!-- NavMenu -->
-  <data name="NavMenu_ToggleTitle" xml:space="preserve">
-    <value>Navigation menu</value>
-    <comment>NavMenu: title attribute on the checkbox that toggles the mobile navigation menu</comment>
   </data>
 
   <!-- ThemeToggle -->

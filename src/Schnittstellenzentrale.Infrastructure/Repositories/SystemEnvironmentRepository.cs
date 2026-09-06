@@ -13,6 +13,8 @@ public class SystemEnvironmentRepository : ISystemEnvironmentRepository
     private readonly ICurrentUserService _currentUserService;
 
     /// <summary>Initialisiert eine neue Instanz von <see cref="SystemEnvironmentRepository"/>.</summary>
+    /// <param name="factory">Fabrik zum Erzeugen des DbContext.</param>
+    /// <param name="currentUserService">Dienst zum Ermitteln des aktuellen Benutzers.</param>
     public SystemEnvironmentRepository(IDbContextFactory<AppDbContext> factory, ICurrentUserService currentUserService)
     {
         _factory = factory;

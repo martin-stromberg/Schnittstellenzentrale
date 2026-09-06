@@ -14,6 +14,7 @@ public class ActivityLogService : IActivityLogService
     private readonly ILogger<ActivityLogService> _logger;
 
     /// <summary>Initialisiert eine neue Instanz des <see cref="ActivityLogService"/>.</summary>
+    /// <param name="logger">Logger für Diagnosemeldungen.</param>
     public ActivityLogService(ILogger<ActivityLogService> logger)
     {
         _logger = logger;

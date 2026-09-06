@@ -20,6 +20,10 @@ public class ODataImportService : IODataImportService
     private readonly ILogger<ODataImportService> _logger;
 
     /// <summary>Initialisiert eine neue Instanz von <see cref="ODataImportService"/>.</summary>
+    /// <param name="httpClientFactory">Fabrik zum Erzeugen von HttpClients.</param>
+    /// <param name="endpointRepository">Repository für Endpunkte.</param>
+    /// <param name="credentialService">Dienst zum Auflösen von Anmeldeinformationen.</param>
+    /// <param name="logger">Logger für Diagnosemeldungen.</param>
     public ODataImportService(IHttpClientFactory httpClientFactory, IEndpointRepository endpointRepository, ICredentialService credentialService, ILogger<ODataImportService> logger)
     {
         _httpClientFactory = httpClientFactory;

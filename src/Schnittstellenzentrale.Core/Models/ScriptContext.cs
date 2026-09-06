@@ -44,6 +44,7 @@ public class ScriptContext
     }
 
     /// <summary>Merkt, ob der letzte <c>sz.execute(name)</c>-Aufruf erfolgreich einen Authenticate-Endpunkt ausgeführt hat.</summary>
+    /// <param name="wasSuccessfulAuthenticateEndpoint"><c>true</c>, wenn der Aufruf erfolgreich einen Authenticate-Endpunkt ausgeführt hat.</param>
     public void RecordExecuteEndpointResult(bool wasSuccessfulAuthenticateEndpoint)
     {
         LastExecuteWasSuccessfulAuthenticate = wasSuccessfulAuthenticateEndpoint;

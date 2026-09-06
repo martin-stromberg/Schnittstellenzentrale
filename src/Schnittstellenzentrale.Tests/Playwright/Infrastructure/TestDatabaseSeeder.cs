@@ -15,6 +15,8 @@ public class TestDatabaseSeeder
     private readonly IConfiguration _configuration;
 
     /// <summary>Initialisiert den Seeder mit dem Service-Provider und der Konfiguration der Factory.</summary>
+    /// <param name="services">Der Service-Provider des Testservers.</param>
+    /// <param name="configuration">Die Konfiguration des Testservers.</param>
     public TestDatabaseSeeder(IServiceProvider services, IConfiguration configuration)
     {
         _services = services;
