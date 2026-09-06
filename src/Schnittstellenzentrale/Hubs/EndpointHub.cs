@@ -6,24 +6,28 @@ namespace Schnittstellenzentrale.Hubs;
 public class EndpointHub : Hub
 {
     /// <summary>Trägt den aktuellen Client in die SignalR-Gruppe der angegebenen Anwendung ein.</summary>
+    /// <param name="applicationId">Die ID der Anwendung.</param>
     public async Task SubscribeToApplication(int applicationId)
     {
         await Groups.AddToGroupAsync(Context.ConnectionId, $"application:{applicationId}");
     }
 
     /// <summary>Entfernt den aktuellen Client aus der SignalR-Gruppe der angegebenen Anwendung.</summary>
+    /// <param name="applicationId">Die ID der Anwendung.</param>
     public async Task UnsubscribeFromApplication(int applicationId)
     {
         await Groups.RemoveFromGroupAsync(Context.ConnectionId, $"application:{applicationId}");
     }
 
     /// <summary>Trägt den aktuellen Client in die SignalR-Gruppe der angegebenen Anwendungsgruppe ein.</summary>
+    /// <param name="groupId">Die ID der Gruppe.</param>
     public async Task SubscribeToGroup(int groupId)
     {
         await Groups.AddToGroupAsync(Context.ConnectionId, $"group:{groupId}");
     }
 
     /// <summary>Entfernt den aktuellen Client aus der SignalR-Gruppe der angegebenen Anwendungsgruppe.</summary>
+    /// <param name="groupId">Die ID der Gruppe.</param>
     public async Task UnsubscribeFromGroup(int groupId)
     {
         await Groups.RemoveFromGroupAsync(Context.ConnectionId, $"group:{groupId}");

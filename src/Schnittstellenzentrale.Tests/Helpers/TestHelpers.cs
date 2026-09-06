@@ -14,7 +14,8 @@ public static class TestHelpers
     /// Der Aufrufer muss die <see cref="SqliteConnection"/> disposen, nachdem alle Factory-erstellten
     /// Contexts disposed wurden.
     /// </summary>
-    public static (IDbContextFactory<AppDbContext> Factory, SqliteConnection Connection) CreateInMemoryDbContext()
+    /// <returns>Tupel aus Context-Factory und offener SQLite-Verbindung.</returns>
+    public static (IDbContextFactory<AppDbContext>, SqliteConnection) CreateInMemoryDbContext()
     {
         var connection = new SqliteConnection("Data Source=:memory:");
         connection.Open();
@@ -37,7 +38,8 @@ public static class TestHelpers
     /// Der Aufrufer muss die <see cref="SqliteConnection"/> disposen, nachdem alle Factory-erstellten
     /// Contexts disposed wurden.
     /// </summary>
-    public static (IDbContextFactory<AppDbContext> Factory, SqliteConnection Connection) CreateInMemoryDbContextWithHistory()
+    /// <returns>Tupel aus Context-Factory und offener SQLite-Verbindung.</returns>
+    public static (IDbContextFactory<AppDbContext>, SqliteConnection) CreateInMemoryDbContextWithHistory()
         => CreateInMemoryDbContext();
 
     /// <summary>
@@ -45,6 +47,7 @@ public static class TestHelpers
     /// dieselbe SQLite-Connection aus. Ermöglicht Concurrency-Tests, bei denen zwei Kontexte
     /// denselben Datenbankzustand sehen müssen.
     /// </summary>
+    /// <param name="test">Der auszuführende Test mit den beiden Repository-Instanzen.</param>
     public static async Task ExecuteWithTwoContextsAsync(Func<ApplicationRepository, ApplicationRepository, Task> test)
     {
         await ExecuteWithSharedConnectionAsync(async (factory1, factory2) =>
@@ -58,6 +61,7 @@ public static class TestHelpers
     /// dieselbe SQLite-Connection aus. Ermöglicht Concurrency-Tests, bei denen zwei Kontexte
     /// denselben Datenbankzustand sehen müssen.
     /// </summary>
+    /// <param name="test">Der auszuführende Test mit den beiden Repository-Instanzen.</param>
     public static async Task ExecuteWithTwoSystemEnvironmentRepositoriesAsync(
         Func<SystemEnvironmentRepository, SystemEnvironmentRepository, Task> test)
     {

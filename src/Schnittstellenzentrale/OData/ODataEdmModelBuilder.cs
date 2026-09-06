@@ -19,6 +19,7 @@ public static class ODataEdmModelBuilder
     private const string BearerTokenVariable = "{{schnittstellenzentrale.authToken}}";
 
     /// <summary>Erzeugt und gibt das fertige <see cref="IEdmModel"/> zurück.</summary>
+    /// <returns>Das erstellte EDM-Modell.</returns>
     public static IEdmModel Build()
     {
         var builder = new ODataConventionModelBuilder();

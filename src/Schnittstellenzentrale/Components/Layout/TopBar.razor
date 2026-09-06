@@ -37,6 +37,10 @@
 
         <ThemeToggle />
 
+        <button type="button" class="sz-topbar-icon-btn" title="@L["TopBar_Tooltip_ActivityLog"]" @onclick="ToggleActivityLog">
+            &#9776;
+        </button>
+
         <a href="/settings" class="sz-topbar-icon-btn" title="@L["TopBar_Tooltip_Settings"]">&#9881;</a>
         <a href="/help" class="sz-topbar-icon-btn" title="@L["TopBar_Tooltip_Help"]">&#63;</a>
 
@@ -45,6 +49,8 @@
 </div>
 
 @code {
+    [Parameter] public EventCallback OnActivityLogToggleRequested { get; set; }
+
     private string _userName = string.Empty;
     private string _initials = string.Empty;
     private EnvironmentSelector? _environmentSelector;
@@ -89,6 +95,8 @@
     }
 
     private void OnStateChanged() => InvokeAsync(StateHasChanged);
+
+    private async Task ToggleActivityLog() => await OnActivityLogToggleRequested.InvokeAsync(null);
 
     /// <summary>Meldet Event-Abonnements ab.</summary>
     public void Dispose()

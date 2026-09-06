@@ -9,6 +9,8 @@ namespace Schnittstellenzentrale.Infrastructure.Data;
 public static class DatabaseProviderFactory
 {
     /// <summary>Liest <c>DatabaseProvider</c> aus der Konfiguration und registriert den passenden EF-Core-Provider samt gefilterten Migrationen.</summary>
+    /// <param name="services">Service-Collection, in der der DbContext registriert wird.</param>
+    /// <param name="configuration">Anwendungskonfiguration mit <c>DatabaseProvider</c> und Connection-String.</param>
     public static void RegisterDbContext(IServiceCollection services, IConfiguration configuration)
     {
         var provider = configuration.GetValue<string>("DatabaseProvider") ?? "SQLite";

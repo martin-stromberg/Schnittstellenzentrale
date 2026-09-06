@@ -116,6 +116,10 @@
     <value>Hilfe</value>
     <comment>TopBar: title-Attribut des Hilfe-Icon-Links</comment>
   </data>
+  <data name="TopBar_Tooltip_ActivityLog" xml:space="preserve">
+    <value>Protokoll ein-/ausblenden</value>
+    <comment>TopBar: title-Attribut des Protokoll-Umschalt-Buttons</comment>
+  </data>
 
   <!-- EmptyContentView -->
   <data name="EmptyContentView_Hint" xml:space="preserve">
@@ -1135,12 +1139,6 @@
   <data name="RequestAuthPanel_Placeholder_BearerToken" xml:space="preserve">
     <value>Token</value>
     <comment>RequestAuthPanel: Platzhalter im Bearer-Token-Eingabefeld</comment>
-  </data>
-
-  <!-- NavMenu -->
-  <data name="NavMenu_ToggleTitle" xml:space="preserve">
-    <value>Navigationsmenü</value>
-    <comment>NavMenu: title-Attribut der Checkbox, die das mobile Navigationsmenü ein-/ausblendet</comment>
   </data>
 
   <!-- ThemeToggle -->

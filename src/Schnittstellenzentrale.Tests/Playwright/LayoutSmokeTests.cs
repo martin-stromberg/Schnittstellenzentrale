@@ -95,4 +95,30 @@ public class LayoutSmokeTests : PlaywrightTestBase
         Assert.NotNull(box);
         Assert.True(box.Height > 100, $"sz-history-content kollabiert: {box.Height}px.");
     }
+
+    /// <summary>Protokoll-Panel erscheint nach Klick auf den Aktivitäts-Button.</summary>
+    [Fact]
+    public async Task ActivityLog_KlickAufToggleButton_ZeigtPanel()
+    {
+        await Page.GotoAsync(BaseUrl);
+        await Page.WaitForLoadStateAsync(LoadState.NetworkIdle);
+
+        var toggle = Page.Locator("button[title='Protokoll ein-/ausblenden']");
+        var panel = Page.Locator(".activity-log-panel");
+
+        // Klicks vor Aufbau des Blazor-Circuits gehen verloren – deshalb bis zur Interaktivität wiederholen.
+        var deadline = DateTime.UtcNow.AddSeconds(15);
+        while (true)
+        {
+            await toggle.ClickAsync();
+            try
+            {
+                await Assertions.Expect(panel).ToBeVisibleAsync(new() { Timeout = 1500 });
+                return;
+            }
+            catch (PlaywrightException) when (DateTime.UtcNow < deadline)
+            {
+            }
+        }
+    }
 }

@@ -32,6 +32,7 @@ public class PlaywrightServer : IAsyncLifetime
     private SqliteConnection? _anchorConnection;
     private string _dbConnectionString = string.Empty;
     /// <summary>Proxy für den SignalR-Notification-Service der PlaywrightApiFactory; kann nach dem App-Start konfiguriert werden.</summary>
+    /// <value>Die gemeinsame Proxy-Instanz für SignalR-Benachrichtigungen.</value>
     private protected readonly SignalRNotificationProxy ApiNotificationProxy = new();
 
     /// <summary>Bind-URL des Kestrel-Servers; kann in Unterklassen überschrieben werden um Port-Konflikte zu vermeiden.</summary>
@@ -44,6 +45,7 @@ public class PlaywrightServer : IAsyncLifetime
     public IServiceProvider Services => _app!.Services;
 
     /// <summary>Kann in Unterklassen überschrieben werden, um weitere Services zu ersetzen.</summary>
+    /// <param name="services">Die Service-Collection der Testanwendung.</param>
     protected virtual void ConfigureTestServices(IServiceCollection services) { }
 
     /// <summary>Wird nach dem Start des Kestrel-Servers aufgerufen. Unterklassen können hier z.B. den <see cref="ApiNotificationProxy"/> konfigurieren.</summary>

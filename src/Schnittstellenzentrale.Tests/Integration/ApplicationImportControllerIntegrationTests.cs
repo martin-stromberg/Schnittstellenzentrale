@@ -21,6 +21,7 @@ public class ApplicationImportControllerIntegrationTests : IClassFixture<Applica
     private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNameCaseInsensitive = true };
 
     /// <summary>Initialisiert den Test mit der spezialisierten Factory.</summary>
+    /// <param name="factory">Die von xUnit injizierte <see cref="ApplicationImportControllerTestFactory"/>.</param>
     public ApplicationImportControllerIntegrationTests(ApplicationImportControllerTestFactory factory)
     {
         _factory = factory;
@@ -277,9 +278,11 @@ public class ApplicationImportControllerIntegrationTests : IClassFixture<Applica
 public class ApplicationImportControllerTestFactory : ControllerTestFactory
 {
     /// <summary>Gemockter Swagger-Import-Service.</summary>
+    /// <value>Der konfigurierte Mock für <see cref="ISwaggerImportService"/>.</value>
     public readonly Mock<ISwaggerImportService> SwaggerImportMock = new();
 
     /// <summary>Gemockter OData-Import-Service.</summary>
+    /// <value>Der konfigurierte Mock für <see cref="IODataImportService"/>.</value>
     public readonly Mock<IODataImportService> ODataImportMock = new();
 
     /// <summary>Initialisiert die Factory und konfiguriert die gemockten Import-Services.</summary>

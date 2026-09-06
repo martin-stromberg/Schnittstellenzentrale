@@ -14,6 +14,9 @@ public static class SwaggerOperationHelper
     private const string DefaultAuthenticateExecuteCall = "sz.execute('Authenticate')";
 
     /// <summary>Liest den Stringwert einer OpenAPI-Erweiterung (<c>x-sz-*</c>) aus.</summary>
+    /// <param name="extensions">Dictionary der OpenAPI-Erweiterungen (optional).</param>
+    /// <param name="key">Schlüssel der Erweiterung.</param>
+    /// <returns>Stringwert der Erweiterung oder <c>null</c>.</returns>
     public static string? ReadExtensionString(IDictionary<string, IOpenApiExtension>? extensions, string key)
     {
         if (extensions == null || !extensions.TryGetValue(key, out var extension))
@@ -26,6 +29,8 @@ public static class SwaggerOperationHelper
     }
 
     /// <summary>Konvertiert einen HTTP-Methodennamen in das projekteigene <see cref="CoreHttpMethod"/>-Enum.</summary>
+    /// <param name="method">HTTP-Methodenname (z. B. <c>GET</c>).</param>
+    /// <returns>Entsprechender <see cref="CoreHttpMethod"/>-Wert.</returns>
     public static CoreHttpMethod MapHttpMethod(string method) =>
         method.ToUpperInvariant() switch
         {
@@ -40,7 +45,10 @@ public static class SwaggerOperationHelper
         };
 
     /// <summary>Wandelt ein OpenAPI-Dokument in eine Endpunktliste samt Bearer-Token-Map um.</summary>
-    public static (List<Endpoint> Endpoints, Dictionary<string, string> BearerTokens) MapDocumentToEndpoints(
+    /// <param name="document">Zu importierendes OpenAPI-Dokument.</param>
+    /// <param name="applicationId">ID der Anwendung, der die Endpunkte zugeordnet werden.</param>
+    /// <returns>Tupel aus Endpunktliste und Bearer-Token-Map (Schlüssel: Endpunktschlüssel).</returns>
+    public static (List<Endpoint>, Dictionary<string, string>) MapDocumentToEndpoints(
         OpenApiDocument document, int applicationId)
     {
         var endpoints = new List<Endpoint>();

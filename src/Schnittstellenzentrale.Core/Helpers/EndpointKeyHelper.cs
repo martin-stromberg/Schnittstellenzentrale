@@ -6,5 +6,7 @@ namespace Schnittstellenzentrale.Core.Helpers;
 public static class EndpointKeyHelper
 {
     /// <summary>Gibt den Schlüssel im Format <c>METHOD:/pfad</c> zurück.</summary>
+    /// <param name="endpoint">Endpunkt, für den der Schlüssel erzeugt wird.</param>
+    /// <returns>Schlüssel im Format <c>METHOD:/pfad</c>.</returns>
     public static string BuildKey(Endpoint endpoint) => $"{endpoint.Method}:{endpoint.RelativePath}";
 }

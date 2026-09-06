@@ -13,8 +13,8 @@
 @implements IAsyncDisposable
 
 <div class="sz-app-shell">
-    <TopBar @ref="_topBar" />
-    <div class="sz-app-content">
+    <TopBar @ref="_topBar" OnActivityLogToggleRequested="ToggleActivityLog" />
+    <div class="sz-app-content" style="@(_activityLogOpen && _activityLogDisplayMode == "dock" ? $"padding-bottom: {_activityLogPanelHeight}px" : "")">
         @if (NavigationStateService.CurrentArea == NavigationArea.Workspaces)
         {
             <WorkspacesLayout />
@@ -32,6 +32,12 @@
             @Body
         }
     </div>
+
+    @if (_activityLogOpen)
+    {
+        <ActivityLogPanel OnDisplayModeChanged="OnActivityLogDisplayModeChanged"
+                          OnPanelHeightChanged="OnActivityLogPanelHeightChanged" />
+    }
 </div>
 
 <EnvironmentManagementOverlay @ref="_environmentManagementOverlay"
@@ -48,6 +54,9 @@
     private EnvironmentManagementOverlay? _environmentManagementOverlay;
     private HubConnection? _hubConnection;
     private NavigationArea _previousArea = NavigationArea.Workspaces;
+    private bool _activityLogOpen;
+    private string _activityLogDisplayMode = "dock";
+    private int _activityLogPanelHeight = 200;
 
     protected override void OnInitialized()
     {
@@ -98,6 +107,22 @@
             await RestoreEnvironmentFromLocalStorageAsync(StorageModeService.CurrentMode);
             if (_topBar != null)
                 await _topBar.RefreshEnvironmentSelectorAsync();
+
+            try
+            {
+                var storedMode = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", LocalStorageKeys.ActivityLogDisplayMode);
+                if (!string.IsNullOrEmpty(storedMode))
+                    _activityLogDisplayMode = storedMode;
+
+                var storedHeight = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", LocalStorageKeys.ActivityLogPanelHeight);
+                if (!string.IsNullOrEmpty(storedHeight) && int.TryParse(storedHeight, out var height))
+                    _activityLogPanelHeight = height;
+            }
+            catch (Exception ex) when (ex is JSException or TaskCanceledException)
+            {
+                Logger.LogDebug(ex, "ActivityLog-Anzeigeeinstellungen konnten aus localStorage nicht gelesen werden.");
+            }
+
             await InvokeAsync(StateHasChanged);
             _ = ConnectHubAsync();
         }
@@ -195,6 +220,24 @@
     {
         if (_environmentManagementOverlay != null)
             await _environmentManagementOverlay.OpenAsync();
+    }
+
+    private void ToggleActivityLog()
+    {
+        _activityLogOpen = !_activityLogOpen;
+        StateHasChanged();
+    }
+
+    private void OnActivityLogDisplayModeChanged(string mode)
+    {
+        _activityLogDisplayMode = mode;
+        StateHasChanged();
+    }
+
+    private void OnActivityLogPanelHeightChanged(int height)
+    {
+        _activityLogPanelHeight = height;
+        StateHasChanged();
     }
 
     private void OnStateChanged()

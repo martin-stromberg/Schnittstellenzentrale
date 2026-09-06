@@ -11,6 +11,7 @@ public class EndpointRepository : IEndpointRepository
     private readonly IDbContextFactory<AppDbContext> _factory;
 
     /// <summary>Initialisiert eine neue Instanz des <see cref="EndpointRepository"/>.</summary>
+    /// <param name="factory">Fabrik zum Erzeugen des DbContext.</param>
     public EndpointRepository(IDbContextFactory<AppDbContext> factory)
     {
         _factory = factory;

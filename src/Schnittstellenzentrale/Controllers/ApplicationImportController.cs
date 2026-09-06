@@ -15,6 +15,10 @@ public class ApplicationImportController : ApiControllerBase
     private readonly IODataImportService _odataImportService;
 
     /// <summary>Initialisiert eine neue Instanz von <see cref="ApplicationImportController"/>.</summary>
+    /// <param name="tokenStore">Der Token-Store.</param>
+    /// <param name="applicationRepository">Das Repository für Anwendungen.</param>
+    /// <param name="swaggerImportService">Der Swagger-Import-Service.</param>
+    /// <param name="odataImportService">Der OData-Import-Service.</param>
     public ApplicationImportController(
         ITokenStore tokenStore,
         IApplicationRepository applicationRepository,
@@ -30,6 +34,7 @@ public class ApplicationImportController : ApiControllerBase
     /// <summary>Wendet einen OData-Import-Diff auf die angegebene Anwendung an.</summary>
     /// <param name="id">Die Anwendungs-ID.</param>
     /// <param name="diff">Der anzuwendende ImportDiff.</param>
+    /// <returns>Das Ergebnis.</returns>
     /// <response code="204">Diff wurde erfolgreich angewendet.</response>
     /// <response code="401">Token fehlt oder ist ungültig.</response>
     /// <response code="404">Anwendung nicht gefunden.</response>
@@ -58,6 +63,7 @@ public class ApplicationImportController : ApiControllerBase
 
     /// <summary>Berechnet den Import-Diff für die angegebene Anwendung. Der Import-Service wird anhand des Interface-Typs der Anwendung ausgewählt.</summary>
     /// <param name="id">Die Anwendungs-ID.</param>
+    /// <returns>Das Ergebnis.</returns>
     /// <response code="200">Der berechnete ImportDiff.</response>
     /// <response code="401">Token fehlt oder ist ungültig.</response>
     /// <response code="404">Anwendung nicht gefunden.</response>

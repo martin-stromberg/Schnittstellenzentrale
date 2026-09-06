@@ -16,6 +16,8 @@ public class SystemEndpointSyncService : BackgroundService
     private readonly ILogger<SystemEndpointSyncService> _logger;
 
     /// <summary>Initialisiert eine neue Instanz des <see cref="SystemEndpointSyncService"/>.</summary>
+    /// <param name="scopeFactory">Die Service-Scope-Factory.</param>
+    /// <param name="logger">Der Logger.</param>
     public SystemEndpointSyncService(IServiceScopeFactory scopeFactory, ILogger<SystemEndpointSyncService> logger)
     {
         _scopeFactory = scopeFactory;

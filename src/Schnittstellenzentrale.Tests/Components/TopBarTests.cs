@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using Microsoft.JSInterop;
 using Moq;
 using Schnittstellenzentrale.Components.Layout;
 using Schnittstellenzentrale.Components.Shared;
@@ -16,8 +17,8 @@ using Schnittstellenzentrale.Tests.Helpers;
 
 namespace Schnittstellenzentrale.Tests.Components;
 
-/// <summary>bUnit-Tests für die <see cref="AppShell"/>- und <see cref="TopBar"/>-Komponenten.</summary>
-public class MainLayoutTests : BunitContext
+/// <summary>bUnit-Tests für die <see cref="TopBar"/>-Komponente innerhalb des <see cref="AppShell"/>.</summary>
+public class TopBarTests : BunitContext
 {
     private readonly Mock<IStorageModeService> _storageMock = new();
     private readonly Mock<IThemeService> _themeMock = new();
@@ -30,7 +31,7 @@ public class MainLayoutTests : BunitContext
     private readonly Mock<INavigationStateService> _navigationStateMock = new();
 
     /// <summary>Initialisiert die Test-Services und JS-Interop-Mocks.</summary>
-    public MainLayoutTests()
+    public TopBarTests()
     {
         _storageMock.Setup(s => s.CurrentMode).Returns(StorageMode.Team);
         _activeEnvMock.Setup(s => s.ActiveEnvironment).Returns((SystemEnvironment?)null);
@@ -64,6 +65,9 @@ public class MainLayoutTests : BunitContext
         JSInterop.Setup<string?>("localStorage.getItem", _ => true).SetResult(null);
         JSInterop.SetupVoid("localStorage.removeItem", _ => true).SetVoidResult();
         JSInterop.SetupVoid("localStorage.setItem", _ => true).SetVoidResult();
+
+        var activityLogModule = JSInterop.SetupModule("./activity-log-panel.js");
+        activityLogModule.Mode = JSRuntimeMode.Loose;
 
         ComponentFactories.AddStub<WorkspacesLayout>();
         ComponentFactories.AddStub<EnvironmentsLayout>();
@@ -245,5 +249,17 @@ public class MainLayoutTests : BunitContext
             .Where(i => i.Identifier == "localStorage.getItem")
             .ToList();
         Assert.Contains(getItemInvocations, invocation => invocation.Arguments.ElementAt(0) is string key && key == userKey);
+    }
+
+    /// <summary>Nach Klick auf den Protokoll-Button wird das ActivityLog-Panel gerendert.</summary>
+    [Fact]
+    public void TopBar_ToggleActivityLog_ZeigtActivityLogPanel()
+    {
+        var cut = Render<AppShell>(p => p.Add(x => x.Body, (RenderFragment)(_ => { })));
+
+        var toggleButton = cut.Find("button[title=\"TopBar_Tooltip_ActivityLog\"]");
+        toggleButton.Click();
+
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".activity-log-panel")));
     }
 }

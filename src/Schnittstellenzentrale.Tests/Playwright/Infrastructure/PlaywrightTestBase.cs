@@ -21,6 +21,7 @@ public abstract class PlaywrightTestBase : IAsyncLifetime
     protected string BaseUrl { get; private set; } = string.Empty;
 
     /// <summary>Der Name der abgeleiteten Testklasse, verwendet für Trace-Dateinamen.</summary>
+    /// <value>Der Name der abgeleiteten Testklasse.</value>
     protected virtual string TestName => GetType().Name;
 
     /// <summary>
@@ -28,6 +29,7 @@ public abstract class PlaywrightTestBase : IAsyncLifetime
     /// In CI-Umgebungen (GITHUB_ACTIONS/CI) ist kein Display verfügbar, daher Headless;
     /// lokal bleibt der Browser sichtbar, damit Entwickler den Testablauf verfolgen können.
     /// </summary>
+    /// <returns><c>true</c>, wenn der Browser headless gestartet werden soll.</returns>
     private static bool IsHeadless()
     {
         var ci = Environment.GetEnvironmentVariable("CI");
@@ -35,6 +37,7 @@ public abstract class PlaywrightTestBase : IAsyncLifetime
     }
 
     /// <summary>Initialisiert die Basisklasse mit dem gemeinsamen Playwright-Server.</summary>
+    /// <param name="server">Der von der Test-Collection bereitgestellte <see cref="PlaywrightServer"/>.</param>
     protected PlaywrightTestBase(PlaywrightServer server)
     {
         _server = server;
@@ -74,10 +77,14 @@ public abstract class PlaywrightTestBase : IAsyncLifetime
     protected virtual Task OnInitializedAsync() => Task.CompletedTask;
 
     /// <summary>Legt einen weiteren Browser-Kontext mit aktiviertem Tracing an.</summary>
+    /// <returns>Der neu angelegte Browser-Kontext.</returns>
     protected Task<IBrowserContext> CreateAdditionalContextAsync()
         => CreateAdditionalContextAsync("de-DE", "de-DE,de;q=0.9");
 
     /// <summary>Legt einen weiteren Browser-Kontext mit der angegebenen Locale und aktiviertem Tracing an.</summary>
+    /// <param name="locale">Die Locale des Browser-Kontexts.</param>
+    /// <param name="acceptLanguage">Der Accept-Language-Header des Browser-Kontexts.</param>
+    /// <returns>Der neu angelegte Browser-Kontext.</returns>
     protected async Task<IBrowserContext> CreateAdditionalContextAsync(string locale, string acceptLanguage)
     {
         var context = await _browser.NewContextAsync(new BrowserNewContextOptions

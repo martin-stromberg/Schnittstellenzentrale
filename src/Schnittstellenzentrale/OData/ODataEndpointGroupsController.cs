@@ -15,6 +15,9 @@ public class ODataEndpointGroupsController : ODataControllerBase
     private readonly IApplicationRepository _applicationRepository;
 
     /// <summary>Initialisiert eine neue Instanz von <see cref="ODataEndpointGroupsController"/>.</summary>
+    /// <param name="tokenStore">Der Token-Store.</param>
+    /// <param name="endpointRepository">Das Repository für Endpunkte.</param>
+    /// <param name="applicationRepository">Das Repository für Anwendungen.</param>
     public ODataEndpointGroupsController(
         ITokenStore tokenStore,
         IEndpointRepository endpointRepository,
@@ -26,6 +29,7 @@ public class ODataEndpointGroupsController : ODataControllerBase
     }
 
     /// <summary>Gibt alle Endpunktgruppen zurück.</summary>
+    /// <returns>Das Ergebnis.</returns>
     [EnableQuery]
     [HttpGet("EndpointGroups")]
     public async Task<IActionResult> Get()
@@ -43,6 +47,8 @@ public class ODataEndpointGroupsController : ODataControllerBase
     }
 
     /// <summary>Gibt eine einzelne Endpunktgruppe per ID zurück.</summary>
+    /// <param name="key">Der Schlüssel der Entität.</param>
+    /// <returns>Das Ergebnis.</returns>
     [EnableQuery]
     [HttpGet("EndpointGroups({key})")]
     public async Task<IActionResult> Get(int key)
@@ -64,6 +70,8 @@ public class ODataEndpointGroupsController : ODataControllerBase
     }
 
     /// <summary>Legt eine neue Endpunktgruppe an.</summary>
+    /// <param name="entity">Die zu verarbeitende Entität.</param>
+    /// <returns>Das Ergebnis.</returns>
     [HttpPost("EndpointGroups")]
     public async Task<IActionResult> Post([FromBody] EndpointGroup entity)
     {
@@ -82,6 +90,9 @@ public class ODataEndpointGroupsController : ODataControllerBase
     }
 
     /// <summary>Ersetzt eine Endpunktgruppe vollständig.</summary>
+    /// <param name="key">Der Schlüssel der Entität.</param>
+    /// <param name="entity">Die zu verarbeitende Entität.</param>
+    /// <returns>Das Ergebnis.</returns>
     [HttpPut("EndpointGroups({key})")]
     public async Task<IActionResult> Put(int key, [FromBody] EndpointGroup entity)
     {
@@ -107,6 +118,9 @@ public class ODataEndpointGroupsController : ODataControllerBase
     }
 
     /// <summary>Aktualisiert eine Endpunktgruppe partiell.</summary>
+    /// <param name="key">Der Schlüssel der Entität.</param>
+    /// <param name="patch">Das JSON-Patch-Dokument.</param>
+    /// <returns>Das Ergebnis.</returns>
     [HttpPatch("EndpointGroups({key})")]
     public async Task<IActionResult> Patch(int key, [FromBody] JsonElement patch)
     {
@@ -166,6 +180,8 @@ public class ODataEndpointGroupsController : ODataControllerBase
     }
 
     /// <summary>Löscht eine Endpunktgruppe.</summary>
+    /// <param name="key">Der Schlüssel der Entität.</param>
+    /// <returns>Das Ergebnis.</returns>
     [HttpDelete("EndpointGroups({key})")]
     public async Task<IActionResult> Delete(int key)
     {

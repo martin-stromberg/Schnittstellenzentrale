@@ -17,6 +17,7 @@ public class StorageModeService : IStorageModeService
     public event Action? OnModeChanged;
 
     /// <summary>Initialisiert eine neue Instanz von <see cref="StorageModeService"/>.</summary>
+    /// <param name="jsRuntime">JS-Runtime für den Zugriff auf das <c>localStorage</c>-Modul.</param>
     public StorageModeService(IJSRuntime jsRuntime)
     {
         _jsRuntime = jsRuntime;

@@ -1,24 +1,30 @@
-#pragma warning disable CS1591
 using System.Collections.Concurrent;
 using Schnittstellenzentrale.Core.Interfaces;
 using Schnittstellenzentrale.Core.Models;
 
 namespace Schnittstellenzentrale.Services;
 
+/// <summary>Speichert und verwaltet Authentifizierungstoken im Arbeitsspeicher.</summary>
 public class TokenStore : ITokenStore
 {
     private readonly TimeSpan _tokenLifetime;
     private readonly ConcurrentDictionary<string, AuthToken> _tokens = new();
 
+    /// <summary>Initialisiert eine neue Instanz von <see cref="TokenStore"/> mit der Standard-Token-Lebensdauer.</summary>
     public TokenStore() : this(TimeSpan.FromMinutes(5))
     {
     }
 
+    /// <summary>Initialisiert eine neue Instanz von <see cref="TokenStore"/>.</summary>
+    /// <param name="tokenLifetime">Die Lebensdauer eines Tokens.</param>
     public TokenStore(TimeSpan tokenLifetime)
     {
         _tokenLifetime = tokenLifetime;
     }
 
+    /// <summary>Erstellt einen neuen Authentifizierungstoken.</summary>
+    /// <param name="username">Der Benutzername.</param>
+    /// <returns>Der erstellte Token.</returns>
     public Task<AuthToken> CreateTokenAsync(string username)
     {
         RemoveExpiredTokens();
@@ -34,6 +40,9 @@ public class TokenStore : ITokenStore
         return Task.FromResult(token);
     }
 
+    /// <summary>Validiert und rotiert einen vorhandenen Token.</summary>
+    /// <param name="tokenString">Der Token-String.</param>
+    /// <returns>Der rotierte Token oder <c>null</c>, wenn der Token ungültig ist.</returns>
     public Task<AuthToken?> ValidateAndRotateAsync(string tokenString)
     {
         RemoveExpiredTokens();

@@ -11,6 +11,7 @@ public class ApplicationLinkRepository : IApplicationLinkRepository
     private readonly IDbContextFactory<AppDbContext> _factory;
 
     /// <summary>Initialisiert eine neue Instanz von <see cref="ApplicationLinkRepository"/>.</summary>
+    /// <param name="factory">Fabrik zum Erzeugen des DbContext.</param>
     public ApplicationLinkRepository(IDbContextFactory<AppDbContext> factory)
     {
         _factory = factory;

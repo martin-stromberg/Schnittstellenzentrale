@@ -8,5 +8,6 @@ public sealed class RequiresContextHeadersAttribute : Attribute
     public bool IncludeOwner { get; }
 
     /// <summary>Initialisiert das Attribut.</summary>
+    /// <param name="includeOwner">Gibt an, ob der Besitzer berücksichtigt werden soll.</param>
     public RequiresContextHeadersAttribute(bool includeOwner = false) => IncludeOwner = includeOwner;
 }

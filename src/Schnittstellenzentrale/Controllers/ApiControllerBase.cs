@@ -18,12 +18,14 @@ public abstract class ApiControllerBase : ControllerBase
     private readonly ITokenStore _tokenStore;
 
     /// <summary>Initialisiert eine neue Instanz von <see cref="ApiControllerBase"/>.</summary>
+    /// <param name="tokenStore">Der Token-Store.</param>
     protected ApiControllerBase(ITokenStore tokenStore)
     {
         _tokenStore = tokenStore;
     }
 
     /// <summary>Prüft das Bearer-Token, rotiert es und schreibt das neue Token in den Response-Header.</summary>
+    /// <returns>Das Ergebnis.</returns>
     protected async Task<AuthToken?> ValidateTokenAndSetResponseHeaderAsync()
     {
         var authHeader = Request.Headers.Authorization.ToString();
@@ -40,6 +42,7 @@ public abstract class ApiControllerBase : ControllerBase
     }
 
     /// <summary>Liest den <c>X-Storage-Mode</c>-Header und gibt den entsprechenden <see cref="StorageMode"/> zurück.</summary>
+    /// <returns>Der Speichermodus.</returns>
     protected StorageMode ParseStorageMode()
     {
         var storageModeHeader = Request.Headers["X-Storage-Mode"].ToString();
@@ -47,6 +50,7 @@ public abstract class ApiControllerBase : ControllerBase
     }
 
     /// <summary>Validiert das Token, liest StorageMode und Owner und gibt ein Kontextobjekt zurück. Gibt <c>null</c> zurück, wenn das Token ungültig ist.</summary>
+    /// <returns>Das Ergebnis.</returns>
     protected async Task<RequestContext?> ParseRequestContextAsync()
     {
         var newToken = await ValidateTokenAndSetResponseHeaderAsync();
@@ -59,6 +63,7 @@ public abstract class ApiControllerBase : ControllerBase
     }
 
     /// <summary>Mappt eine <see cref="Application"/> auf ein <see cref="ApplicationResponse"/>-DTO.</summary>
+    /// <returns>Das Ergebnis.</returns>
     protected static ApplicationResponse MapToResponse(Application application) => new()
     {
         Id = application.Id,
@@ -76,6 +81,7 @@ public abstract class ApiControllerBase : ControllerBase
     };
 
     /// <summary>Mappt eine <see cref="ApplicationGroup"/> auf ein <see cref="ApplicationGroupResponse"/>-DTO.</summary>
+    /// <returns>Das Ergebnis.</returns>
     protected static ApplicationGroupResponse MapToResponse(ApplicationGroup group) => new()
     {
         Id = group.Id,
@@ -89,6 +95,7 @@ public abstract class ApiControllerBase : ControllerBase
     };
 
     /// <summary>Mappt eine <see cref="EndpointGroup"/> auf ein <see cref="EndpointGroupResponse"/>-DTO.</summary>
+    /// <returns>Das Ergebnis.</returns>
     protected static EndpointGroupResponse MapToResponse(EndpointGroup group) => new()
     {
         Id = group.Id,
@@ -99,6 +106,7 @@ public abstract class ApiControllerBase : ControllerBase
     };
 
     /// <summary>Mappt einen <see cref="EndpointHeader"/> auf ein <see cref="EndpointKeyValueResponse"/>-DTO.</summary>
+    /// <returns>Das Ergebnis.</returns>
     protected static EndpointKeyValueResponse MapToResponse(EndpointHeader header) => new()
     {
         Id = header.Id,
@@ -108,6 +116,7 @@ public abstract class ApiControllerBase : ControllerBase
     };
 
     /// <summary>Mappt einen <see cref="EndpointQueryParameter"/> auf ein <see cref="EndpointKeyValueResponse"/>-DTO.</summary>
+    /// <returns>Das Ergebnis.</returns>
     protected static EndpointKeyValueResponse MapToResponse(EndpointQueryParameter parameter) => new()
     {
         Id = parameter.Id,
@@ -117,6 +126,7 @@ public abstract class ApiControllerBase : ControllerBase
     };
 
     /// <summary>Mappt einen <see cref="Endpoint"/> auf ein <see cref="EndpointResponse"/>-DTO inkl. Headers und QueryParameters.</summary>
+    /// <returns>Das Ergebnis.</returns>
     protected static EndpointResponse MapToResponse(Endpoint endpoint) => new()
     {
         Id = endpoint.Id,
@@ -137,4 +147,8 @@ public abstract class ApiControllerBase : ControllerBase
 }
 
 /// <summary>Enthält die aus dem Request extrahierten Kontextinformationen.</summary>
+/// <param name="NewToken">Der neue Token.</param>
+/// <param name="StorageMode">Der Speichermodus.</param>
+/// <param name="Owner">Der Besitzer.</param>
+/// <returns>Der initialisierte RequestContext.</returns>
 public sealed record RequestContext(AuthToken NewToken, StorageMode StorageMode, string Owner);

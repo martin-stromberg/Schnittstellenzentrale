@@ -11,6 +11,7 @@ public class NavigationStateService : INavigationStateService
     private readonly ILogger<NavigationStateService> _logger;
 
     /// <summary>Initialisiert eine neue Instanz von <see cref="NavigationStateService"/>.</summary>
+    /// <param name="logger">Logger für Diagnosemeldungen.</param>
     public NavigationStateService(ILogger<NavigationStateService> logger)
     {
         _logger = logger;

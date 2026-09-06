@@ -10,6 +10,9 @@ namespace Schnittstellenzentrale.Tests.Helpers;
 public class TestAuthHandler : AuthenticationHandler<AuthenticationSchemeOptions>
 {
     /// <summary>Initialisiert den Handler mit den erforderlichen Abhängigkeiten.</summary>
+    /// <param name="options">Monitor für die Scheme-Optionen.</param>
+    /// <param name="logger">Logger-Factory für den Handler.</param>
+    /// <param name="encoder">URL-Encoder für den Handler.</param>
     public TestAuthHandler(
         IOptionsMonitor<AuthenticationSchemeOptions> options,
         ILoggerFactory logger,

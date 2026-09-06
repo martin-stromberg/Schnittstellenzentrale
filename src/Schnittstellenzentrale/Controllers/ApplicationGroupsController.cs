@@ -17,6 +17,9 @@ public class ApplicationGroupsController : ApiControllerBase
     private readonly ISignalRNotificationService _signalRNotificationService;
 
     /// <summary>Initialisiert eine neue Instanz von <see cref="ApplicationGroupsController"/>.</summary>
+    /// <param name="tokenStore">Der Token-Store.</param>
+    /// <param name="applicationRepository">Das Repository für Anwendungen.</param>
+    /// <param name="signalRNotificationService">Der SignalR-Benachrichtigungs-Service.</param>
     public ApplicationGroupsController(
         ITokenStore tokenStore,
         IApplicationRepository applicationRepository,
@@ -30,9 +33,10 @@ public class ApplicationGroupsController : ApiControllerBase
     /// <summary>
     /// Returns all application groups for the given storage mode and owner.
     /// </summary>
-    /// <remarks>Requires the <c>X-Storage-Mode</c> and <c>X-Owner</c> request headers.</remarks>
+    /// <returns>Das Ergebnis.</returns>
     /// <response code="200">List of application groups.</response>
     /// <response code="401">Missing or invalid bearer token.</response>
+    /// <remarks>Requires the <c>X-Storage-Mode</c> and <c>X-Owner</c> request headers.</remarks>
     [HttpGet]
     [RequiresContextHeaders(includeOwner: true)]
     [ProducesResponseType(typeof(IList<ApplicationGroupResponse>), StatusCodes.Status200OK)]
@@ -53,6 +57,7 @@ public class ApplicationGroupsController : ApiControllerBase
     /// Returns a single application group by ID.
     /// </summary>
     /// <param name="id">The application group ID.</param>
+    /// <returns>Das Ergebnis.</returns>
     /// <response code="200">The requested application group.</response>
     /// <response code="401">Missing or invalid bearer token.</response>
     /// <response code="404">Application group not found.</response>
@@ -77,6 +82,7 @@ public class ApplicationGroupsController : ApiControllerBase
     /// Creates a new application group.
     /// </summary>
     /// <param name="request">The application group to create.</param>
+    /// <returns>Das Ergebnis.</returns>
     /// <response code="201">Application group created successfully.</response>
     /// <response code="400">Invalid request body.</response>
     /// <response code="401">Missing or invalid bearer token.</response>
@@ -108,6 +114,7 @@ public class ApplicationGroupsController : ApiControllerBase
     /// </summary>
     /// <param name="id">The application group ID.</param>
     /// <param name="request">The updated application group data.</param>
+    /// <returns>Das Ergebnis.</returns>
     /// <response code="200">Updated application group.</response>
     /// <response code="400">Invalid request body.</response>
     /// <response code="401">Missing or invalid bearer token.</response>
@@ -146,6 +153,7 @@ public class ApplicationGroupsController : ApiControllerBase
     /// Deletes an application group.
     /// </summary>
     /// <param name="id">The application group ID.</param>
+    /// <returns>Das Ergebnis.</returns>
     /// <response code="204">Application group deleted successfully.</response>
     /// <response code="401">Missing or invalid bearer token.</response>
     /// <response code="404">Application group not found.</response>

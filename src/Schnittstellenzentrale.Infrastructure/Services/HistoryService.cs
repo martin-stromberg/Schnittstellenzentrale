@@ -11,6 +11,7 @@ public class HistoryService : IHistoryService
     private readonly IDbContextFactory<AppDbContext> _factory;
 
     /// <summary>Initialisiert eine neue Instanz von <see cref="HistoryService"/>.</summary>
+    /// <param name="factory">Fabrik zum Erzeugen des DbContext.</param>
     public HistoryService(IDbContextFactory<AppDbContext> factory)
     {
         _factory = factory;
@@ -25,7 +26,7 @@ public class HistoryService : IHistoryService
     }
 
     /// <inheritdoc/>
-    public async Task<(IList<EndpointCallHistoryEntry> Items, int TotalCount)> GetPagedAsync(HistoryFilter filter, int page, int pageSize)
+    public async Task<(IList<EndpointCallHistoryEntry>, int)> GetPagedAsync(HistoryFilter filter, int page, int pageSize)
     {
         page = Math.Max(1, page);
         await using var context = await _factory.CreateDbContextAsync();

@@ -8,6 +8,10 @@ namespace Schnittstellenzentrale.Tests.Hubs;
 public class EndpointHubTests_Subscriptions
 {
     /// <summary>Abonnieren/Abmelden für anwendungs- und gruppenbezogene IDs verwendet die erwarteten Gruppennamen.</summary>
+    /// <param name="methodName">Name der aufzurufenden Hub-Methode.</param>
+    /// <param name="id">Die an die Hub-Methode übergebene ID.</param>
+    /// <param name="expectedGroup">Der erwartete SignalR-Gruppenname.</param>
+    /// <param name="isSubscribe"><c>true</c> für Abonnieren, <c>false</c> für Abmelden.</param>
     [Theory]
     [InlineData(nameof(EndpointHub.SubscribeToApplication), 42, "application:42", true)]
     [InlineData(nameof(EndpointHub.UnsubscribeFromApplication), 42, "application:42", false)]
@@ -61,6 +65,9 @@ public class EndpointHubTests_Subscriptions
     }
 
     /// <summary>Abonnieren/Abmelden für statische Gruppen verwendet die erwarteten Gruppennamen.</summary>
+    /// <param name="methodName">Name der aufzurufenden Hub-Methode.</param>
+    /// <param name="expectedGroup">Der erwartete SignalR-Gruppenname.</param>
+    /// <param name="isSubscribe"><c>true</c> für Abonnieren, <c>false</c> für Abmelden.</param>
     [Theory]
     [InlineData(nameof(EndpointHub.SubscribeToWorkspace), "workspace", true)]
     [InlineData(nameof(EndpointHub.UnsubscribeFromWorkspace), "workspace", false)]
