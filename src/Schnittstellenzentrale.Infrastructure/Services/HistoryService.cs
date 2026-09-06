@@ -26,7 +26,7 @@ public class HistoryService : IHistoryService
     }
 
     /// <inheritdoc/>
-    public async Task<(IList<EndpointCallHistoryEntry> Items, int TotalCount)> GetPagedAsync(HistoryFilter filter, int page, int pageSize)
+    public async Task<(IList<EndpointCallHistoryEntry>, int)> GetPagedAsync(HistoryFilter filter, int page, int pageSize)
     {
         page = Math.Max(1, page);
         await using var context = await _factory.CreateDbContextAsync();

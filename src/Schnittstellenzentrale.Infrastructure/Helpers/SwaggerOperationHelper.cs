@@ -45,11 +45,10 @@ public static class SwaggerOperationHelper
         };
 
     /// <summary>Wandelt ein OpenAPI-Dokument in eine Endpunktliste samt Bearer-Token-Map um.</summary>
-    /// <param name="Endpoints">Tupel-Element: Liste der erzeugten Endpunkte.</param>
     /// <param name="document">Zu importierendes OpenAPI-Dokument.</param>
     /// <param name="applicationId">ID der Anwendung, der die Endpunkte zugeordnet werden.</param>
     /// <returns>Tupel aus Endpunktliste und Bearer-Token-Map (Schlüssel: Endpunktschlüssel).</returns>
-    public static (List<Endpoint> Endpoints, Dictionary<string, string> BearerTokens) MapDocumentToEndpoints(
+    public static (List<Endpoint>, Dictionary<string, string>) MapDocumentToEndpoints(
         OpenApiDocument document, int applicationId)
     {
         var endpoints = new List<Endpoint>();

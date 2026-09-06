@@ -13,9 +13,8 @@ public interface IHistoryService
     /// <param name="filter">Filter für die Abfrage.</param>
     /// <param name="page">Seitennummer.</param>
     /// <param name="pageSize">Seitengröße.</param>
-    /// <param name="Items">Elemente der paginierten Ergebnismenge.</param>
-    /// <returns>Die Einträge und die Gesamtanzahl.</returns>
-    Task<(IList<EndpointCallHistoryEntry> Items, int TotalCount)> GetPagedAsync(HistoryFilter filter, int page, int pageSize);
+    /// <returns>Tupel aus den Einträgen der Seite und der Gesamtanzahl.</returns>
+    Task<(IList<EndpointCallHistoryEntry>, int)> GetPagedAsync(HistoryFilter filter, int page, int pageSize);
 
     /// <summary>Ruft die am häufigsten aufgerufenen Endpunkte ab.</summary>
     /// <param name="applicationId">ID der Anwendung.</param>

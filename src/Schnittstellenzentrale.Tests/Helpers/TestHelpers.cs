@@ -14,9 +14,8 @@ public static class TestHelpers
     /// Der Aufrufer muss die <see cref="SqliteConnection"/> disposen, nachdem alle Factory-erstellten
     /// Contexts disposed wurden.
     /// </summary>
-    /// <param name="Factory">Die erstellte <see cref="IDbContextFactory{AppDbContext}"/>.</param>
     /// <returns>Tupel aus Context-Factory und offener SQLite-Verbindung.</returns>
-    public static (IDbContextFactory<AppDbContext> Factory, SqliteConnection Connection) CreateInMemoryDbContext()
+    public static (IDbContextFactory<AppDbContext>, SqliteConnection) CreateInMemoryDbContext()
     {
         var connection = new SqliteConnection("Data Source=:memory:");
         connection.Open();
@@ -39,9 +38,8 @@ public static class TestHelpers
     /// Der Aufrufer muss die <see cref="SqliteConnection"/> disposen, nachdem alle Factory-erstellten
     /// Contexts disposed wurden.
     /// </summary>
-    /// <param name="Factory">Die erstellte <see cref="IDbContextFactory{AppDbContext}"/>.</param>
     /// <returns>Tupel aus Context-Factory und offener SQLite-Verbindung.</returns>
-    public static (IDbContextFactory<AppDbContext> Factory, SqliteConnection Connection) CreateInMemoryDbContextWithHistory()
+    public static (IDbContextFactory<AppDbContext>, SqliteConnection) CreateInMemoryDbContextWithHistory()
         => CreateInMemoryDbContext();
 
     /// <summary>
