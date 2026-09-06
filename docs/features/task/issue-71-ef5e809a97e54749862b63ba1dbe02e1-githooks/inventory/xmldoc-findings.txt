@@ -1,0 +1,395 @@
+ERROR: unvollst├ñndige XML-Dokumentation in src/Schnittstellenzentrale/Program.cs:
+  Zeile 33 (BuildWebApplicationAsync): fehlende <param>-Tags f├╝r: args, options, configureServices
+  Zeile 33 (BuildWebApplicationAsync): fehlendes <returns>-Tag
+
+ERROR: unvollst├ñndige XML-Dokumentation in src/Schnittstellenzentrale/SystemEndpointSyncService.cs:
+  Zeile 18 (SystemEndpointSyncService): fehlende <param>-Tags f├╝r: scopeFactory, logger
+
+ERROR: unvollst├ñndige XML-Dokumentation in src/Schnittstellenzentrale/SystemEntryInitializer.cs:
+  Zeile 12 (InitializeAsync): fehlende <param>-Tags f├╝r: services, configuration
+
+ERROR: unvollst├ñndige XML-Dokumentation in src/Schnittstellenzentrale.Tests/Helpers/ControllerTestFactory.cs:
+  Zeile 84 (ObtainTokenAsync): fehlende <param>-Tags f├╝r: client
+  Zeile 84 (ObtainTokenAsync): fehlendes <returns>-Tag
+
+ERROR: unvollst├ñndige XML-Dokumentation in src/Schnittstellenzentrale.Tests/Helpers/CoverageTestFactory.cs:
+  Zeile 10 (CoverageTestFactory): fehlende <param>-Tags f├╝r: applicationApiClientMock, applicationServiceMock, environmentRepositoryMock, activeEnvironmentServiceMock, restApplication, odataApplication, selectedEnvironment
+
+ERROR: unvollst├ñndige XML-Dokumentation in src/Schnittstellenzentrale.Tests/Helpers/TestAuthHandler.cs:
+  Zeile 12 (TestAuthHandler): fehlende <param>-Tags f├╝r: options, logger, encoder
+
+ERROR: unvollst├ñndige XML-Dokumentation in src/Schnittstellenzentrale.Tests/Helpers/TestHelpers.cs:
+  Zeile 12 (static): fehlende <param>-Tags f├╝r: Factory
+  Zeile 34 (static): fehlende <param>-Tags f├╝r: Factory
+  Zeile 43 (ExecuteWithTwoContextsAsync): fehlende <param>-Tags f├╝r: test
+  Zeile 56 (ExecuteWithTwoSystemEnvironmentRepositoriesAsync): fehlende <param>-Tags f├╝r: test
+
+ERROR: unvollst├ñndige XML-Dokumentation in src/Schnittstellenzentrale.Tests/Helpers/TestMockFactory.cs:
+  Zeile 13 (CreateActivityLogServiceMock): fehlendes <returns>-Tag
+  Zeile 19 (CreateEnv): fehlende <param>-Tags f├╝r: id
+  Zeile 19 (CreateEnv): fehlendes <returns>-Tag
+  Zeile 28 (CreateFakeLocalizer): fehlendes <returns>-Tag
+  Zeile 39 (CreateCoverageScenarioDependencies): fehlendes <returns>-Tag
+
+ERROR: unvollst├ñndige XML-Dokumentation in src/Schnittstellenzentrale.Tests/Hubs/EndpointHubTests_Subscriptions.cs:
+  Zeile 10 (GroupSubscriptions_UseExpectedGroupNames): fehlende <param>-Tags f├╝r: methodName, id, expectedGroup, isSubscribe
+  Zeile 63 (StaticGroupSubscriptions_UseExpectedGroupNames): fehlende <param>-Tags f├╝r: methodName, expectedGroup, isSubscribe
+
+ERROR: unvollst├ñndige XML-Dokumentation in src/Schnittstellenzentrale.Tests/Integration/ApplicationApiClientIntegrationTests.cs:
+  Zeile 16 (ApplicationApiClientIntegrationTests): fehlende <param>-Tags f├╝r: factory
+
+ERROR: unvollst├ñndige XML-Dokumentation in src/Schnittstellenzentrale.Tests/Integration/ApplicationGroupsControllerIntegrationTests.cs:
+  Zeile 16 (ApplicationGroupsControllerIntegrationTests): fehlende <param>-Tags f├╝r: factory
+
+ERROR: unvollst├ñndige XML-Dokumentation in src/Schnittstellenzentrale.Tests/Integration/ApplicationImportControllerIntegrationTests.cs:
+  Zeile 23 (ApplicationImportControllerIntegrationTests): fehlende <param>-Tags f├╝r: factory
+  Zeile 279 (new): fehlendes <returns>-Tag
+  Zeile 282 (new): fehlendes <returns>-Tag
+
+ERROR: unvollst├ñndige XML-Dokumentation in src/Schnittstellenzentrale.Tests/Integration/ApplicationsControllerIntegrationTests.cs:
+  Zeile 18 (ApplicationsControllerIntegrationTests): fehlende <param>-Tags f├╝r: factory
+
+ERROR: unvollst├ñndige XML-Dokumentation in src/Schnittstellenzentrale.Tests/Integration/AuthControllerIntegrationTests.cs:
+  Zeile 14 (AuthControllerIntegrationTests): fehlende <param>-Tags f├╝r: factory
+
+ERROR: unvollst├ñndige XML-Dokumentation in src/Schnittstellenzentrale.Tests/Integration/LocalizationTests.cs:
+  Zeile 11 (LocalizationTests): fehlende <param>-Tags f├╝r: factory
+
+ERROR: unvollst├ñndige XML-Dokumentation in src/Schnittstellenzentrale.Tests/Integration/ODataControllerIntegrationTests.cs:
+  Zeile 18 (ODataControllerIntegrationTests): fehlende <param>-Tags f├╝r: factory
+
+ERROR: unvollst├ñndige XML-Dokumentation in src/Schnittstellenzentrale.Tests/Integration/ODataImportServiceIntegrationTests.cs:
+  Zeile 38 (ODataImportServiceIntegrationTests): fehlende <param>-Tags f├╝r: factory
+
+ERROR: unvollst├ñndige XML-Dokumentation in src/Schnittstellenzentrale.Tests/Integration/SystemEntryInitializerTests.cs:
+  Zeile 286 (GetSystemGroupAsync): fehlendes <returns>-Tag
+  Zeile 290 (GetGroupsAsync): fehlende <param>-Tags f├╝r: storageMode
+  Zeile 290 (GetGroupsAsync): fehlendes <returns>-Tag
+  Zeile 292 (GetGroupByIdAsync): fehlendes <returns>-Tag
+  Zeile 294 (AddGroupAsync): fehlendes <returns>-Tag
+  Zeile 296 (UpdateGroupAsync): fehlendes <returns>-Tag
+  Zeile 300 (GetApplicationsAsync): fehlende <param>-Tags f├╝r: storageMode
+  Zeile 300 (GetApplicationsAsync): fehlendes <returns>-Tag
+  Zeile 302 (GetUngroupedApplicationsAsync): fehlende <param>-Tags f├╝r: storageMode
+  Zeile 302 (GetUngroupedApplicationsAsync): fehlendes <returns>-Tag
+  Zeile 304 (GetApplicationByIdAsync): fehlendes <returns>-Tag
+  Zeile 306 (AddApplicationAsync): fehlendes <returns>-Tag
+  Zeile 308 (UpdateApplicationAsync): fehlendes <returns>-Tag
+  Zeile 312 (GetApplicationCountByGroupAsync): fehlendes <returns>-Tag
+  Zeile 314 (GetEndpointCountByGroupAsync): fehlendes <returns>-Tag
+
+ERROR: unvollst├ñndige XML-Dokumentation in src/Schnittstellenzentrale.Tests/Playwright/Infrastructure/PlaywrightServer.cs:
+  Zeile 34 (new): fehlendes <returns>-Tag
+  Zeile 46 (ConfigureTestServices): fehlende <param>-Tags f├╝r: services
+
+ERROR: unvollst├ñndige XML-Dokumentation in src/Schnittstellenzentrale.Tests/Playwright/Infrastructure/PlaywrightTestBase.cs:
+  Zeile 23 (GetType): fehlendes <returns>-Tag
+  Zeile 26 (IsHeadless): fehlendes <returns>-Tag
+  Zeile 37 (PlaywrightTestBase): fehlende <param>-Tags f├╝r: server
+  Zeile 76 (CreateAdditionalContextAsync): fehlendes <returns>-Tag
+  Zeile 80 (CreateAdditionalContextAsync): fehlende <param>-Tags f├╝r: locale, acceptLanguage
+  Zeile 80 (CreateAdditionalContextAsync): fehlendes <returns>-Tag
+
+ERROR: unvollst├ñndige XML-Dokumentation in src/Schnittstellenzentrale.Tests/Playwright/Infrastructure/TestDatabaseSeeder.cs:
+  Zeile 17 (TestDatabaseSeeder): fehlende <param>-Tags f├╝r: services, configuration
+
+ERROR: unvollst├ñndige XML-Dokumentation in src/Schnittstellenzentrale.Infrastructure/Data/AppDbContext.cs:
+  Zeile 12 (Set): fehlende <typeparam>-Tags f├╝r: ApplicationGroup
+  Zeile 12 (Set): fehlendes <returns>-Tag
+  Zeile 14 (Set): fehlendes <returns>-Tag
+  Zeile 16 (Set): fehlende <typeparam>-Tags f├╝r: EndpointGroup
+  Zeile 16 (Set): fehlendes <returns>-Tag
+  Zeile 18 (Set): fehlendes <returns>-Tag
+  Zeile 20 (Set): fehlende <typeparam>-Tags f├╝r: EndpointHeader
+  Zeile 20 (Set): fehlendes <returns>-Tag
+  Zeile 22 (Set): fehlende <typeparam>-Tags f├╝r: EndpointQueryParameter
+  Zeile 22 (Set): fehlendes <returns>-Tag
+  Zeile 24 (Set): fehlendes <returns>-Tag
+  Zeile 26 (Set): fehlende <typeparam>-Tags f├╝r: EnvironmentVariable
+  Zeile 26 (Set): fehlendes <returns>-Tag
+  Zeile 28 (Set): fehlende <typeparam>-Tags f├╝r: ApplicationLink
+  Zeile 28 (Set): fehlendes <returns>-Tag
+  Zeile 30 (Set): fehlende <typeparam>-Tags f├╝r: EndpointCallHistoryEntry
+  Zeile 30 (Set): fehlendes <returns>-Tag
+
+ERROR: unvollst├ñndige XML-Dokumentation in src/Schnittstellenzentrale.Infrastructure/Data/DatabaseProviderFactory.cs:
+  Zeile 11 (RegisterDbContext): fehlende <param>-Tags f├╝r: services, configuration
+
+ERROR: unvollst├ñndige XML-Dokumentation in src/Schnittstellenzentrale.Infrastructure/Data/ProviderFilteredMigrationsAssemblies.cs:
+  Zeile 17 (SqliteMigrationsAssembly): fehlende <param>-Tags f├╝r: currentContext, options, idGenerator, logger
+  Zeile 17 (SqliteMigrationsAssembly): fehlendes <returns>-Tag
+  Zeile 34 (SqlServerMigrationsAssembly): fehlende <param>-Tags f├╝r: currentContext, options, idGenerator, logger
+  Zeile 34 (SqlServerMigrationsAssembly): fehlendes <returns>-Tag
+
+ERROR: unvollst├ñndige XML-Dokumentation in src/Schnittstellenzentrale.Infrastructure/Helpers/SwaggerOperationHelper.cs:
+  Zeile 16 (ReadExtensionString): fehlende <param>-Tags f├╝r: extensions, key
+  Zeile 16 (ReadExtensionString): fehlendes <returns>-Tag
+  Zeile 28 (MapHttpMethod): fehlende <param>-Tags f├╝r: method
+  Zeile 28 (MapHttpMethod): fehlendes <returns>-Tag
+  Zeile 42 (static): fehlende <param>-Tags f├╝r: Endpoints, document, applicationId
+
+ERROR: unvollst├ñndige XML-Dokumentation in src/Schnittstellenzentrale.Infrastructure/Repositories/ApplicationLinkRepository.cs:
+  Zeile 13 (ApplicationLinkRepository): fehlende <param>-Tags f├╝r: factory
+
+ERROR: unvollst├ñndige XML-Dokumentation in src/Schnittstellenzentrale.Infrastructure/Repositories/ApplicationRepository.cs:
+  Zeile 14 (ApplicationRepository): fehlende <param>-Tags f├╝r: factory
+
+ERROR: unvollst├ñndige XML-Dokumentation in src/Schnittstellenzentrale.Infrastructure/Repositories/EndpointRepository.cs:
+  Zeile 13 (EndpointRepository): fehlende <param>-Tags f├╝r: factory
+
+ERROR: unvollst├ñndige XML-Dokumentation in src/Schnittstellenzentrale.Infrastructure/Repositories/SystemEnvironmentRepository.cs:
+  Zeile 15 (SystemEnvironmentRepository): fehlende <param>-Tags f├╝r: factory, currentUserService
+
+ERROR: unvollst├ñndige XML-Dokumentation in src/Schnittstellenzentrale.Infrastructure/Services/ActivityLogService.cs:
+  Zeile 16 (ActivityLogService): fehlende <param>-Tags f├╝r: logger
+
+ERROR: unvollst├ñndige XML-Dokumentation in src/Schnittstellenzentrale.Infrastructure/Services/ApplicationGroupService.cs:
+  Zeile 14 (ApplicationGroupService): fehlende <param>-Tags f├╝r: factory, uploadSettings
+
+ERROR: unvollst├ñndige XML-Dokumentation in src/Schnittstellenzentrale.Infrastructure/Services/ApplicationLinkService.cs:
+  Zeile 11 (ApplicationLinkService): fehlende <param>-Tags f├╝r: repository
+
+ERROR: unvollst├ñndige XML-Dokumentation in src/Schnittstellenzentrale.Infrastructure/Services/ApplicationService.cs:
+  Zeile 14 (ApplicationService): fehlende <param>-Tags f├╝r: factory, uploadSettings
+
+ERROR: unvollst├ñndige XML-Dokumentation in src/Schnittstellenzentrale.Infrastructure/Services/EndpointExecutionService.cs:
+  Zeile 40 (EndpointExecutionService): fehlende <param>-Tags f├╝r: httpClientFactory, credentialService, activeEnvironmentService, scriptRunner, endpointRepository, environmentRepository, signalRNotificationService, activityLogService, historyService, storageModeService, logger
+
+ERROR: unvollst├ñndige XML-Dokumentation in src/Schnittstellenzentrale.Infrastructure/Services/EndpointScriptRunner.cs:
+  Zeile 19 (EndpointScriptRunner): fehlende <param>-Tags f├╝r: environmentRepository, signalRNotificationService, activityLogService
+
+ERROR: #pragma warning disable f├╝r XML-Dokumentationscodes in src/Schnittstellenzentrale.Infrastructure/Services/HealthCheckService.cs:
+  Zeile 1: CS1591 (#pragma warning disable CS1591)
+
+ERROR: unvollst├ñndige XML-Dokumentation in src/Schnittstellenzentrale.Infrastructure/Services/HistoryService.cs:
+  Zeile 13 (HistoryService): fehlende <param>-Tags f├╝r: factory
+
+ERROR: unvollst├ñndige XML-Dokumentation in src/Schnittstellenzentrale.Infrastructure/Services/ImpressumService.cs:
+  Zeile 15 (ImpressumService): fehlende <param>-Tags f├╝r: options
+
+ERROR: unvollst├ñndige XML-Dokumentation in src/Schnittstellenzentrale.Infrastructure/Services/NavigationStateService.cs:
+  Zeile 13 (NavigationStateService): fehlende <param>-Tags f├╝r: logger
+
+ERROR: unvollst├ñndige XML-Dokumentation in src/Schnittstellenzentrale.Infrastructure/Services/ODataImportService.cs:
+  Zeile 22 (ODataImportService): fehlende <param>-Tags f├╝r: httpClientFactory, endpointRepository, credentialService, logger
+
+ERROR: unvollst├ñndige XML-Dokumentation in src/Schnittstellenzentrale.Infrastructure/Services/SignalRNotificationService.cs:
+  Zeile 14 (SignalRNotificationService): fehlende <param>-Tags f├╝r: hubContext
+  Zeile 30 (NotifyApplicationChangedAsync): fehlende <param>-Tags f├╝r: applicationId
+  Zeile 39 (NotifyGroupChangedAsync): fehlende <param>-Tags f├╝r: groupId
+  Zeile 48 (NotifyEndpointChangedAsync): fehlende <param>-Tags f├╝r: endpointId, applicationId
+  Zeile 57 (NotifyEndpointGroupChangedAsync): fehlende <param>-Tags f├╝r: endpointGroupId, applicationId
+
+ERROR: unvollst├ñndige XML-Dokumentation in src/Schnittstellenzentrale.Infrastructure/Services/StorageModeService.cs:
+  Zeile 19 (StorageModeService): fehlende <param>-Tags f├╝r: jsRuntime
+
+ERROR: unvollst├ñndige XML-Dokumentation in src/Schnittstellenzentrale.Infrastructure/Services/SwaggerImportService.cs:
+  Zeile 19 (SwaggerImportService): fehlende <param>-Tags f├╝r: httpClientFactory, endpointRepository, credentialService, logger
+
+ERROR: #pragma warning disable f├╝r XML-Dokumentationscodes in src/Schnittstellenzentrale.Infrastructure/Services/ThemeService.cs:
+  Zeile 1: CS1591 (#pragma warning disable CS1591)
+
+ERROR: #pragma warning disable f├╝r XML-Dokumentationscodes in src/Schnittstellenzentrale.Infrastructure/Services/WindowsCredentialService.cs:
+  Zeile 1: CS1591 (#pragma warning disable CS1591)
+
+ERROR: #pragma warning disable f├╝r XML-Dokumentationscodes in src/Schnittstellenzentrale.Infrastructure/Services/WindowsCurrentUserService.cs:
+  Zeile 1: CS1591 (#pragma warning disable CS1591)
+
+ERROR: unvollst├ñndige XML-Dokumentation in src/Schnittstellenzentrale.Core/Helpers/CredentialTargetHelper.cs:
+  Zeile 8 (Build): fehlende <param>-Tags f├╝r: applicationId, authenticationType
+  Zeile 8 (Build): fehlendes <returns>-Tag
+
+ERROR: unvollst├ñndige XML-Dokumentation in src/Schnittstellenzentrale.Core/Helpers/EndpointKeyHelper.cs:
+  Zeile 8 (BuildKey): fehlende <param>-Tags f├╝r: endpoint
+  Zeile 8 (BuildKey): fehlendes <returns>-Tag
+
+ERROR: unvollst├ñndige XML-Dokumentation in src/Schnittstellenzentrale.Core/Helpers/EndpointUrlBuilder.cs:
+  Zeile 6 (Resolve): fehlende <param>-Tags f├╝r: path, parameters
+  Zeile 6 (Resolve): fehlendes <returns>-Tag
+
+ERROR: unvollst├ñndige XML-Dokumentation in src/Schnittstellenzentrale.Core/Helpers/HttpMethodBadgeHelper.cs:
+  Zeile 6 (GetMethodBadgeClass): fehlendes <returns>-Tag
+
+ERROR: unvollst├ñndige XML-Dokumentation in src/Schnittstellenzentrale.Core/Interfaces/IEndpointScriptRunner.cs:
+  Zeile 8 (ExecuteAsync): fehlende <param>-Tags f├╝r: script, context
+  Zeile 8 (ExecuteAsync): fehlendes <returns>-Tag
+
+ERROR: unvollst├ñndige XML-Dokumentation in src/Schnittstellenzentrale.Core/Interfaces/IImpressumService.cs:
+  Zeile 6 (IsAvailable): fehlendes <returns>-Tag
+  Zeile 9 (GetContentAsHtmlAsync): fehlendes <returns>-Tag
+
+ERROR: unvollst├ñndige XML-Dokumentation in src/Schnittstellenzentrale.Core/Interfaces/ISignalRNotificationService.cs:
+  Zeile 11 (NotifyApplicationChangedAsync): fehlende <param>-Tags f├╝r: applicationId
+  Zeile 14 (NotifyGroupChangedAsync): fehlende <param>-Tags f├╝r: groupId
+  Zeile 17 (NotifyEndpointChangedAsync): fehlende <param>-Tags f├╝r: endpointId, applicationId
+  Zeile 20 (NotifyEndpointGroupChangedAsync): fehlende <param>-Tags f├╝r: endpointGroupId, applicationId
+
+ERROR: unvollst├ñndige XML-Dokumentation in src/Schnittstellenzentrale.Core/Models/ScriptContext.cs:
+  Zeile 46 (RecordExecuteEndpointResult): fehlende <param>-Tags f├╝r: wasSuccessfulAuthenticateEndpoint
+
+ERROR: unvollst├ñndige XML-Dokumentation in src/Schnittstellenzentrale.Core/Models/ScriptRequestData.cs:
+  Zeile 17 (Dictionary): fehlendes <returns>-Tag
+  Zeile 23 (AsJson): fehlendes <returns>-Tag
+  Zeile 39 (AsXml): fehlendes <returns>-Tag
+
+ERROR: unvollst├ñndige XML-Dokumentation in src/Schnittstellenzentrale.Core/Models/ScriptResponseData.cs:
+  Zeile 17 (Dictionary): fehlendes <returns>-Tag
+  Zeile 20 (AsJson): fehlendes <returns>-Tag
+  Zeile 36 (AsXml): fehlendes <returns>-Tag
+
+ERROR: unvollst├ñndige XML-Dokumentation in src/Schnittstellenzentrale/Controllers/ApiControllerBase.cs:
+  Zeile 20 (ApiControllerBase): fehlende <param>-Tags f├╝r: tokenStore
+  Zeile 26 (ValidateTokenAndSetResponseHeaderAsync): fehlendes <returns>-Tag
+  Zeile 42 (ParseStorageMode): fehlendes <returns>-Tag
+  Zeile 49 (ParseRequestContextAsync): fehlendes <returns>-Tag
+  Zeile 61 (MapToResponse): fehlendes <returns>-Tag
+  Zeile 78 (MapToResponse): fehlendes <returns>-Tag
+  Zeile 91 (MapToResponse): fehlendes <returns>-Tag
+  Zeile 101 (MapToResponse): fehlendes <returns>-Tag
+  Zeile 110 (MapToResponse): fehlendes <returns>-Tag
+  Zeile 119 (MapToResponse): fehlendes <returns>-Tag
+  Zeile 139 (RequestContext): fehlende <param>-Tags f├╝r: NewToken, StorageMode, Owner
+  Zeile 139 (RequestContext): fehlendes <returns>-Tag
+
+ERROR: unvollst├ñndige XML-Dokumentation in src/Schnittstellenzentrale/Controllers/ApplicationGroupsController.cs:
+  Zeile 19 (ApplicationGroupsController): fehlende <param>-Tags f├╝r: tokenStore, applicationRepository, signalRNotificationService
+  Zeile 30 (GetAllAsync): fehlendes <returns>-Tag
+  Zeile 52 (GetByIdAsync): fehlendes <returns>-Tag
+  Zeile 76 (CreateAsync): fehlendes <returns>-Tag
+  Zeile 106 (UpdateAsync): fehlendes <returns>-Tag
+  Zeile 145 (DeleteAsync): fehlendes <returns>-Tag
+
+ERROR: unvollst├ñndige XML-Dokumentation in src/Schnittstellenzentrale/Controllers/ApplicationImportController.cs:
+  Zeile 17 (ApplicationImportController): fehlende <param>-Tags f├╝r: tokenStore, applicationRepository, swaggerImportService, odataImportService
+  Zeile 30 (ApplyODataDiffAsync): fehlendes <returns>-Tag
+  Zeile 59 (ImportAsync): fehlendes <returns>-Tag
+
+ERROR: unvollst├ñndige XML-Dokumentation in src/Schnittstellenzentrale/Controllers/ApplicationsController.cs:
+  Zeile 19 (ApplicationsController): fehlende <param>-Tags f├╝r: tokenStore, applicationRepository, signalRNotificationService
+  Zeile 30 (GetAllAsync): fehlendes <returns>-Tag
+  Zeile 52 (GetUngroupedAsync): fehlendes <returns>-Tag
+  Zeile 74 (GetByIdAsync): fehlendes <returns>-Tag
+  Zeile 98 (CreateAsync): fehlendes <returns>-Tag
+  Zeile 130 (UpdateAsync): fehlendes <returns>-Tag
+  Zeile 170 (DeleteAsync): fehlendes <returns>-Tag
+
+ERROR: #pragma warning disable f├╝r XML-Dokumentationscodes in src/Schnittstellenzentrale/Controllers/AuthController.cs:
+  Zeile 1: CS1591 (#pragma warning disable CS1591)
+
+ERROR: unvollst├ñndige XML-Dokumentation in src/Schnittstellenzentrale/Controllers/EndpointGroupsController.cs:
+  Zeile 17 (EndpointGroupsController): fehlende <param>-Tags f├╝r: tokenStore, endpointRepository, signalRNotificationService
+  Zeile 28 (GetAllAsync): fehlendes <returns>-Tag
+  Zeile 49 (GetByIdAsync): fehlendes <returns>-Tag
+  Zeile 74 (CreateAsync): fehlendes <returns>-Tag
+  Zeile 107 (UpdateAsync): fehlendes <returns>-Tag
+  Zeile 148 (DeleteAsync): fehlendes <returns>-Tag
+
+ERROR: unvollst├ñndige XML-Dokumentation in src/Schnittstellenzentrale/Controllers/EndpointsController.cs:
+  Zeile 18 (EndpointsController): fehlende <param>-Tags f├╝r: tokenStore, endpointRepository, signalRNotificationService
+  Zeile 29 (GetAllAsync): fehlendes <returns>-Tag
+  Zeile 63 (GetByIdAsync): fehlendes <returns>-Tag
+  Zeile 88 (CreateAsync): fehlendes <returns>-Tag
+  Zeile 128 (UpdateAsync): fehlendes <returns>-Tag
+  Zeile 201 (DeleteAsync): fehlendes <returns>-Tag
+  Zeile 232 (AddHeaderAsync): fehlendes <returns>-Tag
+  Zeile 261 (DeleteHeaderAsync): fehlendes <returns>-Tag
+  Zeile 287 (AddQueryParameterAsync): fehlendes <returns>-Tag
+  Zeile 316 (DeleteQueryParameterAsync): fehlendes <returns>-Tag
+
+ERROR: unvollst├ñndige XML-Dokumentation in src/Schnittstellenzentrale/Controllers/SystemEnvironmentsController.cs:
+  Zeile 14 (SystemEnvironmentsController): fehlende <param>-Tags f├╝r: tokenStore, repository
+  Zeile 21 (GetByIdAsync): fehlendes <returns>-Tag
+
+ERROR: unvollst├ñndige XML-Dokumentation in src/Schnittstellenzentrale/Filters/RequiresContextHeadersAttribute.cs:
+  Zeile 10 (RequiresContextHeadersAttribute): fehlende <param>-Tags f├╝r: includeOwner
+
+ERROR: unvollst├ñndige XML-Dokumentation in src/Schnittstellenzentrale/Hubs/EndpointHub.cs:
+  Zeile 8 (SubscribeToApplication): fehlende <param>-Tags f├╝r: applicationId
+  Zeile 14 (UnsubscribeFromApplication): fehlende <param>-Tags f├╝r: applicationId
+  Zeile 20 (SubscribeToGroup): fehlende <param>-Tags f├╝r: groupId
+  Zeile 26 (UnsubscribeFromGroup): fehlende <param>-Tags f├╝r: groupId
+
+ERROR: unvollst├ñndige XML-Dokumentation in src/Schnittstellenzentrale/OData/ODataApplicationGroupsController.cs:
+  Zeile 16 (ODataApplicationGroupsController): fehlende <param>-Tags f├╝r: tokenStore, applicationRepository
+  Zeile 23 (Get): fehlendes <returns>-Tag
+  Zeile 45 (Get): fehlende <param>-Tags f├╝r: key
+  Zeile 45 (Get): fehlendes <returns>-Tag
+  Zeile 69 (Post): fehlende <param>-Tags f├╝r: entity
+  Zeile 69 (Post): fehlendes <returns>-Tag
+  Zeile 85 (Put): fehlende <param>-Tags f├╝r: key, entity
+  Zeile 85 (Put): fehlendes <returns>-Tag
+  Zeile 109 (Patch): fehlende <param>-Tags f├╝r: key, patch
+  Zeile 109 (Patch): fehlendes <returns>-Tag
+  Zeile 137 (Delete): fehlende <param>-Tags f├╝r: key
+  Zeile 137 (Delete): fehlendes <returns>-Tag
+
+ERROR: unvollst├ñndige XML-Dokumentation in src/Schnittstellenzentrale/OData/ODataApplicationsController.cs:
+  Zeile 16 (ODataApplicationsController): fehlende <param>-Tags f├╝r: tokenStore, applicationRepository
+  Zeile 23 (Get): fehlendes <returns>-Tag
+  Zeile 37 (Get): fehlende <param>-Tags f├╝r: key
+  Zeile 37 (Get): fehlendes <returns>-Tag
+  Zeile 58 (Post): fehlende <param>-Tags f├╝r: entity
+  Zeile 58 (Post): fehlendes <returns>-Tag
+  Zeile 76 (Put): fehlende <param>-Tags f├╝r: key, entity
+  Zeile 76 (Put): fehlendes <returns>-Tag
+  Zeile 112 (Patch): fehlende <param>-Tags f├╝r: key, patch
+  Zeile 112 (Patch): fehlendes <returns>-Tag
+  Zeile 149 (Delete): fehlende <param>-Tags f├╝r: key
+  Zeile 149 (Delete): fehlendes <returns>-Tag
+
+ERROR: unvollst├ñndige XML-Dokumentation in src/Schnittstellenzentrale/OData/ODataAuthController.cs:
+  Zeile 16 (ODataAuthController): fehlende <param>-Tags f├╝r: tokenStore
+  Zeile 22 (AuthenticatePost): fehlendes <returns>-Tag
+  Zeile 27 (AuthenticateGet): fehlendes <returns>-Tag
+
+ERROR: unvollst├ñndige XML-Dokumentation in src/Schnittstellenzentrale/OData/ODataControllerBase.cs:
+  Zeile 16 (ODataControllerBase): fehlende <param>-Tags f├╝r: tokenStore
+  Zeile 26 (ParseStorageMode): fehlendes <returns>-Tag
+
+ERROR: unvollst├ñndige XML-Dokumentation in src/Schnittstellenzentrale/OData/ODataEdmModelBuilder.cs:
+  Zeile 21 (Build): fehlendes <returns>-Tag
+
+ERROR: unvollst├ñndige XML-Dokumentation in src/Schnittstellenzentrale/OData/ODataEndpointGroupsController.cs:
+  Zeile 17 (ODataEndpointGroupsController): fehlende <param>-Tags f├╝r: tokenStore, endpointRepository, applicationRepository
+  Zeile 28 (Get): fehlendes <returns>-Tag
+  Zeile 45 (Get): fehlende <param>-Tags f├╝r: key
+  Zeile 45 (Get): fehlendes <returns>-Tag
+  Zeile 66 (Post): fehlende <param>-Tags f├╝r: entity
+  Zeile 66 (Post): fehlendes <returns>-Tag
+  Zeile 84 (Put): fehlende <param>-Tags f├╝r: key, entity
+  Zeile 84 (Put): fehlendes <returns>-Tag
+  Zeile 109 (Patch): fehlende <param>-Tags f├╝r: key, patch
+  Zeile 109 (Patch): fehlendes <returns>-Tag
+  Zeile 168 (Delete): fehlende <param>-Tags f├╝r: key
+  Zeile 168 (Delete): fehlendes <returns>-Tag
+
+ERROR: unvollst├ñndige XML-Dokumentation in src/Schnittstellenzentrale/OData/ODataEndpointsController.cs:
+  Zeile 17 (ODataEndpointsController): fehlende <param>-Tags f├╝r: tokenStore, endpointRepository, applicationRepository
+  Zeile 47 (Get): fehlende <param>-Tags f├╝r: key
+  Zeile 47 (Get): fehlendes <returns>-Tag
+  Zeile 68 (Post): fehlende <param>-Tags f├╝r: entity
+  Zeile 68 (Post): fehlendes <returns>-Tag
+  Zeile 86 (Put): fehlende <param>-Tags f├╝r: key, entity
+  Zeile 86 (Put): fehlendes <returns>-Tag
+  Zeile 127 (Patch): fehlende <param>-Tags f├╝r: key, patch
+  Zeile 127 (Patch): fehlendes <returns>-Tag
+  Zeile 211 (Delete): fehlende <param>-Tags f├╝r: key
+  Zeile 211 (Delete): fehlendes <returns>-Tag
+
+ERROR: unvollst├ñndige XML-Dokumentation in src/Schnittstellenzentrale/OData/ODataPatchHelper.cs:
+  Zeile 9 (TryApplyPatch): fehlende <param>-Tags f├╝r: patch, target, error
+  Zeile 54 (TryApplyPatch): fehlende <param>-Tags f├╝r: patch, target, error
+  Zeile 88 (ContainsRowVersion): fehlende <param>-Tags f├╝r: patch
+  Zeile 100 (TryExtractRowVersion): fehlende <param>-Tags f├╝r: patch
+  Zeile 115 (TryApplyIconData): fehlende <param>-Tags f├╝r: prop, setter, error
+
+ERROR: unvollst├ñndige XML-Dokumentation in src/Schnittstellenzentrale/Services/ApplicationApiClient.cs:
+  Zeile 24 (ApplicationApiClient): fehlende <param>-Tags f├╝r: httpClient, httpContextAccessor, configuration, tokenStore, storageModeService, currentUserService
+
+ERROR: #pragma warning disable f├╝r XML-Dokumentationscodes in src/Schnittstellenzentrale/Services/TokenStore.cs:
+  Zeile 1: CS1591 (#pragma warning disable CS1591)
+
+ERROR: XML-Doc-Konfiguration in src/Schnittstellenzentrale.Core/Schnittstellenzentrale.Core.csproj unvollst├ñndig:
+  <GenerateDocumentationFile>true</GenerateDocumentationFile> fehlt oder ist nicht auf true gesetzt
+  CS1591 ist nicht als Fehler konfiguriert ÔÇô <WarningsAsErrors>CS1591</WarningsAsErrors> oder <TreatWarningsAsErrors>true</TreatWarningsAsErrors> fehlt
+
