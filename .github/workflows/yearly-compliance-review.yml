@@ -1,0 +1,63 @@
+name: Yearly Compliance & Copyright Review
+
+# Schedule-driven workflow that creates a yearly GitHub issue asking
+# @softwarewerkstatt to perform a compliance and copyright review (copyright
+# notices in source code and on websites, imprint, privacy policy,
+# third-party licenses, open-source obligations, company and contact
+# information, app store metadata). Before creating the issue, it ensures
+# the 'automated-compliance-review' label exists and checks whether an open
+# issue with that label is still pending from a previous cycle - if so, no
+# duplicate is created. The label/create logic lives in the shared composite
+# action ./.github/actions/create-review-issue.
+#
+# Can also be triggered manually via workflow_dispatch; the duplicate check
+# applies there as well.
+on:
+  schedule:
+    # Yearly on January 1st at 05:00 UTC.
+    - cron: '0 5 1 1 *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: yearly-compliance-review
+  cancel-in-progress: false
+
+jobs:
+  create-review-issue:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Create review issue
+        uses: ./.github/actions/create-review-issue
+        with:
+          label: automated-compliance-review
+          label-color: 'B60205'
+          label-description: Automated yearly compliance and copyright review issue
+          issue-title-prefix: '[Review] Compliance- und Copyright-Review'
+          cadence: yearly
+          issue-body: |
+            @softwarewerkstatt
+
+            Bitte führe das jährliche Compliance-Review durch.
+
+            Prüfe:
+
+            - Copyright-Hinweise im Quellcode
+            - Copyright-Angaben auf Webseiten
+            - Copyright-Angaben in About-Dialogen
+            - Impressum
+            - Datenschutzerklärung
+            - Drittanbieter-Lizenzen
+            - Open-Source-Verpflichtungen
+            - Unternehmens- und Kontaktinformationen
+            - App-Store-Metadaten (falls vorhanden)
+
+            Erstelle konkrete Änderungsvorschläge und liste erkannte Risiken oder Handlungsbedarfe auf.

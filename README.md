@@ -210,6 +210,18 @@ Das Skript setzt `core.hooksPath` auf `.githooks`. Alternativ manuell: `git conf
 
 **pre-push** blockiert direkte Pushes auf `main`/`staging` und prüft das gesamte Repository streng (`--all --strict`): keine `NotImplementedException`/Throw-only-Stubs, keine verwaisten Razor-Komponenten, alle `public`/`internal`-Enum-Werte müssen in Tests vorkommen.
 
+## Automatisierte Review-Workflows
+
+Drei zeitgesteuerte GitHub-Actions-Workflows unter `.github/workflows/` erzeugen automatisch Review-Issues mit einer `@softwarewerkstatt`-Erwähnung als Bearbeitungsauftrag:
+
+- **Monatliches Architektur- und Sicherheitsreview** (`monthly-architecture-security-review.yml`, 1. des Monats)
+- **Wöchentliche NuGet-Paketprüfung** (`weekly-nuget-review.yml`, montags)
+- **Jährliches Compliance- und Copyright-Review** (`yearly-compliance-review.yml`, 1. Januar)
+
+Jeder Workflow prüft vor dem Anlegen über ein dediziertes Label, ob bereits ein offenes Issue desselben Typs existiert, und verzichtet in diesem Fall auf ein Duplikat. Alle drei Workflows können zusätzlich manuell über `workflow_dispatch` ausgelöst werden.
+
+Details: [docs/help/review-automatisierung/index.md](docs/help/review-automatisierung/index.md)
+
 ## Rechtliches
 
 Rechtliche Hinweise und die Lizenzbeschreibung liegen in [LEGAL.md](LEGAL.md). Im Repository-Stamm ist keine separate `LICENSE`-Datei hinterlegt.

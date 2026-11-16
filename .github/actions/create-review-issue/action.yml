@@ -1,0 +1,72 @@
+name: Create review issue
+
+description: >
+  Ensures a dedicated review label exists (via `gh label create --force`), then checks
+  whether an open issue carrying that label already exists (`gh issue list`) and only
+  creates a new issue (`gh issue create`) if none is open, so recurring cycles never
+  produce duplicates. The issue title is built from the given prefix plus a period
+  suffix derived from the `cadence` input (`monthly` -> yyyy-MM, `weekly` -> ISO
+  yyyy-KWww, `yearly` -> yyyy). Used by the three scheduled review workflows
+  (monthly-architecture-security-review.yml, weekly-nuget-review.yml,
+  yearly-compliance-review.yml), so this logic only exists once instead of being
+  duplicated between them. Follows the label/dedup pattern established in
+  sync-staging-with-main.yml and staging-to-main-promotion.yml.
+
+inputs:
+  label:
+    description: Label identifying this review type; created/updated and used for duplicate detection.
+    required: true
+  label-color:
+    description: Hex color (without leading '#') applied to the label.
+    required: true
+  label-description:
+    description: Short description set on the label.
+    required: true
+  issue-title-prefix:
+    description: Fixed issue title prefix; the cadence-specific period suffix is appended.
+    required: true
+  issue-body:
+    description: Full issue body text, passed to `gh issue create --body` via the ISSUE_BODY env variable.
+    required: true
+  cadence:
+    description: Review cadence selecting the title suffix format. Allowed values - monthly, weekly, yearly.
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Ensure label exists
+      shell: pwsh
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        gh label create "${{ inputs.label }}" --color "${{ inputs.label-color }}" --description "${{ inputs.label-description }}" --force
+        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+    - name: Create issue if none open
+      shell: pwsh
+      env:
+        GH_TOKEN: ${{ github.token }}
+        ISSUE_BODY: ${{ inputs.issue-body }}
+      run: |
+        $existing = gh issue list --label "${{ inputs.label }}" --state open --json number | ConvertFrom-Json
+        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+        if (@($existing).Count -eq 0) {
+          $suffix = switch ("${{ inputs.cadence }}") {
+            'monthly' { Get-Date -Format 'yyyy-MM' }
+            'weekly'  {
+              $now = Get-Date
+              '{0}-KW{1:D2}' -f [System.Globalization.ISOWeek]::GetYear($now),
+                                [System.Globalization.ISOWeek]::GetWeekOfYear($now)
+            }
+            'yearly'  { Get-Date -Format 'yyyy' }
+            default   { throw "Unknown cadence value '${{ inputs.cadence }}'. Expected one of: monthly, weekly, yearly." }
+          }
+          $title = "${{ inputs.issue-title-prefix }} $suffix"
+          gh issue create --title "$title" --body $env:ISSUE_BODY --label "${{ inputs.label }}"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          Write-Host "Created issue '$title'."
+        } else {
+          Write-Host "An open issue with label '${{ inputs.label }}' already exists (#$($existing[0].number)). Skipping creation."
+        }
