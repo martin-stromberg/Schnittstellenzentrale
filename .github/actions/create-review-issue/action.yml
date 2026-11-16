@@ -56,8 +56,9 @@ runs:
           $suffix = switch ("${{ inputs.cadence }}") {
             'monthly' { Get-Date -Format 'yyyy-MM' }
             'weekly'  {
-              '{0}-KW{1:D2}' -f [System.Globalization.ISOWeek]::GetYear((Get-Date)),
-                                [System.Globalization.ISOWeek]::GetWeekOfYear((Get-Date))
+              $now = Get-Date
+              '{0}-KW{1:D2}' -f [System.Globalization.ISOWeek]::GetYear($now),
+                                [System.Globalization.ISOWeek]::GetWeekOfYear($now)
             }
             'yearly'  { Get-Date -Format 'yyyy' }
             default   { throw "Unknown cadence value '${{ inputs.cadence }}'. Expected one of: monthly, weekly, yearly." }
