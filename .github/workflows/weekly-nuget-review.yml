@@ -1,0 +1,64 @@
+name: Weekly NuGet Package Review
+
+# Schedule-driven workflow that creates a weekly GitHub issue asking
+# @softwarewerkstatt to analyze all used NuGet packages (updates, security
+# fixes, unmaintained packages, breaking changes) and to implement the safe
+# recommendations directly in a pull request. Before creating the issue, it
+# ensures the 'automated-nuget-review' label exists and checks whether an
+# open issue with that label is still pending from a previous cycle - if so,
+# no duplicate is created. The label/create logic lives in the shared
+# composite action ./.github/actions/create-review-issue.
+#
+# Runs two hours after the weekly security-scan.yml gate (Monday 04:00 UTC)
+# to avoid runner contention. Can also be triggered manually via
+# workflow_dispatch; the duplicate check applies there as well.
+on:
+  schedule:
+    # Weekly on Monday at 06:00 UTC.
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: weekly-nuget-review
+  cancel-in-progress: false
+
+jobs:
+  create-review-issue:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Create review issue
+        uses: ./.github/actions/create-review-issue
+        with:
+          label: automated-nuget-review
+          label-color: 'D93F0B'
+          label-description: Automated weekly NuGet package review issue
+          issue-title-prefix: '[Review] NuGet-Paketprüfung'
+          cadence: weekly
+          issue-body: |
+            @softwarewerkstatt
+
+            Bitte analysiere alle verwendeten NuGet-Pakete.
+
+            Prüfe:
+
+            - Verfügbare Updates
+            - Security-Updates
+            - Pakete mit bekannt gewordenen Schwachstellen
+            - Veraltete oder nicht mehr gepflegte Pakete
+            - Empfohlene Nachfolgepakete
+            - Mögliche Breaking Changes bei Updates
+
+            Erstelle konkrete Update-Empfehlungen inklusive Risikobewertung.
+
+            Setze die unbedenklichen Empfehlungen (niedriges bis mittleres Risiko)
+            direkt in einem Pull Request um. Risikoreiche oder aufgeschobene
+            Empfehlungen dokumentiere im PR-Body bzw. als eigenes Folge-Issue.
