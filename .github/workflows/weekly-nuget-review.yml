@@ -17,9 +17,6 @@ on:
     # Weekly on Monday at 06:00 UTC.
     - cron: '0 6 * * 1'
   workflow_dispatch:
-  push:
-    branches:
-      - task/issue-79-d4b8f7fe70a54d0d968f0c9d0c2c0b04-automatisierung-wiederkehrende
 
 permissions:
   contents: read
