@@ -23,7 +23,7 @@
     <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.*" />
     <PackageReference Include="Microsoft.JSInterop" Version="10.0.*" />
     <PackageReference Include="Microsoft.OData.Edm" Version="8.4.3" />
-    <PackageReference Include="Microsoft.OpenApi" Version="3.8.0" />
+    <PackageReference Include="Microsoft.OpenApi" Version="2.10.0" />
     <PackageReference Include="SQLitePCLRaw.lib.e_sqlite3" Version="3.53.3" />
     <!-- Direct override to pull in System.Security.Cryptography.Pkcs >= 10.0.13:
          Microsoft.EntityFrameworkCore.SqlServer >= 10.0.15 requires Pkcs >= 10.0.13
