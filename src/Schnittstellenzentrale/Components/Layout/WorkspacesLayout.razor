@@ -1,8 +1,5 @@
 @inject INavigationStateService NavigationStateService
 @inject IApplicationApiClient ApplicationApiClient
-@inject IEndpointRepository EndpointRepository
-@inject IStorageModeService StorageModeService
-@inject ISignalRNotificationService SignalRNotificationService
 @inject IActivityLogService ActivityLogService
 @inject IJSRuntime JSRuntime
 @inject IStringLocalizer<SharedResources> L
@@ -219,11 +216,7 @@
         _deleteTargetGroup = null;
         try
         {
-            var freshGroup = await ApplicationApiClient.GetGroupByIdAsync(group.Id);
-            var applications = freshGroup?.Applications ?? group.Applications;
-            foreach (var app in applications.ToList())
-                await ApplicationApiClient.DeleteApplicationAsync(app.Id);
-            await ApplicationApiClient.DeleteGroupAsync(group.Id);
+            await ApplicationApiClient.DeleteGroupAsync(group.Id, ApplicationGroupDeleteMode.Delete);
             await NavigationStateService.SetWorkspaceSelectionAsync(null);
             await RefreshTreeAsync();
         }
@@ -235,12 +228,7 @@
         _deleteTargetGroup = null;
         try
         {
-            foreach (var app in group.Applications.ToList())
-            {
-                app.ApplicationGroupId = null;
-                await ApplicationApiClient.UpdateApplicationAsync(app);
-            }
-            await ApplicationApiClient.DeleteGroupAsync(group.Id);
+            await ApplicationApiClient.DeleteGroupAsync(group.Id, ApplicationGroupDeleteMode.Detach);
             await NavigationStateService.SetWorkspaceSelectionAsync(null);
             await RefreshTreeAsync();
         }
@@ -269,10 +257,8 @@
         try
         {
             var group = new EndpointGroup { Name = name, ApplicationId = application.Id };
-            var saved = await EndpointRepository.AddEndpointGroupAsync(group);
+            var saved = await ApplicationApiClient.AddEndpointGroupAsync(group);
             ActivityLogService.Log(ActivityLogCategory.EntityCreated, string.Format(L["WorkspacesLayout_Log_FolderCreated"], saved.Name));
-            if (StorageModeService.CurrentMode == StorageMode.Team)
-                await SignalRNotificationService.NotifyEndpointGroupChangedAsync(saved.Id, application.Id);
             await RefreshTreeAsync();
         }
         catch (Exception ex) { _errorMessage = string.Format(L["WorkspacesLayout_Error_CreateFolder"], ex.Message); }
@@ -286,29 +272,36 @@
             {
                 Name = L["WorkspacesLayout_DefaultEndpointName"],
                 Method = Core.Enums.HttpMethod.GET,
-                RelativePath = string.Empty,
+                RelativePath = "/",
                 BodyMode = BodyMode.None,
                 ApplicationId = args.Application.Id,
                 EndpointGroupId = args.Group?.Id
             };
-            var saved = await EndpointRepository.AddEndpointAsync(endpoint);
+            var saved = await ApplicationApiClient.AddEndpointAsync(endpoint);
             ActivityLogService.Log(ActivityLogCategory.EntityCreated, string.Format(L["WorkspacesLayout_Log_EndpointCreated"], saved.Name));
-            if (StorageModeService.CurrentMode == StorageMode.Team)
-                await SignalRNotificationService.NotifyEndpointChangedAsync(saved.Id, args.Application.Id);
             await RefreshTreeAsync();
-            var loaded = await EndpointRepository.GetEndpointByIdAsync(saved.Id);
+            var loaded = await ApplicationApiClient.GetEndpointByIdAsync(saved.Id);
             if (loaded != null)
             {
                 CloseAllPanels();
                 var path = new List<object>();
-                if (loaded.Application != null)
+                var app = await ApplicationApiClient.GetApplicationByIdAsync(loaded.ApplicationId);
+                if (app != null)
                 {
-                    if (loaded.Application.ApplicationGroup != null)
-                        path.Add(loaded.Application.ApplicationGroup);
-                    path.Add(loaded.Application);
+                    if (app.ApplicationGroupId.HasValue)
+                    {
+                        var appGroup = await ApplicationApiClient.GetGroupByIdAsync(app.ApplicationGroupId.Value);
+                        if (appGroup != null)
+                            path.Add(appGroup);
+                    }
+                    path.Add(app);
                 }
-                if (loaded.EndpointGroup != null)
-                    path.Add(loaded.EndpointGroup);
+                if (loaded.EndpointGroupId.HasValue)
+                {
+                    var endpointGroup = await ApplicationApiClient.GetEndpointGroupByIdAsync(loaded.EndpointGroupId.Value);
+                    if (endpointGroup != null)
+                        path.Add(endpointGroup);
+                }
                 path.Add(loaded);
                 await NavigationStateService.SetWorkspaceSelectionAsync(new WorkspaceSelection(loaded, path));
             }
@@ -322,10 +315,8 @@
     {
         try
         {
-            await EndpointRepository.UpdateEndpointGroupAsync(group);
+            await ApplicationApiClient.UpdateEndpointGroupAsync(group);
             ActivityLogService.Log(ActivityLogCategory.EntityModified, string.Format(L["WorkspacesLayout_Log_FolderRenamed"], group.Name));
-            if (StorageModeService.CurrentMode == StorageMode.Team)
-                await SignalRNotificationService.NotifyEndpointGroupChangedAsync(group.Id, group.ApplicationId);
             _renameTargetEndpointGroup = null;
             await RefreshTreeAsync();
         }
@@ -337,8 +328,8 @@
         CloseAllPanels();
         try
         {
-            _deleteTargetEndpoints = await EndpointRepository.GetEndpointsAsync(group.ApplicationId);
-            _deleteTargetAllGroups = await EndpointRepository.GetEndpointGroupsAsync(group.ApplicationId);
+            _deleteTargetEndpoints = await ApplicationApiClient.GetEndpointsAsync(group.ApplicationId);
+            _deleteTargetAllGroups = await ApplicationApiClient.GetEndpointGroupsAsync(group.ApplicationId);
             _deleteTargetEndpointCount = CountEndpointsRecursive(group.Id, _deleteTargetEndpoints, _deleteTargetAllGroups);
             _deleteTargetEndpointGroup = group;
         }
@@ -363,7 +354,6 @@
 
     private async Task OnEndpointGroupDeleteConfirmed(EndpointGroup group)
     {
-        var applicationId = group.ApplicationId;
         _deleteTargetEndpointGroup = null;
         _deleteTargetEndpointCount = 0;
         try
@@ -377,9 +367,7 @@
             }
             _deleteTargetEndpoints = null;
             _deleteTargetAllGroups = null;
-            await EndpointRepository.DeleteEndpointGroupAsync(group.Id);
-            if (StorageModeService.CurrentMode == StorageMode.Team)
-                await SignalRNotificationService.NotifyEndpointGroupChangedAsync(group.Id, applicationId);
+            await ApplicationApiClient.DeleteEndpointGroupAsync(group.Id);
             await RefreshTreeAsync();
         }
         catch (Exception ex) { _errorMessage = string.Format(L["WorkspacesLayout_Error_DeleteFolder"], ex.Message); }
@@ -391,12 +379,10 @@
         {
             var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", string.Format(L["WorkspacesLayout_Confirm_DeleteEndpoint"], endpoint.Name));
             if (!confirmed) return;
-            await EndpointRepository.DeleteEndpointAsync(endpoint.Id);
+            await ApplicationApiClient.DeleteEndpointAsync(endpoint.Id);
             var current = NavigationStateService.CurrentSelection?.SelectedItem as Core.Models.Endpoint;
             if (current != null && current.Id == endpoint.Id)
                 await NavigationStateService.SetWorkspaceSelectionAsync(null);
-            if (StorageModeService.CurrentMode == StorageMode.Team)
-                await SignalRNotificationService.NotifyEndpointChangedAsync(endpoint.Id, endpoint.ApplicationId);
             await RefreshTreeAsync();
         }
         catch (Exception ex) { _errorMessage = string.Format(L["WorkspacesLayout_Error_DeleteEndpoint"], ex.Message); }

@@ -300,11 +300,12 @@ Dieselbe Berechnung nutzt auch der automatische Startabgleich der Systemanwendun
 
 ### 1. Schreiboperation auslösen
 
-Nach einer Schreiboperation im Team-Modus ruft die UI-Komponente `ISignalRNotificationService.NotifyApplicationChangedAsync(applicationId)` oder `NotifyGroupChangedAsync(groupId)` auf.
+Bei Schreiboperationen über den REST-API-Pfad entscheidet der jeweilige Controller anhand des `X-Storage-Mode`-Headers, ob eine Benachrichtigung ausgelöst wird — die Benachrichtigungspolitik liegt einheitlich im Controller-Pfad, nicht bei den aufrufenden Komponenten. `WorkspacesLayout` führt sämtliche Endpunkt-/Endpunktgruppen-Operationen (Anlegen, Umbenennen, Löschen, Zählabfragen) sowie das Löschen von Anwendungsgruppen (`DELETE /api/application-groups/{id}?content=delete|detach`) ausschließlich über `IApplicationApiClient` aus; die Team-Benachrichtigung erfolgt dabei serverseitig genau einmal pro Mutation. Einzelne UI-Komponenten mit direktem Schreibzugriff (z. B. `EndpointPage`, `EnvironmentManagementOverlay`) rufen `ISignalRNotificationService` weiterhin selbst auf.
 
 Beteiligte Komponenten:
 - `SignalRNotificationService<EndpointHub>.NotifyApplicationChangedAsync` — sendet `"ApplicationChanged"` an Gruppe `"application:{id}"`
 - `SignalRNotificationService<EndpointHub>.NotifyGroupChangedAsync` — sendet `"GroupChanged"` an Gruppe `"group:{id}"`
+- `EndpointsController` / `EndpointGroupsController` / `ApplicationsController` / `ApplicationGroupsController` — lösen `NotifyEndpointChangedAsync`, `NotifyEndpointGroupChangedAsync` bzw. `NotifyTreeChangedAsync` bei `X-Storage-Mode: Team` aus
 
 ### 2. Hub-Abonnement
 
