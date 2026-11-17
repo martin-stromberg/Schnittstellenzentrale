@@ -4,7 +4,7 @@ Branch: `task/issue-78-e692faab901a4147ab28ab4a1b560b76-code-review-orchestrieru
 
 | # | Titel | Abhängigkeiten | Branch | Status |
 |---|-------|-----------------|--------|--------|
-| 1 | Einheitlicher Swagger-Import-Ausführungspfad inkl. Startabgleich (#87) | Keine | `task/issue-78-e692faab901a4147ab28ab4a1b560b76-code-review-orchestrierung-meh-schritt-1-swagger-import-pfad` | Offen |
+| 1 | Einheitlicher Swagger-Import-Ausführungspfad inkl. Startabgleich (#87) | Keine | `task/issue-78-e692faab901a4147ab28ab4a1b560b76-code-review-orchestrierung-meh-schritt-1-swagger-import-pfad` | In Arbeit |
 | 2 | API-Endpunkt für Swagger-Import-Apply und Umstellung des Import-Dialogs (#88) | 1 | `task/issue-78-e692faab901a4147ab28ab4a1b560b76-code-review-orchestrierung-meh-schritt-2-swagger-apply-api` | Offen |
 | 3 | Atomares Löschen von Anwendungsgruppen mit Inhalt (#90) | Keine | `task/issue-78-e692faab901a4147ab28ab4a1b560b76-code-review-orchestrierung-meh-schritt-3-gruppen-loeschen` | Offen |
 | 4 | Workspace-Oberfläche vollständig auf den API-Pfad umstellen (#89) | 3 | `task/issue-78-e692faab901a4147ab28ab4a1b560b76-code-review-orchestrierung-meh-schritt-4-workspace-api` | Offen |
