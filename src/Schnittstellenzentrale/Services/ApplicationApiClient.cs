@@ -112,6 +112,17 @@ public class ApplicationApiClient : IApplicationApiClient
     }
 
     /// <inheritdoc/>
+    public async Task DeleteGroupAsync(int id, ApplicationGroupDeleteMode mode)
+    {
+        var baseUrl = GetBaseUrl();
+        var storageMode = _storageModeService.CurrentMode;
+        var content = mode.ToString().ToLowerInvariant();
+
+        await SendWithTokenNoContentAsync(
+            t => BuildDeleteRequest($"{baseUrl}/api/application-groups/{id}?content={content}", storageMode, t));
+    }
+
+    /// <inheritdoc/>
     public async Task<IList<Application>> GetUngroupedApplicationsAsync(StorageMode storageMode, string owner)
     {
         var baseUrl = GetBaseUrl();
@@ -448,6 +459,22 @@ public class ApplicationApiClient : IApplicationApiClient
 
         var httpResponse = await ExecuteWithTokenAsync(
             t => BuildRequestWithBody(HttpMethod.Post, $"{baseUrl}/api/applications/{applicationId}/odata-import/apply", diff, storageMode, t));
+
+        if (!httpResponse.IsSuccessStatusCode)
+        {
+            var errorBody = await TryReadErrorMessageAsync(httpResponse);
+            throw new InvalidOperationException(errorBody ?? $"HTTP-Fehler: {(int)httpResponse.StatusCode} {httpResponse.ReasonPhrase}");
+        }
+    }
+
+    /// <inheritdoc/>
+    public async Task ApplySwaggerDiffAsync(int applicationId, ImportDiff diff)
+    {
+        var baseUrl = GetBaseUrl();
+        var storageMode = _storageModeService.CurrentMode;
+
+        var httpResponse = await ExecuteWithTokenAsync(
+            t => BuildRequestWithBody(HttpMethod.Post, $"{baseUrl}/api/applications/{applicationId}/swagger-import/apply", diff, storageMode, t));
 
         if (!httpResponse.IsSuccessStatusCode)
         {

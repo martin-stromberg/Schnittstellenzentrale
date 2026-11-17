@@ -119,6 +119,8 @@ CRUD-Operationen für Anwendungen und Anwendungsgruppen mit StorageMode-Bewussts
 | Methode | Rückgabe | Beschreibung |
 |---------|----------|--------------|
 | `ImportAsync(Application application)` | `Task<ImportDiff>` | Ruft Definition ab, berechnet Diff gegen bestehende Endpunkte |
+| `ISwaggerImportService.ApplyDiffAsync(ImportDiff diff, int applicationId)` | `Task` | Wendet den Diff an; verwirft ihn mit `InvalidOperationException`, wenn Endpunkte eine abweichende `applicationId` tragen (Aggregat-Validierung) |
+| `IODataImportService.ApplyDiffAsync(ImportDiff diff)` | `Task` | Wendet den Diff an |
 
 ### `ICredentialService`
 

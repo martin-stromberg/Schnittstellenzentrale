@@ -91,7 +91,7 @@ Beteiligte Komponenten:
 `PersistAsync()` unterscheidet anhand von `_model.Id`:
 
 - Neuer Endpunkt (`Id == 0`): `IApplicationApiClient.AddEndpointAsync(_model)` wird aufgerufen. Das zurückgegebene `Endpoint`-Objekt enthält die vergebene `Id` und den neuen `RowVersion`-Wert, die in `_model` übernommen werden.
-- Bestehender Endpunkt: `IApplicationApiClient.UpdateEndpointAsync(_model)` wird aufgerufen. Der zurückgegebene `RowVersion`-Wert wird in `_model.RowVersion` übernommen.
+- Bestehender Endpunkt: `IApplicationApiClient.UpdateEndpointAsync(_model)` wird aufgerufen — die Aggregat-Operation ersetzt Skalarwerte und die vollständigen Kind-Mengen `Headers`/`QueryParameters` in einem Schritt. Der zurückgegebene `RowVersion`-Wert wird in `_model.RowVersion` übernommen.
 
 `ForceSaveAsync()` liest vor dem Speichern den aktuellen `RowVersion`-Wert über `IApplicationApiClient.GetEndpointByIdAsync(_model.Id)` und aktualisiert `_model.RowVersion`, bevor `UpdateEndpointAsync` aufgerufen wird.
 
@@ -193,17 +193,19 @@ Beteiligte Komponenten:
 
 ## Ablauf: Header und Query-Parameter verwalten
 
-`EndpointPage` verwaltet Header und Query-Parameter über atomare API-Routen:
+`EndpointPage` verwaltet Header und Query-Parameter bei der Bearbeitung rein In-Memory (`_headers` / `_queryParameters`); die Panels melden Änderungen über `OnChanged` an `MarkDirty`. Die Persistierung erfolgt ausschließlich beim Speichern über die Aggregat-Operation `UpdateEndpointAsync`, die beide Kind-Mengen als Vollmenge ersetzt.
 
-- **Header hinzufügen** (`AddHeaderAsync`): `IApplicationApiClient.AddHeaderAsync(header)` → `POST /api/endpoints/headers` → gibt `EndpointHeader` mit vergebener `Id` zurück; wird in `_model.Headers` eingefügt.
-- **Header löschen** (`DeleteHeaderAsync`): `IApplicationApiClient.DeleteHeaderAsync(id)` → `DELETE /api/endpoints/headers/{id}` → Eintrag wird aus `_model.Headers` entfernt.
-- **Query-Parameter hinzufügen** (`AddQueryParameterAsync`): `IApplicationApiClient.AddQueryParameterAsync(parameter)` → `POST /api/endpoints/query-parameters` → gibt `EndpointQueryParameter` zurück.
-- **Query-Parameter löschen** (`DeleteQueryParameterAsync`): `IApplicationApiClient.DeleteQueryParameterAsync(id)` → `DELETE /api/endpoints/query-parameters/{id}`.
+Nur beim erstmaligen Anlegen eines Endpunkts (`CreateEndpointWithDetailsAsync`, `Id == 0`) werden die Kinder nach dem `AddEndpointAsync`-Aufruf über die atomaren Routen nachgepflegt, da `POST /api/endpoints` keine Kind-Mengen entgegennimmt:
+
+- **Header hinzufügen**: `IApplicationApiClient.AddHeaderAsync(header)` → `POST /api/endpoints/headers` → gibt `EndpointHeader` mit vergebener `Id` zurück.
+- **Query-Parameter hinzufügen**: `IApplicationApiClient.AddQueryParameterAsync(parameter)` → `POST /api/endpoints/query-parameters` → gibt `EndpointQueryParameter` zurück.
+
+Die atomaren Routen `POST`/`DELETE /api/endpoints/headers` und `/api/endpoints/query-parameters` bleiben als öffentlicher REST-Vertrag bestehen, werden aber vom Speicherpfad der Detailseite nicht mehr verwendet.
 
 Beteiligte Komponenten:
-- `EndpointPage.AddHeaderAsync()` / `DeleteHeaderAsync()` / `AddQueryParameterAsync()` / `DeleteQueryParameterAsync()`
+- `EndpointPage.CreateEndpointWithDetailsAsync()` — Kind-Nachpflege beim Anlegen
 - `IApplicationApiClient` — HTTP-Transport
-- `RequestHeadersPanel` / `RequestQueryParamsPanel` — UI-Komponenten, die die jeweiligen `OnAdd`/`OnDelete`-Callbacks auslösen
+- `RequestHeadersPanel` / `RequestQueryParamsPanel` — UI-Komponenten mit `OnChanged`-Callback
 
 ---
 
@@ -276,14 +278,18 @@ Das lokale Bearer-Token-Dictionary wird als `ImportDiff.BearerTokens` in das zur
 
 ### 5. Diff anwenden
 
-Die UI ruft `ISwaggerImportService.ApplyDiffAsync(diff)` auf. Für neue und geänderte Endpunkte werden zunächst die Datenbankoperationen ausgeführt (`IEndpointRepository.AddEndpointAsync` / `UpdateEndpointAsync`). Anschließend wird `SaveBearerTokenIfPresent` aufgerufen:
+Der `SwaggerImportDialog` ruft `IApplicationApiClient.ApplySwaggerDiffAsync(applicationId, diff)` auf, der serverseitig `POST /api/applications/{id}/swagger-import/apply` anspricht. Der Endpunkt (`ApplicationImportController.ApplySwaggerDiffAsync`) validiert das Bearer-Token (`401`), die Existenz der Anwendung (`404`) und den `InterfaceType` (`422`, wenn nicht `Rest`) und ruft anschließend `ISwaggerImportService.ApplyDiffAsync(diff, applicationId)` auf.
+
+Der Service prüft vor jeder Persistierung die Aggregat-Zugehörigkeit: Tragen nicht alle Endpunkte des Diffs die `ApplicationId` der Zielanwendung, wird eine `InvalidOperationException` geworfen und der Diff vollständig verworfen (der Endpunkt antwortet `422` mit `errorMessage`). Anschließend werden für neue und geänderte Endpunkte zunächst die Datenbankoperationen ausgeführt (`IEndpointRepository.AddEndpointAsync` / `UpdateEndpointAsync`). Danach wird `SaveBearerTokenIfPresent` aufgerufen:
 
 - `endpoint.AuthenticationType == BearerToken` → Schlüssel `"{Method}:{RelativePath}"` in `ImportDiff.BearerTokens` nachschlagen → `ICredentialService.SavePassword(credentialTarget, "", tokenValue)` aufrufen.
 - Fehler beim Credential-Zugriff werden per `_logger.LogWarning` geloggt und unterbrechen den Import nicht.
 - Der `credentialTarget` wird durch `CredentialTargetHelper.Build(applicationId, AuthenticationType.BearerToken)` erzeugt.
 
 Beteiligte Komponenten:
-- `SwaggerImportService.ApplyDiffAsync` — Persistierung und Credential-Ablage
+- `ApplicationImportController.ApplySwaggerDiffAsync` — REST-Endpunkt (`POST /api/applications/{id}/swagger-import/apply`)
+- `IApplicationApiClient.ApplySwaggerDiffAsync` — clientseitiger Aufruf des Endpunkts
+- `SwaggerImportService.ApplyDiffAsync` — Aggregat-Validierung, Persistierung und Credential-Ablage
 - `SwaggerImportService.SaveBearerTokenIfPresent` — private Hilfsmethode für Credential-Speicherung
 - `IEndpointRepository.AddEndpointAsync` / `UpdateEndpointAsync` — Datenbankoperationen
 - `ICredentialService.SavePassword` — Ablage im Windows Credential Manager
@@ -404,7 +410,7 @@ Beteiligte Komponenten:
 
 ### 8. Diff anwenden
 
-`ODataImportDialog.ApplyAsync` ruft `IODataImportService.ApplyDiffAsync(diff)` auf.
+`ODataImportDialog.ApplyAsync` ruft `IApplicationApiClient.ApplyODataDiffAsync(applicationId, diff)` auf, der serverseitig `POST /api/applications/{id}/odata-import/apply` anspricht; der Endpunkt ruft nach Token-, Existenz- und Typprüfung `IODataImportService.ApplyDiffAsync(diff)` auf.
 
 `ODataImportService.ApplyDiffAsync` iteriert über alle betroffenen `applicationId`-Werte, lädt die vorhandenen Endpunktgruppen und baut ein `groupLookup`-Dictionary auf. Anschließend werden die Endpunkte verarbeitet:
 
@@ -469,7 +475,7 @@ flowchart TD
     J -- Nein --> L[ImportDiffCalculator.Calculate]
     K --> L
     L --> M[ImportDiff mit BearerTokens zurückgeben]
-    M --> N[ApplyDiffAsync]
+    M --> N[ApiClient.ApplySwaggerDiffAsync -> POST swagger-import/apply -> ApplyDiffAsync]
     N --> O[AddEndpointAsync / UpdateEndpointAsync]
     O --> P{AuthenticationType = BearerToken?}
     P -- Ja --> Q[SaveBearerTokenIfPresent]

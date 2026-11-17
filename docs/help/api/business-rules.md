@@ -50,13 +50,29 @@
 
 ## StorageMode-Übergabe via X-Storage-Mode-Header
 
-**Beschreibung:** Die Blazor-Komponenten kennen den aktuellen `StorageMode` (`Team`/`User`), die Controller nicht. Der Modus wird deshalb als HTTP-Header übertragen, damit der Controller entscheiden kann, ob eine SignalR-Benachrichtigung ausgelöst werden soll.
+**Beschreibung:** Die Blazor-Komponenten kennen den aktuellen `StorageMode` (`Team`/`User`), die Controller nicht. Der Modus wird deshalb als HTTP-Header übertragen, damit die zentrale Benachrichtigungs-Policy entscheiden kann, ob eine SignalR-Benachrichtigung ausgelöst werden soll.
 
 **Verhalten:**
-- Header `X-Storage-Mode: Team` → `StorageMode.Team` → nach erfolgreichem Speichern wird `ISignalRNotificationService.NotifyGroupChangedAsync`, `NotifyApplicationChangedAsync`, `NotifyEndpointGroupChangedAsync` bzw. `NotifyEndpointChangedAsync` aufgerufen.
+- Header `X-Storage-Mode: Team` → `StorageMode.Team` → nach erfolgreichem Speichern ruft der Controller die passende `INotificationPolicy`-Methode auf; die Policy delegiert an `ISignalRNotificationService.NotifyTreeChangedAsync`, `NotifyEndpointGroupChangedAsync` bzw. `NotifyEndpointChangedAsync`.
 - Header fehlt oder hat anderen Wert → `StorageMode.User` → keine SignalR-Benachrichtigung.
 
 **Umsetzung:** `ApiControllerBase.ParseStorageMode` — Vergleich des Header-Werts mit dem Literal `"Team"`.
+
+---
+
+## Zentrale Benachrichtigungs-Policy (INotificationPolicy)
+
+**Beschreibung:** Die Entscheidung, ob und welche SignalR-Änderungs-Benachrichtigung nach einem mutierenden Vorgang gesendet wird, liegt an genau einer Stelle: `INotificationPolicy` (`Schnittstellenzentrale.Core`) mit Implementierung `NotificationPolicy` (`Schnittstellenzentrale.Infrastructure`). Kein Controller und keine UI-Komponente prüft den Speichermodus selbst oder ruft den SignalR-Transport direkt auf.
+
+**Verhalten:**
+- Pro erfolgreichem mutierendem Vorgang wird **genau eine** Benachrichtigung ausgelöst — fehlschlagende Vorgänge (4xx/5xx vor Persistierung) benachrichtigen nicht.
+- Im `Team`-Modus: Baum-Benachrichtigung (`TreeChanged`) für Anwendungen, Anwendungsgruppen und mehrere Entitäten umfassende Vorgänge (Import-Apply, Startabgleich); entitätsspezifische Benachrichtigung (`EndpointChanged`/`EndpointGroupChanged`) für Endpunkte (inkl. Header-/Query-Parameter-Kindmutationen) und Endpunktgruppen.
+- Im `User`-Modus: keine Benachrichtigung.
+- Gilt einheitlich für REST (`/api/*`), OData (`/odatav4/*`), Import-Apply-Endpunkte und den Startabgleich (`SystemEndpointSyncService` — dort ohne StorageMode-Prüfung, da nur freigegebene Systemdaten betroffen sind und kein Anforderungskontext existiert).
+- UI-Komponenten lösen keine eigenen Benachrichtigungen aus; `EndpointPage.razor` verlässt sich auf die Controller-Benachrichtigung beim Speichern.
+- Der Transport (`EndpointHub`, SignalR-Gruppen, Ereignisnamen) ist unverändert.
+
+**Umsetzung:** `NotificationPolicy` — prüft `StorageMode == StorageMode.Team` und delegiert an `ISignalRNotificationService`. Registriert als `AddScoped<INotificationPolicy, NotificationPolicy>()` in `Program.cs`.
 
 ---
 

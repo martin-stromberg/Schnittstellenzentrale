@@ -89,6 +89,55 @@ Legt eine neue `ApplicationGroup` an.
 
 ---
 
+## DELETE /api/application-groups/{id}
+
+Löscht eine `ApplicationGroup` atomar in einer Transaktion. Der optionale Query-Parameter `content` steuert, wie enthaltene Anwendungen behandelt werden.
+
+**Authentifizierung:** Bearer-Token (aus `/authenticate`).
+
+**Request-Header:**
+
+| Header | Pflicht | Beschreibung |
+|--------|---------|--------------|
+| `Authorization` | Ja | `Bearer <token>` |
+| `X-Storage-Mode` | Nein | `Team` oder `User` (Standard: `User`); steuert SignalR-Benachrichtigungen |
+
+**Query-Parameter:**
+
+| Parameter | Typ | Pflicht | Beschreibung |
+|-----------|-----|---------|--------------|
+| `content` | `string` | Nein | `delete` löscht die Gruppe inklusive aller enthaltenen Anwendungen mit deren Endpunkten und Endpunktgruppen kaskadierend; `detach` hängt die enthaltenen Anwendungen in die ungruppierte Menge um und löscht nur die Gruppe. Fehlt der Parameter, gilt `detach`. Werte werden case-insensitiv ausgewertet. |
+
+**Beispiel:**
+
+```
+DELETE /api/application-groups/42?content=delete
+```
+
+**Response: 204 No Content**
+
+**Response-Header:**
+
+| Header | Beschreibung |
+|--------|--------------|
+| `X-New-Token` | Neuer Bearer-Token; ersetzt den verwendeten Token |
+
+**Fehler:**
+
+| Status | Ursache |
+|--------|---------|
+| 400 Bad Request | Ungültiger Wert für `content` (erlaubt: `delete`, `detach`) |
+| 401 Unauthorized | Token fehlt, unbekannt oder abgelaufen |
+| 403 Forbidden | Die Gruppe ist eine Systemgruppe (`IsSystem`) |
+| 404 Not Found | Keine Gruppe mit dieser ID vorhanden |
+
+**Hinweise:**
+
+- Die Operation ist atomar: Schlägt sie fehl, bleibt der gesamte Bestand unverändert (kein Teilerfolg).
+- Im `Team`-Speichermodus wird nach erfolgreichem Löschen eine SignalR-Benachrichtigung über die geänderte Baumstruktur gesendet.
+
+---
+
 ## POST /api/applications
 
 Legt eine neue `Application` an.
@@ -441,9 +490,11 @@ Legt einen neuen `Endpoint` an.
 
 ## PUT /api/endpoints/{id}
 
-Aktualisiert einen bestehenden `Endpoint`.
+Aktualisiert einen bestehenden `Endpoint` als Aggregat in einer einzigen serverseitigen Operation.
 
 **Authentifizierung:** Bearer-Token.
+
+**Aggregat-Semantik:** Der Request ersetzt sämtliche Skalarwerte und die vollständigen Kind-Mengen `headers` und `queryParameters`. Die mitgelieferten Listen gelten als Vollmengen — nicht aufgeführte Einträge werden entfernt, leere Listen löschen die jeweilige Menge komplett. Skalare und Kinder werden atomar gemeinsam persistiert; `rowVersion` dient weiterhin der Optimistic-Concurrency-Prüfung.
 
 **Request-Body:** alle Felder aus `POST /api/endpoints` ohne `applicationId`, zusätzlich:
 
@@ -701,3 +752,46 @@ Der Diff wird vollständig angewendet:
 | 401 Unauthorized | Token fehlt, unbekannt oder abgelaufen |
 | 404 Not Found | Anwendung nicht gefunden |
 | 422 Unprocessable Entity | Die Anwendung hat den Interface-Typ `OData` nicht; nur OData-Anwendungen unterstützen diesen Import-Endpunkt |
+
+---
+
+## POST /api/applications/{id}/swagger-import/apply
+
+Wendet einen Swagger-Import-Diff serverseitig auf eine Anwendung an. Dieser Endpunkt wird normalerweise intern von `IApplicationApiClient.ApplySwaggerDiffAsync()` aufgerufen, kann aber auch von externen Clients für Swagger-/OpenAPI-Import-Workflows verwendet werden.
+
+**Authentifizierung:** Bearer-Token (aus `/authenticate`).
+
+**Request-Header:**
+
+| Header | Pflicht | Beschreibung |
+|--------|---------|--------------|
+| `Authorization` | Ja | `Bearer <token>` |
+
+**Pfadparameter:**
+
+| Parameter | Typ | Pflicht | Beschreibung |
+|-----------|-----|---------|--------------|
+| `id` | `int` | Ja | ID der Anwendung |
+
+**Request-Body:** `ImportDiff`-Objekt (Struktur wie bei `POST /api/applications/{id}/odata-import/apply`).
+
+**Zusätzliche Validierung (Aggregat-Zugehörigkeit):** Alle Endpunkte in `newEndpoints`, `changedEndpoints` und `removedEndpoints` müssen die `applicationId` der Zielanwendung tragen. Enthält der Diff Endpunkte einer anderen Anwendung, wird der Diff vollständig verworfen — es wird nichts angewendet.
+
+**Response: 204 No Content**
+
+Der Diff wird vollständig angewendet:
+- Neue Endpunkte werden eingefügt (Gruppen werden aus den Pfadsegmenten des `relativePath` abgeleitet).
+- Bestehende Endpunkte werden aktualisiert.
+- Entfernte Endpunkte werden gelöscht.
+- Bearer-Tokens aus dem `bearerTokens`-Dictionary werden persistiert, wenn der zugehörige Endpunkt die Authentifizierung auf `BearerToken` setzt.
+
+**Response-Header:** `X-New-Token`
+
+**Fehler:**
+
+| Status | Ursache |
+|--------|---------|
+| 401 Unauthorized | Token fehlt, unbekannt oder abgelaufen |
+| 404 Not Found | Anwendung nicht gefunden |
+| 422 Unprocessable Entity | Die Anwendung hat den Interface-Typ `Rest` nicht; nur REST-Anwendungen unterstützen diesen Import-Endpunkt |
+| 422 Unprocessable Entity | Der Diff enthält Endpunkte mit einer `applicationId`, die nicht zur Zielanwendung gehört (`errorMessage` im Body beschreibt die Verletzung) |

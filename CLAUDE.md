@@ -14,7 +14,7 @@ Ein PostToolUse-Hook prüft nach jedem Schreiben automatisch fehlende Klassen un
 
 Alle Datenentitäten (Anwendungsgruppen, Anwendungen, Endpunktgruppen, Endpunkte) werden aus UI-Komponenten ausschließlich über `IApplicationApiClient` abgerufen. Direktzugriffe auf Repository-Interfaces aus Blazor-Komponenten sind nicht erlaubt.
 
-Explizite Ausnahme: `SystemEndpointSyncService` verwendet `IEndpointRepository` direkt beim Startup-Abgleich, da zu diesem Zeitpunkt kein zuverlässiger HTTP-Roundtrip möglich ist.
+Explizite Ausnahme: `SystemEndpointSyncService` verwendet `IApplicationRepository` direkt beim Startup-Abgleich (Auflösen von Systemgruppe und Systemanwendung), da zu diesem Zeitpunkt kein zuverlässiger HTTP-Roundtrip möglich ist. Der eigentliche Endpunktabgleich inklusive Persistenz läuft serverseitig in `SwaggerImportService.SyncFromDocumentAsync`.
 
 
 ## Tests

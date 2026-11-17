@@ -1,15 +1,12 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Schnittstellenzentrale.Core.Helpers;
 using Schnittstellenzentrale.Core.Interfaces;
-using Schnittstellenzentrale.Core.Models;
-using Schnittstellenzentrale.Infrastructure.Helpers;
 using Swashbuckle.AspNetCore.Swagger;
 
 namespace Schnittstellenzentrale;
 
-/// <summary>Führt nach App-Start einmalig den selektiven Endpunktabgleich für die Systemanwendung durch.</summary>
+/// <summary>Führt nach App-Start einmalig den Endpunktabgleich für die Systemanwendung durch.</summary>
 public class SystemEndpointSyncService : BackgroundService
 {
     private readonly IServiceScopeFactory _scopeFactory;
@@ -49,9 +46,20 @@ public class SystemEndpointSyncService : BackgroundService
             try
             {
                 var swaggerProvider = scope.ServiceProvider.GetRequiredService<ISwaggerProvider>();
-                var endpointRepository = scope.ServiceProvider.GetRequiredService<IEndpointRepository>();
                 var swaggerImportService = scope.ServiceProvider.GetRequiredService<ISwaggerImportService>();
-                await SyncEndpointsAsync(swaggerProvider, endpointRepository, swaggerImportService, systemApp);
+                var document = swaggerProvider.GetSwagger("v1");
+                var diff = await swaggerImportService.SyncFromDocumentAsync(document, systemApp.Id);
+
+                // Hintergrundvorgang ohne Anforderungskontext: freigegebene Systemdaten,
+                // daher immer genau eine Baum-Benachrichtigung bei tatsächlichen Änderungen.
+                // Die Policy wird erst hier aufgelöst, damit ein Benachrichtigungsfehler
+                // den eigentlichen Abgleich nicht gefährdet.
+                if (diff.ErrorMessage == null
+                    && (diff.NewEndpoints.Count > 0 || diff.ChangedEndpoints.Count > 0 || diff.RemovedEndpoints.Count > 0))
+                {
+                    var notificationPolicy = scope.ServiceProvider.GetRequiredService<INotificationPolicy>();
+                    await notificationPolicy.NotifyBackgroundMutationAsync();
+                }
             }
             catch (Exception ex)
             {
@@ -62,27 +70,5 @@ public class SystemEndpointSyncService : BackgroundService
         {
             _logger.LogError(ex, "Unerwarteter Fehler beim Endpunktabgleich.");
         }
-    }
-
-    private static async Task SyncEndpointsAsync(
-        ISwaggerProvider swaggerProvider,
-        IEndpointRepository endpointRepository,
-        ISwaggerImportService swaggerImportService,
-        Application systemApp)
-    {
-        var document = swaggerProvider.GetSwagger("v1");
-        var (importedEndpoints, bearerTokens) = SwaggerOperationHelper.MapDocumentToEndpoints(document, systemApp.Id);
-
-        var existingEndpoints = await endpointRepository.GetEndpointsAsync(systemApp.Id);
-        var existingKeys = existingEndpoints.Select(EndpointKeyHelper.BuildKey).ToHashSet();
-        var importedKeys = importedEndpoints.Select(EndpointKeyHelper.BuildKey).ToHashSet();
-
-        var diff = new ImportDiff
-        {
-            NewEndpoints = importedEndpoints.Where(e => !existingKeys.Contains(EndpointKeyHelper.BuildKey(e))).ToList(),
-            RemovedEndpoints = existingEndpoints.Where(e => !importedKeys.Contains(EndpointKeyHelper.BuildKey(e))).ToList()
-        }.WithBearerTokens(bearerTokens);
-
-        await swaggerImportService.ApplyDiffAsync(diff);
     }
 }

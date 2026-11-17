@@ -74,7 +74,7 @@ internal sealed class PlaywrightApiFactory : WebApplicationFactory<Program>
                 {
                     NewEndpoints = [new Endpoint { Name = "GET /api/test", Method = Core.Enums.HttpMethod.GET, RelativePath = "/api/test", ApplicationId = 0 }]
                 });
-            swaggerMock.Setup(s => s.ApplyDiffAsync(It.IsAny<ImportDiff>())).Returns(Task.CompletedTask);
+            swaggerMock.Setup(s => s.ApplyDiffAsync(It.IsAny<ImportDiff>(), It.IsAny<int>())).Returns(Task.CompletedTask);
             services.RemoveAll<ISwaggerImportService>();
             services.AddScoped(_ => swaggerMock.Object);
         });

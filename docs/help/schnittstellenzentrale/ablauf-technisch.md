@@ -36,14 +36,13 @@ Nach `app.Run()` startet der Host den registrierten `SystemEndpointSyncService`.
 1. Ein neuer DI-Scope wird über `IServiceScopeFactory.CreateScope()` erzeugt.
 2. `IApplicationRepository.GetSystemGroupAsync()` liefert die Systemgruppe. Gibt sie `null` zurück, wird eine Warnung geloggt und der Abgleich übersprungen.
 3. Aus der Systemgruppe wird die Anwendung mit `IsSystem == true` ermittelt. Ist keine vorhanden, analog: Warnung loggen und beenden.
-4. `ISwaggerImportService.ImportAsync(systemApp)` ruft die Swagger-Definition ab und berechnet den Diff.
-5. Ist `diff.ErrorMessage != null`, wird ein Fehler geloggt und `ExecuteAsync` beendet.
-6. Für jeden Eintrag in `diff.NewEndpoints` → `IEndpointRepository.AddEndpointAsync`.
-7. Für jeden Eintrag in `diff.RemovedEndpoints` → `IEndpointRepository.DeleteEndpointAsync`.
-8. Für jeden Eintrag in `diff.ChangedEndpoints` → `IEndpointRepository.UpdateEndpointNameAsync` (nur der `Name` wird überschrieben).
-9. Unerwartete Exceptions werden im `catch`-Block auf `Error`-Level geloggt; die Anwendung startet in jedem Fall normal weiter.
+4. `ISwaggerProvider.GetSwagger("v1")` liefert das eigene OpenAPI-Dokument.
+5. `ISwaggerImportService.SyncFromDocumentAsync(document, systemApp.Id)` führt den kompletten Abgleich serverseitig aus — derselbe Ausführungspfad wie beim manuellen Swagger-Import: `SwaggerOperationHelper.MapDocumentToEndpoints` leitet die Endpunkte aus dem Dokument ab (inkl. `x-sz-bearer-token`, `x-sz-pre-request-script`, `x-sz-post-request-script`), `ImportDiffCalculator.Calculate` bildet die Differenz zum Bestand (neu / geändert / entfernt, Duplikatschlüssel → `ErrorMessage`) und `ApplyDiffAsync(diff, systemApp.Id)` wendet sie an — inklusive Aggregat-Validierung, dass alle Endpunkte des Diffs die `systemApp.Id` tragen.
+6. Ist `diff.ErrorMessage != null` (z. B. Duplikatschlüssel), wird eine Warnung geloggt und nichts angewendet.
+7. Für jeden Eintrag in `diff.NewEndpoints` → Gruppenauflösung aus Pfadsegmenten + `AddEndpointAsync`; für `diff.ChangedEndpoints` → `UpdateEndpointAsync` (Name, Body, `AuthenticationType`, Skripte); für `diff.RemovedEndpoints` → `DeleteEndpointAsync`; mitgelieferte Bearer-Tokens werden im Credential Store gespeichert.
+8. Unerwartete Exceptions werden im `catch`-Block auf `Error`-Level geloggt; die Anwendung startet in jedem Fall normal weiter.
 
-Beteiligte Komponenten: `SystemEndpointSyncService`, `IServiceScopeFactory`, `IApplicationRepository`, `ISwaggerImportService`, `IEndpointRepository`, `ImportDiff`
+Beteiligte Komponenten: `SystemEndpointSyncService`, `IServiceScopeFactory`, `IApplicationRepository`, `ISwaggerProvider`, `ISwaggerImportService` (`SwaggerImportService.SyncFromDocumentAsync`), `ImportDiff`
 
 ```mermaid
 flowchart TD
@@ -54,13 +53,15 @@ flowchart TD
     D -- Ja --> F[IsSystem-Anwendung ermitteln]
     F --> G{Systemanwendung vorhanden?}
     G -- Nein --> E
-    G -- Ja --> H[SwaggerImportService.ImportAsync]
-    H --> I{diff.ErrorMessage != null?}
-    I -- Ja --> J[Fehler loggen\nAbbruch]
-    I -- Nein --> K[NewEndpoints anlegen\nAddEndpointAsync]
-    K --> L[RemovedEndpoints löschen\nDeleteEndpointAsync]
-    L --> M[ChangedEndpoints umbenennen\nUpdateEndpointNameAsync]
-    M --> N[Scope disposed\nExecuteAsync endet]
+    G -- Ja --> H[ISwaggerProvider.GetSwagger v1]
+    H --> I[ISwaggerImportService.SyncFromDocumentAsync]
+    I --> J{diff.ErrorMessage != null?}
+    J -- Ja --> K[Warnung loggen\nkein Apply]
+    J -- Nein --> L[NewEndpoints anlegen]
+    L --> M[ChangedEndpoints aktualisieren]
+    M --> N[RemovedEndpoints löschen]
+    N --> O[Bearer-Tokens speichern]
+    O --> P[Scope disposed\nExecuteAsync endet]
 ```
 
 ---
@@ -279,8 +280,11 @@ Der Service lädt die Definition über `IHttpClientFactory` (HTTP GET auf `Swagg
 
 `ImportDiffCalculator.Calculate(existingEndpoints, importedEndpoints)` vergleicht bestehende und importierte Endpunkte anhand des Schlüssels `{Method}:{RelativePath}`:
 - Nur in importiert → `NewEndpoints`
-- In beiden, Name unterschiedlich → `ChangedEndpoints`
+- In beiden, aber `Name`, `Body`, `AuthenticationType` oder Vor-/Nachher-Skripte unterschiedlich → `ChangedEndpoints`
 - Nur in bestehend → `RemovedEndpoints`
+- Duplikatschlüssel in einer der beiden Mengen → `ImportDiff.ErrorMessage` (keine Anwendung)
+
+Dieselbe Berechnung nutzt auch der automatische Startabgleich der Systemanwendung über `ISwaggerImportService.SyncFromDocumentAsync`.
 
 ### 5. Diff-Vorschau anzeigen
 
@@ -296,11 +300,13 @@ Der Service lädt die Definition über `IHttpClientFactory` (HTTP GET auf `Swagg
 
 ### 1. Schreiboperation auslösen
 
-Nach einer Schreiboperation im Team-Modus ruft die UI-Komponente `ISignalRNotificationService.NotifyApplicationChangedAsync(applicationId)` oder `NotifyGroupChangedAsync(groupId)` auf.
+Bei Schreiboperationen entscheidet die zentrale `INotificationPolicy` anhand des `X-Storage-Mode`-Headers (bzw. ohne Prüfung beim Startabgleich), ob eine Benachrichtigung ausgelöst wird — die Benachrichtigungspolitik liegt einheitlich in `NotificationPolicy`, nicht bei den aufrufenden Komponenten. `WorkspacesLayout` führt sämtliche Endpunkt-/Endpunktgruppen-Operationen (Anlegen, Umbenennen, Löschen, Zählabfragen) sowie das Löschen von Anwendungsgruppen (`DELETE /api/application-groups/{id}?content=delete|detach`) ausschließlich über `IApplicationApiClient` aus; die Team-Benachrichtigung erfolgt dabei serverseitig genau einmal pro Mutation. Alle mutierenden Pfade — REST (`/api/*`), OData (`/odatav4/*`), Import-Apply und der Startabgleich (`SystemEndpointSyncService`) — benachrichtigen über dieselbe Policy; UI-Komponenten (z. B. `EndpointPage`) senden keine eigenen Benachrichtigungen mehr. Ausgenommen bleibt der eigenständige `EnvironmentChanged`-Mechanismus (`EnvironmentManagementOverlay`/`EndpointScriptRunner`).
 
 Beteiligte Komponenten:
+- `NotificationPolicy` (`INotificationPolicy`) — einzige Stelle mit der Team-Modus-Entscheidung; delegiert an `ISignalRNotificationService`
 - `SignalRNotificationService<EndpointHub>.NotifyApplicationChangedAsync` — sendet `"ApplicationChanged"` an Gruppe `"application:{id}"`
 - `SignalRNotificationService<EndpointHub>.NotifyGroupChangedAsync` — sendet `"GroupChanged"` an Gruppe `"group:{id}"`
+- `EndpointsController` / `EndpointGroupsController` / `ApplicationsController` / `ApplicationGroupsController` / `ApplicationImportController` sowie die vier OData-Controller — rufen bei `X-Storage-Mode: Team` die passende `INotificationPolicy`-Methode auf
 
 ### 2. Hub-Abonnement
 

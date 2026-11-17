@@ -272,6 +272,138 @@ public class ApplicationImportControllerIntegrationTests : IClassFixture<Applica
 
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
     }
+
+    /// <summary>ApplySwaggerDiff_WithRestApplication_Returns204AndCallsService</summary>
+    [Fact]
+    public async Task ApplySwaggerDiff_WithRestApplication_Returns204AndCallsService()
+    {
+        var client = _factory.CreateClient();
+        var token = await _factory.ObtainTokenAsync(client);
+
+        var appRepo = _factory.Services.GetRequiredService<IApplicationRepository>();
+        var app = await appRepo.AddApplicationAsync(new Application
+        {
+            Name = "SwaggerApplyDiffApp",
+            BaseUrl = "https://swagger-apply.example.com",
+            InterfaceUrl = "https://swagger-apply.example.com/swagger.json",
+            InterfaceType = InterfaceType.Rest
+        });
+
+        _factory.SwaggerImportMock
+            .Setup(s => s.ApplyDiffAsync(It.IsAny<ImportDiff>(), It.IsAny<int>()))
+            .Returns(Task.CompletedTask);
+        _factory.SwaggerImportMock.Invocations.Clear();
+
+        var diff = new ImportDiff
+        {
+            NewEndpoints =
+            [
+                new Core.Models.Endpoint { Name = "GET Items", RelativePath = "/items", ApplicationId = app.Id }
+            ]
+        };
+        var request = BuildRequest(HttpMethod.Post, $"/api/applications/{app.Id}/swagger-import/apply", token);
+        request.Content = System.Net.Http.Json.JsonContent.Create(diff);
+        var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        _factory.SwaggerImportMock.Verify(
+            s => s.ApplyDiffAsync(It.Is<ImportDiff>(d => d.NewEndpoints.Count == 1), app.Id), Times.Once);
+    }
+
+    /// <summary>ApplySwaggerDiff_WithoutToken_Returns401</summary>
+    [Fact]
+    public async Task ApplySwaggerDiff_WithoutToken_Returns401()
+    {
+        var client = _factory.CreateClient();
+
+        var diff = new ImportDiff();
+        var request = new HttpRequestMessage(HttpMethod.Post, "/api/applications/1/swagger-import/apply");
+        request.Content = System.Net.Http.Json.JsonContent.Create(diff);
+        var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    /// <summary>ApplySwaggerDiff_WithUnknownApplicationId_Returns404</summary>
+    [Fact]
+    public async Task ApplySwaggerDiff_WithUnknownApplicationId_Returns404()
+    {
+        var client = _factory.CreateClient();
+        var token = await _factory.ObtainTokenAsync(client);
+
+        var diff = new ImportDiff();
+        var request = BuildRequest(HttpMethod.Post, "/api/applications/99999/swagger-import/apply", token);
+        request.Content = System.Net.Http.Json.JsonContent.Create(diff);
+        var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    /// <summary>ApplySwaggerDiff_WithNonRestApplication_Returns422</summary>
+    [Fact]
+    public async Task ApplySwaggerDiff_WithNonRestApplication_Returns422()
+    {
+        var client = _factory.CreateClient();
+        var token = await _factory.ObtainTokenAsync(client);
+
+        var appRepo = _factory.Services.GetRequiredService<IApplicationRepository>();
+        var app = await appRepo.AddApplicationAsync(new Application
+        {
+            Name = "ODataApplySwaggerApp",
+            BaseUrl = "https://odata-swagger-apply.example.com",
+            InterfaceType = InterfaceType.OData
+        });
+
+        var diff = new ImportDiff();
+        var request = BuildRequest(HttpMethod.Post, $"/api/applications/{app.Id}/swagger-import/apply", token);
+        request.Content = System.Net.Http.Json.JsonContent.Create(diff);
+        var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<JsonDocument>(JsonOptions);
+        Assert.NotNull(body);
+        Assert.True(body.RootElement.TryGetProperty("errorMessage", out var errorMsg));
+        Assert.False(string.IsNullOrEmpty(errorMsg.GetString()));
+    }
+
+    /// <summary>ApplySwaggerDiff_WhenServiceRejectsAggregate_Returns422</summary>
+    [Fact]
+    public async Task ApplySwaggerDiff_WhenServiceRejectsAggregate_Returns422()
+    {
+        var client = _factory.CreateClient();
+        var token = await _factory.ObtainTokenAsync(client);
+
+        var appRepo = _factory.Services.GetRequiredService<IApplicationRepository>();
+        var app = await appRepo.AddApplicationAsync(new Application
+        {
+            Name = "SwaggerApplyAggregateApp",
+            BaseUrl = "https://swagger-aggregate.example.com",
+            InterfaceUrl = "https://swagger-aggregate.example.com/swagger.json",
+            InterfaceType = InterfaceType.Rest
+        });
+
+        _factory.SwaggerImportMock
+            .Setup(s => s.ApplyDiffAsync(It.IsAny<ImportDiff>(), It.IsAny<int>()))
+            .ThrowsAsync(new InvalidOperationException(
+                $"Der Import-Diff enthält Endpunkte, die nicht zur Anwendung {app.Id} gehören."));
+
+        var diff = new ImportDiff
+        {
+            NewEndpoints =
+            [
+                new Core.Models.Endpoint { Name = "GET Items", RelativePath = "/items", ApplicationId = 42 }
+            ]
+        };
+        var request = BuildRequest(HttpMethod.Post, $"/api/applications/{app.Id}/swagger-import/apply", token);
+        request.Content = System.Net.Http.Json.JsonContent.Create(diff);
+        var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<JsonDocument>(JsonOptions);
+        Assert.NotNull(body);
+        Assert.True(body.RootElement.TryGetProperty("errorMessage", out var errorMsg));
+        Assert.Contains("gehören", errorMsg.GetString());
+    }
 }
 
 /// <summary>Spezialisierte WebApplicationFactory für ApplicationImportController-Tests mit gemockten Import-Services.</summary>
