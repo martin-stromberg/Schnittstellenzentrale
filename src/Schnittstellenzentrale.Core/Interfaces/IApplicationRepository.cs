@@ -35,6 +35,11 @@ public interface IApplicationRepository
     /// <param name="id">ID der zu löschenden Gruppe.</param>
     Task DeleteGroupAsync(int id);
 
+    /// <summary>Löscht eine Anwendungsgruppe atomar in einer Transaktion.</summary>
+    /// <param name="id">ID der zu löschenden Gruppe.</param>
+    /// <param name="mode">Legt fest, ob enthaltene Anwendungen mitgelöscht oder ungruppiert werden.</param>
+    Task DeleteGroupAsync(int id, ApplicationGroupDeleteMode mode);
+
     /// <summary>Ruft die Anwendungen ab.</summary>
     /// <param name="storageMode">Der Speichermodus.</param>
     /// <param name="owner">Der Eigentümer.</param>

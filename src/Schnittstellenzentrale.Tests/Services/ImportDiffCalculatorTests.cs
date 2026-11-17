@@ -109,4 +109,47 @@ public class ImportDiffCalculatorTests
         var json = JsonSerializer.Serialize(diff); // must not throw
         Assert.NotNull(json);
     }
+
+    /// <summary>Calculate_WhenImportedContainsDuplicateKeys_ReturnsErrorMessage</summary>
+    [Fact]
+    public void Calculate_WhenImportedContainsDuplicateKeys_ReturnsErrorMessage()
+    {
+        var existing = new List<Endpoint>();
+        var imported = new List<Endpoint>
+        {
+            new() { Name = "a", Method = Core.Enums.HttpMethod.GET, RelativePath = "/items", ApplicationId = 1 },
+            new() { Name = "b", Method = Core.Enums.HttpMethod.GET, RelativePath = "/items", ApplicationId = 1 }
+        };
+
+        var diff = ImportDiffCalculator.Calculate(existing, imported);
+
+        Assert.NotNull(diff.ErrorMessage);
+        Assert.Contains("GET:/items", diff.ErrorMessage);
+        Assert.Empty(diff.NewEndpoints);
+        Assert.Empty(diff.ChangedEndpoints);
+        Assert.Empty(diff.RemovedEndpoints);
+    }
+
+    /// <summary>Calculate_WhenExistingContainsDuplicateKeys_ReturnsErrorMessage</summary>
+    [Fact]
+    public void Calculate_WhenExistingContainsDuplicateKeys_ReturnsErrorMessage()
+    {
+        var existing = new List<Endpoint>
+        {
+            new() { Id = 1, Name = "a", Method = Core.Enums.HttpMethod.GET, RelativePath = "/items", ApplicationId = 1 },
+            new() { Id = 2, Name = "b", Method = Core.Enums.HttpMethod.GET, RelativePath = "/items", ApplicationId = 1 }
+        };
+        var imported = new List<Endpoint>
+        {
+            new() { Name = "getItems", Method = Core.Enums.HttpMethod.GET, RelativePath = "/items", ApplicationId = 1 }
+        };
+
+        var diff = ImportDiffCalculator.Calculate(existing, imported);
+
+        Assert.NotNull(diff.ErrorMessage);
+        Assert.Contains("GET:/items", diff.ErrorMessage);
+        Assert.Empty(diff.NewEndpoints);
+        Assert.Empty(diff.ChangedEndpoints);
+        Assert.Empty(diff.RemovedEndpoints);
+    }
 }

@@ -1840,4 +1840,202 @@ public class ODataControllerIntegrationTests : IClassFixture<ControllerTestFacto
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 
+    /// <summary>PutEndpoint_MitKindMengen_ErsetztHeadersUndQueryParameters</summary>
+    [Fact]
+    public async Task PutEndpoint_MitKindMengen_ErsetztHeadersUndQueryParameters()
+    {
+        var client = _factory.CreateClient();
+        var token = await ObtainTokenAsync(client);
+
+        var appRepo = _factory.Services.GetRequiredService<IApplicationRepository>();
+        var endpointRepo = _factory.Services.GetRequiredService<IEndpointRepository>();
+
+        var app = await appRepo.AddApplicationAsync(new Application { Name = "PutChildrenApp", BaseUrl = "https://put-children.example.com" });
+        var endpoint = await endpointRepo.AddEndpointAsync(new Endpoint
+        {
+            Name = "GET Children",
+            Method = Core.Enums.HttpMethod.GET,
+            RelativePath = "/children",
+            ApplicationId = app.Id,
+            Headers = [new EndpointHeader { Key = "Alt", Value = "1" }],
+            QueryParameters = [new EndpointQueryParameter { Key = "altQ", Value = "a" }]
+        });
+        var saved = await endpointRepo.GetEndpointByIdAsync(endpoint.Id);
+        Assert.NotNull(saved);
+        var rowVersionBase64 = Convert.ToBase64String(saved.RowVersion);
+
+        var request = CreateRequest(HttpMethod.Put, $"/odatav4/Endpoints({endpoint.Id})", token);
+        request.Content = new StringContent(
+            $$$"""{"name":"PUT Children","method":"Get","relativePath":"/children","rowversion":"{{{rowVersionBase64}}}","headers":[{"key":"Neu","value":"x"}],"queryparameters":[{"key":"n1","value":"1"},{"key":"n2","value":"2"}]}""",
+            System.Text.Encoding.UTF8,
+            "application/json");
+
+        var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var reloaded = await endpointRepo.GetEndpointByIdAsync(endpoint.Id);
+        Assert.NotNull(reloaded);
+        var header = Assert.Single(reloaded.Headers);
+        Assert.Equal("Neu", header.Key);
+        Assert.Equal("x", header.Value);
+        Assert.Equal(2, reloaded.QueryParameters.Count);
+        Assert.Contains(reloaded.QueryParameters, p => p.Key == "n1" && p.Value == "1");
+        Assert.Contains(reloaded.QueryParameters, p => p.Key == "n2" && p.Value == "2");
+    }
+
+    /// <summary>PutEndpoint_OhneKindMengen_LaessBestehendeKinderUnveraendert</summary>
+    [Fact]
+    public async Task PutEndpoint_OhneKindMengen_LaessBestehendeKinderUnveraendert()
+    {
+        var client = _factory.CreateClient();
+        var token = await ObtainTokenAsync(client);
+
+        var appRepo = _factory.Services.GetRequiredService<IApplicationRepository>();
+        var endpointRepo = _factory.Services.GetRequiredService<IEndpointRepository>();
+
+        var app = await appRepo.AddApplicationAsync(new Application { Name = "PutNoChildrenApp", BaseUrl = "https://put-nochildren.example.com" });
+        var endpoint = await endpointRepo.AddEndpointAsync(new Endpoint
+        {
+            Name = "GET Keep",
+            Method = Core.Enums.HttpMethod.GET,
+            RelativePath = "/keep",
+            ApplicationId = app.Id,
+            Headers = [new EndpointHeader { Key = "Bleibt", Value = "da" }],
+            QueryParameters = [new EndpointQueryParameter { Key = "bleibtQ", Value = "b" }]
+        });
+        var saved = await endpointRepo.GetEndpointByIdAsync(endpoint.Id);
+        Assert.NotNull(saved);
+        var rowVersionBase64 = Convert.ToBase64String(saved.RowVersion);
+
+        var request = CreateRequest(HttpMethod.Put, $"/odatav4/Endpoints({endpoint.Id})", token);
+        request.Content = new StringContent(
+            $$$"""{"name":"PUT Renamed","method":"Get","relativePath":"/keep","rowversion":"{{{rowVersionBase64}}}"}""",
+            System.Text.Encoding.UTF8,
+            "application/json");
+
+        var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var reloaded = await endpointRepo.GetEndpointByIdAsync(endpoint.Id);
+        Assert.NotNull(reloaded);
+        var header = Assert.Single(reloaded.Headers);
+        Assert.Equal("Bleibt", header.Key);
+        var param = Assert.Single(reloaded.QueryParameters);
+        Assert.Equal("bleibtQ", param.Key);
+    }
+
+    /// <summary>PatchEndpoint_MitHeaders_ErsetztHeaderMenge</summary>
+    [Fact]
+    public async Task PatchEndpoint_MitHeaders_ErsetztHeaderMenge()
+    {
+        var client = _factory.CreateClient();
+        var token = await ObtainTokenAsync(client);
+
+        var appRepo = _factory.Services.GetRequiredService<IApplicationRepository>();
+        var endpointRepo = _factory.Services.GetRequiredService<IEndpointRepository>();
+
+        var app = await appRepo.AddApplicationAsync(new Application { Name = "PatchChildrenApp", BaseUrl = "https://patch-children.example.com" });
+        var endpoint = await endpointRepo.AddEndpointAsync(new Endpoint
+        {
+            Name = "GET Patch",
+            Method = Core.Enums.HttpMethod.GET,
+            RelativePath = "/patch",
+            ApplicationId = app.Id,
+            Headers = [new EndpointHeader { Key = "Alt", Value = "1" }],
+            QueryParameters = [new EndpointQueryParameter { Key = "keep", Value = "k" }]
+        });
+        var saved = await endpointRepo.GetEndpointByIdAsync(endpoint.Id);
+        Assert.NotNull(saved);
+        var rowVersionBase64 = Convert.ToBase64String(saved.RowVersion);
+
+        var request = CreateRequest(HttpMethod.Patch, $"/odatav4/Endpoints({endpoint.Id})", token);
+        request.Content = new StringContent(
+            $$$"""{"headers":[{"key":"P1","value":"p"}],"rowversion":"{{{rowVersionBase64}}}"}""",
+            System.Text.Encoding.UTF8,
+            "application/json");
+
+        var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var reloaded = await endpointRepo.GetEndpointByIdAsync(endpoint.Id);
+        Assert.NotNull(reloaded);
+        var header = Assert.Single(reloaded.Headers);
+        Assert.Equal("P1", header.Key);
+        // Nicht mitgelieferte Kind-Menge bleibt unverändert (Patch-Semantik).
+        var param = Assert.Single(reloaded.QueryParameters);
+        Assert.Equal("keep", param.Key);
+    }
+
+    /// <summary>PatchEndpoint_MitUngueltigenKindern_Gibt400</summary>
+    [Fact]
+    public async Task PatchEndpoint_MitUngueltigenKindern_Gibt400()
+    {
+        var client = _factory.CreateClient();
+        var token = await ObtainTokenAsync(client);
+
+        var appRepo = _factory.Services.GetRequiredService<IApplicationRepository>();
+        var endpointRepo = _factory.Services.GetRequiredService<IEndpointRepository>();
+
+        var app = await appRepo.AddApplicationAsync(new Application { Name = "PatchBadChildrenApp", BaseUrl = "https://patch-badchildren.example.com" });
+        var endpoint = await endpointRepo.AddEndpointAsync(new Endpoint
+        {
+            Name = "GET Bad",
+            Method = Core.Enums.HttpMethod.GET,
+            RelativePath = "/bad",
+            ApplicationId = app.Id
+        });
+        var saved = await endpointRepo.GetEndpointByIdAsync(endpoint.Id);
+        Assert.NotNull(saved);
+        var rowVersionBase64 = Convert.ToBase64String(saved.RowVersion);
+
+        var request = CreateRequest(HttpMethod.Patch, $"/odatav4/Endpoints({endpoint.Id})", token);
+        request.Content = new StringContent(
+            $$$"""{"headers":"kein-array","rowversion":"{{{rowVersionBase64}}}"}""",
+            System.Text.Encoding.UTF8,
+            "application/json");
+
+        var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    /// <summary>PutEndpoint_MitLeerenKindMengen_LoeschtAlleKinder</summary>
+    [Fact]
+    public async Task PutEndpoint_MitLeerenKindMengen_LoeschtAlleKinder()
+    {
+        var client = _factory.CreateClient();
+        var token = await ObtainTokenAsync(client);
+
+        var appRepo = _factory.Services.GetRequiredService<IApplicationRepository>();
+        var endpointRepo = _factory.Services.GetRequiredService<IEndpointRepository>();
+
+        var app = await appRepo.AddApplicationAsync(new Application { Name = "PutEmptyChildrenApp", BaseUrl = "https://put-emptychildren.example.com" });
+        var endpoint = await endpointRepo.AddEndpointAsync(new Endpoint
+        {
+            Name = "GET Empty",
+            Method = Core.Enums.HttpMethod.GET,
+            RelativePath = "/empty",
+            ApplicationId = app.Id,
+            Headers = [new EndpointHeader { Key = "Weg", Value = "1" }],
+            QueryParameters = [new EndpointQueryParameter { Key = "wegQ", Value = "w" }]
+        });
+        var saved = await endpointRepo.GetEndpointByIdAsync(endpoint.Id);
+        Assert.NotNull(saved);
+        var rowVersionBase64 = Convert.ToBase64String(saved.RowVersion);
+
+        var request = CreateRequest(HttpMethod.Put, $"/odatav4/Endpoints({endpoint.Id})", token);
+        request.Content = new StringContent(
+            $$$"""{"name":"PUT Empty","method":"Get","relativePath":"/empty","rowversion":"{{{rowVersionBase64}}}","headers":[],"queryparameters":[]}""",
+            System.Text.Encoding.UTF8,
+            "application/json");
+
+        var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var reloaded = await endpointRepo.GetEndpointByIdAsync(endpoint.Id);
+        Assert.NotNull(reloaded);
+        Assert.Empty(reloaded.Headers);
+        Assert.Empty(reloaded.QueryParameters);
+    }
+
 }

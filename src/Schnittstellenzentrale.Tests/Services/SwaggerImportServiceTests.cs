@@ -1,12 +1,16 @@
 using System.Net;
 using System.Text;
+using System.Text.Json.Nodes;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.OpenApi;
 using Moq;
 using Moq.Protected;
 using Schnittstellenzentrale.Core.Enums;
 using Schnittstellenzentrale.Core.Interfaces;
 using Schnittstellenzentrale.Core.Models;
 using Schnittstellenzentrale.Infrastructure.Services;
+using CoreHttpMethod = Schnittstellenzentrale.Core.Enums.HttpMethod;
+using HttpMethod = System.Net.Http.HttpMethod;
 
 namespace Schnittstellenzentrale.Tests.Services;
 
@@ -311,7 +315,7 @@ public class SwaggerImportServiceTests
             BearerTokens = new Dictionary<string, string> { ["GET:/items"] = "myToken" }
         };
 
-        await service.ApplyDiffAsync(diff);
+        await service.ApplyDiffAsync(diff, 1);
 
         credentialMock.Verify(c => c.SavePassword(
             It.Is<string>(t => t.Contains("BearerToken")),
@@ -348,7 +352,7 @@ public class SwaggerImportServiceTests
             }]
         };
 
-        await service.ApplyDiffAsync(diff);
+        await service.ApplyDiffAsync(diff, 1);
 
         Assert.Equal(2, createdGroups.Count);
         Assert.Equal("applications", createdGroups[0].Name);
@@ -387,7 +391,7 @@ public class SwaggerImportServiceTests
             }]
         };
 
-        await service.ApplyDiffAsync(diff);
+        await service.ApplyDiffAsync(diff, 1);
 
         Assert.Single(createdGroups);
         Assert.Equal("application-groups", createdGroups[0].Name);
@@ -416,9 +420,242 @@ public class SwaggerImportServiceTests
             ]
         };
 
-        await service.ApplyDiffAsync(diff);
+        await service.ApplyDiffAsync(diff, 1);
 
         repoMock.Verify(r => r.AddEndpointGroupAsync(It.IsAny<Core.Models.EndpointGroup>()), Times.Never);
         repoMock.Verify(r => r.AddEndpointAsync(It.Is<Core.Models.Endpoint>(e => e.EndpointGroupId == 5)), Times.Exactly(2));
+    }
+
+    /// <summary>ApplyDiff_WithErrorMessage_DoesNotApplyAnyChanges</summary>
+    [Fact]
+    public async Task ApplyDiff_WithErrorMessage_DoesNotApplyAnyChanges()
+    {
+        var repoMock = new Mock<IEndpointRepository>();
+        var service = CreateService(SwaggerWithGetPost, repoMock);
+        var diff = new ImportDiff
+        {
+            ErrorMessage = "Duplizierter Endpoint-Schlüssel im Import: GET:/items",
+            NewEndpoints = [new Core.Models.Endpoint { Name = "getItems", Method = CoreHttpMethod.GET, RelativePath = "/items", ApplicationId = 1 }],
+            RemovedEndpoints = [new Core.Models.Endpoint { Id = 7, Name = "old", Method = CoreHttpMethod.DELETE, RelativePath = "/old", ApplicationId = 1 }]
+        };
+
+        await service.ApplyDiffAsync(diff, 1);
+
+        repoMock.Verify(r => r.AddEndpointAsync(It.IsAny<Core.Models.Endpoint>()), Times.Never);
+        repoMock.Verify(r => r.UpdateEndpointAsync(It.IsAny<Core.Models.Endpoint>()), Times.Never);
+        repoMock.Verify(r => r.DeleteEndpointAsync(It.IsAny<int>()), Times.Never);
+    }
+
+    /// <summary>ApplyDiff_MismatchedApplicationId_ThrowsAndDoesNotApply</summary>
+    [Fact]
+    public async Task ApplyDiff_MismatchedApplicationId_ThrowsAndDoesNotApply()
+    {
+        var repoMock = new Mock<IEndpointRepository>();
+        var service = CreateService(SwaggerWithGetPost, repoMock);
+        var diff = new ImportDiff
+        {
+            NewEndpoints = [new Core.Models.Endpoint { Name = "getItems", Method = CoreHttpMethod.GET, RelativePath = "/items", ApplicationId = 99 }],
+            ChangedEndpoints = [new Core.Models.Endpoint { Id = 3, Name = "chg", Method = CoreHttpMethod.GET, RelativePath = "/items", ApplicationId = 1 }],
+            RemovedEndpoints = [new Core.Models.Endpoint { Id = 4, Name = "del", Method = CoreHttpMethod.DELETE, RelativePath = "/items", ApplicationId = 1 }]
+        };
+
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => service.ApplyDiffAsync(diff, 1));
+
+        Assert.Contains("Anwendung 1", ex.Message);
+        repoMock.Verify(r => r.AddEndpointAsync(It.IsAny<Core.Models.Endpoint>()), Times.Never);
+        repoMock.Verify(r => r.UpdateEndpointAsync(It.IsAny<Core.Models.Endpoint>()), Times.Never);
+        repoMock.Verify(r => r.DeleteEndpointAsync(It.IsAny<int>()), Times.Never);
+    }
+
+    /// <summary>ApplyDiff_MismatchedRemovedEndpoint_ThrowsAndDoesNotApply</summary>
+    [Fact]
+    public async Task ApplyDiff_MismatchedRemovedEndpoint_ThrowsAndDoesNotApply()
+    {
+        var repoMock = new Mock<IEndpointRepository>();
+        var service = CreateService(SwaggerWithGetPost, repoMock);
+        var diff = new ImportDiff
+        {
+            RemovedEndpoints = [new Core.Models.Endpoint { Id = 4, Name = "del", Method = CoreHttpMethod.DELETE, RelativePath = "/items", ApplicationId = 42 }]
+        };
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => service.ApplyDiffAsync(diff, 1));
+
+        repoMock.Verify(r => r.DeleteEndpointAsync(It.IsAny<int>()), Times.Never);
+    }
+
+    private static OpenApiDocument DocumentWithPaths(params (string Path, HttpMethod Method, string OperationId)[] operations)
+    {
+        var paths = new OpenApiPaths();
+        foreach (var group in operations.GroupBy(o => o.Path))
+        {
+            var pathItem = new OpenApiPathItem();
+            foreach (var (_, method, operationId) in group)
+                pathItem.AddOperation(method, new OpenApiOperation { OperationId = operationId });
+            paths[group.Key] = pathItem;
+        }
+        return new OpenApiDocument { Paths = paths };
+    }
+
+    /// <summary>SyncFromDocument_NewEndpoints_AreAdded</summary>
+    [Fact]
+    public async Task SyncFromDocument_NewEndpoints_AreAdded()
+    {
+        var repoMock = new Mock<IEndpointRepository>();
+        repoMock.Setup(r => r.GetEndpointsAsync(It.IsAny<int>())).ReturnsAsync([]);
+        repoMock.Setup(r => r.GetEndpointGroupsAsync(It.IsAny<int>())).ReturnsAsync([]);
+        repoMock.Setup(r => r.AddEndpointGroupAsync(It.IsAny<Core.Models.EndpointGroup>()))
+            .ReturnsAsync((Core.Models.EndpointGroup g) => { g.Id = 1; return g; });
+        repoMock.Setup(r => r.AddEndpointAsync(It.IsAny<Core.Models.Endpoint>()))
+            .ReturnsAsync((Core.Models.Endpoint e) => e);
+        var service = CreateService(SwaggerWithGetPost, repoMock);
+        var document = DocumentWithPaths(("/items", HttpMethod.Get, "getItems"), ("/items", HttpMethod.Post, "createItem"));
+
+        var diff = await service.SyncFromDocumentAsync(document, 1);
+
+        Assert.Null(diff.ErrorMessage);
+        repoMock.Verify(r => r.AddEndpointAsync(It.IsAny<Core.Models.Endpoint>()), Times.Exactly(2));
+        repoMock.Verify(r => r.UpdateEndpointAsync(It.IsAny<Core.Models.Endpoint>()), Times.Never);
+        repoMock.Verify(r => r.DeleteEndpointAsync(It.IsAny<int>()), Times.Never);
+    }
+
+    /// <summary>SyncFromDocument_ChangedEndpoint_IsUpdated</summary>
+    [Fact]
+    public async Task SyncFromDocument_ChangedEndpoint_IsUpdated()
+    {
+        var existing = new List<Core.Models.Endpoint>
+        {
+            new() { Id = 5, Name = "alterName", Method = CoreHttpMethod.GET, RelativePath = "/items", ApplicationId = 1 }
+        };
+        var repoMock = new Mock<IEndpointRepository>();
+        repoMock.Setup(r => r.GetEndpointsAsync(It.IsAny<int>())).ReturnsAsync(existing);
+        repoMock.Setup(r => r.UpdateEndpointAsync(It.IsAny<Core.Models.Endpoint>()))
+            .ReturnsAsync((Core.Models.Endpoint e) => e);
+        var service = CreateService(SwaggerWithGetPost, repoMock);
+        var document = DocumentWithPaths(("/items", HttpMethod.Get, "getItems"));
+
+        var diff = await service.SyncFromDocumentAsync(document, 1);
+
+        Assert.Null(diff.ErrorMessage);
+        repoMock.Verify(r => r.UpdateEndpointAsync(
+            It.Is<Core.Models.Endpoint>(e => e.Id == 5 && e.Name == "getItems")), Times.Once);
+        repoMock.Verify(r => r.AddEndpointAsync(It.IsAny<Core.Models.Endpoint>()), Times.Never);
+        repoMock.Verify(r => r.DeleteEndpointAsync(It.IsAny<int>()), Times.Never);
+    }
+
+    /// <summary>SyncFromDocument_ChangedEndpoint_UpdateErhaeltKindMengenFuerAggregatUpdate</summary>
+    [Fact]
+    public async Task SyncFromDocument_ChangedEndpoint_UpdateErhaeltKindMengenFuerAggregatUpdate()
+    {
+        var existing = new List<Core.Models.Endpoint>
+        {
+            new()
+            {
+                Id = 7,
+                Name = "alterName",
+                Method = CoreHttpMethod.GET,
+                RelativePath = "/items",
+                ApplicationId = 1,
+                RowVersion = [1, 2, 3],
+                Headers = [new Core.Models.EndpointHeader { Key = "Accept", Value = "application/json" }],
+                QueryParameters = [new Core.Models.EndpointQueryParameter { Key = "filter", Value = "x" }]
+            }
+        };
+        var repoMock = new Mock<IEndpointRepository>();
+        repoMock.Setup(r => r.GetEndpointsAsync(It.IsAny<int>())).ReturnsAsync(existing);
+        repoMock.Setup(r => r.UpdateEndpointAsync(It.IsAny<Core.Models.Endpoint>()))
+            .ReturnsAsync((Core.Models.Endpoint e) => e);
+        var service = CreateService(SwaggerWithGetPost, repoMock);
+        var document = DocumentWithPaths(("/items", HttpMethod.Get, "getItems"));
+
+        var diff = await service.SyncFromDocumentAsync(document, 1);
+
+        Assert.Null(diff.ErrorMessage);
+        repoMock.Verify(r => r.UpdateEndpointAsync(
+            It.Is<Core.Models.Endpoint>(e =>
+                e.Id == 7
+                && e.Headers.Count == 1 && e.Headers.Single().Key == "Accept"
+                && e.QueryParameters.Count == 1 && e.QueryParameters.Single().Key == "filter")), Times.Once);
+    }
+
+    /// <summary>SyncFromDocument_RemovedEndpoint_IsDeleted</summary>
+    [Fact]
+    public async Task SyncFromDocument_RemovedEndpoint_IsDeleted()
+    {
+        var existing = new List<Core.Models.Endpoint>
+        {
+            new() { Id = 9, Name = "alt", Method = CoreHttpMethod.DELETE, RelativePath = "/items/{id}", ApplicationId = 1 }
+        };
+        var repoMock = new Mock<IEndpointRepository>();
+        repoMock.Setup(r => r.GetEndpointsAsync(It.IsAny<int>())).ReturnsAsync(existing);
+        repoMock.Setup(r => r.GetEndpointGroupsAsync(It.IsAny<int>())).ReturnsAsync([]);
+        repoMock.Setup(r => r.AddEndpointGroupAsync(It.IsAny<Core.Models.EndpointGroup>()))
+            .ReturnsAsync((Core.Models.EndpointGroup g) => { g.Id = 1; return g; });
+        repoMock.Setup(r => r.AddEndpointAsync(It.IsAny<Core.Models.Endpoint>()))
+            .ReturnsAsync((Core.Models.Endpoint e) => e);
+        var service = CreateService(SwaggerWithGetPost, repoMock);
+        var document = DocumentWithPaths(("/items", HttpMethod.Get, "getItems"));
+
+        var diff = await service.SyncFromDocumentAsync(document, 1);
+
+        Assert.Null(diff.ErrorMessage);
+        repoMock.Verify(r => r.DeleteEndpointAsync(9), Times.Once);
+        repoMock.Verify(r => r.UpdateEndpointAsync(It.IsAny<Core.Models.Endpoint>()), Times.Never);
+    }
+
+    /// <summary>SyncFromDocument_WithBearerToken_SavesCredential</summary>
+    [Fact]
+    public async Task SyncFromDocument_WithBearerToken_SavesCredential()
+    {
+        var repoMock = new Mock<IEndpointRepository>();
+        repoMock.Setup(r => r.GetEndpointsAsync(It.IsAny<int>())).ReturnsAsync([]);
+        repoMock.Setup(r => r.GetEndpointGroupsAsync(It.IsAny<int>())).ReturnsAsync([]);
+        repoMock.Setup(r => r.AddEndpointGroupAsync(It.IsAny<Core.Models.EndpointGroup>()))
+            .ReturnsAsync((Core.Models.EndpointGroup g) => { g.Id = 1; return g; });
+        repoMock.Setup(r => r.AddEndpointAsync(It.IsAny<Core.Models.Endpoint>()))
+            .ReturnsAsync((Core.Models.Endpoint e) => e);
+        var credentialMock = new Mock<ICredentialService>();
+        var service = CreateService(SwaggerWithGetPost, repoMock, credentialMock);
+
+        var operation = new OpenApiOperation
+        {
+            OperationId = "getItems",
+            Extensions = new Dictionary<string, IOpenApiExtension>
+            {
+                ["x-sz-bearer-token"] = new JsonNodeExtension(JsonValue.Create("my-secret-token"))
+            }
+        };
+        var pathItem = new OpenApiPathItem();
+        pathItem.AddOperation(HttpMethod.Get, operation);
+        var document = new OpenApiDocument { Paths = new OpenApiPaths { ["/items"] = pathItem } };
+
+        var diff = await service.SyncFromDocumentAsync(document, 1);
+
+        Assert.Null(diff.ErrorMessage);
+        credentialMock.Verify(c => c.SavePassword(
+            It.Is<string>(t => t.Contains("BearerToken")),
+            It.IsAny<string>(),
+            "my-secret-token"), Times.Once);
+    }
+
+    /// <summary>SyncFromDocument_WhenDuplicateKeysInExisting_ReturnsErrorAndDoesNotApply</summary>
+    [Fact]
+    public async Task SyncFromDocument_WhenDuplicateKeysInExisting_ReturnsErrorAndDoesNotApply()
+    {
+        var existing = new List<Core.Models.Endpoint>
+        {
+            new() { Id = 1, Name = "a", Method = CoreHttpMethod.GET, RelativePath = "/items", ApplicationId = 1 },
+            new() { Id = 2, Name = "b", Method = CoreHttpMethod.GET, RelativePath = "/items", ApplicationId = 1 }
+        };
+        var repoMock = new Mock<IEndpointRepository>();
+        repoMock.Setup(r => r.GetEndpointsAsync(It.IsAny<int>())).ReturnsAsync(existing);
+        var service = CreateService(SwaggerWithGetPost, repoMock);
+        var document = DocumentWithPaths(("/items", HttpMethod.Get, "getItems"));
+
+        var diff = await service.SyncFromDocumentAsync(document, 1);
+
+        Assert.NotNull(diff.ErrorMessage);
+        repoMock.Verify(r => r.AddEndpointAsync(It.IsAny<Core.Models.Endpoint>()), Times.Never);
+        repoMock.Verify(r => r.UpdateEndpointAsync(It.IsAny<Core.Models.Endpoint>()), Times.Never);
+        repoMock.Verify(r => r.DeleteEndpointAsync(It.IsAny<int>()), Times.Never);
     }
 }

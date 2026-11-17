@@ -31,6 +31,11 @@ public interface IApplicationApiClient
     /// <param name="id">ID der zu löschenden Gruppe.</param>
     Task DeleteGroupAsync(int id);
 
+    /// <summary>Löscht eine Anwendungsgruppe mit Angabe, wie enthaltene Anwendungen behandelt werden.</summary>
+    /// <param name="id">ID der zu löschenden Gruppe.</param>
+    /// <param name="mode">Legt fest, ob enthaltene Anwendungen mitgelöscht oder ungruppiert werden.</param>
+    Task DeleteGroupAsync(int id, ApplicationGroupDeleteMode mode);
+
     /// <summary>Ruft die nicht gruppierten Anwendungen ab.</summary>
     /// <param name="storageMode">Der Speichermodus.</param>
     /// <param name="owner">Der Eigentümer.</param>
@@ -137,4 +142,9 @@ public interface IApplicationApiClient
     /// <param name="applicationId">ID der Anwendung.</param>
     /// <param name="diff">Der anzuwendende Unterschied.</param>
     Task ApplyODataDiffAsync(int applicationId, ImportDiff diff);
+
+    /// <summary>Wendet einen Swagger-Importunterschied an.</summary>
+    /// <param name="applicationId">ID der Anwendung.</param>
+    /// <param name="diff">Der anzuwendende Unterschied.</param>
+    Task ApplySwaggerDiffAsync(int applicationId, ImportDiff diff);
 }

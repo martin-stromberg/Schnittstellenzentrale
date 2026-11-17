@@ -12,14 +12,20 @@ namespace Schnittstellenzentrale.OData;
 public class ODataApplicationsController : ODataControllerBase
 {
     private readonly IApplicationRepository _applicationRepository;
+    private readonly INotificationPolicy _notificationPolicy;
 
     /// <summary>Initialisiert eine neue Instanz von <see cref="ODataApplicationsController"/>.</summary>
     /// <param name="tokenStore">Der Token-Store.</param>
     /// <param name="applicationRepository">Das Repository für Anwendungen.</param>
-    public ODataApplicationsController(ITokenStore tokenStore, IApplicationRepository applicationRepository)
+    /// <param name="notificationPolicy">Die zentrale Benachrichtigungs-Policy.</param>
+    public ODataApplicationsController(
+        ITokenStore tokenStore,
+        IApplicationRepository applicationRepository,
+        INotificationPolicy notificationPolicy)
         : base(tokenStore)
     {
         _applicationRepository = applicationRepository;
+        _notificationPolicy = notificationPolicy;
     }
 
     /// <summary>Gibt alle Anwendungen zurück.</summary>
@@ -77,6 +83,7 @@ public class ODataApplicationsController : ODataControllerBase
         entity.Owner = user;
 
         var saved = await _applicationRepository.AddApplicationAsync(entity);
+        await _notificationPolicy.NotifyTreeMutationAsync(ParseStorageMode());
         return Created($"/odatav4/Applications({saved.Id})", saved);
     }
 
@@ -116,6 +123,7 @@ public class ODataApplicationsController : ODataControllerBase
         existing.RowVersion = entity.RowVersion;
 
         var saved = await _applicationRepository.UpdateApplicationAsync(existing);
+        await _notificationPolicy.NotifyTreeMutationAsync(ParseStorageMode());
         return Ok(saved);
     }
 
@@ -151,6 +159,7 @@ public class ODataApplicationsController : ODataControllerBase
         try
         {
             var saved = await _applicationRepository.UpdateApplicationAsync(existing);
+            await _notificationPolicy.NotifyTreeMutationAsync(ParseStorageMode());
             return Ok(saved);
         }
         catch (DbUpdateConcurrencyException)
@@ -173,6 +182,7 @@ public class ODataApplicationsController : ODataControllerBase
             return StatusCode(StatusCodes.Status403Forbidden);
 
         await _applicationRepository.DeleteApplicationAsync(key);
+        await _notificationPolicy.NotifyTreeMutationAsync(ParseStorageMode());
         return NoContent();
     }
 }

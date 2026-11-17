@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OData.Query;
 using Microsoft.EntityFrameworkCore;
 using Schnittstellenzentrale.Core.Interfaces;
+using Schnittstellenzentrale.Core.Models;
 using Endpoint = Schnittstellenzentrale.Core.Models.Endpoint;
 
 namespace Schnittstellenzentrale.OData;
@@ -13,19 +14,23 @@ public class ODataEndpointsController : ODataControllerBase
 {
     private readonly IEndpointRepository _endpointRepository;
     private readonly IApplicationRepository _applicationRepository;
+    private readonly INotificationPolicy _notificationPolicy;
 
     /// <summary>Initialisiert eine neue Instanz von <see cref="ODataEndpointsController"/>.</summary>
     /// <param name="tokenStore">Der Token-Store.</param>
     /// <param name="endpointRepository">Das Repository für Endpunkte.</param>
     /// <param name="applicationRepository">Das Repository für Anwendungen.</param>
+    /// <param name="notificationPolicy">Die zentrale Benachrichtigungs-Policy.</param>
     public ODataEndpointsController(
         ITokenStore tokenStore,
         IEndpointRepository endpointRepository,
-        IApplicationRepository applicationRepository)
+        IApplicationRepository applicationRepository,
+        INotificationPolicy notificationPolicy)
         : base(tokenStore)
     {
         _endpointRepository = endpointRepository;
         _applicationRepository = applicationRepository;
+        _notificationPolicy = notificationPolicy;
     }
 
     /// <summary>Gibt alle Endpunkte zurück.</summary>
@@ -87,15 +92,16 @@ public class ODataEndpointsController : ODataControllerBase
         entity.RowVersion = [];
 
         var saved = await _endpointRepository.AddEndpointAsync(entity);
+        await _notificationPolicy.NotifyEndpointMutationAsync(ParseStorageMode(), saved.Id, saved.ApplicationId);
         return Created($"/odatav4/Endpoints({saved.Id})", saved);
     }
 
-    /// <summary>Ersetzt einen Endpunkt vollständig.</summary>
+    /// <summary>Ersetzt einen Endpunkt vollständig. Mitgelieferte <c>headers</c>/<c>queryparameters</c>-Mengen ersetzen die jeweilige Kind-Menge; fehlende Kind-Felder lassen die Bestands-Mengen unverändert.</summary>
     /// <param name="key">Der Schlüssel der Entität.</param>
-    /// <param name="entity">Die zu verarbeitende Entität.</param>
+    /// <param name="document">Das JSON-Body-Dokument.</param>
     /// <returns>Das Ergebnis.</returns>
     [HttpPut("Endpoints({key})")]
-    public async Task<IActionResult> Put(int key, [FromBody] Endpoint entity)
+    public async Task<IActionResult> Put(int key, [FromBody] JsonElement document)
     {
         var existing = await _endpointRepository.GetEndpointByIdAsync(key);
         if (existing == null)
@@ -107,7 +113,10 @@ public class ODataEndpointsController : ODataControllerBase
         if (existing.Application.IsSystem)
             return StatusCode(StatusCodes.Status403Forbidden);
 
-        if (entity.EndpointGroupId != null)
+        if (!ODataEndpointUpdateHelper.TryDeserializeEndpoint(document, out var entity, out var error))
+            return BadRequest(error);
+
+        if (entity!.EndpointGroupId != null)
         {
             var targetGroup = await _endpointRepository.GetEndpointGroupByIdAsync(entity.EndpointGroupId.Value);
             if (targetGroup == null || targetGroup.ApplicationId != existing.ApplicationId)
@@ -130,7 +139,14 @@ public class ODataEndpointsController : ODataControllerBase
         existing.PostRequestScript = entity.PostRequestScript;
         existing.RowVersion = entity.RowVersion;
 
+        if (ODataEndpointUpdateHelper.ContainsProperty(document, "headers"))
+            existing.Headers = entity.Headers ?? [];
+
+        if (ODataEndpointUpdateHelper.ContainsProperty(document, "queryparameters"))
+            existing.QueryParameters = entity.QueryParameters ?? [];
+
         var saved = await _endpointRepository.UpdateEndpointAsync(existing);
+        await _notificationPolicy.NotifyEndpointMutationAsync(ParseStorageMode(), saved.Id, saved.ApplicationId);
         return Ok(saved);
     }
 
@@ -176,12 +192,15 @@ public class ODataEndpointsController : ODataControllerBase
         if (rowVersion == null)
             return BadRequest("rowVersion is required for PATCH");
 
-        ApplyPatch(patch, existing);
+        if (!TryApplyPatch(patch, existing, out var error))
+            return BadRequest(error);
+
         existing.RowVersion = rowVersion;
 
         try
         {
             var saved = await _endpointRepository.UpdateEndpointAsync(existing);
+            await _notificationPolicy.NotifyEndpointMutationAsync(ParseStorageMode(), saved.Id, saved.ApplicationId);
             return Ok(saved);
         }
         catch (DbUpdateConcurrencyException)
@@ -190,12 +209,23 @@ public class ODataEndpointsController : ODataControllerBase
         }
     }
 
-    private static void ApplyPatch(JsonElement patch, Endpoint target)
+    private static bool TryApplyPatch(JsonElement patch, Endpoint target, out string? error)
     {
+        error = null;
         foreach (var prop in patch.EnumerateObject())
         {
             switch (prop.Name.ToLowerInvariant())
             {
+                case "headers":
+                    if (!ODataEndpointUpdateHelper.TryReadChildren(prop.Value, prop.Name, out var headers, out error))
+                        return false;
+                    target.Headers = headers!.Select(h => new EndpointHeader { Key = h.Key, Value = h.Value, EndpointId = target.Id }).ToList();
+                    break;
+                case "queryparameters":
+                    if (!ODataEndpointUpdateHelper.TryReadChildren(prop.Value, prop.Name, out var queryParameters, out error))
+                        return false;
+                    target.QueryParameters = queryParameters!.Select(p => new EndpointQueryParameter { Key = p.Key, Value = p.Value, EndpointId = target.Id }).ToList();
+                    break;
                 case "name": target.Name = prop.Value.GetString() ?? target.Name; break;
                 case "relativepath": target.RelativePath = prop.Value.GetString() ?? target.RelativePath; break;
                 case "body": target.Body = prop.Value.ValueKind == JsonValueKind.Null ? null : prop.Value.GetString(); break;
@@ -219,6 +249,7 @@ public class ODataEndpointsController : ODataControllerBase
                     break;
             }
         }
+        return true;
     }
 
     /// <summary>Löscht einen Endpunkt.</summary>
@@ -237,7 +268,9 @@ public class ODataEndpointsController : ODataControllerBase
         if (existing.Application.IsSystem)
             return StatusCode(StatusCodes.Status403Forbidden);
 
+        var applicationId = existing.ApplicationId;
         await _endpointRepository.DeleteEndpointAsync(key);
+        await _notificationPolicy.NotifyEndpointMutationAsync(ParseStorageMode(), key, applicationId);
         return NoContent();
     }
 }

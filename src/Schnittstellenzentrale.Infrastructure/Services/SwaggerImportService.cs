@@ -60,6 +60,24 @@ public class SwaggerImportService : ISwaggerImportService
         return ImportDiffCalculator.Calculate(existingEndpoints, importedEndpoints).WithBearerTokens(bearerTokens);
     }
 
+    /// <inheritdoc/>
+    public async Task<ImportDiff> SyncFromDocumentAsync(Microsoft.OpenApi.OpenApiDocument document, int applicationId)
+    {
+        var (importedEndpoints, bearerTokens) = SwaggerOperationHelper.MapDocumentToEndpoints(document, applicationId);
+
+        var existingEndpoints = await _endpointRepository.GetEndpointsAsync(applicationId);
+        var diff = ImportDiffCalculator.Calculate(existingEndpoints, importedEndpoints).WithBearerTokens(bearerTokens);
+
+        if (!string.IsNullOrEmpty(diff.ErrorMessage))
+        {
+            _logger.LogWarning("Endpunktabgleich für Anwendung {ApplicationId} übersprungen: {ErrorMessage}", applicationId, diff.ErrorMessage);
+            return diff;
+        }
+
+        await ApplyDiffAsync(diff, applicationId);
+        return diff;
+    }
+
     private async Task<Stream> FetchSwaggerStreamAsync(string url)
     {
         var client = _httpClientFactory.CreateClient();
@@ -82,8 +100,24 @@ public class SwaggerImportService : ISwaggerImportService
     }
 
     /// <inheritdoc/>
-    public async Task ApplyDiffAsync(ImportDiff diff)
+    public async Task ApplyDiffAsync(ImportDiff diff, int applicationId)
     {
+        ArgumentNullException.ThrowIfNull(diff);
+
+        if (!string.IsNullOrEmpty(diff.ErrorMessage))
+        {
+            _logger.LogWarning("ImportDiff mit Fehler wird nicht angewendet: {ErrorMessage}", diff.ErrorMessage);
+            return;
+        }
+
+        if (diff.NewEndpoints.Any(e => e.ApplicationId != applicationId)
+            || diff.ChangedEndpoints.Any(e => e.ApplicationId != applicationId)
+            || diff.RemovedEndpoints.Any(e => e.ApplicationId != applicationId))
+        {
+            throw new InvalidOperationException(
+                $"Der Import-Diff enthält Endpunkte, die nicht zur Anwendung {applicationId} gehören.");
+        }
+
         Dictionary<(string Name, int? ParentGroupId), EndpointGroup>? groupLookup = null;
 
         foreach (var endpoint in diff.NewEndpoints)

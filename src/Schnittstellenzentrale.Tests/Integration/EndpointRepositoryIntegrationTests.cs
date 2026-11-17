@@ -251,4 +251,130 @@ public class EndpointRepositoryIntegrationTests
             }
         }
     }
+
+    /// <summary>UpdateEndpointAsync_ErsetztSkalareUndKinderInEinemSchritt</summary>
+    [Fact]
+    public async Task UpdateEndpointAsync_ErsetztSkalareUndKinderInEinemSchritt()
+    {
+        var (factory, connection) = TestHelpers.CreateInMemoryDbContext();
+        await using (connection)
+        {
+            var app = new Core.Models.Application { Name = "App", BaseUrl = "http://app" };
+            await using (var context = factory.CreateDbContext())
+            {
+                context.Applications.Add(app);
+                await context.SaveChangesAsync();
+            }
+
+            var repository = new EndpointRepository(factory);
+            var endpoint = await repository.AddEndpointAsync(new Core.Models.Endpoint
+            {
+                Name = "Alt",
+                Method = Core.Enums.HttpMethod.GET,
+                RelativePath = "/alt",
+                ApplicationId = app.Id,
+                Headers = [new EndpointHeader { Key = "H-Alt", Value = "1" }],
+                QueryParameters = [new EndpointQueryParameter { Key = "q-alt", Value = "a" }]
+            });
+
+            var loaded = await repository.GetEndpointByIdAsync(endpoint.Id);
+            Assert.NotNull(loaded);
+
+            var update = new Core.Models.Endpoint
+            {
+                Id = endpoint.Id,
+                ApplicationId = app.Id,
+                RowVersion = loaded.RowVersion,
+                Name = "Neu",
+                Method = Core.Enums.HttpMethod.POST,
+                RelativePath = "/neu",
+                Body = "{}",
+                Headers = [new EndpointHeader { Key = "H-Neu", Value = "2" }],
+                QueryParameters =
+                [
+                    new EndpointQueryParameter { Key = "q1", Value = "v1" },
+                    new EndpointQueryParameter { Key = "q2", Value = "v2" }
+                ]
+            };
+
+            await repository.UpdateEndpointAsync(update);
+
+            var reloaded = await repository.GetEndpointByIdAsync(endpoint.Id);
+            Assert.NotNull(reloaded);
+            Assert.Equal("Neu", reloaded.Name);
+            Assert.Equal(Core.Enums.HttpMethod.POST, reloaded.Method);
+            Assert.Equal("/neu", reloaded.RelativePath);
+            Assert.Equal("{}", reloaded.Body);
+            var header = Assert.Single(reloaded.Headers);
+            Assert.Equal("H-Neu", header.Key);
+            Assert.Equal("2", header.Value);
+            Assert.Equal(2, reloaded.QueryParameters.Count);
+            Assert.Contains(reloaded.QueryParameters, p => p.Key == "q1" && p.Value == "v1");
+            Assert.Contains(reloaded.QueryParameters, p => p.Key == "q2" && p.Value == "v2");
+        }
+    }
+
+    /// <summary>UpdateEndpointAsync_BeiVersionskonflikt_BleibenKinderUnveraendert</summary>
+    [Fact]
+    public async Task UpdateEndpointAsync_BeiVersionskonflikt_BleibenKinderUnveraendert()
+    {
+        var (factory, connection) = TestHelpers.CreateInMemoryDbContext();
+        await using (connection)
+        {
+            var app = new Core.Models.Application { Name = "App", BaseUrl = "http://app" };
+            await using (var context = factory.CreateDbContext())
+            {
+                context.Applications.Add(app);
+                await context.SaveChangesAsync();
+            }
+
+            var repository = new EndpointRepository(factory);
+            var endpoint = await repository.AddEndpointAsync(new Core.Models.Endpoint
+            {
+                Name = "Original",
+                Method = Core.Enums.HttpMethod.GET,
+                RelativePath = "/orig",
+                ApplicationId = app.Id,
+                Headers = [new EndpointHeader { Key = "H-Orig", Value = "o" }]
+            });
+
+            var snapshot1 = await repository.GetEndpointByIdAsync(endpoint.Id);
+            var snapshot2 = await repository.GetEndpointByIdAsync(endpoint.Id);
+            Assert.NotNull(snapshot1);
+            Assert.NotNull(snapshot2);
+
+            var first = new Core.Models.Endpoint
+            {
+                Id = endpoint.Id,
+                ApplicationId = app.Id,
+                RowVersion = snapshot1.RowVersion,
+                Name = "Erste",
+                Method = Core.Enums.HttpMethod.GET,
+                RelativePath = "/erste",
+                Headers = [new EndpointHeader { Key = "H-Erste", Value = "e" }],
+                QueryParameters = []
+            };
+            await repository.UpdateEndpointAsync(first);
+
+            var stale = new Core.Models.Endpoint
+            {
+                Id = endpoint.Id,
+                ApplicationId = app.Id,
+                RowVersion = snapshot2.RowVersion,
+                Name = "Veraltet",
+                Method = Core.Enums.HttpMethod.GET,
+                RelativePath = "/stale",
+                Headers = [new EndpointHeader { Key = "H-Stale", Value = "s" }],
+                QueryParameters = []
+            };
+
+            await Assert.ThrowsAsync<DbUpdateConcurrencyException>(() => repository.UpdateEndpointAsync(stale));
+
+            var reloaded = await repository.GetEndpointByIdAsync(endpoint.Id);
+            Assert.NotNull(reloaded);
+            Assert.Equal("Erste", reloaded.Name);
+            var header = Assert.Single(reloaded.Headers);
+            Assert.Equal("H-Erste", header.Key);
+        }
+    }
 }

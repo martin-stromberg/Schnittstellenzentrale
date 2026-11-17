@@ -27,7 +27,7 @@ Das `EditForm` führt eine `DataAnnotationsValidator`-Prüfung durch. Bei Fehler
 
 - `ApplicationGroupEditor.SaveAsync` — ruft `IApplicationApiClient.AddGroupAsync(new CreateApplicationGroupRequest { Name = ... }, storageMode)` auf.
 - `ApplicationApiClient` authentifiziert sich bei Bedarf über `POST /authenticate` und sendet den Request an `POST /api/application-groups` mit Bearer-Token und `X-Storage-Mode`-Header.
-- Im Controller: `IApplicationRepository.AddGroupAsync`, bei `StorageMode.Team` anschließend `ISignalRNotificationService.NotifyGroupChangedAsync(saved.Id)`.
+- Im Controller: `IApplicationRepository.AddGroupAsync`, bei `StorageMode.Team` sendet der Controller anschließend über `INotificationPolicy.NotifyTreeMutationAsync` genau eine Baum-Benachrichtigung (`TreeChanged`).
 - Nach Erfolg: `OnSaved.InvokeAsync()` → `ApplicationGroupTree.OnGroupSaved` setzt Flag auf `false` und ruft `LoadDataAsync()` auf.
 - Bei Exception: `_errorMessage` wird gesetzt.
 
@@ -35,7 +35,7 @@ Das `EditForm` führt eine `DataAnnotationsValidator`-Prüfung durch. Bei Fehler
 
 - `ApplicationEditor.SaveAsync` — bei `StorageMode.User` wird `_model.Owner` auf `ICurrentUserService.GetCurrentUserName()` gesetzt.
 - Ruft `IApplicationApiClient.AddApplicationAsync(new CreateApplicationRequest { ... }, storageMode)` auf.
-- `ApplicationApiClient` sendet den Request an `POST /api/applications`; im Controller: `IApplicationRepository.AddApplicationAsync`, `InterfaceType` wird via `Application.DetectInterfaceType(request.InterfaceUrl)` abgeleitet; bei `StorageMode.Team` anschließend `ISignalRNotificationService.NotifyApplicationChangedAsync(saved.Id)`.
+- `ApplicationApiClient` sendet den Request an `POST /api/applications`; im Controller: `IApplicationRepository.AddApplicationAsync`, `InterfaceType` wird via `Application.DetectInterfaceType(request.InterfaceUrl)` abgeleitet; bei `StorageMode.Team` sendet der Controller anschließend über `INotificationPolicy.NotifyTreeMutationAsync` genau eine Baum-Benachrichtigung (`TreeChanged`).
 - Nach Erfolg: `OnSaved.InvokeAsync()` → `ApplicationGroupTree.OnApplicationSaved` setzt Flag auf `false` und ruft `LoadDataAsync()` auf.
 
 ### 6. Abbrechen
@@ -54,7 +54,7 @@ flowchart TD
     F -- Speichern --> H[DataAnnotationsValidator]
     H -- Fehler --> I[Fehlermeldung anzeigen]
     H -- OK --> J{StorageMode?}
-    J -- Team --> K[AddGroupAsync / AddApplicationAsync via REST-Client\nController ruft NotifyGroupChangedAsync / NotifyApplicationChangedAsync]
+    J -- Team --> K[AddGroupAsync / AddApplicationAsync via REST-Client\nController ruft NotifyTreeMutationAsync (TreeChanged)]
     J -- User --> L[Owner setzen\nAddApplicationAsync via REST-Client]
     K --> M[OnSaved.InvokeAsync]
     L --> M
@@ -83,7 +83,7 @@ Beteiligte Komponenten: `ApplicationContextMenu`, `ApplicationGroupContextMenu`,
 3. `ApplicationGroupTree.OnRenameGroupRequested(group)` setzt `_renameTargetGroup = group` → `RenameGroupDialog` wird gerendert.
 4. `RenameGroupDialog.SaveAsync` löst `OnSaved` aus → `ApplicationGroupTree.OnGroupRenamed(group)`:
    - `ApplicationRepository.UpdateGroupAsync(group)`
-   - Bei `StorageMode.Team`: `SignalRNotificationService.NotifyGroupChangedAsync(group.Id)`
+   - Bei `StorageMode.Team`: der Controller sendet über `INotificationPolicy.NotifyTreeMutationAsync` genau eine `TreeChanged`-Benachrichtigung
    - `LoadDataAsync()`
 5. Bei `DbUpdateConcurrencyException` oder sonstiger Exception: `_errorMessage` wird gesetzt.
 
@@ -94,13 +94,13 @@ Beteiligte Komponenten: `ApplicationContextMenu`, `ApplicationGroupContextMenu`,
 1. `ApplicationGroupTree.OnDeleteGroupRequested(group)` setzt `_deleteTargetGroup = group` → `ConfirmDeleteGroupDialog` wird mit `Applications.Count` gerendert.
 
 **Option „Mitlöschen"** → `ApplicationGroupTree.OnDeleteGroupConfirmedAll(group)`:
-1. `ProcessGroupApplicationsAsync`: Für jede Anwendung der Gruppe: `DeleteApplicationAsync` + ggf. `NotifyApplicationChangedAsync`
-2. `DeleteGroupAsync(group.Id)` + ggf. `NotifyGroupChangedAsync`
+1. `ProcessGroupApplicationsAsync`: Für jede Anwendung der Gruppe: `DeleteApplicationAsync`
+2. `DeleteGroupAsync(group.Id)`; bei `StorageMode.Team` sendet der Controller abschließend über `INotificationPolicy.NotifyTreeMutationAsync` genau eine `TreeChanged`-Benachrichtigung für den gesamten Vorgang
 3. `LoadDataAsync()`
 
 **Option „Nur Gruppe löschen"** → `ApplicationGroupTree.OnDeleteGroupConfirmedGroupOnly(group)`:
-1. `ProcessGroupApplicationsAsync`: Für jede Anwendung: `app.ApplicationGroupId = null`, `UpdateApplicationAsync` + ggf. `NotifyApplicationChangedAsync`
-2. `DeleteGroupAsync(group.Id)` + ggf. `NotifyGroupChangedAsync`
+1. `ProcessGroupApplicationsAsync`: Für jede Anwendung: `app.ApplicationGroupId = null`, `UpdateApplicationAsync`
+2. `DeleteGroupAsync(group.Id)`; bei `StorageMode.Team` sendet der Controller abschließend über `INotificationPolicy.NotifyTreeMutationAsync` genau eine `TreeChanged`-Benachrichtigung für den gesamten Vorgang
 3. `LoadDataAsync()`
 
 ---
@@ -112,7 +112,7 @@ Beteiligte Komponenten: `ApplicationContextMenu`, `ApplicationGroupContextMenu`,
 3. `ApplicationEditor.SaveAsync`:
    - Im Benutzermodus: `_model.Owner = CurrentUserService.GetCurrentUserName()`
    - `ApplicationRepository.UpdateApplicationAsync(_model)`
-   - Bei `StorageMode.Team`: `SignalRNotificationService.NotifyApplicationChangedAsync(saved.Id)`
+   - Bei `StorageMode.Team`: der Controller sendet über `INotificationPolicy.NotifyTreeMutationAsync` genau eine `TreeChanged`-Benachrichtigung
    - `OnSaved.InvokeAsync()` → `ApplicationGroupTree.OnApplicationEdited()` setzt `_editTargetApplication = null` und ruft `LoadDataAsync()` auf.
 4. Bei `DbUpdateConcurrencyException`: `_errorMessage` wird inline im Formular angezeigt; der Dialog bleibt geöffnet.
 
@@ -125,7 +125,7 @@ Beteiligte Komponenten: `ApplicationContextMenu`, `ApplicationGroupContextMenu`,
 2. Setzt `application.ApplicationGroupId = null`
 3. `ApplicationRepository.UpdateApplicationAsync(application)`
 4. Bei Fehler: stellt `application.ApplicationGroupId = previousGroupId` wieder her
-5. Bei `StorageMode.Team`: `SignalRNotificationService.NotifyApplicationChangedAsync(application.Id)`
+5. Bei `StorageMode.Team`: der Controller sendet über `INotificationPolicy.NotifyTreeMutationAsync` genau eine `TreeChanged`-Benachrichtigung
 6. `LoadDataAsync()`
 
 ---
@@ -134,7 +134,7 @@ Beteiligte Komponenten: `ApplicationContextMenu`, `ApplicationGroupContextMenu`,
 
 `ApplicationGroupTree.OnDeleteApplicationRequested(application)` setzt `_deleteTargetApplication = application`. Nach Bestätigung ruft `ApplicationGroupTree.OnDeleteApplicationConfirmed(application)`:
 1. `ApplicationRepository.DeleteApplicationAsync(application.Id)`
-2. Bei `StorageMode.Team`: `SignalRNotificationService.NotifyApplicationChangedAsync(application.Id)`
+2. Bei `StorageMode.Team`: der Controller sendet über `INotificationPolicy.NotifyTreeMutationAsync` genau eine `TreeChanged`-Benachrichtigung
 3. `OnSelectionCleared.InvokeAsync()` — blendet `ApplicationContentView` in `Home` aus
 4. `LoadDataAsync()`
 
@@ -156,7 +156,7 @@ Beteiligte Komponenten: `ApplicationContextMenu`, `ApplicationGroupContextMenu`,
    - Setzt `_draggedApplication.ApplicationGroupId = targetGroupId`
    - `ApplicationRepository.UpdateApplicationAsync(_draggedApplication)`
    - Bei Fehler: stellt `previousGroupId` wieder her
-   - Bei `StorageMode.Team`: `SignalRNotificationService.NotifyApplicationChangedAsync(...)`
+   - Bei `StorageMode.Team`: der Controller sendet über `INotificationPolicy.NotifyTreeMutationAsync` genau eine `TreeChanged`-Benachrichtigung
    - Setzt `_draggedApplication`, `_dropTargetGroupId`, `_dropTargetIsUngrouped` und beide Counter zurück
    - `LoadDataAsync()`
 
@@ -323,10 +323,10 @@ Beteiligte Klassen/Komponenten: `ApplicationGroupTree`, `IEndpointRepository`, `
 3. `Home.HandleCreateEndpointGroupRequested(application)`:
    - Legt `EndpointGroup { Name = "Neuer Ordner", ApplicationId = application.Id }` an.
    - `IEndpointRepository.AddEndpointGroupAsync(group)` speichert die Gruppe.
-   - Bei `StorageMode.Team`: `ISignalRNotificationService.NotifyEndpointGroupChangedAsync(saved.Id, application.Id)`.
+   - Bei `StorageMode.Team`: `INotificationPolicy.NotifyEndpointGroupMutationAsync(...)` — genau eine `EndpointGroupChanged`-Benachrichtigung.
    - `_tree.RefreshAsync()` lädt den Baum neu.
 
-Beteiligte Klassen/Komponenten: `ApplicationContextMenu`, `Home`, `IEndpointRepository`, `ISignalRNotificationService`, `ApplicationGroupTree`
+Beteiligte Klassen/Komponenten: `ApplicationContextMenu`, `Home`, `IEndpointRepository`, `INotificationPolicy`, `ApplicationGroupTree`
 
 ---
 
@@ -337,10 +337,10 @@ Beteiligte Klassen/Komponenten: `ApplicationContextMenu`, `Home`, `IEndpointRepo
 3. `Home.HandleRenameEndpointGroupRequested(group)` setzt `_renameTargetEndpointGroup = group` → `RenameEndpointGroupDialog` wird gerendert.
 4. `RenameEndpointGroupDialog.SaveAsync` löst `OnSaved.InvokeAsync(_model)` aus → `Home.OnEndpointGroupRenamed(group)`:
    - `IEndpointRepository.UpdateEndpointGroupAsync(group)`.
-   - Bei `StorageMode.Team`: `ISignalRNotificationService.NotifyEndpointGroupChangedAsync(group.Id, group.ApplicationId)`.
+   - Bei `StorageMode.Team`: `INotificationPolicy.NotifyEndpointGroupMutationAsync(...)` — genau eine `EndpointGroupChanged`-Benachrichtigung.
    - `_tree.RefreshAsync()`.
 
-Beteiligte Klassen/Komponenten: `EndpointGroupContextMenu`, `RenameEndpointGroupDialog`, `Home`, `IEndpointRepository`, `ISignalRNotificationService`, `ApplicationGroupTree`
+Beteiligte Klassen/Komponenten: `EndpointGroupContextMenu`, `RenameEndpointGroupDialog`, `Home`, `IEndpointRepository`, `INotificationPolicy`, `ApplicationGroupTree`
 
 ---
 
@@ -354,10 +354,10 @@ Beteiligte Klassen/Komponenten: `EndpointGroupContextMenu`, `RenameEndpointGroup
 3. Nach Bestätigung: `Home.OnEndpointGroupDeleteConfirmed(group)`:
    - Prüft, ob `_selectedEndpoint` zu dieser Gruppe gehört → setzt ggf. `_selectedEndpoint = null`.
    - `IEndpointRepository.DeleteEndpointGroupAsync(group.Id)` — EF Core löscht alle enthaltenen Endpunkte kaskadierend (`DeleteBehavior.Cascade`).
-   - Bei `StorageMode.Team`: `ISignalRNotificationService.NotifyEndpointGroupChangedAsync(group.Id, applicationId)`.
+   - Bei `StorageMode.Team`: `INotificationPolicy.NotifyEndpointGroupMutationAsync(...)` — genau eine `EndpointGroupChanged`-Benachrichtigung.
    - `_tree.RefreshAsync()`.
 
-Beteiligte Klassen/Komponenten: `EndpointGroupContextMenu`, `ConfirmDeleteEndpointGroupDialog`, `Home`, `IEndpointRepository`, `AppDbContext` (Cascade), `ISignalRNotificationService`
+Beteiligte Klassen/Komponenten: `EndpointGroupContextMenu`, `ConfirmDeleteEndpointGroupDialog`, `Home`, `IEndpointRepository`, `AppDbContext` (Cascade), `INotificationPolicy`
 
 ---
 
@@ -367,11 +367,11 @@ Beteiligte Klassen/Komponenten: `EndpointGroupContextMenu`, `ConfirmDeleteEndpoi
 2. `Home.HandleCreateEndpointRequested((application, group?))`:
    - Legt `Endpoint { Name = "Neuer Endpunkt", Method = GET, RelativePath = "", BodyMode = None, ApplicationId = ..., EndpointGroupId = group?.Id }` an.
    - `IEndpointRepository.AddEndpointAsync(endpoint)`.
-   - Bei `StorageMode.Team`: `ISignalRNotificationService.NotifyEndpointChangedAsync(saved.Id, application.Id)`.
+   - Bei `StorageMode.Team`: `INotificationPolicy.NotifyEndpointMutationAsync(...)` — genau eine `EndpointChanged`-Benachrichtigung.
    - `_tree.RefreshAsync()`.
    - `IEndpointRepository.GetEndpointByIdAsync(saved.Id)` lädt den vollständigen Datensatz → `_selectedEndpoint = loaded` → `EndpointPage` wird geöffnet.
 
-Beteiligte Klassen/Komponenten: `ApplicationContextMenu`, `EndpointGroupContextMenu`, `Home`, `IEndpointRepository`, `ISignalRNotificationService`, `ApplicationGroupTree`, `EndpointPage`
+Beteiligte Klassen/Komponenten: `ApplicationContextMenu`, `EndpointGroupContextMenu`, `Home`, `IEndpointRepository`, `INotificationPolicy`, `ApplicationGroupTree`, `EndpointPage`
 
 ---
 
@@ -387,9 +387,9 @@ Beteiligte Klassen/Komponenten: `ApplicationContextMenu`, `EndpointGroupContextM
    - Baut `_model.Headers` und `_model.QueryParameters` aus den lokalen Listen.
    - `IEndpointRepository.UpdateEndpointAsync(_model)`.
    - Bei `DbUpdateConcurrencyException`: `_showConcurrencyWarning = true` → `ConcurrencyWarningDialog`.
-   - Nach Erfolg: `_isDirty = false`; Navigation Guards deregistrieren; bei Team-Modus `NotifyEndpointChangedAsync`; `OnEndpointSaved.InvokeAsync`.
+   - Nach Erfolg: `_isDirty = false`; Navigation Guards deregistrieren; `OnEndpointSaved.InvokeAsync`. Eine eigene SignalR-Benachrichtigung sendet die Seite nicht — der REST-Controller benachrichtigt im Team-Modus zentral über `INotificationPolicy`.
 
-Beteiligte Klassen/Komponenten: `EndpointPage`, `Home`, `IEndpointRepository`, `ISignalRNotificationService`, `ConcurrencyWarningDialog`, `IJSRuntime`, `NavigationManager`
+Beteiligte Klassen/Komponenten: `EndpointPage`, `Home`, `IEndpointRepository`, `INotificationPolicy`, `ConcurrencyWarningDialog`, `IJSRuntime`, `NavigationManager`
 
 ---
 
@@ -433,10 +433,10 @@ Beteiligte Klassen/Komponenten: `EndpointPage`, `RequestBodyPanel`, `RequestHead
    - Bei Ablehnung: keine Aktion.
    - `IEndpointRepository.DeleteEndpointAsync(endpoint.Id)`.
    - Wenn `_selectedEndpoint?.Id == endpoint.Id`: `_selectedEndpoint = null` → `EndpointPage` wird geschlossen.
-   - Bei `StorageMode.Team`: `ISignalRNotificationService.NotifyEndpointChangedAsync(endpoint.Id, endpoint.ApplicationId)`.
+   - Bei `StorageMode.Team`: `INotificationPolicy.NotifyEndpointMutationAsync(...)` — genau eine `EndpointChanged`-Benachrichtigung.
    - `_tree.RefreshAsync()`.
 
-Beteiligte Klassen/Komponenten: `EndpointContextMenu`, `Home`, `IEndpointRepository`, `ISignalRNotificationService`, `ApplicationGroupTree`, `EndpointPage`
+Beteiligte Klassen/Komponenten: `EndpointContextMenu`, `Home`, `IEndpointRepository`, `INotificationPolicy`, `ApplicationGroupTree`, `EndpointPage`
 
 ---
 
@@ -577,8 +577,8 @@ In `ApplicationContentView.OpenODataImportAsync`:
 `ODataImportDialog` delegiert an die generische `ImportDialog`-Komponente und registriert den `OnClose`-Callback.
 
 - **Bestätigung:** `ImportDialog` ruft die von `ODataImportDialog` übergebene `OnApplyAsync`-Callback auf.
-  - `ODataImportService.ApplyDiffAsync` persistiert die neuen, geänderten und gelöschten Endpunkte über `IEndpointRepository`.
-  - Bei `StorageMode.Team`: `ISignalRNotificationService.NotifyEndpointChangedAsync` für jede betroffene Anwendung.
+  - `IApplicationApiClient.ApplyODataDiffAsync` ruft `POST /api/applications/{id}/odata-import/apply` auf; der Endpunkt persistiert nach Token-, Existenz- und Typprüfung über `ODataImportService.ApplyDiffAsync` die neuen, geänderten und gelöschten Endpunkte via `IEndpointRepository`.
+  - Bei `StorageMode.Team`: der Apply-Endpunkt sendet über `INotificationPolicy.NotifyTreeMutationAsync` genau eine `TreeChanged`-Benachrichtigung für den gesamten Import-Vorgang (nur bei tatsächlichen Änderungen).
   - Dialog wird geschlossen; `CloseODataImport` wird aufgerufen.
 
 - **Abbruch:** Der Dialog wird ohne Speichern geschlossen; `OnClose`-Handler wird aufgerufen.
@@ -589,7 +589,7 @@ In `ApplicationContentView.OpenODataImportAsync`:
 - Setzt `_showODataImport = false`.
 - Blazor blendet den Dialog aus.
 
-Beteiligte Klassen/Komponenten: `ApplicationContentView`, `ODataImportDialog`, `ImportDialog`, `ODataImportService`, `ImportDiffCalculator`, `IApplicationApiClient`, `IEndpointRepository`, `ISignalRNotificationService`
+Beteiligte Klassen/Komponenten: `ApplicationContentView`, `ODataImportDialog`, `ImportDialog`, `ODataImportService`, `ImportDiffCalculator`, `IApplicationApiClient`, `IEndpointRepository`, `INotificationPolicy`
 
 ```mermaid
 flowchart TD
@@ -608,7 +608,7 @@ flowchart TD
     L -- Bestätigen --> N[ApplyDiffAsync]
     N --> O[Endpunkte persistieren]
     O --> P{StorageMode?}
-    P -- Team --> Q[NotifyEndpointChangedAsync]
+    P -- Team --> Q[NotifyTreeMutationAsync - TreeChanged]
     P -- User --> R[Keine SignalR-Benachrichtigung]
     Q --> M
     R --> M

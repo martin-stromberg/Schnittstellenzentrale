@@ -127,7 +127,7 @@ Der `RelativePath` eines importierten Endpunkts wird relativ zur `Application.Ba
 
 Nach dem Import werden alle Endpunkte eines Entity-Sets in eine gleichnamige Endpunktgruppe eingeordnet; die Gruppe wird bei Bedarf automatisch angelegt.
 
-Die Diff-Berechnung erfolgt über denselben `ImportDiffCalculator` wie beim Swagger-Import. Das Ergebnis zeigt neue, geänderte und zu entfernende Endpunkte. Nach Bestätigung durch den Anwender wendet `ODataImportService.ApplyDiffAsync` die Änderungen über `IEndpointRepository` an.
+Die Diff-Berechnung erfolgt über denselben `ImportDiffCalculator` wie beim Swagger-Import. Das Ergebnis zeigt neue, geänderte und zu entfernende Endpunkte. Nach Bestätigung durch den Anwender wendet der Server die Änderungen über `ODataImportService.ApplyDiffAsync` via `IEndpointRepository` an — der Dialog ruft dafür `IApplicationApiClient.ApplyODataDiffAsync` (`POST /api/applications/{id}/odata-import/apply`) auf. Beim Swagger-Import läuft das Anwenden analog über `IApplicationApiClient.ApplySwaggerDiffAsync` (`POST /api/applications/{id}/swagger-import/apply`), wobei `SwaggerImportService.ApplyDiffAsync` zusätzlich prüft, dass alle Endpunkte des Diffs zur Zielanwendung gehören.
 
 ### Propriäre CSDL-Annotationen
 
