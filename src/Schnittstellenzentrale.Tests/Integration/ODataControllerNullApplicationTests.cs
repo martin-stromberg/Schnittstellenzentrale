@@ -57,7 +57,9 @@ public class ODataControllerNullApplicationTests
 
         var controller = CreateEndpointsController(endpointRepoMock, appRepoMock);
 
-        var result = await controller.Put(1, new Endpoint { Name = "Changed", Method = Core.Enums.HttpMethod.GET, RelativePath = "/test" });
+        var document = System.Text.Json.JsonDocument.Parse(
+            """{"name":"Changed","method":"Get","relativePath":"/test"}""").RootElement;
+        var result = await controller.Put(1, document);
 
         Assert.IsType<NotFoundResult>(result);
     }

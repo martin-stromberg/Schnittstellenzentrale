@@ -424,13 +424,28 @@ Legt einen neuen Endpunkt an.
 
 Ersetzt einen Endpunkt vollständig.
 
-**Felder:** `name`, `method`, `relativePath`, `body`, `bodyMode`, `authenticationType`, `endpointGroupId`, `preRequestScript`, `postRequestScript`, `rowVersion` (Pflichtfeld)
+**Felder:** `name`, `method`, `relativePath`, `body`, `bodyMode`, `authenticationType`, `endpointGroupId`, `preRequestScript`, `postRequestScript`, `rowVersion` (Pflichtfeld), `headers`, `queryparameters`
 
 `id` wird serverseitig ignoriert.
 
+**Aggregat-Semantik für Kind-Mengen:** Skalarwerte und Kind-Mengen werden in einer einzigen serverseitigen Operation persistiert. Sind `headers` und/oder `queryparameters` im Request-Body enthalten, wird die jeweilige Menge als Vollmenge ersetzt — eine leere Liste löscht alle vorhandenen Einträge dieser Menge. Fehlt ein Kind-Feld im Request-Body, bleibt die entsprechende Bestands-Menge unverändert.
+
+```json
+{
+  "name": "Artikel abrufen",
+  "method": "Get",
+  "relativePath": "/api/articles/{id}",
+  "rowVersion": "AAA=",
+  "headers": [{ "key": "Accept", "value": "application/json" }],
+  "queryparameters": [{ "key": "filter", "value": "active" }]
+}
+```
+
+> Hinweis: Die Kind-Mengen sind im EDM-Modell (`$metadata`) ausgeblendet und werden nicht in GET-Responses ausgeliefert; sie werden jedoch in PUT/PATCH-Request-Bodies akzeptiert und persistiert.
+
 **Response: 200 OK**
 
-**Fehler:** 400 Bad Request (`rowVersion` fehlt), 401 Unauthorized, 403 Forbidden (Systemanwendung), 404 Not Found
+**Fehler:** 400 Bad Request (`rowVersion` fehlt oder ungültiger Body), 401 Unauthorized, 403 Forbidden (Systemanwendung), 404 Not Found
 
 ---
 
@@ -438,7 +453,9 @@ Ersetzt einen Endpunkt vollständig.
 
 Partielles Update eines Endpunkts.
 
-Unterstützte Felder: `name`, `relativePath`, `body`, `preRequestScript`, `postRequestScript`, `endpointGroupId`, `method`, `authenticationType`, `rowVersion` (Pflicht).
+Unterstützte Felder: `name`, `relativePath`, `body`, `preRequestScript`, `postRequestScript`, `endpointGroupId`, `method`, `authenticationType`, `headers`, `queryparameters`, `rowVersion` (Pflicht).
+
+**Aggregat-Semantik für Kind-Mengen:** `headers` und `queryparameters` werden als Vollmenge ersetzt, wenn sie im Patch-Dokument enthalten sind — eine leere Liste leert die jeweilige Menge. Nicht mitgelieferte Kind-Felder bleiben unverändert. Die Einträge haben die Form `{ "key": "...", "value": "..." }`; ein anderer Typ führt zu `400 Bad Request`. Die Ersetzung erfolgt atomar zusammen mit den Skalarwerten in derselben serverseitigen Operation.
 
 **Null-Behandlung:** String-Felder können auf `null` gesetzt werden. Das Feld `endpointGroupId` kann auf `null` gesetzt werden (um den Endpunkt aus einer Gruppe zu entfernen).
 

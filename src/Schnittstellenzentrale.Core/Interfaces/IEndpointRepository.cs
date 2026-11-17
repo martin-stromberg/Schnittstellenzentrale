@@ -40,8 +40,8 @@ public interface IEndpointRepository
     /// <returns>Der erstellte Endpunkt.</returns>
     Task<Endpoint> AddEndpointAsync(Endpoint endpoint);
 
-    /// <summary>Aktualisiert einen Endpunkt.</summary>
-    /// <param name="endpoint">Der aktualisierte Endpunkt.</param>
+    /// <summary>Aktualisiert einen Endpunkt als Aggregat in einer Operation: ersetzt die Skalarwerte und die vollständigen Kind-Mengen <see cref="Endpoint.Headers"/> und <see cref="Endpoint.QueryParameters"/>. <see cref="Endpoint.RowVersion"/> dient der Optimistic-Concurrency-Prüfung.</summary>
+    /// <param name="endpoint">Der aktualisierte Endpunkt inklusive der neuen vollständigen Kind-Mengen.</param>
     /// <returns>Der aktualisierte Endpunkt.</returns>
     Task<Endpoint> UpdateEndpointAsync(Endpoint endpoint);
 

@@ -542,6 +542,41 @@ public class SwaggerImportServiceTests
         repoMock.Verify(r => r.DeleteEndpointAsync(It.IsAny<int>()), Times.Never);
     }
 
+    /// <summary>SyncFromDocument_ChangedEndpoint_UpdateErhaeltKindMengenFuerAggregatUpdate</summary>
+    [Fact]
+    public async Task SyncFromDocument_ChangedEndpoint_UpdateErhaeltKindMengenFuerAggregatUpdate()
+    {
+        var existing = new List<Core.Models.Endpoint>
+        {
+            new()
+            {
+                Id = 7,
+                Name = "alterName",
+                Method = CoreHttpMethod.GET,
+                RelativePath = "/items",
+                ApplicationId = 1,
+                RowVersion = [1, 2, 3],
+                Headers = [new Core.Models.EndpointHeader { Key = "Accept", Value = "application/json" }],
+                QueryParameters = [new Core.Models.EndpointQueryParameter { Key = "filter", Value = "x" }]
+            }
+        };
+        var repoMock = new Mock<IEndpointRepository>();
+        repoMock.Setup(r => r.GetEndpointsAsync(It.IsAny<int>())).ReturnsAsync(existing);
+        repoMock.Setup(r => r.UpdateEndpointAsync(It.IsAny<Core.Models.Endpoint>()))
+            .ReturnsAsync((Core.Models.Endpoint e) => e);
+        var service = CreateService(SwaggerWithGetPost, repoMock);
+        var document = DocumentWithPaths(("/items", HttpMethod.Get, "getItems"));
+
+        var diff = await service.SyncFromDocumentAsync(document, 1);
+
+        Assert.Null(diff.ErrorMessage);
+        repoMock.Verify(r => r.UpdateEndpointAsync(
+            It.Is<Core.Models.Endpoint>(e =>
+                e.Id == 7
+                && e.Headers.Count == 1 && e.Headers.Single().Key == "Accept"
+                && e.QueryParameters.Count == 1 && e.QueryParameters.Single().Key == "filter")), Times.Once);
+    }
+
     /// <summary>SyncFromDocument_RemovedEndpoint_IsDeleted</summary>
     [Fact]
     public async Task SyncFromDocument_RemovedEndpoint_IsDeleted()

@@ -306,7 +306,8 @@
 - Der Re-Import liefert andere Werte für `PreRequestScript`, `PostRequestScript` oder `AuthenticationType`.
 
 **Verhalten:**
-- Geänderte Endpunkte landen in `ImportDiff.ChangedEndpoints` und werden via `IEndpointRepository.UpdateEndpointAsync` persistiert.
+- Geänderte Endpunkte landen in `ImportDiff.ChangedEndpoints` und werden via `IEndpointRepository.UpdateEndpointAsync` persistiert — diese Aggregat-Operation ersetzt Skalarwerte und Kind-Mengen gemeinsam in einer Transaktion.
+- `MergeExistingIdentity` übergibt die bestehenden `Headers`/`QueryParameters` an die Operation — Header und Query-Parameter bleiben beim Import damit erhalten (die Aggregat-Operation ersetzt sie durch die übergebenen Mengen).
 - Fehlende Erweiterungsfelder im Import setzen die Felder explizit auf `null` / `None` — das entspricht dem bestehenden Verhalten für `Name` und `Body`.
 
 **Umsetzung:** `ImportDiffCalculator.HasChanged` und `ImportDiffCalculator.MergeExistingIdentity` — explizites Überschreib-Verhalten verhindert Silent-Divergenz zwischen Swagger-Definition und gespeichertem Endpunkt.

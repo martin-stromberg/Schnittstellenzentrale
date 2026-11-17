@@ -91,7 +91,7 @@ Beteiligte Komponenten:
 `PersistAsync()` unterscheidet anhand von `_model.Id`:
 
 - Neuer Endpunkt (`Id == 0`): `IApplicationApiClient.AddEndpointAsync(_model)` wird aufgerufen. Das zurückgegebene `Endpoint`-Objekt enthält die vergebene `Id` und den neuen `RowVersion`-Wert, die in `_model` übernommen werden.
-- Bestehender Endpunkt: `IApplicationApiClient.UpdateEndpointAsync(_model)` wird aufgerufen. Der zurückgegebene `RowVersion`-Wert wird in `_model.RowVersion` übernommen.
+- Bestehender Endpunkt: `IApplicationApiClient.UpdateEndpointAsync(_model)` wird aufgerufen — die Aggregat-Operation ersetzt Skalarwerte und die vollständigen Kind-Mengen `Headers`/`QueryParameters` in einem Schritt. Der zurückgegebene `RowVersion`-Wert wird in `_model.RowVersion` übernommen.
 
 `ForceSaveAsync()` liest vor dem Speichern den aktuellen `RowVersion`-Wert über `IApplicationApiClient.GetEndpointByIdAsync(_model.Id)` und aktualisiert `_model.RowVersion`, bevor `UpdateEndpointAsync` aufgerufen wird.
 
@@ -193,17 +193,19 @@ Beteiligte Komponenten:
 
 ## Ablauf: Header und Query-Parameter verwalten
 
-`EndpointPage` verwaltet Header und Query-Parameter über atomare API-Routen:
+`EndpointPage` verwaltet Header und Query-Parameter bei der Bearbeitung rein In-Memory (`_headers` / `_queryParameters`); die Panels melden Änderungen über `OnChanged` an `MarkDirty`. Die Persistierung erfolgt ausschließlich beim Speichern über die Aggregat-Operation `UpdateEndpointAsync`, die beide Kind-Mengen als Vollmenge ersetzt.
 
-- **Header hinzufügen** (`AddHeaderAsync`): `IApplicationApiClient.AddHeaderAsync(header)` → `POST /api/endpoints/headers` → gibt `EndpointHeader` mit vergebener `Id` zurück; wird in `_model.Headers` eingefügt.
-- **Header löschen** (`DeleteHeaderAsync`): `IApplicationApiClient.DeleteHeaderAsync(id)` → `DELETE /api/endpoints/headers/{id}` → Eintrag wird aus `_model.Headers` entfernt.
-- **Query-Parameter hinzufügen** (`AddQueryParameterAsync`): `IApplicationApiClient.AddQueryParameterAsync(parameter)` → `POST /api/endpoints/query-parameters` → gibt `EndpointQueryParameter` zurück.
-- **Query-Parameter löschen** (`DeleteQueryParameterAsync`): `IApplicationApiClient.DeleteQueryParameterAsync(id)` → `DELETE /api/endpoints/query-parameters/{id}`.
+Nur beim erstmaligen Anlegen eines Endpunkts (`CreateEndpointWithDetailsAsync`, `Id == 0`) werden die Kinder nach dem `AddEndpointAsync`-Aufruf über die atomaren Routen nachgepflegt, da `POST /api/endpoints` keine Kind-Mengen entgegennimmt:
+
+- **Header hinzufügen**: `IApplicationApiClient.AddHeaderAsync(header)` → `POST /api/endpoints/headers` → gibt `EndpointHeader` mit vergebener `Id` zurück.
+- **Query-Parameter hinzufügen**: `IApplicationApiClient.AddQueryParameterAsync(parameter)` → `POST /api/endpoints/query-parameters` → gibt `EndpointQueryParameter` zurück.
+
+Die atomaren Routen `POST`/`DELETE /api/endpoints/headers` und `/api/endpoints/query-parameters` bleiben als öffentlicher REST-Vertrag bestehen, werden aber vom Speicherpfad der Detailseite nicht mehr verwendet.
 
 Beteiligte Komponenten:
-- `EndpointPage.AddHeaderAsync()` / `DeleteHeaderAsync()` / `AddQueryParameterAsync()` / `DeleteQueryParameterAsync()`
+- `EndpointPage.CreateEndpointWithDetailsAsync()` — Kind-Nachpflege beim Anlegen
 - `IApplicationApiClient` — HTTP-Transport
-- `RequestHeadersPanel` / `RequestQueryParamsPanel` — UI-Komponenten, die die jeweiligen `OnAdd`/`OnDelete`-Callbacks auslösen
+- `RequestHeadersPanel` / `RequestQueryParamsPanel` — UI-Komponenten mit `OnChanged`-Callback
 
 ---
 

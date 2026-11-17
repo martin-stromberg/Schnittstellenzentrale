@@ -490,9 +490,11 @@ Legt einen neuen `Endpoint` an.
 
 ## PUT /api/endpoints/{id}
 
-Aktualisiert einen bestehenden `Endpoint`.
+Aktualisiert einen bestehenden `Endpoint` als Aggregat in einer einzigen serverseitigen Operation.
 
 **Authentifizierung:** Bearer-Token.
+
+**Aggregat-Semantik:** Der Request ersetzt sämtliche Skalarwerte und die vollständigen Kind-Mengen `headers` und `queryParameters`. Die mitgelieferten Listen gelten als Vollmengen — nicht aufgeführte Einträge werden entfernt, leere Listen löschen die jeweilige Menge komplett. Skalare und Kinder werden atomar gemeinsam persistiert; `rowVersion` dient weiterhin der Optimistic-Concurrency-Prüfung.
 
 **Request-Body:** alle Felder aus `POST /api/endpoints` ohne `applicationId`, zusätzlich:
 
