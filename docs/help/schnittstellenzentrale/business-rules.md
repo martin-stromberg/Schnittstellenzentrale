@@ -68,21 +68,22 @@
 
 ## Selektiver Endpunktabgleich beim App-Start
 
-**Beschreibung:** Beim Start der Anwendung werden die in der Datenbank gespeicherten Endpunkte der Systemanwendung automatisch mit der eigenen Swagger-Definition abgeglichen — ohne manuell konfigurierten Felder zu überschreiben.
+**Beschreibung:** Beim Start der Anwendung werden die in der Datenbank gespeicherten Endpunkte der Systemanwendung automatisch mit der eigenen Swagger-Definition abgeglichen — über denselben serverseitigen Ausführungspfad wie der manuelle Swagger-Import.
 
 **Bedingungen:**
 - Die Systemgruppe und -anwendung müssen in der Datenbank vorhanden sein (angelegt durch `SystemEntryInitializer`).
-- Die Swagger-Definition muss unter `Application.InterfaceUrl` abrufbar sein.
+- Das eigene OpenAPI-Dokument muss über `ISwaggerProvider.GetSwagger("v1")` erzeugbar sein.
 
 **Verhalten:**
-- Wenn ein Endpunkt nur in der Swagger-Definition vorhanden ist (neuer Endpunkt): wird via `AddEndpointAsync` angelegt.
-- Wenn ein Endpunkt nur in der Datenbank vorhanden ist (entfernter Endpunkt): wird via `DeleteEndpointAsync` gelöscht.
-- Wenn ein Endpunkt in beiden vorhanden ist, aber `Name` unterschiedlich ist (geänderter Name): wird via `UpdateEndpointNameAsync` nur der `Name` aktualisiert; `AuthenticationType`, `Body`, `Headers` und `QueryParameters` bleiben erhalten.
-- Wenn ein Endpunkt in beiden vorhanden ist und `Name` gleich ist: kein Eingriff.
+- Wenn ein Endpunkt nur in der Swagger-Definition vorhanden ist (neuer Endpunkt): wird angelegt — inklusive Gruppenzuordnung aus den Pfadsegmenten.
+- Wenn ein Endpunkt nur in der Datenbank vorhanden ist (entfernter Endpunkt): wird gelöscht.
+- Wenn ein Endpunkt in beiden vorhanden ist, aber `Name`, `Body`, `AuthenticationType` oder die Vor-/Nachher-Skripte abweichen (geänderter Endpunkt): wird der Endpunkt auf die Dokumentwerte aktualisiert; `Headers`, `QueryParameters` und die Gruppenzugehörigkeit bleiben erhalten.
+- Im Dokument mitgelieferte Bearer-Tokens (`x-sz-bearer-token`) werden im Credential Store gespeichert.
+- Wenn das Dokument oder der Bestand Duplikatschlüssel (`{Method}:{RelativePath}`) enthält: `ImportDiff.ErrorMessage` wird gesetzt, nichts wird angewendet, Warnung wird geloggt.
 - Wenn `GetSystemGroupAsync()` `null` zurückgibt oder keine Systemanwendung gefunden wird: Abgleich wird übersprungen, Warnung wird geloggt.
-- Wenn die Swagger-Definition nicht abrufbar ist (`diff.ErrorMessage != null`) oder eine unerwartete Exception auftritt: Fehler wird geloggt, die Anwendung startet trotzdem normal.
+- Bei einem Fehler im Abgleich oder einer unerwarteten Exception: Fehler wird geloggt, die Anwendung startet trotzdem normal.
 
-**Umsetzung:** `SystemEndpointSyncService.ExecuteAsync` — verwendet `ISwaggerImportService.ImportAsync` für den Diff und ruft selektiv `IEndpointRepository.AddEndpointAsync`, `DeleteEndpointAsync` und `UpdateEndpointNameAsync` auf; `ApplyDiffAsync` wird bewusst nicht verwendet, da es auch `ChangedEndpoints` vollständig überschreiben würde.
+**Umsetzung:** `SystemEndpointSyncService.ExecuteAsync` löst Systemgruppe und -anwendung auf (direkter `IApplicationRepository`-Zugriff — dokumentierte Ausnahme vom API-First-Prinzip, da beim Start kein zuverlässiger HTTP-Roundtrip möglich ist), beschafft das Dokument via `ISwaggerProvider` und ruft `ISwaggerImportService.SyncFromDocumentAsync`. Die gesamte Differenzbildung und Persistenz liegt in `SwaggerImportService` (Infrastructure) — gemeinsamer Pfad mit dem manuellen Import.
 
 ---
 
