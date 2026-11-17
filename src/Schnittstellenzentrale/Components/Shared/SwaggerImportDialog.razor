@@ -1,4 +1,4 @@
-@inject ISwaggerImportService SwaggerImportService
+@inject IApplicationApiClient ApiClient
 @inject IStringLocalizer<SharedResources> L
 
 <ImportDialog Title="@L["SwaggerImportDialog_Title"]" Diff="Diff" Application="Application" OnApply="ApplyAsync" OnClose="OnClose" />
@@ -10,6 +10,6 @@
 
     private async Task ApplyAsync(ImportDiff diff)
     {
-        await SwaggerImportService.ApplyDiffAsync(diff);
+        await ApiClient.ApplySwaggerDiffAsync(Application.Id, diff);
     }
 }

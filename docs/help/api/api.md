@@ -701,3 +701,46 @@ Der Diff wird vollständig angewendet:
 | 401 Unauthorized | Token fehlt, unbekannt oder abgelaufen |
 | 404 Not Found | Anwendung nicht gefunden |
 | 422 Unprocessable Entity | Die Anwendung hat den Interface-Typ `OData` nicht; nur OData-Anwendungen unterstützen diesen Import-Endpunkt |
+
+---
+
+## POST /api/applications/{id}/swagger-import/apply
+
+Wendet einen Swagger-Import-Diff serverseitig auf eine Anwendung an. Dieser Endpunkt wird normalerweise intern von `IApplicationApiClient.ApplySwaggerDiffAsync()` aufgerufen, kann aber auch von externen Clients für Swagger-/OpenAPI-Import-Workflows verwendet werden.
+
+**Authentifizierung:** Bearer-Token (aus `/authenticate`).
+
+**Request-Header:**
+
+| Header | Pflicht | Beschreibung |
+|--------|---------|--------------|
+| `Authorization` | Ja | `Bearer <token>` |
+
+**Pfadparameter:**
+
+| Parameter | Typ | Pflicht | Beschreibung |
+|-----------|-----|---------|--------------|
+| `id` | `int` | Ja | ID der Anwendung |
+
+**Request-Body:** `ImportDiff`-Objekt (Struktur wie bei `POST /api/applications/{id}/odata-import/apply`).
+
+**Zusätzliche Validierung (Aggregat-Zugehörigkeit):** Alle Endpunkte in `newEndpoints`, `changedEndpoints` und `removedEndpoints` müssen die `applicationId` der Zielanwendung tragen. Enthält der Diff Endpunkte einer anderen Anwendung, wird der Diff vollständig verworfen — es wird nichts angewendet.
+
+**Response: 204 No Content**
+
+Der Diff wird vollständig angewendet:
+- Neue Endpunkte werden eingefügt (Gruppen werden aus den Pfadsegmenten des `relativePath` abgeleitet).
+- Bestehende Endpunkte werden aktualisiert.
+- Entfernte Endpunkte werden gelöscht.
+- Bearer-Tokens aus dem `bearerTokens`-Dictionary werden persistiert, wenn der zugehörige Endpunkt die Authentifizierung auf `BearerToken` setzt.
+
+**Response-Header:** `X-New-Token`
+
+**Fehler:**
+
+| Status | Ursache |
+|--------|---------|
+| 401 Unauthorized | Token fehlt, unbekannt oder abgelaufen |
+| 404 Not Found | Anwendung nicht gefunden |
+| 422 Unprocessable Entity | Die Anwendung hat den Interface-Typ `Rest` nicht; nur REST-Anwendungen unterstützen diesen Import-Endpunkt |
+| 422 Unprocessable Entity | Der Diff enthält Endpunkte mit einer `applicationId`, die nicht zur Zielanwendung gehört (`errorMessage` im Body beschreibt die Verletzung) |

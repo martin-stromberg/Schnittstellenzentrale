@@ -61,6 +61,47 @@ public class ApplicationImportController : ApiControllerBase
         return NoContent();
     }
 
+    /// <summary>Wendet einen Swagger-Import-Diff auf die angegebene Anwendung an.</summary>
+    /// <param name="id">Die Anwendungs-ID.</param>
+    /// <param name="diff">Der anzuwendende ImportDiff.</param>
+    /// <returns>Das Ergebnis.</returns>
+    /// <response code="204">Diff wurde erfolgreich angewendet.</response>
+    /// <response code="401">Token fehlt oder ist ungültig.</response>
+    /// <response code="404">Anwendung nicht gefunden.</response>
+    /// <response code="422">Die Anwendung unterstützt keinen Swagger-Import oder der Diff enthält Endpunkte einer anderen Anwendung.</response>
+    [HttpPost("{id:int}/swagger-import/apply")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> ApplySwaggerDiffAsync(int id, [FromBody][ValidateNever] ImportDiff diff)
+    {
+        var newToken = await ValidateTokenAndSetResponseHeaderAsync();
+        if (newToken == null)
+            return Unauthorized();
+
+        var application = await _applicationRepository.GetApplicationByIdAsync(id);
+        if (application == null)
+            return NotFound();
+
+        if (application.InterfaceType != InterfaceType.Rest)
+            return UnprocessableEntity(new { errorMessage = "Die Anwendung unterstützt keinen Swagger-Import." });
+
+        if (diff == null)
+            return UnprocessableEntity(new { errorMessage = "Es wurde kein Import-Diff übergeben." });
+
+        try
+        {
+            await _swaggerImportService.ApplyDiffAsync(diff, id);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return UnprocessableEntity(new { errorMessage = ex.Message });
+        }
+
+        return NoContent();
+    }
+
     /// <summary>Berechnet den Import-Diff für die angegebene Anwendung. Der Import-Service wird anhand des Interface-Typs der Anwendung ausgewählt.</summary>
     /// <param name="id">Die Anwendungs-ID.</param>
     /// <returns>Das Ergebnis.</returns>

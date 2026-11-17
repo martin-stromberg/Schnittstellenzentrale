@@ -97,4 +97,57 @@ public class ImportDialogTests : BunitContext
         Assert.Equal("my-token", capturedDiff.BearerTokens["http://example.com"]);
         Assert.True(onCloseCalled);
     }
+
+    /// <summary>
+    /// SwaggerImportDialog ruft beim Übernehmen den API-Client-Pfad
+    /// (ApplySwaggerDiffAsync) mit der ID der Anwendung auf.
+    /// </summary>
+    [Fact]
+    public async Task SwaggerImportDialog_ApplyAsync_CallsApiClient()
+    {
+        var app = CreateApplication();
+        var diff = CreateDiff();
+
+        _apiClientMock
+            .Setup(s => s.ApplySwaggerDiffAsync(It.IsAny<int>(), It.IsAny<ImportDiff>()))
+            .Returns(Task.CompletedTask);
+
+        var cut = Render<SwaggerImportDialog>(p =>
+        {
+            p.Add(x => x.Diff, diff);
+            p.Add(x => x.Application, app);
+            p.Add(x => x.OnClose, EventCallback.Empty);
+        });
+
+        var applyButton = cut.Find("button.sz-btn-primary");
+        await cut.InvokeAsync(() => applyButton.Click());
+
+        _apiClientMock.Verify(s => s.ApplySwaggerDiffAsync(app.Id, It.IsAny<ImportDiff>()), Times.Once);
+    }
+
+    /// <summary>
+    /// Eine Exception aus ApplySwaggerDiffAsync wird als Fehlermeldung im Dialog angezeigt.
+    /// </summary>
+    [Fact]
+    public async Task SwaggerImportDialog_ApplyAsync_OnException_ErrorIsDisplayedInImportDialog()
+    {
+        var app = CreateApplication();
+        var diff = CreateDiff();
+
+        _apiClientMock
+            .Setup(s => s.ApplySwaggerDiffAsync(It.IsAny<int>(), It.IsAny<ImportDiff>()))
+            .ThrowsAsync(new InvalidOperationException("Der Import-Diff enthält Endpunkte, die nicht zur Anwendung 1 gehören."));
+
+        var cut = Render<SwaggerImportDialog>(p =>
+        {
+            p.Add(x => x.Diff, diff);
+            p.Add(x => x.Application, app);
+            p.Add(x => x.OnClose, EventCallback.Empty);
+        });
+
+        var applyButton = cut.Find("button.sz-btn-primary");
+        await cut.InvokeAsync(() => applyButton.Click());
+
+        Assert.Contains("ImportDialog_Error_Apply", cut.Markup);
+    }
 }
