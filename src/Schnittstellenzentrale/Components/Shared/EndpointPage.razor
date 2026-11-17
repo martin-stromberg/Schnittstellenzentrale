@@ -71,15 +71,11 @@
         }
         else if (_activeRequestTab == "headers")
         {
-            <RequestHeadersPanel Headers="_headers" OnChanged="MarkDirty"
-                                 OnHeaderAdded="AddHeaderAsync"
-                                 OnHeaderRemoved="DeleteHeaderAsync" />
+            <RequestHeadersPanel Headers="_headers" OnChanged="MarkDirty" />
         }
         else if (_activeRequestTab == "query")
         {
-            <RequestQueryParamsPanel QueryParameters="_queryParameters" OnChanged="MarkDirty"
-                                     OnQueryParameterAdded="AddQueryParameterAsync"
-                                     OnQueryParameterRemoved="DeleteQueryParameterAsync" />
+            <RequestQueryParamsPanel QueryParameters="_queryParameters" OnChanged="MarkDirty" />
         }
         else if (_activeRequestTab == "body")
         {
@@ -439,38 +435,6 @@
                 new EndpointQueryParameter { Key = param.Key, Value = param.Value, EndpointId = saved.Id });
             param.Id = savedParam.Id;
         }
-    }
-
-    private async Task AddHeaderAsync(RequestHeadersPanel.HeaderEntry entry)
-    {
-        if (_model.Id == 0 || string.IsNullOrWhiteSpace(entry.Key))
-            return;
-        var saved = await ApplicationApiClient.AddHeaderAsync(
-            new EndpointHeader { Key = entry.Key, Value = entry.Value, EndpointId = _model.Id });
-        entry.Id = saved.Id;
-    }
-
-    private async Task DeleteHeaderAsync(RequestHeadersPanel.HeaderEntry entry)
-    {
-        if (entry.Id == 0)
-            return;
-        await ApplicationApiClient.DeleteHeaderAsync(entry.Id);
-    }
-
-    private async Task AddQueryParameterAsync(RequestQueryParamsPanel.QueryParamEntry entry)
-    {
-        if (_model.Id == 0 || entry.IsPathParameter || string.IsNullOrWhiteSpace(entry.Key))
-            return;
-        var saved = await ApplicationApiClient.AddQueryParameterAsync(
-            new EndpointQueryParameter { Key = entry.Key, Value = entry.Value, EndpointId = _model.Id });
-        entry.Id = saved.Id;
-    }
-
-    private async Task DeleteQueryParameterAsync(RequestQueryParamsPanel.QueryParamEntry entry)
-    {
-        if (entry.Id == 0)
-            return;
-        await ApplicationApiClient.DeleteQueryParameterAsync(entry.Id);
     }
 
     private async Task OnSaveSuccessAsync()

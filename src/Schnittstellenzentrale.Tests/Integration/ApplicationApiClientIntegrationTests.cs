@@ -407,6 +407,68 @@ public class ApplicationApiClientIntegrationTests : IClassFixture<ControllerTest
         Assert.Equal("/api/updated", body.RelativePath);
     }
 
+    /// <summary>PutEndpoint_ReplacesScalarsAndFullChildSets</summary>
+    [Fact]
+    public async Task PutEndpoint_ReplacesScalarsAndFullChildSets()
+    {
+        var client = _factory.CreateClient();
+        var token = await _factory.ObtainTokenAsync(client);
+
+        var postApp = await client.SendAsync(BuildRequest(HttpMethod.Post, "/api/applications", token,
+            new CreateApplicationRequest { Name = "AppForAggregatePut", BaseUrl = "https://aggregate-put.example.com" }));
+        postApp.EnsureSuccessStatusCode();
+        var createdApp = await postApp.Content.ReadFromJsonAsync<ApplicationResponse>();
+        token = ExtractNewToken(postApp);
+
+        var postEndpoint = await client.SendAsync(BuildRequest(HttpMethod.Post, "/api/endpoints", token,
+            new CreateEndpointRequest { Name = "AggregateEndpoint", RelativePath = "/api/aggregate", ApplicationId = createdApp!.Id }));
+        postEndpoint.EnsureSuccessStatusCode();
+        var createdEndpoint = await postEndpoint.Content.ReadFromJsonAsync<EndpointResponse>();
+        token = ExtractNewToken(postEndpoint);
+
+        var addHeader = await client.SendAsync(BuildRequest(HttpMethod.Post, "/api/endpoints/headers", token,
+            new AddEndpointKeyValueRequest { Key = "Alt", Value = "1", EndpointId = createdEndpoint!.Id }));
+        addHeader.EnsureSuccessStatusCode();
+        token = ExtractNewToken(addHeader);
+
+        var addParam = await client.SendAsync(BuildRequest(HttpMethod.Post, "/api/endpoints/query-parameters", token,
+            new AddEndpointKeyValueRequest { Key = "altQ", Value = "a", EndpointId = createdEndpoint.Id }));
+        addParam.EnsureSuccessStatusCode();
+        token = ExtractNewToken(addParam);
+
+        var putResponse = await client.SendAsync(BuildRequest(HttpMethod.Put, $"/api/endpoints/{createdEndpoint.Id}", token,
+            new UpdateEndpointRequest
+            {
+                Name = "AggregateRenamed",
+                RelativePath = "/api/aggregate-new",
+                Method = Schnittstellenzentrale.Core.Enums.HttpMethod.POST,
+                RowVersion = createdEndpoint.RowVersion,
+                Headers = [new UpdateEndpointKeyValueItem { Key = "Neu", Value = "x" }],
+                QueryParameters =
+                [
+                    new UpdateEndpointKeyValueItem { Key = "n1", Value = "1" },
+                    new UpdateEndpointKeyValueItem { Key = "n2", Value = "2" }
+                ]
+            }));
+
+        Assert.Equal(HttpStatusCode.OK, putResponse.StatusCode);
+        token = ExtractNewToken(putResponse);
+
+        var getResponse = await client.SendAsync(BuildRequest(HttpMethod.Get, $"/api/endpoints/{createdEndpoint.Id}", token));
+        Assert.Equal(HttpStatusCode.OK, getResponse.StatusCode);
+        var body = await getResponse.Content.ReadFromJsonAsync<EndpointResponse>();
+        Assert.NotNull(body);
+        Assert.Equal("AggregateRenamed", body.Name);
+        Assert.Equal("/api/aggregate-new", body.RelativePath);
+        Assert.Equal(Schnittstellenzentrale.Core.Enums.HttpMethod.POST, body.Method);
+        var header = Assert.Single(body.Headers);
+        Assert.Equal("Neu", header.Key);
+        Assert.Equal("x", header.Value);
+        Assert.Equal(2, body.QueryParameters.Count);
+        Assert.Contains(body.QueryParameters, p => p.Key == "n1" && p.Value == "1");
+        Assert.Contains(body.QueryParameters, p => p.Key == "n2" && p.Value == "2");
+    }
+
     /// <summary>PutEndpoint_WithInvalidId_Returns404</summary>
     [Fact]
     public async Task PutEndpoint_WithInvalidId_Returns404()

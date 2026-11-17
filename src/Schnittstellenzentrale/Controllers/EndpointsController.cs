@@ -170,30 +170,13 @@ public class EndpointsController : ApiControllerBase
             AuthenticationType = request.AuthenticationType,
             PreRequestScript = request.PreRequestScript,
             PostRequestScript = request.PostRequestScript,
-            RowVersion = request.RowVersion
+            RowVersion = request.RowVersion,
+            Headers = [.. request.Headers.Select(h => new EndpointHeader { Key = h.Key, Value = h.Value, EndpointId = id })],
+            QueryParameters = [.. request.QueryParameters.Select(p => new EndpointQueryParameter { Key = p.Key, Value = p.Value, EndpointId = id })]
         };
 
-        var saved = await _endpointRepository.UpdateEndpointAsync(endpoint);
-
-        foreach (var h in existing.Headers)
-            await _endpointRepository.DeleteHeaderAsync(h.Id);
-        foreach (var h in request.Headers)
-            await _endpointRepository.AddHeaderAsync(new EndpointHeader
-            {
-                Key = h.Key,
-                Value = h.Value,
-                EndpointId = id
-            });
-
-        foreach (var p in existing.QueryParameters)
-            await _endpointRepository.DeleteQueryParameterAsync(p.Id);
-        foreach (var p in request.QueryParameters)
-            await _endpointRepository.AddQueryParameterAsync(new EndpointQueryParameter
-            {
-                Key = p.Key,
-                Value = p.Value,
-                EndpointId = id
-            });
+        // Aggregat-Update: ersetzt Skalare und die vollständigen Kind-Mengen in einer Operation.
+        await _endpointRepository.UpdateEndpointAsync(endpoint);
 
         var updated = await _endpointRepository.GetEndpointByIdAsync(id);
         if (updated == null)
