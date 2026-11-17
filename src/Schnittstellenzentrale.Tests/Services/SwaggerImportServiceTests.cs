@@ -315,7 +315,7 @@ public class SwaggerImportServiceTests
             BearerTokens = new Dictionary<string, string> { ["GET:/items"] = "myToken" }
         };
 
-        await service.ApplyDiffAsync(diff);
+        await service.ApplyDiffAsync(diff, 1);
 
         credentialMock.Verify(c => c.SavePassword(
             It.Is<string>(t => t.Contains("BearerToken")),
@@ -352,7 +352,7 @@ public class SwaggerImportServiceTests
             }]
         };
 
-        await service.ApplyDiffAsync(diff);
+        await service.ApplyDiffAsync(diff, 1);
 
         Assert.Equal(2, createdGroups.Count);
         Assert.Equal("applications", createdGroups[0].Name);
@@ -391,7 +391,7 @@ public class SwaggerImportServiceTests
             }]
         };
 
-        await service.ApplyDiffAsync(diff);
+        await service.ApplyDiffAsync(diff, 1);
 
         Assert.Single(createdGroups);
         Assert.Equal("application-groups", createdGroups[0].Name);
@@ -420,7 +420,7 @@ public class SwaggerImportServiceTests
             ]
         };
 
-        await service.ApplyDiffAsync(diff);
+        await service.ApplyDiffAsync(diff, 1);
 
         repoMock.Verify(r => r.AddEndpointGroupAsync(It.IsAny<Core.Models.EndpointGroup>()), Times.Never);
         repoMock.Verify(r => r.AddEndpointAsync(It.Is<Core.Models.Endpoint>(e => e.EndpointGroupId == 5)), Times.Exactly(2));
@@ -439,10 +439,47 @@ public class SwaggerImportServiceTests
             RemovedEndpoints = [new Core.Models.Endpoint { Id = 7, Name = "old", Method = CoreHttpMethod.DELETE, RelativePath = "/old", ApplicationId = 1 }]
         };
 
-        await service.ApplyDiffAsync(diff);
+        await service.ApplyDiffAsync(diff, 1);
 
         repoMock.Verify(r => r.AddEndpointAsync(It.IsAny<Core.Models.Endpoint>()), Times.Never);
         repoMock.Verify(r => r.UpdateEndpointAsync(It.IsAny<Core.Models.Endpoint>()), Times.Never);
+        repoMock.Verify(r => r.DeleteEndpointAsync(It.IsAny<int>()), Times.Never);
+    }
+
+    /// <summary>ApplyDiff_MismatchedApplicationId_ThrowsAndDoesNotApply</summary>
+    [Fact]
+    public async Task ApplyDiff_MismatchedApplicationId_ThrowsAndDoesNotApply()
+    {
+        var repoMock = new Mock<IEndpointRepository>();
+        var service = CreateService(SwaggerWithGetPost, repoMock);
+        var diff = new ImportDiff
+        {
+            NewEndpoints = [new Core.Models.Endpoint { Name = "getItems", Method = CoreHttpMethod.GET, RelativePath = "/items", ApplicationId = 99 }],
+            ChangedEndpoints = [new Core.Models.Endpoint { Id = 3, Name = "chg", Method = CoreHttpMethod.GET, RelativePath = "/items", ApplicationId = 1 }],
+            RemovedEndpoints = [new Core.Models.Endpoint { Id = 4, Name = "del", Method = CoreHttpMethod.DELETE, RelativePath = "/items", ApplicationId = 1 }]
+        };
+
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => service.ApplyDiffAsync(diff, 1));
+
+        Assert.Contains("Anwendung 1", ex.Message);
+        repoMock.Verify(r => r.AddEndpointAsync(It.IsAny<Core.Models.Endpoint>()), Times.Never);
+        repoMock.Verify(r => r.UpdateEndpointAsync(It.IsAny<Core.Models.Endpoint>()), Times.Never);
+        repoMock.Verify(r => r.DeleteEndpointAsync(It.IsAny<int>()), Times.Never);
+    }
+
+    /// <summary>ApplyDiff_MismatchedRemovedEndpoint_ThrowsAndDoesNotApply</summary>
+    [Fact]
+    public async Task ApplyDiff_MismatchedRemovedEndpoint_ThrowsAndDoesNotApply()
+    {
+        var repoMock = new Mock<IEndpointRepository>();
+        var service = CreateService(SwaggerWithGetPost, repoMock);
+        var diff = new ImportDiff
+        {
+            RemovedEndpoints = [new Core.Models.Endpoint { Id = 4, Name = "del", Method = CoreHttpMethod.DELETE, RelativePath = "/items", ApplicationId = 42 }]
+        };
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => service.ApplyDiffAsync(diff, 1));
+
         repoMock.Verify(r => r.DeleteEndpointAsync(It.IsAny<int>()), Times.Never);
     }
 

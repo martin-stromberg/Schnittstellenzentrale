@@ -457,6 +457,22 @@ public class ApplicationApiClient : IApplicationApiClient
     }
 
     /// <inheritdoc/>
+    public async Task ApplySwaggerDiffAsync(int applicationId, ImportDiff diff)
+    {
+        var baseUrl = GetBaseUrl();
+        var storageMode = _storageModeService.CurrentMode;
+
+        var httpResponse = await ExecuteWithTokenAsync(
+            t => BuildRequestWithBody(HttpMethod.Post, $"{baseUrl}/api/applications/{applicationId}/swagger-import/apply", diff, storageMode, t));
+
+        if (!httpResponse.IsSuccessStatusCode)
+        {
+            var errorBody = await TryReadErrorMessageAsync(httpResponse);
+            throw new InvalidOperationException(errorBody ?? $"HTTP-Fehler: {(int)httpResponse.StatusCode} {httpResponse.ReasonPhrase}");
+        }
+    }
+
+    /// <inheritdoc/>
     public async Task<SystemEnvironment?> GetEnvironmentByIdAsync(int id)
     {
         var baseUrl = GetBaseUrl();

@@ -74,7 +74,7 @@ public class SwaggerImportService : ISwaggerImportService
             return diff;
         }
 
-        await ApplyDiffAsync(diff);
+        await ApplyDiffAsync(diff, applicationId);
         return diff;
     }
 
@@ -100,12 +100,22 @@ public class SwaggerImportService : ISwaggerImportService
     }
 
     /// <inheritdoc/>
-    public async Task ApplyDiffAsync(ImportDiff diff)
+    public async Task ApplyDiffAsync(ImportDiff diff, int applicationId)
     {
+        ArgumentNullException.ThrowIfNull(diff);
+
         if (!string.IsNullOrEmpty(diff.ErrorMessage))
         {
             _logger.LogWarning("ImportDiff mit Fehler wird nicht angewendet: {ErrorMessage}", diff.ErrorMessage);
             return;
+        }
+
+        if (diff.NewEndpoints.Any(e => e.ApplicationId != applicationId)
+            || diff.ChangedEndpoints.Any(e => e.ApplicationId != applicationId)
+            || diff.RemovedEndpoints.Any(e => e.ApplicationId != applicationId))
+        {
+            throw new InvalidOperationException(
+                $"Der Import-Diff enthält Endpunkte, die nicht zur Anwendung {applicationId} gehören.");
         }
 
         Dictionary<(string Name, int? ParentGroupId), EndpointGroup>? groupLookup = null;

@@ -137,4 +137,9 @@ public interface IApplicationApiClient
     /// <param name="applicationId">ID der Anwendung.</param>
     /// <param name="diff">Der anzuwendende Unterschied.</param>
     Task ApplyODataDiffAsync(int applicationId, ImportDiff diff);
+
+    /// <summary>Wendet einen Swagger-Importunterschied an.</summary>
+    /// <param name="applicationId">ID der Anwendung.</param>
+    /// <param name="diff">Der anzuwendende Unterschied.</param>
+    Task ApplySwaggerDiffAsync(int applicationId, ImportDiff diff);
 }

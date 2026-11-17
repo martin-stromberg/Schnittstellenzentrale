@@ -577,7 +577,7 @@ In `ApplicationContentView.OpenODataImportAsync`:
 `ODataImportDialog` delegiert an die generische `ImportDialog`-Komponente und registriert den `OnClose`-Callback.
 
 - **Bestätigung:** `ImportDialog` ruft die von `ODataImportDialog` übergebene `OnApplyAsync`-Callback auf.
-  - `ODataImportService.ApplyDiffAsync` persistiert die neuen, geänderten und gelöschten Endpunkte über `IEndpointRepository`.
+  - `IApplicationApiClient.ApplyODataDiffAsync` ruft `POST /api/applications/{id}/odata-import/apply` auf; der Endpunkt persistiert nach Token-, Existenz- und Typprüfung über `ODataImportService.ApplyDiffAsync` die neuen, geänderten und gelöschten Endpunkte via `IEndpointRepository`.
   - Bei `StorageMode.Team`: `ISignalRNotificationService.NotifyEndpointChangedAsync` für jede betroffene Anwendung.
   - Dialog wird geschlossen; `CloseODataImport` wird aufgerufen.
 

@@ -19,5 +19,7 @@ public interface ISwaggerImportService
 
     /// <summary>Wendet eine zuvor ermittelte Importdifferenz an.</summary>
     /// <param name="diff">Die anzuwendende Importdifferenz.</param>
-    Task ApplyDiffAsync(ImportDiff diff);
+    /// <param name="applicationId">Die ID der Zielanwendung, der alle Endpunkte des Diffs zugeordnet sein müssen.</param>
+    /// <exception cref="InvalidOperationException">Der Diff enthält Endpunkte mit einer abweichenden Anwendungs-ID; der Diff wird nicht angewendet.</exception>
+    Task ApplyDiffAsync(ImportDiff diff, int applicationId);
 }
