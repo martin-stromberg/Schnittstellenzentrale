@@ -122,7 +122,7 @@ Die Authentifizierung erfolgt mittels Windows-Authentifizierung (Negotiate), die
 | `/api/endpoint-groups` | CRUD für `EndpointGroup` |
 | `/api/endpoints` | CRUD für `Endpoint` inkl. Header- und Query-Parameter-Routen |
 
-Alle Endpunkte erfordern Bearer-Token im `Authorization`-Header. Unterstützt `X-Storage-Mode` (`Team`/`User`) und `X-Owner` für benutzermodus-abhängige Filterung. Schreibzugriffe lösen SignalR-Benachrichtigungen an alle verbundenen Clients aus.
+Alle Endpunkte erfordern Bearer-Token im `Authorization`-Header. Unterstützt `X-Storage-Mode` (`Team`/`User`) und `X-Owner` für benutzermodus-abhängige Filterung. Mutierende Zugriffe lösen im Team-Modus über die zentrale `INotificationPolicy` jeweils genau eine SignalR-Benachrichtigung an alle verbundenen Clients aus — einheitlich für REST, OData, Import-Apply und den Startabgleich.
 
 ### OData v4-API (`/odatav4`)
 

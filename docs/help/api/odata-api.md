@@ -4,6 +4,8 @@
 
 Der OData v4-Service ist unter dem Präfix `/odatav4` erreichbar. Er exponiert vier Entity-Sets und ein CSDL-Metadaten-Dokument. Alle Datenendpunkte erfordern einen gültigen Bearer-Token. Der Token kann direkt über `GET /odatav4/Authenticate()` oder `POST /odatav4/Authenticate()` (Windows/Negotiate) bezogen werden — unabhängig von der REST-API. OData-Abfrageoptionen (`$filter`, `$select`, `$expand`, `$orderby`, `$top`, `$skip`) werden auf allen Collection-Endpunkten unterstützt. Der `X-Storage-Mode`-Header wird von allen Datencontrollern ausgewertet (Standard: `User`), um die zurückgegebenen Datensätze zu filtern.
 
+**Benachrichtigungen:** Alle mutierenden Operationen (`POST`/`PUT`/`PATCH`/`DELETE`) der vier Entity-Sets lösen über die zentrale `INotificationPolicy` dieselben SignalR-Benachrichtigungen aus wie ihre REST-Pendants: Baum-Benachrichtigung (`TreeChanged`) für `Applications` und `ApplicationGroups`, entitätsspezifische Benachrichtigung (`EndpointChanged`/`EndpointGroupChanged`) für `Endpoints` und `EndpointGroups`. Im Team-Modus wird pro erfolgreichem mutierendem Request genau eine Benachrichtigung gesendet; im Benutzermodus keine. Details: [Business Rules — Zentrale Benachrichtigungs-Policy](business-rules.md#zentrale-benachrichtigungs-policy-inotificationpolicy).
+
 ---
 
 ## OData-Metadaten-Import

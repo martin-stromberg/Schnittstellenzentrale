@@ -13,20 +13,20 @@ namespace Schnittstellenzentrale.Controllers;
 public class EndpointsController : ApiControllerBase
 {
     private readonly IEndpointRepository _endpointRepository;
-    private readonly ISignalRNotificationService _signalRNotificationService;
+    private readonly INotificationPolicy _notificationPolicy;
 
     /// <summary>Initialisiert eine neue Instanz von <see cref="EndpointsController"/>.</summary>
     /// <param name="tokenStore">Der Token-Store.</param>
     /// <param name="endpointRepository">Das Repository für Endpunkte.</param>
-    /// <param name="signalRNotificationService">Der SignalR-Benachrichtigungs-Service.</param>
+    /// <param name="notificationPolicy">Die zentrale Benachrichtigungs-Policy.</param>
     public EndpointsController(
         ITokenStore tokenStore,
         IEndpointRepository endpointRepository,
-        ISignalRNotificationService signalRNotificationService)
+        INotificationPolicy notificationPolicy)
         : base(tokenStore)
     {
         _endpointRepository = endpointRepository;
-        _signalRNotificationService = signalRNotificationService;
+        _notificationPolicy = notificationPolicy;
     }
 
     /// <summary>
@@ -124,8 +124,7 @@ public class EndpointsController : ApiControllerBase
         };
         var saved = await _endpointRepository.AddEndpointAsync(endpoint);
 
-        if (context.StorageMode == StorageMode.Team)
-            await _signalRNotificationService.NotifyEndpointChangedAsync(saved.Id, saved.ApplicationId);
+        await _notificationPolicy.NotifyEndpointMutationAsync(context.StorageMode, saved.Id, saved.ApplicationId);
 
         var response = MapToResponse(saved);
         return CreatedAtAction(null, new { id = saved.Id }, response);
@@ -182,8 +181,7 @@ public class EndpointsController : ApiControllerBase
         if (updated == null)
             return NotFound();
 
-        if (context.StorageMode == StorageMode.Team)
-            await _signalRNotificationService.NotifyEndpointChangedAsync(updated.Id, updated.ApplicationId);
+        await _notificationPolicy.NotifyEndpointMutationAsync(context.StorageMode, updated.Id, updated.ApplicationId);
 
         return Ok(MapToResponse(updated));
     }
@@ -214,8 +212,7 @@ public class EndpointsController : ApiControllerBase
         var applicationId = endpoint.ApplicationId;
         await _endpointRepository.DeleteEndpointAsync(id);
 
-        if (context.StorageMode == StorageMode.Team)
-            await _signalRNotificationService.NotifyEndpointChangedAsync(id, applicationId);
+        await _notificationPolicy.NotifyEndpointMutationAsync(context.StorageMode, id, applicationId);
 
         return NoContent();
     }
@@ -247,6 +244,10 @@ public class EndpointsController : ApiControllerBase
         };
         var saved = await _endpointRepository.AddHeaderAsync(header);
 
+        var endpoint = await _endpointRepository.GetEndpointByIdAsync(saved.EndpointId);
+        if (endpoint != null)
+            await _notificationPolicy.NotifyEndpointMutationAsync(context.StorageMode, saved.EndpointId, endpoint.ApplicationId);
+
         return CreatedAtAction(null, new { id = saved.Id }, MapToResponse(saved));
     }
 
@@ -274,6 +275,11 @@ public class EndpointsController : ApiControllerBase
             return NotFound();
 
         await _endpointRepository.DeleteHeaderAsync(id);
+
+        var endpoint = await _endpointRepository.GetEndpointByIdAsync(header.EndpointId);
+        if (endpoint != null)
+            await _notificationPolicy.NotifyEndpointMutationAsync(context.StorageMode, header.EndpointId, endpoint.ApplicationId);
+
         return NoContent();
     }
 
@@ -304,6 +310,10 @@ public class EndpointsController : ApiControllerBase
         };
         var saved = await _endpointRepository.AddQueryParameterAsync(parameter);
 
+        var endpoint = await _endpointRepository.GetEndpointByIdAsync(saved.EndpointId);
+        if (endpoint != null)
+            await _notificationPolicy.NotifyEndpointMutationAsync(context.StorageMode, saved.EndpointId, endpoint.ApplicationId);
+
         return CreatedAtAction(null, new { id = saved.Id }, MapToResponse(saved));
     }
 
@@ -331,6 +341,11 @@ public class EndpointsController : ApiControllerBase
             return NotFound();
 
         await _endpointRepository.DeleteQueryParameterAsync(id);
+
+        var endpoint = await _endpointRepository.GetEndpointByIdAsync(parameter.EndpointId);
+        if (endpoint != null)
+            await _notificationPolicy.NotifyEndpointMutationAsync(context.StorageMode, parameter.EndpointId, endpoint.ApplicationId);
+
         return NoContent();
     }
 }

@@ -14,20 +14,20 @@ namespace Schnittstellenzentrale.Controllers;
 public class ApplicationGroupsController : ApiControllerBase
 {
     private readonly IApplicationRepository _applicationRepository;
-    private readonly ISignalRNotificationService _signalRNotificationService;
+    private readonly INotificationPolicy _notificationPolicy;
 
     /// <summary>Initialisiert eine neue Instanz von <see cref="ApplicationGroupsController"/>.</summary>
     /// <param name="tokenStore">Der Token-Store.</param>
     /// <param name="applicationRepository">Das Repository für Anwendungen.</param>
-    /// <param name="signalRNotificationService">Der SignalR-Benachrichtigungs-Service.</param>
+    /// <param name="notificationPolicy">Die zentrale Benachrichtigungs-Policy.</param>
     public ApplicationGroupsController(
         ITokenStore tokenStore,
         IApplicationRepository applicationRepository,
-        ISignalRNotificationService signalRNotificationService)
+        INotificationPolicy notificationPolicy)
         : base(tokenStore)
     {
         _applicationRepository = applicationRepository;
-        _signalRNotificationService = signalRNotificationService;
+        _notificationPolicy = notificationPolicy;
     }
 
     /// <summary>
@@ -102,8 +102,7 @@ public class ApplicationGroupsController : ApiControllerBase
         var group = new ApplicationGroup { Name = request.Name };
         var saved = await _applicationRepository.AddGroupAsync(group);
 
-        if (storageMode == StorageMode.Team)
-            await _signalRNotificationService.NotifyTreeChangedAsync();
+        await _notificationPolicy.NotifyTreeMutationAsync(storageMode);
 
         var response = MapToResponse(saved);
         return CreatedAtAction(null, new { id = saved.Id }, response);
@@ -143,8 +142,7 @@ public class ApplicationGroupsController : ApiControllerBase
         group.Name = request.Name;
         var saved = await _applicationRepository.UpdateGroupAsync(group);
 
-        if (storageMode == StorageMode.Team)
-            await _signalRNotificationService.NotifyTreeChangedAsync();
+        await _notificationPolicy.NotifyTreeMutationAsync(storageMode);
 
         return Ok(MapToResponse(saved));
     }
@@ -198,8 +196,7 @@ public class ApplicationGroupsController : ApiControllerBase
 
         await _applicationRepository.DeleteGroupAsync(id, mode);
 
-        if (storageMode == StorageMode.Team)
-            await _signalRNotificationService.NotifyTreeChangedAsync();
+        await _notificationPolicy.NotifyTreeMutationAsync(storageMode);
 
         return NoContent();
     }

@@ -16,7 +16,8 @@ public class ODataControllerNullApplicationTests
         Mock<IApplicationRepository> appRepoMock)
     {
         var tokenStoreMock = new Mock<ITokenStore>();
-        var controller = new ODataEndpointsController(tokenStoreMock.Object, endpointRepoMock.Object, appRepoMock.Object);
+        var notificationPolicyMock = new Mock<INotificationPolicy>();
+        var controller = new ODataEndpointsController(tokenStoreMock.Object, endpointRepoMock.Object, appRepoMock.Object, notificationPolicyMock.Object);
         controller.ControllerContext = new ControllerContext
         {
             HttpContext = new DefaultHttpContext()
@@ -29,7 +30,8 @@ public class ODataControllerNullApplicationTests
         Mock<IApplicationRepository> appRepoMock)
     {
         var tokenStoreMock = new Mock<ITokenStore>();
-        var controller = new ODataEndpointGroupsController(tokenStoreMock.Object, endpointRepoMock.Object, appRepoMock.Object);
+        var notificationPolicyMock = new Mock<INotificationPolicy>();
+        var controller = new ODataEndpointGroupsController(tokenStoreMock.Object, endpointRepoMock.Object, appRepoMock.Object, notificationPolicyMock.Object);
         controller.ControllerContext = new ControllerContext
         {
             HttpContext = new DefaultHttpContext()

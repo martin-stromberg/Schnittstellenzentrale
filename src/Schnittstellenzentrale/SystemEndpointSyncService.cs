@@ -48,7 +48,18 @@ public class SystemEndpointSyncService : BackgroundService
                 var swaggerProvider = scope.ServiceProvider.GetRequiredService<ISwaggerProvider>();
                 var swaggerImportService = scope.ServiceProvider.GetRequiredService<ISwaggerImportService>();
                 var document = swaggerProvider.GetSwagger("v1");
-                await swaggerImportService.SyncFromDocumentAsync(document, systemApp.Id);
+                var diff = await swaggerImportService.SyncFromDocumentAsync(document, systemApp.Id);
+
+                // Hintergrundvorgang ohne Anforderungskontext: freigegebene Systemdaten,
+                // daher immer genau eine Baum-Benachrichtigung bei tatsächlichen Änderungen.
+                // Die Policy wird erst hier aufgelöst, damit ein Benachrichtigungsfehler
+                // den eigentlichen Abgleich nicht gefährdet.
+                if (diff.ErrorMessage == null
+                    && (diff.NewEndpoints.Count > 0 || diff.ChangedEndpoints.Count > 0 || diff.RemovedEndpoints.Count > 0))
+                {
+                    var notificationPolicy = scope.ServiceProvider.GetRequiredService<INotificationPolicy>();
+                    await notificationPolicy.NotifyBackgroundMutationAsync();
+                }
             }
             catch (Exception ex)
             {

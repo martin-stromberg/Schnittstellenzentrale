@@ -62,13 +62,13 @@ Beteiligte Komponenten:
 4. `ParseStorageMode()` liest `X-Storage-Mode`-Header: `"Team"` → `StorageMode.Team`, sonst `StorageMode.User`.
 5. Neues `ApplicationGroup`-Objekt wird erstellt: `Name = request.Name`.
 6. `IApplicationRepository.AddGroupAsync(group)` wird aufgerufen.
-7. Bei `StorageMode.Team`: `ISignalRNotificationService.NotifyGroupChangedAsync(saved.Id)`.
+7. `INotificationPolicy.NotifyTreeMutationAsync(storageMode)` — sendet bei `StorageMode.Team` genau eine Baum-Benachrichtigung (`TreeChanged`).
 8. Response: `201 Created` mit `Location`-Header, `X-New-Token`-Header und `ApplicationGroupResponse { Id, Name }`.
 
 Beteiligte Komponenten:
 - `ApplicationGroupsController`
 - `CreateApplicationGroupRequest`, `ApplicationGroupResponse`
-- `IApplicationRepository`, `ISignalRNotificationService`
+- `IApplicationRepository`, `INotificationPolicy`
 - `ApiControllerBase`, `ITokenStore`
 
 ---
@@ -81,14 +81,14 @@ Beteiligte Komponenten:
 4. `ParseStorageMode()` liest `X-Storage-Mode`-Header.
 5. Neues `Application`-Objekt wird erstellt; `InterfaceType` wird via `Application.DetectInterfaceType(request.InterfaceUrl)` abgeleitet.
 6. `IApplicationRepository.AddApplicationAsync(application)` wird aufgerufen.
-7. Bei `StorageMode.Team`: `ISignalRNotificationService.NotifyApplicationChangedAsync(saved.Id)`.
+7. `INotificationPolicy.NotifyTreeMutationAsync(storageMode)` — sendet bei `StorageMode.Team` genau eine Baum-Benachrichtigung (`TreeChanged`).
 8. Response: `201 Created` mit `Location`-Header, `X-New-Token`-Header und `ApplicationResponse { Id, Name, BaseUrl, ApplicationGroupId }`.
 
 Beteiligte Komponenten:
 - `ApplicationsController`
 - `CreateApplicationRequest`, `ApplicationResponse`
 - `Application.DetectInterfaceType`
-- `IApplicationRepository`, `ISignalRNotificationService`
+- `IApplicationRepository`, `INotificationPolicy`
 - `ApiControllerBase`, `ITokenStore`
 
 ---
@@ -118,13 +118,13 @@ Beteiligte Komponenten:
 4. `ParseStorageMode()` liest `X-Storage-Mode`-Header.
 5. Neues `EndpointGroup`-Objekt wird erstellt: `Name`, `ApplicationId`, `ParentGroupId`.
 6. `IEndpointRepository.AddEndpointGroupAsync(group)` wird aufgerufen.
-7. Bei `StorageMode.Team`: `ISignalRNotificationService.NotifyEndpointGroupChangedAsync(saved.Id, saved.ApplicationId)`.
+7. `INotificationPolicy.NotifyEndpointGroupMutationAsync(context.StorageMode, saved.Id, saved.ApplicationId)` — sendet bei `StorageMode.Team` genau eine `EndpointGroupChanged`-Benachrichtigung.
 8. Response: `201 Created` mit `Location`-Header, `X-New-Token`-Header und `EndpointGroupResponse`.
 
 Beteiligte Komponenten:
 - `EndpointGroupsController`
 - `CreateEndpointGroupRequest`, `EndpointGroupResponse`
-- `IEndpointRepository`, `ISignalRNotificationService`
+- `IEndpointRepository`, `INotificationPolicy`
 - `ApiControllerBase`, `ITokenStore`
 
 ---
@@ -137,7 +137,7 @@ Beteiligte Komponenten:
 4. `ParseStorageMode()` liest `X-Storage-Mode`-Header.
 5. Neues `Endpoint`-Objekt wird erstellt mit allen Feldern aus dem Request, einschließlich `PreRequestScript`, `PostRequestScript`, `AuthenticationType`.
 6. `IEndpointRepository.AddEndpointAsync(endpoint)` wird aufgerufen.
-7. Bei `StorageMode.Team`: `ISignalRNotificationService.NotifyEndpointChangedAsync(saved.Id, saved.ApplicationId)`.
+7. `INotificationPolicy.NotifyEndpointMutationAsync(context.StorageMode, saved.Id, saved.ApplicationId)` — sendet bei `StorageMode.Team` genau eine `EndpointChanged`-Benachrichtigung.
 8. Controller mappt das gespeicherte `Endpoint` via `ApiControllerBase.MapToResponse(Endpoint)` auf `EndpointResponse` (inkl. `Headers` und `QueryParameters`).
 9. Response: `201 Created` mit `Location`-Header, `X-New-Token`-Header und `EndpointResponse`.
 
@@ -145,7 +145,7 @@ Beteiligte Komponenten:
 - `EndpointsController`
 - `CreateEndpointRequest`, `EndpointResponse`
 - `ApiControllerBase.MapToResponse(Endpoint)` — statische Mapping-Methode inkl. `Headers` und `QueryParameters`
-- `IEndpointRepository`, `ISignalRNotificationService`
+- `IEndpointRepository`, `INotificationPolicy`
 - `ApiControllerBase`, `ITokenStore`
 
 ---
@@ -157,12 +157,13 @@ Beteiligte Komponenten:
 3. Token-Validierung und -Rotation (siehe Ablauf 2). Bei ungültigem Token: `401 Unauthorized`.
 4. Neues `EndpointHeader`-Objekt wird aus `Key`, `Value`, `EndpointId` erstellt.
 5. `IEndpointRepository.AddHeaderAsync(header)` wird aufgerufen.
-6. Response: `201 Created` mit `EndpointHeaderResponse` und `X-New-Token`-Header.
+6. `INotificationPolicy.NotifyEndpointMutationAsync(context.StorageMode, saved.EndpointId, endpoint.ApplicationId)` — sendet bei `StorageMode.Team` genau eine `EndpointChanged`-Benachrichtigung (die `applicationId` wird über `GetEndpointByIdAsync` aufgelöst). Gilt analog für `DELETE /api/endpoints/headers/{id}` sowie für `POST`/`DELETE /api/endpoints/query-parameters`.
+7. Response: `201 Created` mit `EndpointHeaderResponse` und `X-New-Token`-Header.
 
 Beteiligte Komponenten:
 - `EndpointsController`
 - `AddEndpointHeaderRequest`, `EndpointHeaderResponse`
-- `IEndpointRepository`
+- `IEndpointRepository`, `INotificationPolicy`
 - `ApiControllerBase`, `ITokenStore`
 
 ---

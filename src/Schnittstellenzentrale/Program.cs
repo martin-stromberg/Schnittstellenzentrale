@@ -139,6 +139,7 @@ public partial class Program
         builder.Services.AddSingleton<ICredentialService, WindowsCredentialService>();
         builder.Services.AddSingleton<ICurrentUserService, WindowsCurrentUserService>();
         builder.Services.AddScoped<ISignalRNotificationService, SignalRNotificationService<EndpointHub>>();
+        builder.Services.AddScoped<INotificationPolicy, NotificationPolicy>();
         builder.Services.AddHttpContextAccessor();
         builder.Services.AddSingleton<ITokenStore, TokenStore>();
         builder.Services.AddHttpClient<IApplicationApiClient, ApplicationApiClient>();

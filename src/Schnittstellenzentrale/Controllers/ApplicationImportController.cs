@@ -13,22 +13,26 @@ public class ApplicationImportController : ApiControllerBase
     private readonly IApplicationRepository _applicationRepository;
     private readonly ISwaggerImportService _swaggerImportService;
     private readonly IODataImportService _odataImportService;
+    private readonly INotificationPolicy _notificationPolicy;
 
     /// <summary>Initialisiert eine neue Instanz von <see cref="ApplicationImportController"/>.</summary>
     /// <param name="tokenStore">Der Token-Store.</param>
     /// <param name="applicationRepository">Das Repository für Anwendungen.</param>
     /// <param name="swaggerImportService">Der Swagger-Import-Service.</param>
     /// <param name="odataImportService">Der OData-Import-Service.</param>
+    /// <param name="notificationPolicy">Die zentrale Benachrichtigungs-Policy.</param>
     public ApplicationImportController(
         ITokenStore tokenStore,
         IApplicationRepository applicationRepository,
         ISwaggerImportService swaggerImportService,
-        IODataImportService odataImportService)
+        IODataImportService odataImportService,
+        INotificationPolicy notificationPolicy)
         : base(tokenStore)
     {
         _applicationRepository = applicationRepository;
         _swaggerImportService = swaggerImportService;
         _odataImportService = odataImportService;
+        _notificationPolicy = notificationPolicy;
     }
 
     /// <summary>Wendet einen OData-Import-Diff auf die angegebene Anwendung an.</summary>
@@ -57,7 +61,9 @@ public class ApplicationImportController : ApiControllerBase
         if (application.InterfaceType != InterfaceType.OData)
             return UnprocessableEntity(new { errorMessage = "Die Anwendung unterstützt keinen OData-Import." });
 
+        var storageMode = ParseStorageMode();
         await _odataImportService.ApplyDiffAsync(diff);
+        await NotifyIfDiffAppliedAsync(storageMode, diff);
         return NoContent();
     }
 
@@ -90,6 +96,7 @@ public class ApplicationImportController : ApiControllerBase
         if (diff == null)
             return UnprocessableEntity(new { errorMessage = "Es wurde kein Import-Diff übergeben." });
 
+        var storageMode = ParseStorageMode();
         try
         {
             await _swaggerImportService.ApplyDiffAsync(diff, id);
@@ -99,6 +106,7 @@ public class ApplicationImportController : ApiControllerBase
             return UnprocessableEntity(new { errorMessage = ex.Message });
         }
 
+        await NotifyIfDiffAppliedAsync(storageMode, diff);
         return NoContent();
     }
 
@@ -137,5 +145,16 @@ public class ApplicationImportController : ApiControllerBase
         }
 
         return UnprocessableEntity(new { errorMessage = "Interface-Typ nicht unterstützt" });
+    }
+
+    private async Task NotifyIfDiffAppliedAsync(StorageMode storageMode, ImportDiff? diff)
+    {
+        if (diff == null || diff.ErrorMessage != null)
+            return;
+
+        if (diff.NewEndpoints.Count == 0 && diff.ChangedEndpoints.Count == 0 && diff.RemovedEndpoints.Count == 0)
+            return;
+
+        await _notificationPolicy.NotifyTreeMutationAsync(storageMode);
     }
 }

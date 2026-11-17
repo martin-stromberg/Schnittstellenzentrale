@@ -3,8 +3,6 @@
 @inject IEndpointExecutionResultCache ExecutionResultCache
 @inject IJSRuntime JSRuntime
 @inject NavigationManager NavigationManager
-@inject IStorageModeService StorageModeService
-@inject ISignalRNotificationService SignalRNotificationService
 @inject IActiveEnvironmentService ActiveEnvironmentService
 @inject IStringLocalizer<SharedResources> L
 @using Microsoft.EntityFrameworkCore
@@ -442,8 +440,8 @@
         _isDirty = false;
         UnregisterLocationChanging();
         await DisableBeforeUnloadGuardAsync();
-        if (StorageModeService.CurrentMode == StorageMode.Team)
-            await SignalRNotificationService.NotifyEndpointChangedAsync(_model.Id, _model.ApplicationId);
+        // Keine eigene SignalR-Benachrichtigung: Das Speichern läuft über die REST-API,
+        // deren Controller die Team-Modus-Benachrichtigung bereits zentral auslöst.
         await OnEndpointSaved.InvokeAsync(_model);
     }
 

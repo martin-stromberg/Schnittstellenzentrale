@@ -197,6 +197,7 @@ public class SystemEntryInitializerTests
         services.AddSingleton<IEndpointRepository>(endpointRepo);
         services.AddSingleton<ISwaggerProvider>(swaggerProvider);
         services.AddSingleton<ISwaggerImportService>(swaggerImportService);
+        services.AddSingleton(new Mock<INotificationPolicy>().Object);
         var provider = services.BuildServiceProvider();
 
         var scopeFactoryMock = new Mock<IServiceScopeFactory>();

@@ -20,11 +20,12 @@ public class SystemEndpointSyncServiceTests
         public Task RunAsync() => ExecuteAsync(CancellationToken.None);
     }
 
-    private static (TestableSyncService Service, Mock<IApplicationRepository> AppRepoMock, Mock<ISwaggerProvider> SwaggerProviderMock, Mock<ISwaggerImportService> SwaggerImportServiceMock, Mock<ILogger<SystemEndpointSyncService>> LoggerMock) CreateService()
+    private static (TestableSyncService Service, Mock<IApplicationRepository> AppRepoMock, Mock<ISwaggerProvider> SwaggerProviderMock, Mock<ISwaggerImportService> SwaggerImportServiceMock, Mock<INotificationPolicy> NotificationPolicyMock, Mock<ILogger<SystemEndpointSyncService>> LoggerMock) CreateService()
     {
         var appRepoMock = new Mock<IApplicationRepository>();
         var swaggerProviderMock = new Mock<ISwaggerProvider>();
         var swaggerImportServiceMock = new Mock<ISwaggerImportService>();
+        var notificationPolicyMock = new Mock<INotificationPolicy>();
 
         swaggerImportServiceMock
             .Setup(s => s.SyncFromDocumentAsync(It.IsAny<OpenApiDocument>(), It.IsAny<int>()))
@@ -37,6 +38,7 @@ public class SystemEndpointSyncServiceTests
         services.AddSingleton<IApplicationRepository>(appRepoMock.Object);
         services.AddSingleton<ISwaggerProvider>(swaggerProviderMock.Object);
         services.AddSingleton<ISwaggerImportService>(swaggerImportServiceMock.Object);
+        services.AddSingleton<INotificationPolicy>(notificationPolicyMock.Object);
         var provider = services.BuildServiceProvider();
 
         var scopeFactoryMock = new Mock<IServiceScopeFactory>();
@@ -47,7 +49,7 @@ public class SystemEndpointSyncServiceTests
         var loggerMock = new Mock<ILogger<SystemEndpointSyncService>>();
         var service = new TestableSyncService(scopeFactoryMock.Object, loggerMock.Object);
 
-        return (service, appRepoMock, swaggerProviderMock, swaggerImportServiceMock, loggerMock);
+        return (service, appRepoMock, swaggerProviderMock, swaggerImportServiceMock, notificationPolicyMock, loggerMock);
     }
 
     private static ApplicationGroup SystemGroup()
@@ -73,7 +75,7 @@ public class SystemEndpointSyncServiceTests
     [Fact]
     public async Task ExecuteAsync_CallsSyncFromDocumentAsync_WithDocumentAndApplicationId()
     {
-        var (service, appRepoMock, swaggerProviderMock, swaggerImportServiceMock, _) = CreateService();
+        var (service, appRepoMock, swaggerProviderMock, swaggerImportServiceMock, _, _) = CreateService();
         appRepoMock.Setup(r => r.GetSystemGroupAsync()).ReturnsAsync(SystemGroup());
         var document = DocumentWithPaths(("/items", HttpMethod.Get, "getItems"), ("/items", HttpMethod.Post, "createItem"));
         swaggerProviderMock.Setup(p => p.GetSwagger("v1", null, null)).Returns(document);
@@ -88,7 +90,7 @@ public class SystemEndpointSyncServiceTests
     [Fact]
     public async Task ExecuteAsync_WhenSystemGroupMissing_LogsWarningAndSkips()
     {
-        var (service, appRepoMock, swaggerProviderMock, swaggerImportServiceMock, _) = CreateService();
+        var (service, appRepoMock, swaggerProviderMock, swaggerImportServiceMock, _, _) = CreateService();
         appRepoMock.Setup(r => r.GetSystemGroupAsync()).ReturnsAsync((ApplicationGroup?)null);
 
         var exception = await Record.ExceptionAsync(() => service.RunAsync());
@@ -102,7 +104,7 @@ public class SystemEndpointSyncServiceTests
     [Fact]
     public async Task ExecuteAsync_WhenSystemAppMissing_LogsWarningAndSkips()
     {
-        var (service, appRepoMock, swaggerProviderMock, swaggerImportServiceMock, loggerMock) = CreateService();
+        var (service, appRepoMock, swaggerProviderMock, swaggerImportServiceMock, _, loggerMock) = CreateService();
         var groupWithoutSystemApp = new ApplicationGroup
         {
             Id = 1,
@@ -130,7 +132,7 @@ public class SystemEndpointSyncServiceTests
     [Fact]
     public async Task ExecuteAsync_WhenSwaggerProviderThrows_LogsErrorAndDoesNotThrow()
     {
-        var (service, appRepoMock, swaggerProviderMock, swaggerImportServiceMock, loggerMock) = CreateService();
+        var (service, appRepoMock, swaggerProviderMock, swaggerImportServiceMock, _, loggerMock) = CreateService();
         appRepoMock.Setup(r => r.GetSystemGroupAsync()).ReturnsAsync(SystemGroup());
         swaggerProviderMock.Setup(p => p.GetSwagger("v1", null, null))
             .Throws(new InvalidOperationException("Swagger nicht verfügbar"));
@@ -149,11 +151,44 @@ public class SystemEndpointSyncServiceTests
         swaggerImportServiceMock.Verify(s => s.SyncFromDocumentAsync(It.IsAny<OpenApiDocument>(), It.IsAny<int>()), Times.Never);
     }
 
+    /// <summary>ExecuteAsync_WhenDiffContainsChanges_SendsExactlyOneBackgroundNotification</summary>
+    [Fact]
+    public async Task ExecuteAsync_WhenDiffContainsChanges_SendsExactlyOneBackgroundNotification()
+    {
+        var (service, appRepoMock, swaggerProviderMock, swaggerImportServiceMock, notificationPolicyMock, _) = CreateService();
+        appRepoMock.Setup(r => r.GetSystemGroupAsync()).ReturnsAsync(SystemGroup());
+        swaggerProviderMock.Setup(p => p.GetSwagger("v1", null, null))
+            .Returns(DocumentWithPaths(("/items", HttpMethod.Get, "getItems")));
+        swaggerImportServiceMock.Setup(s => s.SyncFromDocumentAsync(It.IsAny<OpenApiDocument>(), It.IsAny<int>()))
+            .ReturnsAsync(new ImportDiff
+            {
+                NewEndpoints = [new Schnittstellenzentrale.Core.Models.Endpoint { Name = "GET /items" }]
+            });
+
+        await service.RunAsync();
+
+        notificationPolicyMock.Verify(n => n.NotifyBackgroundMutationAsync(), Times.Once);
+    }
+
+    /// <summary>ExecuteAsync_WhenDiffIsEmpty_SendsNoNotification</summary>
+    [Fact]
+    public async Task ExecuteAsync_WhenDiffIsEmpty_SendsNoNotification()
+    {
+        var (service, appRepoMock, swaggerProviderMock, _, notificationPolicyMock, _) = CreateService();
+        appRepoMock.Setup(r => r.GetSystemGroupAsync()).ReturnsAsync(SystemGroup());
+        swaggerProviderMock.Setup(p => p.GetSwagger("v1", null, null))
+            .Returns(DocumentWithPaths(("/items", HttpMethod.Get, "getItems")));
+
+        await service.RunAsync();
+
+        notificationPolicyMock.Verify(n => n.NotifyBackgroundMutationAsync(), Times.Never);
+    }
+
     /// <summary>ExecuteAsync_WhenSyncFromDocumentAsyncThrows_LogsErrorAndDoesNotThrow</summary>
     [Fact]
     public async Task ExecuteAsync_WhenSyncFromDocumentAsyncThrows_LogsErrorAndDoesNotThrow()
     {
-        var (service, appRepoMock, swaggerProviderMock, swaggerImportServiceMock, loggerMock) = CreateService();
+        var (service, appRepoMock, swaggerProviderMock, swaggerImportServiceMock, _, loggerMock) = CreateService();
         appRepoMock.Setup(r => r.GetSystemGroupAsync()).ReturnsAsync(SystemGroup());
         swaggerProviderMock.Setup(p => p.GetSwagger("v1", null, null))
             .Returns(DocumentWithPaths(("/items", HttpMethod.Get, "getItems")));

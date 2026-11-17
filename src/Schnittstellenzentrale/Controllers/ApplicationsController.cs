@@ -14,20 +14,20 @@ namespace Schnittstellenzentrale.Controllers;
 public class ApplicationsController : ApiControllerBase
 {
     private readonly IApplicationRepository _applicationRepository;
-    private readonly ISignalRNotificationService _signalRNotificationService;
+    private readonly INotificationPolicy _notificationPolicy;
 
     /// <summary>Initialisiert eine neue Instanz von <see cref="ApplicationsController"/>.</summary>
     /// <param name="tokenStore">Der Token-Store.</param>
     /// <param name="applicationRepository">Das Repository für Anwendungen.</param>
-    /// <param name="signalRNotificationService">Der SignalR-Benachrichtigungs-Service.</param>
+    /// <param name="notificationPolicy">Die zentrale Benachrichtigungs-Policy.</param>
     public ApplicationsController(
         ITokenStore tokenStore,
         IApplicationRepository applicationRepository,
-        ISignalRNotificationService signalRNotificationService)
+        INotificationPolicy notificationPolicy)
         : base(tokenStore)
     {
         _applicationRepository = applicationRepository;
-        _signalRNotificationService = signalRNotificationService;
+        _notificationPolicy = notificationPolicy;
     }
 
     /// <summary>
@@ -127,8 +127,7 @@ public class ApplicationsController : ApiControllerBase
 
         var saved = await _applicationRepository.AddApplicationAsync(application);
 
-        if (storageMode == StorageMode.Team)
-            await _signalRNotificationService.NotifyTreeChangedAsync();
+        await _notificationPolicy.NotifyTreeMutationAsync(storageMode);
 
         var response = MapToResponse(saved);
         return CreatedAtAction(null, new { id = saved.Id }, response);
@@ -169,8 +168,7 @@ public class ApplicationsController : ApiControllerBase
 
         var saved = await _applicationRepository.UpdateApplicationAsync(application);
 
-        if (storageMode == StorageMode.Team)
-            await _signalRNotificationService.NotifyTreeChangedAsync();
+        await _notificationPolicy.NotifyTreeMutationAsync(storageMode);
 
         return Ok(MapToResponse(saved));
     }
@@ -205,8 +203,7 @@ public class ApplicationsController : ApiControllerBase
 
         await _applicationRepository.DeleteApplicationAsync(id);
 
-        if (storageMode == StorageMode.Team)
-            await _signalRNotificationService.NotifyTreeChangedAsync();
+        await _notificationPolicy.NotifyTreeMutationAsync(storageMode);
 
         return NoContent();
     }
