@@ -114,7 +114,7 @@ Die Authentifizierung erfolgt mittels Windows-Authentifizierung (Negotiate), die
 | Ressource | Beschreibung |
 |-----------|--------------|
 | `POST /authenticate` | Bearer-Token beziehen (Windows/Negotiate) |
-| `/api/application-groups` | CRUD für `ApplicationGroup` |
+| `/api/application-groups` | CRUD für `ApplicationGroup`; `DELETE` unterstützt `?content=delete` (atomar mit Inhalt) bzw. `?content=detach` (Standard: Anwendungen werden ungruppiert) |
 | `/api/applications` | CRUD für `Application` |
 | `POST /api/applications/{id}/import` | Import-Diff berechnen (Swagger oder OData, je nach `InterfaceType`) |
 | `POST /api/applications/{id}/odata-import/apply` | OData-Import-Diff auf Anwendung anwenden |
