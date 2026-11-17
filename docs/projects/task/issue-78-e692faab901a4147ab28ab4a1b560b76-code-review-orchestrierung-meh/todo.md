@@ -14,6 +14,6 @@ Branch: `task/issue-78-e692faab901a4147ab28ab4a1b560b76-code-review-orchestrieru
 | [x] | 5b | Projektplan gegen Anforderung prüfen (Unteragent) | `project-plan-check.md` |
 | [x] | 5c | Planungscommit | – |
 | [x] | 6 | Entwicklungsschritte-Tracking anlegen | `steps.md` |
-| [ ] | 7 | Entwicklungsschritte abarbeiten (Schleife über `/lifecycle`) | Codeänderungen je Schritt |
-| [ ] | – | Projekt-Verzeichnis aufräumen | – |
-| [ ] | 8 | Abschlusscommit | – |
+| [x] | 7 | Entwicklungsschritte abarbeiten (Schleife über `/lifecycle`) | Codeänderungen je Schritt |
+| [x] | – | Projekt-Verzeichnis aufräumen | – |
+| [x] | 8 | Abschlusscommit | – |
