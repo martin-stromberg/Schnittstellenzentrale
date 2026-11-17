@@ -9,4 +9,4 @@ Branch: `task/issue-78-e692faab901a4147ab28ab4a1b560b76-code-review-orchestrieru
 | 3 | Atomares Löschen von Anwendungsgruppen mit Inhalt (#90) | Keine | `task/issue-78-e692faab901a4147ab28ab4a1b560b76-code-review-orchestrierung-meh-schritt-3-gruppen-loeschen` | Fertig |
 | 4 | Workspace-Oberfläche vollständig auf den API-Pfad umstellen (#89) | 3 | `task/issue-78-e692faab901a4147ab28ab4a1b560b76-code-review-orchestrierung-meh-schritt-4-workspace-api` | Fertig |
 | 5 | Einheitliche Update-Semantik für das Endpunkt-Aggregat (#92) | 1, 2 | `task/issue-78-e692faab901a4147ab28ab4a1b560b76-code-review-orchestrierung-meh-schritt-5-aggregat-update` | Fertig |
-| 6 | Zentralisierte Änderungs-Benachrichtigungen inkl. OData (#91) | 5 | `task/issue-78-e692faab901a4147ab28ab4a1b560b76-code-review-orchestrierung-meh-schritt-6-notify-zentral` | In Arbeit |
+| 6 | Zentralisierte Änderungs-Benachrichtigungen inkl. OData (#91) | 5 | `task/issue-78-e692faab901a4147ab28ab4a1b560b76-code-review-orchestrierung-meh-schritt-6-notify-zentral` | Fertig |
