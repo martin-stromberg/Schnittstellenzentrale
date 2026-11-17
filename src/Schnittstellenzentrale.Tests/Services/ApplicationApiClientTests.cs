@@ -305,6 +305,48 @@ public class ApplicationApiClientTests
             ItExpr.IsAny<CancellationToken>());
     }
 
+    /// <summary>DeleteGroupAsync_WithDeleteMode_SendsContentQueryParam</summary>
+    [Fact]
+    public async Task DeleteGroupAsync_WithDeleteMode_SendsContentQueryParam()
+    {
+        var authToken = Guid.NewGuid().ToString();
+        var newToken = Guid.NewGuid().ToString();
+
+        var (apiClient, handlerMock, _) = CreateClient(authToken, newToken, HttpStatusCode.NoContent, "");
+
+        await apiClient.DeleteGroupAsync(3, ApplicationGroupDeleteMode.Delete);
+
+        handlerMock.Protected().Verify(
+            "SendAsync",
+            Times.Once(),
+            ItExpr.Is<HttpRequestMessage>(r =>
+                r.RequestUri!.AbsolutePath == "/api/application-groups/3" &&
+                r.RequestUri!.Query == "?content=delete" &&
+                r.Method == HttpMethod.Delete),
+            ItExpr.IsAny<CancellationToken>());
+    }
+
+    /// <summary>DeleteGroupAsync_WithDetachMode_SendsContentQueryParam</summary>
+    [Fact]
+    public async Task DeleteGroupAsync_WithDetachMode_SendsContentQueryParam()
+    {
+        var authToken = Guid.NewGuid().ToString();
+        var newToken = Guid.NewGuid().ToString();
+
+        var (apiClient, handlerMock, _) = CreateClient(authToken, newToken, HttpStatusCode.NoContent, "");
+
+        await apiClient.DeleteGroupAsync(3, ApplicationGroupDeleteMode.Detach);
+
+        handlerMock.Protected().Verify(
+            "SendAsync",
+            Times.Once(),
+            ItExpr.Is<HttpRequestMessage>(r =>
+                r.RequestUri!.AbsolutePath == "/api/application-groups/3" &&
+                r.RequestUri!.Query == "?content=detach" &&
+                r.Method == HttpMethod.Delete),
+            ItExpr.IsAny<CancellationToken>());
+    }
+
     /// <summary>UpdateApplicationAsync_SendsCorrectPutRequestAndReturnsMappedApplication</summary>
     [Fact]
     public async Task UpdateApplicationAsync_SendsCorrectPutRequestAndReturnsMappedApplication()

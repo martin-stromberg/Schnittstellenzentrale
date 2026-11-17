@@ -153,20 +153,39 @@ public class ApplicationGroupsController : ApiControllerBase
     /// Deletes an application group.
     /// </summary>
     /// <param name="id">The application group ID.</param>
+    /// <param name="content">How to handle contained applications: <c>delete</c> removes them with the group, <c>detach</c> moves them to the ungrouped set (default when omitted).</param>
     /// <returns>Das Ergebnis.</returns>
     /// <response code="204">Application group deleted successfully.</response>
+    /// <response code="400">Invalid value for the <c>content</c> parameter.</response>
     /// <response code="401">Missing or invalid bearer token.</response>
+    /// <response code="403">Application group is a system group.</response>
     /// <response code="404">Application group not found.</response>
     [HttpDelete("{id:int}")]
     [RequiresContextHeaders]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> DeleteAsync(int id)
+    public async Task<IActionResult> DeleteAsync(int id, [FromQuery] string? content = null)
     {
         var newToken = await ValidateTokenAndSetResponseHeaderAsync();
         if (newToken == null)
             return Unauthorized();
+
+        ApplicationGroupDeleteMode mode;
+        if (string.IsNullOrEmpty(content) || string.Equals(content, "detach", StringComparison.OrdinalIgnoreCase))
+        {
+            mode = ApplicationGroupDeleteMode.Detach;
+        }
+        else if (string.Equals(content, "delete", StringComparison.OrdinalIgnoreCase))
+        {
+            mode = ApplicationGroupDeleteMode.Delete;
+        }
+        else
+        {
+            return BadRequest();
+        }
 
         var storageMode = ParseStorageMode();
 
@@ -177,7 +196,7 @@ public class ApplicationGroupsController : ApiControllerBase
         if (group.IsSystem)
             return StatusCode(StatusCodes.Status403Forbidden);
 
-        await _applicationRepository.DeleteGroupAsync(id);
+        await _applicationRepository.DeleteGroupAsync(id, mode);
 
         if (storageMode == StorageMode.Team)
             await _signalRNotificationService.NotifyTreeChangedAsync();

@@ -319,6 +319,12 @@ public class SystemEntryInitializerTests
         /// <returns>Ein abgeschlossener Task.</returns>
         public Task DeleteGroupAsync(int id) => Task.CompletedTask;
 
+        /// <summary>DeleteGroupAsync</summary>
+        /// <param name="id">Die ID der Gruppe.</param>
+        /// <param name="mode">Der Löschmodus.</param>
+        /// <returns>Ein abgeschlossener Task.</returns>
+        public Task DeleteGroupAsync(int id, Schnittstellenzentrale.Core.Enums.ApplicationGroupDeleteMode mode) => Task.CompletedTask;
+
         /// <summary>GetApplicationsAsync</summary>
         /// <param name="storageMode">Der Speichermodus der Abfrage.</param>
         /// <param name="owner">Der Besitzer-Kontext der Abfrage.</param>

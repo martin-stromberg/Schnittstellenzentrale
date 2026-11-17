@@ -424,4 +424,129 @@ public class ApplicationGroupsControllerIntegrationTests : IClassFixture<Control
 
         Assert.Equal(HttpStatusCode.Forbidden, putResponse.StatusCode);
     }
+
+    /// <summary>Legt eine Gruppe mit einer Anwendung per Repository an.</summary>
+    /// <returns>Die IDs der angelegten Gruppe und Anwendung.</returns>
+    private async Task<(int GroupId, int ApplicationId)> SeedGroupWithApplicationAsync()
+    {
+        var repo = _factory.Services.GetRequiredService<IApplicationRepository>();
+        var group = await repo.AddGroupAsync(new ApplicationGroup { Name = "SeedGruppe" });
+        var app = await repo.AddApplicationAsync(new Application
+        {
+            Name = "SeedApp",
+            BaseUrl = "https://seed.example.com",
+            ApplicationGroupId = group.Id
+        });
+        return (group.Id, app.Id);
+    }
+
+    /// <summary>DeleteApplicationGroup_WithContentDelete_RemovesGroupAndApplications</summary>
+    [Fact]
+    public async Task DeleteApplicationGroup_WithContentDelete_RemovesGroupAndApplications()
+    {
+        var client = _factory.CreateClient();
+        var token = await _factory.ObtainTokenAsync(client);
+        var (groupId, applicationId) = await SeedGroupWithApplicationAsync();
+
+        var deleteRequest = new HttpRequestMessage(HttpMethod.Delete, $"/api/application-groups/{groupId}?content=delete");
+        deleteRequest.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+        deleteRequest.Headers.Add("X-Storage-Mode", "Team");
+
+        var deleteResponse = await client.SendAsync(deleteRequest);
+
+        Assert.Equal(HttpStatusCode.NoContent, deleteResponse.StatusCode);
+
+        var repo = _factory.Services.GetRequiredService<IApplicationRepository>();
+        Assert.Null(await repo.GetGroupByIdAsync(groupId));
+        Assert.Null(await repo.GetApplicationByIdAsync(applicationId));
+    }
+
+    /// <summary>DeleteApplicationGroup_WithContentDetach_KeepsApplicationsUngrouped</summary>
+    [Fact]
+    public async Task DeleteApplicationGroup_WithContentDetach_KeepsApplicationsUngrouped()
+    {
+        var client = _factory.CreateClient();
+        var token = await _factory.ObtainTokenAsync(client);
+        var (groupId, applicationId) = await SeedGroupWithApplicationAsync();
+
+        var deleteRequest = new HttpRequestMessage(HttpMethod.Delete, $"/api/application-groups/{groupId}?content=detach");
+        deleteRequest.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+        deleteRequest.Headers.Add("X-Storage-Mode", "Team");
+
+        var deleteResponse = await client.SendAsync(deleteRequest);
+
+        Assert.Equal(HttpStatusCode.NoContent, deleteResponse.StatusCode);
+
+        var repo = _factory.Services.GetRequiredService<IApplicationRepository>();
+        Assert.Null(await repo.GetGroupByIdAsync(groupId));
+        var application = await repo.GetApplicationByIdAsync(applicationId);
+        Assert.NotNull(application);
+        Assert.Null(application.ApplicationGroupId);
+    }
+
+    /// <summary>DeleteApplicationGroup_WithoutContent_BehavesLikeDetach</summary>
+    [Fact]
+    public async Task DeleteApplicationGroup_WithoutContent_BehavesLikeDetach()
+    {
+        var client = _factory.CreateClient();
+        var token = await _factory.ObtainTokenAsync(client);
+        var (groupId, applicationId) = await SeedGroupWithApplicationAsync();
+
+        var deleteRequest = new HttpRequestMessage(HttpMethod.Delete, $"/api/application-groups/{groupId}");
+        deleteRequest.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+        deleteRequest.Headers.Add("X-Storage-Mode", "Team");
+
+        var deleteResponse = await client.SendAsync(deleteRequest);
+
+        Assert.Equal(HttpStatusCode.NoContent, deleteResponse.StatusCode);
+
+        var repo = _factory.Services.GetRequiredService<IApplicationRepository>();
+        Assert.Null(await repo.GetGroupByIdAsync(groupId));
+        var application = await repo.GetApplicationByIdAsync(applicationId);
+        Assert.NotNull(application);
+        Assert.Null(application.ApplicationGroupId);
+    }
+
+    /// <summary>DeleteApplicationGroup_WithInvalidContent_Returns400</summary>
+    [Fact]
+    public async Task DeleteApplicationGroup_WithInvalidContent_Returns400()
+    {
+        var client = _factory.CreateClient();
+        var token = await _factory.ObtainTokenAsync(client);
+        var (groupId, _) = await SeedGroupWithApplicationAsync();
+
+        var deleteRequest = new HttpRequestMessage(HttpMethod.Delete, $"/api/application-groups/{groupId}?content=bogus");
+        deleteRequest.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+        deleteRequest.Headers.Add("X-Storage-Mode", "Team");
+
+        var deleteResponse = await client.SendAsync(deleteRequest);
+
+        Assert.Equal(HttpStatusCode.BadRequest, deleteResponse.StatusCode);
+
+        var repo = _factory.Services.GetRequiredService<IApplicationRepository>();
+        Assert.NotNull(await repo.GetGroupByIdAsync(groupId));
+    }
+
+    /// <summary>DeleteApplicationGroup_WithDeleteModeAndSystemGroup_Returns403</summary>
+    [Fact]
+    public async Task DeleteApplicationGroup_WithDeleteModeAndSystemGroup_Returns403()
+    {
+        var client = _factory.CreateClient();
+        var token = await _factory.ObtainTokenAsync(client);
+
+        var repo = _factory.Services.GetRequiredService<IApplicationRepository>();
+        var systemGroup = await repo.AddGroupAsync(new ApplicationGroup
+        {
+            Name = "Schnittstellenzentrale",
+            IsSystem = true
+        });
+
+        var deleteRequest = new HttpRequestMessage(HttpMethod.Delete, $"/api/application-groups/{systemGroup.Id}?content=delete");
+        deleteRequest.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+        deleteRequest.Headers.Add("X-Storage-Mode", "Team");
+
+        var deleteResponse = await client.SendAsync(deleteRequest);
+
+        Assert.Equal(HttpStatusCode.Forbidden, deleteResponse.StatusCode);
+    }
 }

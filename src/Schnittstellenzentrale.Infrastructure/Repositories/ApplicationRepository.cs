@@ -78,13 +78,47 @@ public class ApplicationRepository : IApplicationRepository
     /// <inheritdoc/>
     public async Task DeleteGroupAsync(int id)
     {
+        await DeleteGroupAsync(id, ApplicationGroupDeleteMode.Detach);
+    }
+
+    /// <inheritdoc/>
+    public async Task DeleteGroupAsync(int id, ApplicationGroupDeleteMode mode)
+    {
         await using var context = await _factory.CreateDbContextAsync();
-        var group = await context.ApplicationGroups.FindAsync(id);
-        if (group != null)
+        await using var transaction = await context.Database.BeginTransactionAsync();
+
+        var group = await context.ApplicationGroups
+            .Include(g => g.Applications)
+            .FirstOrDefaultAsync(g => g.Id == id);
+        if (group == null)
+            return;
+
+        if (mode == ApplicationGroupDeleteMode.Delete)
         {
-            context.ApplicationGroups.Remove(group);
-            await context.SaveChangesAsync();
+            var applicationIds = group.Applications.Select(a => a.Id).ToList();
+            var endpointGroups = await context.EndpointGroups
+                .Where(g => applicationIds.Contains(g.ApplicationId))
+                .ToListAsync();
+            var endpoints = await context.Endpoints
+                .Where(e => applicationIds.Contains(e.ApplicationId))
+                .ToListAsync();
+
+            // Getrackte Entitäten werden von EF topologisch geordnet gelöscht —
+            // Endpunktgruppen stehen auf DeleteBehavior.Restrict, Kindgruppen müssen
+            // daher vor ihren Eltern entfernt werden.
+            context.Endpoints.RemoveRange(endpoints);
+            context.EndpointGroups.RemoveRange(endpointGroups);
+            context.Applications.RemoveRange(group.Applications);
         }
+        else
+        {
+            foreach (var application in group.Applications)
+                application.ApplicationGroupId = null;
+        }
+
+        context.ApplicationGroups.Remove(group);
+        await context.SaveChangesAsync();
+        await transaction.CommitAsync();
     }
 
     /// <inheritdoc/>

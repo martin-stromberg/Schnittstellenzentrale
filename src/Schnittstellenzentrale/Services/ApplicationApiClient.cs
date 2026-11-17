@@ -112,6 +112,17 @@ public class ApplicationApiClient : IApplicationApiClient
     }
 
     /// <inheritdoc/>
+    public async Task DeleteGroupAsync(int id, ApplicationGroupDeleteMode mode)
+    {
+        var baseUrl = GetBaseUrl();
+        var storageMode = _storageModeService.CurrentMode;
+        var content = mode.ToString().ToLowerInvariant();
+
+        await SendWithTokenNoContentAsync(
+            t => BuildDeleteRequest($"{baseUrl}/api/application-groups/{id}?content={content}", storageMode, t));
+    }
+
+    /// <inheritdoc/>
     public async Task<IList<Application>> GetUngroupedApplicationsAsync(StorageMode storageMode, string owner)
     {
         var baseUrl = GetBaseUrl();

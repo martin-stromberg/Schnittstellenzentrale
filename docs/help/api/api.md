@@ -89,6 +89,55 @@ Legt eine neue `ApplicationGroup` an.
 
 ---
 
+## DELETE /api/application-groups/{id}
+
+Löscht eine `ApplicationGroup` atomar in einer Transaktion. Der optionale Query-Parameter `content` steuert, wie enthaltene Anwendungen behandelt werden.
+
+**Authentifizierung:** Bearer-Token (aus `/authenticate`).
+
+**Request-Header:**
+
+| Header | Pflicht | Beschreibung |
+|--------|---------|--------------|
+| `Authorization` | Ja | `Bearer <token>` |
+| `X-Storage-Mode` | Nein | `Team` oder `User` (Standard: `User`); steuert SignalR-Benachrichtigungen |
+
+**Query-Parameter:**
+
+| Parameter | Typ | Pflicht | Beschreibung |
+|-----------|-----|---------|--------------|
+| `content` | `string` | Nein | `delete` löscht die Gruppe inklusive aller enthaltenen Anwendungen mit deren Endpunkten und Endpunktgruppen kaskadierend; `detach` hängt die enthaltenen Anwendungen in die ungruppierte Menge um und löscht nur die Gruppe. Fehlt der Parameter, gilt `detach`. Werte werden case-insensitiv ausgewertet. |
+
+**Beispiel:**
+
+```
+DELETE /api/application-groups/42?content=delete
+```
+
+**Response: 204 No Content**
+
+**Response-Header:**
+
+| Header | Beschreibung |
+|--------|--------------|
+| `X-New-Token` | Neuer Bearer-Token; ersetzt den verwendeten Token |
+
+**Fehler:**
+
+| Status | Ursache |
+|--------|---------|
+| 400 Bad Request | Ungültiger Wert für `content` (erlaubt: `delete`, `detach`) |
+| 401 Unauthorized | Token fehlt, unbekannt oder abgelaufen |
+| 403 Forbidden | Die Gruppe ist eine Systemgruppe (`IsSystem`) |
+| 404 Not Found | Keine Gruppe mit dieser ID vorhanden |
+
+**Hinweise:**
+
+- Die Operation ist atomar: Schlägt sie fehl, bleibt der gesamte Bestand unverändert (kein Teilerfolg).
+- Im `Team`-Speichermodus wird nach erfolgreichem Löschen eine SignalR-Benachrichtigung über die geänderte Baumstruktur gesendet.
+
+---
+
 ## POST /api/applications
 
 Legt eine neue `Application` an.

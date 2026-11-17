@@ -1,6 +1,8 @@
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Schnittstellenzentrale.Core.Enums;
 using Schnittstellenzentrale.Core.Models;
+using Schnittstellenzentrale.Infrastructure.Data;
 using Schnittstellenzentrale.Infrastructure.Repositories;
 using Schnittstellenzentrale.Tests.Helpers;
 
@@ -414,5 +416,149 @@ public class ApplicationRepositoryIntegrationTests
             await Assert.ThrowsAsync<DbUpdateConcurrencyException>(
                 () => repo2.UpdateGroupAsync(staleGroup));
         });
+    }
+
+    /// <summary>DeleteGroup_WithDeleteMode_DeletesApplicationsEndpointsAndGroups</summary>
+    [Fact]
+    public async Task DeleteGroup_WithDeleteMode_DeletesApplicationsEndpointsAndGroups()
+    {
+        var (factory, connection) = TestHelpers.CreateInMemoryDbContext();
+        await using (connection)
+        {
+            var repo = new ApplicationRepository(factory);
+            var endpointRepo = new EndpointRepository(factory);
+
+            var group = await repo.AddGroupAsync(new ApplicationGroup { Name = "Gruppe" });
+            var app = await repo.AddApplicationAsync(new Core.Models.Application { Name = "App", BaseUrl = "http://app", ApplicationGroupId = group.Id });
+            var parentGroup = await endpointRepo.AddEndpointGroupAsync(new EndpointGroup { Name = "Elterngruppe", ApplicationId = app.Id });
+            var childGroup = await endpointRepo.AddEndpointGroupAsync(new EndpointGroup { Name = "Kindgruppe", ApplicationId = app.Id, ParentGroupId = parentGroup.Id });
+            await endpointRepo.AddEndpointAsync(new Core.Models.Endpoint { Name = "Ep1", RelativePath = "/e1", ApplicationId = app.Id, EndpointGroupId = childGroup.Id });
+            await endpointRepo.AddEndpointAsync(new Core.Models.Endpoint { Name = "Ep2", RelativePath = "/e2", ApplicationId = app.Id });
+
+            await repo.DeleteGroupAsync(group.Id, ApplicationGroupDeleteMode.Delete);
+
+            Assert.Empty(await repo.GetGroupsAsync(StorageMode.Team, string.Empty));
+            Assert.Empty(await repo.GetApplicationsAsync(StorageMode.Team, string.Empty));
+            Assert.Empty(await endpointRepo.GetEndpointGroupsAsync(app.Id));
+            Assert.Empty(await endpointRepo.GetEndpointsAsync(app.Id));
+        }
+    }
+
+    /// <summary>DeleteGroup_WithDetachMode_KeepsApplicationsUngrouped</summary>
+    [Fact]
+    public async Task DeleteGroup_WithDetachMode_KeepsApplicationsUngrouped()
+    {
+        var (factory, connection) = TestHelpers.CreateInMemoryDbContext();
+        await using (connection)
+        {
+            var repo = new ApplicationRepository(factory);
+            var endpointRepo = new EndpointRepository(factory);
+
+            var group = await repo.AddGroupAsync(new ApplicationGroup { Name = "Gruppe" });
+            var app = await repo.AddApplicationAsync(new Core.Models.Application { Name = "App", BaseUrl = "http://app", ApplicationGroupId = group.Id });
+            var endpointGroup = await endpointRepo.AddEndpointGroupAsync(new EndpointGroup { Name = "Gruppe1", ApplicationId = app.Id });
+            await endpointRepo.AddEndpointAsync(new Core.Models.Endpoint { Name = "Ep1", RelativePath = "/e1", ApplicationId = app.Id, EndpointGroupId = endpointGroup.Id });
+
+            await repo.DeleteGroupAsync(group.Id, ApplicationGroupDeleteMode.Detach);
+
+            Assert.Empty(await repo.GetGroupsAsync(StorageMode.Team, string.Empty));
+
+            var ungrouped = await repo.GetUngroupedApplicationsAsync(StorageMode.Team, string.Empty);
+            Assert.Single(ungrouped);
+            Assert.Equal(app.Id, ungrouped[0].Id);
+            Assert.Null(ungrouped[0].ApplicationGroupId);
+
+            // Endpunkte und Endpunktgruppen der erhaltenen Anwendung bleiben erhalten.
+            Assert.Single(await endpointRepo.GetEndpointGroupsAsync(app.Id));
+            Assert.Single(await endpointRepo.GetEndpointsAsync(app.Id));
+        }
+    }
+
+    /// <summary>DeleteGroup_WithDeleteMode_OnSaveFailure_RollsBackEverything</summary>
+    [Fact]
+    public async Task DeleteGroup_WithDeleteMode_OnSaveFailure_RollsBackEverything()
+    {
+        await ExecuteWithFailingSaveContextAsync(async (repo, failingRepo, endpointRepo) =>
+        {
+            var group = await repo.AddGroupAsync(new ApplicationGroup { Name = "Gruppe" });
+            var app = await repo.AddApplicationAsync(new Core.Models.Application { Name = "App", BaseUrl = "http://app", ApplicationGroupId = group.Id });
+            await endpointRepo.AddEndpointAsync(new Core.Models.Endpoint { Name = "Ep1", RelativePath = "/e1", ApplicationId = app.Id });
+
+            await Assert.ThrowsAsync<InvalidOperationException>(
+                () => failingRepo.DeleteGroupAsync(group.Id, ApplicationGroupDeleteMode.Delete));
+
+            Assert.Single(await repo.GetGroupsAsync(StorageMode.Team, string.Empty));
+            Assert.Single(await repo.GetApplicationsAsync(StorageMode.Team, string.Empty));
+            Assert.Single(await endpointRepo.GetEndpointsAsync(app.Id));
+        });
+    }
+
+    /// <summary>DeleteGroup_WithDetachMode_OnSaveFailure_RollsBackEverything</summary>
+    [Fact]
+    public async Task DeleteGroup_WithDetachMode_OnSaveFailure_RollsBackEverything()
+    {
+        await ExecuteWithFailingSaveContextAsync(async (repo, failingRepo, endpointRepo) =>
+        {
+            var group = await repo.AddGroupAsync(new ApplicationGroup { Name = "Gruppe" });
+            var app = await repo.AddApplicationAsync(new Core.Models.Application { Name = "App", BaseUrl = "http://app", ApplicationGroupId = group.Id });
+
+            await Assert.ThrowsAsync<InvalidOperationException>(
+                () => failingRepo.DeleteGroupAsync(group.Id, ApplicationGroupDeleteMode.Detach));
+
+            Assert.Single(await repo.GetGroupsAsync(StorageMode.Team, string.Empty));
+            var applications = await repo.GetApplicationsAsync(StorageMode.Team, string.Empty);
+            Assert.Single(applications);
+            Assert.Equal(group.Id, applications[0].ApplicationGroupId);
+        });
+    }
+
+    private static async Task ExecuteWithFailingSaveContextAsync(
+        Func<ApplicationRepository, ApplicationRepository, EndpointRepository, Task> test)
+    {
+        var connection = new SqliteConnection("Data Source=:memory:");
+        connection.Open();
+
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseSqlite(connection)
+            .Options;
+
+        await using (connection)
+        {
+            using (var initContext = new AppDbContext(options))
+            {
+                initContext.Database.EnsureCreated();
+            }
+
+            var factory = new FixedOptionsDbContextFactory(options);
+            var failingFactory = new FailingSaveDbContextFactory(options);
+            await test(
+                new ApplicationRepository(factory),
+                new ApplicationRepository(failingFactory),
+                new EndpointRepository(factory));
+        }
+    }
+
+    private sealed class FixedOptionsDbContextFactory(DbContextOptions<AppDbContext> options)
+        : IDbContextFactory<AppDbContext>
+    {
+        public AppDbContext CreateDbContext() => new(options);
+    }
+
+    private sealed class FailingSaveDbContextFactory(DbContextOptions<AppDbContext> options)
+        : IDbContextFactory<AppDbContext>
+    {
+        public AppDbContext CreateDbContext() => new FailingSaveDbContext(options);
+    }
+
+    private sealed class FailingSaveDbContext(DbContextOptions<AppDbContext> options) : AppDbContext(options)
+    {
+        /// <summary>Anzahl der aufgerufenen Speicherversuche (zur optionalen Verifikation im Test).</summary>
+        public int SaveAttempts { get; private set; }
+
+        public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+        {
+            SaveAttempts++;
+            return Task.FromException<int>(new InvalidOperationException("Simulierter Fehler beim Speichern."));
+        }
     }
 }
