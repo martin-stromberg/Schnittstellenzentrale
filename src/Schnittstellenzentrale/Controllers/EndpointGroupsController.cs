@@ -12,20 +12,20 @@ namespace Schnittstellenzentrale.Controllers;
 public class EndpointGroupsController : ApiControllerBase
 {
     private readonly IEndpointRepository _endpointRepository;
-    private readonly ISignalRNotificationService _signalRNotificationService;
+    private readonly INotificationPolicy _notificationPolicy;
 
     /// <summary>Initialisiert eine neue Instanz von <see cref="EndpointGroupsController"/>.</summary>
     /// <param name="tokenStore">Der Token-Store.</param>
     /// <param name="endpointRepository">Das Repository für Endpunkte.</param>
-    /// <param name="signalRNotificationService">Der SignalR-Benachrichtigungs-Service.</param>
+    /// <param name="notificationPolicy">Die zentrale Benachrichtigungs-Policy.</param>
     public EndpointGroupsController(
         ITokenStore tokenStore,
         IEndpointRepository endpointRepository,
-        ISignalRNotificationService signalRNotificationService)
+        INotificationPolicy notificationPolicy)
         : base(tokenStore)
     {
         _endpointRepository = endpointRepository;
-        _signalRNotificationService = signalRNotificationService;
+        _notificationPolicy = notificationPolicy;
     }
 
     /// <summary>
@@ -103,8 +103,7 @@ public class EndpointGroupsController : ApiControllerBase
         };
         var saved = await _endpointRepository.AddEndpointGroupAsync(group);
 
-        if (context.StorageMode == StorageMode.Team)
-            await _signalRNotificationService.NotifyEndpointGroupChangedAsync(saved.Id, saved.ApplicationId);
+        await _notificationPolicy.NotifyEndpointGroupMutationAsync(context.StorageMode, saved.Id, saved.ApplicationId);
 
         var response = MapToResponse(saved);
         return CreatedAtAction(null, new { id = saved.Id }, response);
@@ -146,8 +145,7 @@ public class EndpointGroupsController : ApiControllerBase
         };
         var saved = await _endpointRepository.UpdateEndpointGroupAsync(group);
 
-        if (context.StorageMode == StorageMode.Team)
-            await _signalRNotificationService.NotifyEndpointGroupChangedAsync(saved.Id, saved.ApplicationId);
+        await _notificationPolicy.NotifyEndpointGroupMutationAsync(context.StorageMode, saved.Id, saved.ApplicationId);
 
         return Ok(MapToResponse(saved));
     }
@@ -178,8 +176,7 @@ public class EndpointGroupsController : ApiControllerBase
         var applicationId = group.ApplicationId;
         await _endpointRepository.DeleteEndpointGroupAsync(id);
 
-        if (context.StorageMode == StorageMode.Team)
-            await _signalRNotificationService.NotifyEndpointGroupChangedAsync(id, applicationId);
+        await _notificationPolicy.NotifyEndpointGroupMutationAsync(context.StorageMode, id, applicationId);
 
         return NoContent();
     }

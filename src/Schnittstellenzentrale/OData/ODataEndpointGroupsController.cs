@@ -13,19 +13,23 @@ public class ODataEndpointGroupsController : ODataControllerBase
 {
     private readonly IEndpointRepository _endpointRepository;
     private readonly IApplicationRepository _applicationRepository;
+    private readonly INotificationPolicy _notificationPolicy;
 
     /// <summary>Initialisiert eine neue Instanz von <see cref="ODataEndpointGroupsController"/>.</summary>
     /// <param name="tokenStore">Der Token-Store.</param>
     /// <param name="endpointRepository">Das Repository für Endpunkte.</param>
     /// <param name="applicationRepository">Das Repository für Anwendungen.</param>
+    /// <param name="notificationPolicy">Die zentrale Benachrichtigungs-Policy.</param>
     public ODataEndpointGroupsController(
         ITokenStore tokenStore,
         IEndpointRepository endpointRepository,
-        IApplicationRepository applicationRepository)
+        IApplicationRepository applicationRepository,
+        INotificationPolicy notificationPolicy)
         : base(tokenStore)
     {
         _endpointRepository = endpointRepository;
         _applicationRepository = applicationRepository;
+        _notificationPolicy = notificationPolicy;
     }
 
     /// <summary>Gibt alle Endpunktgruppen zurück.</summary>
@@ -86,6 +90,7 @@ public class ODataEndpointGroupsController : ODataControllerBase
         entity.RowVersion = [];
 
         var saved = await _endpointRepository.AddEndpointGroupAsync(entity);
+        await _notificationPolicy.NotifyEndpointGroupMutationAsync(ParseStorageMode(), saved.Id, saved.ApplicationId);
         return Created($"/odatav4/EndpointGroups({saved.Id})", saved);
     }
 
@@ -114,6 +119,7 @@ public class ODataEndpointGroupsController : ODataControllerBase
         existing.RowVersion = entity.RowVersion;
 
         var saved = await _endpointRepository.UpdateEndpointGroupAsync(existing);
+        await _notificationPolicy.NotifyEndpointGroupMutationAsync(ParseStorageMode(), saved.Id, saved.ApplicationId);
         return Ok(saved);
     }
 
@@ -156,6 +162,7 @@ public class ODataEndpointGroupsController : ODataControllerBase
         try
         {
             var saved = await _endpointRepository.UpdateEndpointGroupAsync(existing);
+            await _notificationPolicy.NotifyEndpointGroupMutationAsync(ParseStorageMode(), saved.Id, saved.ApplicationId);
             return Ok(saved);
         }
         catch (DbUpdateConcurrencyException)
@@ -195,7 +202,9 @@ public class ODataEndpointGroupsController : ODataControllerBase
         if (existing.Application.IsSystem)
             return StatusCode(StatusCodes.Status403Forbidden);
 
+        var applicationId = existing.ApplicationId;
         await _endpointRepository.DeleteEndpointGroupAsync(key);
+        await _notificationPolicy.NotifyEndpointGroupMutationAsync(ParseStorageMode(), key, applicationId);
         return NoContent();
     }
 }

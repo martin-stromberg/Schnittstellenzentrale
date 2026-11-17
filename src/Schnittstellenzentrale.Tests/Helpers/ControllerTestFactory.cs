@@ -25,6 +25,10 @@ public class ControllerTestFactory : WebApplicationFactory<Program>
     /// <summary>Überschreibt die Standard-Token-Lebenszeit im <see cref="ITokenStore"/>.</summary>
     public TimeSpan? TokenLifetime { get; set; }
 
+    /// <summary>Mock für den SignalR-Transport; erlaubt inhaltliche Verifikation der Benachrichtigungen in Integrationstests. Vor jeder Verifikation <see cref="Moq.Mock.Invocations"/> leeren.</summary>
+    /// <returns>Der geteilte Mock, der anstelle des echten SignalR-Dienstes registriert ist.</returns>
+    public Mock<ISignalRNotificationService> SignalRNotificationMock { get; } = new();
+
     /// <summary>Öffnet eine SQLite In-Memory-Verbindung für den Testlauf.</summary>
     public ControllerTestFactory()
     {
@@ -56,9 +60,8 @@ public class ControllerTestFactory : WebApplicationFactory<Program>
 
             services.RemoveAll<IHostedService>();
 
-            var signalRMock = new Mock<ISignalRNotificationService>();
             services.RemoveAll<ISignalRNotificationService>();
-            services.AddScoped(_ => signalRMock.Object);
+            services.AddScoped(_ => SignalRNotificationMock.Object);
 
             if (TokenLifetime.HasValue)
             {

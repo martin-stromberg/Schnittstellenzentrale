@@ -32,9 +32,9 @@
 
 **Bedingungen:** `IStorageModeService.CurrentMode == StorageMode.Team`
 
-**Verhalten:** Nach jeder persistierenden Operation wird `ISignalRNotificationService.NotifyGroupChangedAsync` bzw. `NotifyApplicationChangedAsync` aufgerufen. Im Benutzermodus entfällt die Benachrichtigung.
+**Verhalten:** Nach jeder persistierenden Operation ruft der zuständige Controller `INotificationPolicy.NotifyTreeMutationAsync` auf, das im Team-Modus genau eine Baum-Benachrichtigung (`TreeChanged`) sendet. Im Benutzermodus entfällt die Benachrichtigung.
 
-**Umsetzung:** Beim Anlegen (Anlage-Modus) wird der `StorageMode` per `X-Storage-Mode`-Header an den REST-Controller übergeben; `ApplicationGroupsController.CreateAsync` und `ApplicationsController.CreateAsync` rufen `ISignalRNotificationService` auf. Bei Bearbeitungs-, Lösch- und Drag-&-Drop-Operationen bleiben `ApplicationEditor.SaveAsync` und alle Handler in `ApplicationGroupTree` zuständig.
+**Umsetzung:** Beim Anlegen (Anlage-Modus) wird der `StorageMode` per `X-Storage-Mode`-Header an den REST-Controller übergeben; `ApplicationGroupsController.CreateAsync` und `ApplicationsController.CreateAsync` rufen `INotificationPolicy` auf. Dasselbe gilt für die Bearbeitungs- und Lösch-Endpunkte sowie für die OData-Controller — die Team-Modus-Entscheidung liegt zentral in `NotificationPolicy`.
 
 ---
 
@@ -43,12 +43,12 @@
 **Beschreibung:** Beim Löschen einer Gruppe, die noch Anwendungen enthält, muss der Anwender explizit entscheiden, was mit ihnen geschehen soll.
 
 **Option 1 — Mitlöschen:**
-- Alle Anwendungen werden einzeln per `DeleteApplicationAsync` gelöscht; im Team-Modus wird für jede `NotifyApplicationChangedAsync` ausgelöst. Dann wird die Gruppe per `DeleteGroupAsync` gelöscht.
+- Alle Anwendungen werden einzeln per `DeleteApplicationAsync` gelöscht, dann wird die Gruppe per `DeleteGroupAsync` gelöscht; im Team-Modus sendet der Controller über `INotificationPolicy.NotifyTreeMutationAsync` genau eine `TreeChanged`-Benachrichtigung für den gesamten Vorgang.
 - Umsetzung: `ApplicationGroupTree.OnDeleteGroupConfirmedAll` via `ProcessGroupApplicationsAsync`. Die Schleife läuft UI-seitig, da kein kaskadierendes Delete auf DB-Ebene konfiguriert ist (`DeleteBehavior.SetNull`).
 
 **Option 2 — Nur Gruppe löschen:**
-- `ApplicationGroupId` aller enthaltenen Anwendungen wird auf `null` gesetzt per `UpdateApplicationAsync`; im Team-Modus wird für jede `NotifyApplicationChangedAsync` ausgelöst. Dann wird die Gruppe gelöscht.
-- Umsetzung: `ApplicationGroupTree.OnDeleteGroupConfirmedGroupOnly` via `ProcessGroupApplicationsAsync` — das explizite Entkoppeln ist auch dann nötig, wenn `DeleteBehavior.SetNull` auf DB-Ebene konfiguriert ist, damit SignalR-Benachrichtigungen für die einzelnen Anwendungen ausgelöst werden.
+- `ApplicationGroupId` aller enthaltenen Anwendungen wird auf `null` gesetzt per `UpdateApplicationAsync`, dann wird die Gruppe gelöscht; im Team-Modus sendet der Controller über `INotificationPolicy.NotifyTreeMutationAsync` genau eine `TreeChanged`-Benachrichtigung für den gesamten Vorgang.
+- Umsetzung: `ApplicationGroupTree.OnDeleteGroupConfirmedGroupOnly` via `ProcessGroupApplicationsAsync` — das explizite Entkoppeln ist auch dann nötig, wenn `DeleteBehavior.SetNull` auf DB-Ebene konfiguriert ist.
 
 ---
 
@@ -257,12 +257,12 @@
 **Bedingungen:** `IStorageModeService.CurrentMode == StorageMode.Team`
 
 **Verhalten:**
-- Alle Schreiboperationen auf `Endpoint` und `EndpointGroup` rufen `ISignalRNotificationService.NotifyEndpointChangedAsync(endpointId, applicationId)` bzw. `NotifyEndpointGroupChangedAsync(groupId, applicationId)` auf.
+- Alle Schreiboperationen auf `Endpoint` und `EndpointGroup` rufen im Team-Modus über `INotificationPolicy.NotifyEndpointMutationAsync` bzw. `NotifyEndpointGroupMutationAsync` genau eine `EndpointChanged`/`EndpointGroupChanged`-Benachrichtigung auf.
 - Events werden an die SignalR-Gruppe `application:{applicationId}` gesendet (Methoden: `EndpointChanged`, `EndpointGroupChanged`).
 - `ApplicationGroupTree` empfängt diese Events und lädt nur die Daten der betroffenen Anwendung neu (`ReloadApplicationDataAsync(applicationId)`), ohne den gesamten Baum neu aufzubauen.
 - Abonnements werden nur für aufgeklappte Anwendungsknoten gehalten; zuklappen kündigt das Abonnement.
 
-**Umsetzung:** `Home` (alle Schreibhandler), `EndpointPage.OnSaveSuccessAsync`, `SignalRNotificationService.NotifyEndpointChangedAsync`, `SignalRNotificationService.NotifyEndpointGroupChangedAsync`, `ApplicationGroupTree` (SignalR-Event-Handler, `ToggleApplicationExpanded`, `DisposeAsync`).
+**Umsetzung:** `Home` (alle Schreibhandler über `IApplicationApiClient`), `EndpointsController`/`EndpointGroupsController` (Policy-Aufrufe), `NotificationPolicy` (zentrale Team-Modus-Entscheidung), `SignalRNotificationService` (Transport), `ApplicationGroupTree` (SignalR-Event-Handler, `ToggleApplicationExpanded`, `DisposeAsync`). `EndpointPage` sendet nach dem Speichern keine eigene Benachrichtigung — der REST-Controller benachrichtigt bereits zentral.
 
 ---
 

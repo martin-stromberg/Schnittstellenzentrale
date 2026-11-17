@@ -300,12 +300,13 @@ Dieselbe Berechnung nutzt auch der automatische Startabgleich der Systemanwendun
 
 ### 1. Schreiboperation auslösen
 
-Bei Schreiboperationen über den REST-API-Pfad entscheidet der jeweilige Controller anhand des `X-Storage-Mode`-Headers, ob eine Benachrichtigung ausgelöst wird — die Benachrichtigungspolitik liegt einheitlich im Controller-Pfad, nicht bei den aufrufenden Komponenten. `WorkspacesLayout` führt sämtliche Endpunkt-/Endpunktgruppen-Operationen (Anlegen, Umbenennen, Löschen, Zählabfragen) sowie das Löschen von Anwendungsgruppen (`DELETE /api/application-groups/{id}?content=delete|detach`) ausschließlich über `IApplicationApiClient` aus; die Team-Benachrichtigung erfolgt dabei serverseitig genau einmal pro Mutation. Einzelne UI-Komponenten mit direktem Schreibzugriff (z. B. `EndpointPage`, `EnvironmentManagementOverlay`) rufen `ISignalRNotificationService` weiterhin selbst auf.
+Bei Schreiboperationen entscheidet die zentrale `INotificationPolicy` anhand des `X-Storage-Mode`-Headers (bzw. ohne Prüfung beim Startabgleich), ob eine Benachrichtigung ausgelöst wird — die Benachrichtigungspolitik liegt einheitlich in `NotificationPolicy`, nicht bei den aufrufenden Komponenten. `WorkspacesLayout` führt sämtliche Endpunkt-/Endpunktgruppen-Operationen (Anlegen, Umbenennen, Löschen, Zählabfragen) sowie das Löschen von Anwendungsgruppen (`DELETE /api/application-groups/{id}?content=delete|detach`) ausschließlich über `IApplicationApiClient` aus; die Team-Benachrichtigung erfolgt dabei serverseitig genau einmal pro Mutation. Alle mutierenden Pfade — REST (`/api/*`), OData (`/odatav4/*`), Import-Apply und der Startabgleich (`SystemEndpointSyncService`) — benachrichtigen über dieselbe Policy; UI-Komponenten (z. B. `EndpointPage`) senden keine eigenen Benachrichtigungen mehr. Ausgenommen bleibt der eigenständige `EnvironmentChanged`-Mechanismus (`EnvironmentManagementOverlay`/`EndpointScriptRunner`).
 
 Beteiligte Komponenten:
+- `NotificationPolicy` (`INotificationPolicy`) — einzige Stelle mit der Team-Modus-Entscheidung; delegiert an `ISignalRNotificationService`
 - `SignalRNotificationService<EndpointHub>.NotifyApplicationChangedAsync` — sendet `"ApplicationChanged"` an Gruppe `"application:{id}"`
 - `SignalRNotificationService<EndpointHub>.NotifyGroupChangedAsync` — sendet `"GroupChanged"` an Gruppe `"group:{id}"`
-- `EndpointsController` / `EndpointGroupsController` / `ApplicationsController` / `ApplicationGroupsController` — lösen `NotifyEndpointChangedAsync`, `NotifyEndpointGroupChangedAsync` bzw. `NotifyTreeChangedAsync` bei `X-Storage-Mode: Team` aus
+- `EndpointsController` / `EndpointGroupsController` / `ApplicationsController` / `ApplicationGroupsController` / `ApplicationImportController` sowie die vier OData-Controller — rufen bei `X-Storage-Mode: Team` die passende `INotificationPolicy`-Methode auf
 
 ### 2. Hub-Abonnement
 

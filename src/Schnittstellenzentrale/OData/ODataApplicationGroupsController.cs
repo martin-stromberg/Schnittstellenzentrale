@@ -12,14 +12,20 @@ namespace Schnittstellenzentrale.OData;
 public class ODataApplicationGroupsController : ODataControllerBase
 {
     private readonly IApplicationRepository _applicationRepository;
+    private readonly INotificationPolicy _notificationPolicy;
 
     /// <summary>Initialisiert eine neue Instanz von <see cref="ODataApplicationGroupsController"/>.</summary>
     /// <param name="tokenStore">Der Token-Store.</param>
     /// <param name="applicationRepository">Das Repository für Anwendungen.</param>
-    public ODataApplicationGroupsController(ITokenStore tokenStore, IApplicationRepository applicationRepository)
+    /// <param name="notificationPolicy">Die zentrale Benachrichtigungs-Policy.</param>
+    public ODataApplicationGroupsController(
+        ITokenStore tokenStore,
+        IApplicationRepository applicationRepository,
+        INotificationPolicy notificationPolicy)
         : base(tokenStore)
     {
         _applicationRepository = applicationRepository;
+        _notificationPolicy = notificationPolicy;
     }
 
     /// <summary>Gibt alle Anwendungsgruppen zurück.</summary>
@@ -86,6 +92,7 @@ public class ODataApplicationGroupsController : ODataControllerBase
         entity.RowVersion = [];
 
         var saved = await _applicationRepository.AddGroupAsync(entity);
+        await _notificationPolicy.NotifyTreeMutationAsync(ParseStorageMode());
         return Created($"/odatav4/ApplicationGroups({saved.Id})", saved);
     }
 
@@ -113,6 +120,7 @@ public class ODataApplicationGroupsController : ODataControllerBase
         existing.RowVersion = entity.RowVersion;
 
         var saved = await _applicationRepository.UpdateGroupAsync(existing);
+        await _notificationPolicy.NotifyTreeMutationAsync(ParseStorageMode());
         return Ok(saved);
     }
 
@@ -139,6 +147,7 @@ public class ODataApplicationGroupsController : ODataControllerBase
         try
         {
             var saved = await _applicationRepository.UpdateGroupAsync(existing);
+            await _notificationPolicy.NotifyTreeMutationAsync(ParseStorageMode());
             return Ok(saved);
         }
         catch (DbUpdateConcurrencyException)
@@ -161,6 +170,7 @@ public class ODataApplicationGroupsController : ODataControllerBase
             return StatusCode(StatusCodes.Status403Forbidden);
 
         await _applicationRepository.DeleteGroupAsync(key);
+        await _notificationPolicy.NotifyTreeMutationAsync(ParseStorageMode());
         return NoContent();
     }
 }
