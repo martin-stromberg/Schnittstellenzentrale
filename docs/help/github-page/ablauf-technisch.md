@@ -53,6 +53,20 @@ gh api repos/martin-stromberg/Schnittstellenzentrale/pages
 
 (`build_type: "workflow"` erwartet.) Antwortet die API mit „Already exists", ist ein `PUT` mit demselben Body möglich. Alternativ: Repository → Settings → Pages → Source „GitHub Actions". Ohne diesen Schritt schlägt der erste `deploy-pages`-Lauf fehl.
 
+**Deployment-Branch-Policy der `github-pages`-Environment:** Die Environment wird beim ersten Deploy automatisch angelegt und erlaubt dann standardmäßig nur den Default-Branch `main`. Da `pages.yml` auch auf `staging` deployt, muss `staging` einmalig zur Branch-Policy hinzugefügt werden — sonst bricht der Lauf mit „Branch „staging" is not allowed to deploy to github-pages due to environment protection rules" ab, bevor der erste Step startet:
+
+```
+gh api repos/martin-stromberg/Schnittstellenzentrale/environments/github-pages/deployment-branch-policies -X POST -f name=staging
+```
+
+Kontrolle der erlaubten Branches:
+
+```
+gh api repos/martin-stromberg/Schnittstellenzentrale/environments/github-pages/deployment-branch-policies
+```
+
+Alternativ: Repository → Settings → Environments → `github-pages` → „Deployment branches and tags" → `staging` hinzufügen. Beides erfordert Admin-Rechte; die Policies für `main` und `staging` sind bereits gesetzt (Stand: November 2026).
+
 ## Screenshot-Regenerierung
 
 Die Galerie-PNGs werden aus der echten Anwendung erzeugt:
