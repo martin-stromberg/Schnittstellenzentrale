@@ -24,17 +24,9 @@ public abstract class PlaywrightTestBase : IAsyncLifetime
     /// <value>Der Name der abgeleiteten Testklasse.</value>
     protected virtual string TestName => GetType().Name;
 
-    /// <summary>
-    /// Ermittelt, ob Chromium im Headless-Modus gestartet werden soll.
-    /// In CI-Umgebungen (GITHUB_ACTIONS/CI) ist kein Display verfügbar, daher Headless;
-    /// lokal bleibt der Browser sichtbar, damit Entwickler den Testablauf verfolgen können.
-    /// </summary>
-    /// <returns><c>true</c>, wenn der Browser headless gestartet werden soll.</returns>
-    private static bool IsHeadless()
-    {
-        var ci = Environment.GetEnvironmentVariable("CI");
-        return !string.IsNullOrEmpty(ci) && ci.Equals("true", StringComparison.OrdinalIgnoreCase);
-    }
+    /// <summary>Die gemeinsame Playwright-Server-Instanz der Test-Collection.</summary>
+    /// <value>Der <see cref="PlaywrightServer"/> für Zugriff auf <see cref="PlaywrightServer.Services"/> und <see cref="PlaywrightServer.BaseAddress"/>.</value>
+    protected PlaywrightServer Server => _server;
 
     /// <summary>Initialisiert die Basisklasse mit dem gemeinsamen Playwright-Server.</summary>
     /// <param name="server">Der von der Test-Collection bereitgestellte <see cref="PlaywrightServer"/>.</param>
@@ -54,7 +46,7 @@ public abstract class PlaywrightTestBase : IAsyncLifetime
         BaseUrl = _server.BaseAddress;
 
         _playwright = await Microsoft.Playwright.Playwright.CreateAsync();
-        _browser = await _playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions { Headless = IsHeadless() });
+        _browser = await _playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions { Headless = TestPaths.IsHeadless() });
         Context = await _browser.NewContextAsync(new BrowserNewContextOptions
         {
             Locale = "de-DE",
