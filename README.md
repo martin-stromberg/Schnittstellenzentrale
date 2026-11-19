@@ -223,6 +223,10 @@ Jeder Workflow prüft vor dem Anlegen über ein dediziertes Label, ob bereits ei
 
 Details: [docs/help/review-automatisierung/index.md](docs/help/review-automatisierung/index.md)
 
+## GitHub Page
+
+Die öffentliche Präsentationsseite der Anwendung ist unter https://martin-stromberg.github.io/Schnittstellenzentrale/ erreichbar. Ihre Quellen liegen im Ordner `site/` (reines HTML/CSS/JS ohne Build-Tool, eingecheckte Screenshots); das Deployment übernimmt der Workflow `.github/workflows/pages.yml` bei Push auf `staging`/`main` mit Änderungen an den Seitenquellen oder manuell per `workflow_dispatch`. Details zum Pflege- und Aktualisierungsweg: [docs/help/github-page/index.md](docs/help/github-page/index.md).
+
 ## Rechtliches
 
 Rechtliche Hinweise und die Lizenzbeschreibung liegen in [LEGAL.md](LEGAL.md). Im Repository-Stamm ist keine separate `LICENSE`-Datei hinterlegt.

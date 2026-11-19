@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Schnittstellenzentrale – Zentrale Verwaltung lokaler Webservice-Endpunkte</title>
+    <meta name="description" content="Die Schnittstellenzentrale ist eine Blazor-Server-Anwendung zur zentralen Verwaltung lokaler Webservice-Endpunkte: Workspaces, Environments, Import aus Swagger/OData, OData-v4-API und Echtzeit-Synchronisation." />
+    <link rel="icon" type="image/png" href="favicon.png" />
+    <script>
+        // Inline theme init: apply the stored scheme (or prefers-color-scheme
+        // fallback) before first paint to avoid a flash of the wrong theme.
+        (function () {
+            var stored = localStorage.getItem('colorScheme');
+            var scheme = (stored === 'Light' || stored === 'Dark')
+                ? stored
+                : (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'Dark' : 'Light');
+            if (scheme === 'Dark') {
+                document.documentElement.classList.add('dark');
+            }
+        })();
+    </script>
+    <link rel="stylesheet" href="site.css" />
+    <script src="theme.js" defer></script>
+</head>
+<body>
+    <header class="site-header">
+        <img class="site-logo" src="favicon.png" alt="" width="24" height="24" />
+        <span class="site-title">Schnittstellenzentrale</span>
+        <nav class="site-nav" aria-label="Hauptnavigation">
+            <a href="#features">Features</a>
+            <a href="#screenshots">Screenshots</a>
+            <a href="#download">Download</a>
+            <a href="https://github.com/martin-stromberg/Schnittstellenzentrale" target="_blank" rel="noopener">GitHub</a>
+            <button id="theme-toggle" class="theme-toggle" type="button" aria-pressed="false" title="Zum dunklen Modus wechseln">☾</button>
+        </nav>
+    </header>
+
+    <main>
+        <section class="hero" id="hero">
+            <div class="hero-content">
+                <h1>Webservice-Endpunkte zentral verwalten</h1>
+                <p>
+                    Die Schnittstellenzentrale ist eine Blazor-Server-Anwendung zur zentralen Verwaltung
+                    lokaler Webservice-Endpunkte. Sie ermöglicht das Anlegen, Gruppieren und direkte
+                    Ausführen von HTTP-Endpunkten mit verschiedenen Authentifizierungstypen, den Import
+                    aus Swagger/OpenAPI- und OData-Definitionen sowie Echtzeit-Synchronisation im
+                    Teammodus über SignalR.
+                </p>
+                <div class="hero-badges">
+                    <a href="https://github.com/martin-stromberg/Schnittstellenzentrale/releases/latest" target="_blank" rel="noopener">
+                        <img src="https://img.shields.io/github/v/release/martin-stromberg/Schnittstellenzentrale?label=Aktuelles%20Release" alt="Aktuelles Release" />
+                    </a>
+                </div>
+                <a class="btn btn-primary" href="https://github.com/martin-stromberg/Schnittstellenzentrale/releases/latest" target="_blank" rel="noopener">Jetzt herunterladen</a>
+                <a class="btn btn-outline" href="https://github.com/martin-stromberg/Schnittstellenzentrale" target="_blank" rel="noopener">Zum Repository</a>
+            </div>
+        </section>
+
+        <section class="section" id="features">
+            <h2>Features</h2>
+            <p class="section-lead">
+                Alles, was Teams für die tägliche Arbeit mit lokalen Webservices brauchen — in einer Oberfläche.
+            </p>
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <h3>Workspaces</h3>
+                    <p>Anwendungen in Sammlungen organisieren, Endpunkte anlegen und direkt ausführen — das letzte Ergebnis bleibt pro Sitzung sichtbar.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>Environments</h3>
+                    <p>Systemumgebungen mit Variablentabellen verwalten und Platzhalter in Endpunktpfaden automatisch auflösen.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>History</h3>
+                    <p>Vollständige Aufrufhistorie mit Zeitraumfilter und Top-5-Auswertung je Anwendung.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>Swagger- und OData-Import</h3>
+                    <p>Endpunkte aus Swagger/OpenAPI- oder OData-<code>$metadata</code>-Definitionen importieren — mit Diff-Vorschau und selektiver Übernahme.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>OData v4-API</h3>
+                    <p>Vollständiger OData-v4-Service unter <code>/odatav4</code> mit CSDL-Metadaten, CRUD-Zugriff und allen Abfrageoptionen.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>Authentifizierungstypen</h3>
+                    <p>None, Basic, Negotiate, BearerToken und Negotiate mit Impersonation — Zugangsdaten liegen sicher im Windows Credential Manager.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>Team- und Benutzermodus</h3>
+                    <p>Umschaltung zwischen globalem und benutzerspezifischem Speicherbereich; die Wahl wird im Browser gespeichert.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>Echtzeit-Synchronisation</h3>
+                    <p>SignalR-basiertes Broadcasting verteilt Änderungen sofort an alle verbundenen Sitzungen im Teammodus.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>Health-Check &amp; mehr</h3>
+                    <p>Erreichbarkeitsprüfung mit Cooldown, Icons und Links je Anwendung, Impressumsseite sowie eine deutsch- und englischsprachige Oberfläche mit Dark Mode.</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="section" id="screenshots">
+            <h2>Screenshots</h2>
+            <p class="section-lead">
+                Ein Blick in die Anwendung — Workspaces, Anwendungsdetail und Endpunktansicht, hell und dunkel.
+            </p>
+            <div class="gallery-grid">
+                <figure class="gallery-item">
+                    <img src="screenshots/home-light.png" alt="Workspaces-Ansicht mit aufgeklapptem Anwendungsbaum (helles Theme)" loading="lazy" />
+                    <figcaption>Workspaces: Anwendungen, Gruppen und Endpunkte im Navigationsbaum</figcaption>
+                </figure>
+                <figure class="gallery-item">
+                    <img src="screenshots/application-light.png" alt="Anwendungsdetailansicht mit Basis-URL und Kennzahlen (helles Theme)" loading="lazy" />
+                    <figcaption>Anwendungsdetail: Beschreibung, Basis-URL, Import und Health-Check</figcaption>
+                </figure>
+                <figure class="gallery-item">
+                    <img src="screenshots/endpoint-light.png" alt="Endpunktansicht mit Methode, Pfad und Anfrage-Bereich (helles Theme)" loading="lazy" />
+                    <figcaption>Endpunkt: Methode, Pfad, Authentifizierung und direkte Ausführung</figcaption>
+                </figure>
+                <figure class="gallery-item">
+                    <img src="screenshots/home-dark.png" alt="Workspaces-Ansicht im dunklen Theme" loading="lazy" />
+                    <figcaption>Dieselbe Oberfläche im Dark Mode</figcaption>
+                </figure>
+            </div>
+        </section>
+
+        <section class="section" id="download">
+            <h2>Download</h2>
+            <div class="download-panel">
+                <div class="download-text">
+                    <h3>Aktuelles Release</h3>
+                    <p>
+                        Das jeweils aktuelle Release steht auf GitHub bereit. Das ZIP-Asset
+                        <code>Schnittstellenzentrale-vX.Y.Z.zip</code> enthält die veröffentlichte
+                        Anwendung für Windows / IIS — herunterladen, entpacken, konfigurieren, starten.
+                    </p>
+                </div>
+                <a class="btn btn-primary" href="https://github.com/martin-stromberg/Schnittstellenzentrale/releases/latest" target="_blank" rel="noopener">Release herunterladen</a>
+            </div>
+        </section>
+    </main>
+
+    <footer class="site-footer" id="footer">
+        <nav aria-label="Footer-Navigation">
+            <a href="https://github.com/martin-stromberg/Schnittstellenzentrale" target="_blank" rel="noopener">Repository</a>
+            <a href="https://github.com/martin-stromberg/Schnittstellenzentrale/tree/main/docs/help" target="_blank" rel="noopener">Dokumentation</a>
+            <a href="https://github.com/martin-stromberg/Schnittstellenzentrale/blob/main/LEGAL.md" target="_blank" rel="noopener">Rechtliches</a>
+        </nav>
+        <p>Schnittstellenzentrale — zentrale Verwaltung lokaler Webservice-Endpunkte.</p>
+    </footer>
+</body>
+</html>

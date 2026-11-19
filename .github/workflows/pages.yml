@@ -1,0 +1,80 @@
+name: GitHub Pages
+
+# Deploys the static presentation site (site/) to GitHub Pages at
+# https://martin-stromberg.github.io/Schnittstellenzentrale/.
+#
+# Triggered on pushes to staging and main that touch the page sources, the
+# verify scripts, the documentation artifacts checked by them or this
+# workflow file; can also be run manually via workflow_dispatch (available
+# once this file reaches the default branch).
+#
+# Single deploy job: there is no build step - the job runs the static
+# verification (scripts/verify-site.mjs) and then the standard Pages sequence
+# configure-pages -> upload-pages-artifact -> deploy-pages. The environment
+# and url keys are job-level keys; deploy-pages only carries id: deployment
+# so its page_url output is picked up. deploy-pages@v4+ requires the
+# 'actions: read' permission to resolve the uploaded pages artifact.
+#
+# Prerequisite: GitHub Pages must be enabled for this repository with source
+# "GitHub Actions" (one-time setup via `gh api`, documented in
+# docs/help/github-page/ablauf-technisch.md). The 'github-pages' environment
+# is created automatically by the first deploy-pages run.
+on:
+  push:
+    branches: [staging, main]
+    paths:
+      - 'site/**'
+      - '.github/workflows/pages.yml'
+      - 'scripts/verify-site*.mjs'
+      - 'docs/help/github-page/**'
+      - 'docs/help/index.md'
+      - 'README.md'
+      - 'docs/RELEASE_NOTES.md'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+  actions: read
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      # Static verification of the page artifacts and the documentation of the
+      # maintenance path. Fails the job before any deploy step when a required
+      # section, screenshot or docs artifact is missing.
+      - name: Verify site artifacts
+        shell: pwsh
+        run: node scripts/verify-site.mjs
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v6
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: site/
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5
