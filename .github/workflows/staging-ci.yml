@@ -1,9 +1,7 @@
 name: Pre-Release
 
-# Filename stays staging-ci.yml (only the display name is "Pre-Release") - see
-# ci-target-schema.md section 3. staging-to-main-promotion.yml's workflow_run trigger
-# references this display name, not the filename; both were added together in the same
-# commit so the promotion chain never points at a name that doesn't exist yet.
+# Filename stays staging-ci.yml even though the display name is "Pre-Release" - see
+# ci-target-schema.md section 3.
 #
 # Same two parallel jobs as pr-staging-ci.yml (static-checks, build-and-test; hybrid model,
 # ci-target-schema.md section 4.2/4.3), followed by version + prerelease. detect-backmerge
