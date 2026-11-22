@@ -19,7 +19,8 @@ Explizite Ausnahme: `SystemEndpointSyncService` verwendet `IApplicationRepositor
 
 ## Tests
 
-- Unit-Tests: `dotnet test --filter "FullyQualifiedName!~Playwright"`
+- Unit-Tests: `dotnet test --filter "Category!=OsInterface"` (reguläre Lane, blockierend)
+- OS-Schnittstellen-Tests (Playwright, echte Kestrel-Bindung, Temp-FS): `dotnet test --filter "Category=OsInterface"` — läuft in der CI als best-effort-Job `os-interface-tests`, siehe `docs/help/stabilitaet/os-interface-tests.md`
 - Playwright läuft über `PlaywrightServer` (Kestrel, Port 5099) — kein manueller App-Start nötig
 - `LayoutSmokeTests` prüft via `BoundingBoxAsync()` ob das Layout nicht kollabiert ist
 

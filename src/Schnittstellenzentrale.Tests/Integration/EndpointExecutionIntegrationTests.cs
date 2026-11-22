@@ -26,10 +26,25 @@ public class EndpointExecutionIntegrationTests : IAsyncLifetime
     }
 
     /// <inheritdoc/>
+    /// <remarks>Best-effort analog <c>PlaywrightServer.DisposeAsync</c>: ein
+    /// Cleanup-Fehler darf den eigentlichen Test-Assert nie überdecken —
+    /// Restfehler gehen nur nach <see cref="Console.Error"/>, die Methode wirft nie.</remarks>
     public Task DisposeAsync()
     {
-        _apiClient.Dispose();
-        _factory.Dispose();
+        try { _apiClient?.Dispose(); }
+        catch (Exception error)
+        {
+            Console.Error.WriteLine(
+                $"EndpointExecutionIntegrationTests.DisposeAsync: Cleanup-Fehler (best-effort, nicht werfend): {error}");
+        }
+
+        try { _factory?.Dispose(); }
+        catch (Exception error)
+        {
+            Console.Error.WriteLine(
+                $"EndpointExecutionIntegrationTests.DisposeAsync: Cleanup-Fehler (best-effort, nicht werfend): {error}");
+        }
+
         return Task.CompletedTask;
     }
 

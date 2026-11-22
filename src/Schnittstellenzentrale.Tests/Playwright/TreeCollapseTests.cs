@@ -1,14 +1,19 @@
 using Microsoft.Playwright;
+using Schnittstellenzentrale.Tests.Infrastructure.Testing;
 using Schnittstellenzentrale.Tests.Playwright.Infrastructure;
+using Xunit.Abstractions;
 
 namespace Schnittstellenzentrale.Tests.Playwright;
 
 /// <summary>Playwright-Tests für das Auf- und Zuklappen von Baumknoten über Titel und Chevron.</summary>
 [Collection("Playwright")]
+[OsInterface]
 public class TreeCollapseTests : PlaywrightTestBase
 {
     /// <summary>Initialisiert den Test mit der gemeinsamen Playwright-Factory.</summary>
-    public TreeCollapseTests(PlaywrightServer server) : base(server) { }
+    /// <param name="server">Die gemeinsame Server-Fixture der Test-Collection.</param>
+    /// <param name="output">Testausgabe-Hilfsinstanz für Diagnose- und Dispose-Logs.</param>
+    public TreeCollapseTests(PlaywrightServer server, ITestOutputHelper output) : base(server, output) { }
 
     /// <summary>Ein Klick auf den ApplicationGroup-Titeltext klappt den Knoten zu; ein zweiter Klick klappt ihn wieder auf.</summary>
     [Fact]

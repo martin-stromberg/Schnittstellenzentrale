@@ -1,7 +1,9 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Playwright;
+using Schnittstellenzentrale.Tests.Infrastructure.Testing;
 using Schnittstellenzentrale.Tests.Playwright.Infrastructure;
+using Xunit.Abstractions;
 
 namespace Schnittstellenzentrale.Tests.Playwright;
 
@@ -12,6 +14,7 @@ namespace Schnittstellenzentrale.Tests.Playwright;
 /// in das Repository-Arbeitsverzeichnis.
 /// </summary>
 [Collection("Playwright")]
+[OsInterface]
 public class SiteScreenshotTests : PlaywrightTestBase
 {
     private const int ViewportWidth = 1440;
@@ -19,7 +22,10 @@ public class SiteScreenshotTests : PlaywrightTestBase
 
     /// <summary>Initialisiert den Test mit dem gemeinsamen Playwright-Server.</summary>
     /// <param name="server">Der von der Test-Collection bereitgestellte <see cref="PlaywrightServer"/>.</param>
-    public SiteScreenshotTests(PlaywrightServer server) : base(server) { }
+    /// <param name="output">xUnit-Testausgabe für Dispose-/Timeout-Diagnosen.</param>
+    /// <param name="server">Die gemeinsame Server-Fixture der Test-Collection.</param>
+    /// <param name="output">Testausgabe-Hilfsinstanz für Diagnose- und Dispose-Logs.</param>
+    public SiteScreenshotTests(PlaywrightServer server, ITestOutputHelper output) : base(server, output) { }
 
     /// <summary>Workspaces-Ansicht mit aufgeklapptem Baum im hellen Theme → site/screenshots/home-light.png.</summary>
     [Fact]

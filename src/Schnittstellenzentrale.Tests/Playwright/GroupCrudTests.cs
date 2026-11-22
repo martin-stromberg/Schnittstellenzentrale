@@ -1,14 +1,19 @@
 using Microsoft.Playwright;
+using Schnittstellenzentrale.Tests.Infrastructure.Testing;
 using Schnittstellenzentrale.Tests.Playwright.Infrastructure;
+using Xunit.Abstractions;
 
 namespace Schnittstellenzentrale.Tests.Playwright;
 
 /// <summary>Playwright-Tests für das Umbenennen und Löschen von Sammlungen.</summary>
 [Collection("Playwright")]
+[OsInterface]
 public class GroupCrudTests : PlaywrightTestBase
 {
     /// <summary>Initialisiert den Test mit der gemeinsamen Playwright-Factory.</summary>
-    public GroupCrudTests(PlaywrightServer server) : base(server) { }
+    /// <param name="server">Die gemeinsame Server-Fixture der Test-Collection.</param>
+    /// <param name="output">Testausgabe-Hilfsinstanz für Diagnose- und Dispose-Logs.</param>
+    public GroupCrudTests(PlaywrightServer server, ITestOutputHelper output) : base(server, output) { }
 
     private async Task<string> CreateGroupWithApplicationAsync(string groupName, string appName)
     {

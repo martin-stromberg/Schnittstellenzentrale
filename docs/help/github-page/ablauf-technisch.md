@@ -72,17 +72,19 @@ Alternativ: Repository → Settings → Environments → `github-pages` → „D
 Die Galerie-PNGs werden aus der echten Anwendung erzeugt:
 
 ```
-dotnet test --filter "FullyQualifiedName~SiteScreenshotTests"
+dotnet test --filter "(Category=OsInterface)&(FullyQualifiedName~SiteScreenshotTests)"
 ```
 
 Die Klasse `SiteScreenshotTests` (Playwright, Collection `"Playwright"`) startet die App auf `http://127.0.0.1:5099`, seedet über `TestDatabaseSeeder.SeedShowcaseDataAsync()` repräsentative Demo-Daten (Gruppen, Anwendungen, Endpunktgruppen, Endpunkte und Umgebungen im Team-Speichermodus) und schreibt die PNGs mit festem Viewport 1440×900 nach `site/screenshots/` — lokal sichtbar, headless unter `CI=true`. Die zugrunde liegende Testinfrastruktur ist unter [Playwright-Tests](../playwright-tests/index.md) dokumentiert. In CI landen die Dateien im Wegwerf-Workspace; nur lokale Läufe erzeugen committbare Änderungen. Geänderte PNGs werden eingecheckt und fließen beim nächsten Deploy mit aus.
 
 Zusätzlich prüft `SitePageTests` (Playwright ohne Server, serviert `site/` per Route-Interception) Inhalte, Bild-Ladestatus, Dark-Toggle-Persistenz und Responsivität der statischen Seite.
 
+> **Filter-Konvention:** Die Trennung der Test-Lanes läuft über den xUnit-Trait `Category`, nicht über Namensmuster — `SiteScreenshotTests` und `SitePageTests` tragen wie alle Playwright-Tests `[OsInterface]` (Details: [OS-Schnittstellen-Tests](../stabilitaet/os-interface-tests.md)). Gezielte Einzelklassen-Läufe kombinieren daher `Category=OsInterface` mit `FullyQualifiedName~<Klasse>`; für Lane-Auswahl allein genügt `Category=OsInterface` bzw. `Category!=OsInterface`.
+
 ## Pflegeprozess
 
 1. Texte und Features in `site/index.html`, Styles in `site/site.css` ändern; Screenshots bei Bedarf per `SiteScreenshotTests`-Lauf neu erzeugen.
-2. Lokal prüfen: statischer Server auf `site/` (z. B. `npx serve site` oder `python -m http.server -d site`), `node scripts/verify-site.mjs` sowie `dotnet test --filter "FullyQualifiedName~SitePageTests"`.
+2. Lokal prüfen: statischer Server auf `site/` (z. B. `npx serve site` oder `python -m http.server -d site`), `node scripts/verify-site.mjs` sowie `dotnet test --filter "(Category=OsInterface)&(FullyQualifiedName~SitePageTests)"`.
 3. PR → Merge auf `staging` → `pages.yml` deployt automatisch (Paths-Filter); die Promotion nach `main` deployt denselben Stand erneut.
 4. **Dokumentationspflicht:** `scripts/verify-site.mjs` prüft neben den Seiten-Artefakten auch die Doku-Artefakte des Aktualisierungswegs (dieses Hilfethema, den `docs/help/index.md`-Eintrag, den README-Abschnitt und den `docs/RELEASE_NOTES.md`-Eintrag). Werden Doku-Dateien umbenannt, entfernt oder entkernt, bricht der Verify-Schritt den Deploy ab — Strukturänderungen müssen die Stichwort-Prüfung des Skripts mitpflegen.
 

@@ -1,4 +1,5 @@
 using Microsoft.Playwright;
+using Schnittstellenzentrale.Tests.Infrastructure.Testing;
 using Schnittstellenzentrale.Tests.Playwright.Infrastructure;
 
 namespace Schnittstellenzentrale.Tests.Playwright;
@@ -9,6 +10,7 @@ namespace Schnittstellenzentrale.Tests.Playwright;
 /// <c>"Playwright"</c>-Collection: Die statischen Dateien werden per
 /// Route-Interception unter der Pseudo-Origin <c>http://site.test/</c> ausgeliefert.
 /// </summary>
+[OsInterface]
 public class SitePageTests : IAsyncLifetime
 {
     private const string SiteOrigin = "http://site.test";
@@ -31,16 +33,36 @@ public class SitePageTests : IAsyncLifetime
             Locale = "de-DE",
             ExtraHTTPHeaders = new Dictionary<string, string> { ["Accept-Language"] = "de-DE,de;q=0.9" }
         });
+        // Explizite Default-Timeouts analog PlaywrightTestBase: Aktionen 30 s,
+        // Navigationen 60 s (weit unter dem 45-min-Job-Timeout der OS-Lane).
+        _context.SetDefaultTimeout(30_000);
+        _context.SetDefaultNavigationTimeout(60_000);
         await _context.RouteAsync("**/*", ServeSiteFileAsync);
         _page = await _context.NewPageAsync();
     }
 
     /// <inheritdoc/>
+    /// <remarks>Komplett best-effort: Jeder Dispose-Schritt läuft einzeln, Fehler werden
+    /// gesammelt und protokolliert — die Methode wirft nie, damit ein Cleanup-Fehler den
+    /// eigentlichen Test-Assert nicht überdeckt.</remarks>
     public async Task DisposeAsync()
     {
-        await _context.DisposeAsync();
-        await _browser.DisposeAsync();
-        _playwright.Dispose();
+        var errors = new List<Exception>();
+
+        try { await _context.DisposeAsync(); }
+        catch (Exception error) { errors.Add(error); }
+
+        try { await _browser.DisposeAsync(); }
+        catch (Exception error) { errors.Add(error); }
+
+        try { _playwright.Dispose(); }
+        catch (Exception error) { errors.Add(error); }
+
+        foreach (var error in errors)
+        {
+            Console.Error.WriteLine(
+                $"SitePageTests.DisposeAsync: Cleanup-Fehler (best-effort, nicht werfend): {error}");
+        }
     }
 
     /// <summary>Alle Pflichtsektionen der Seite sind sichtbar (Hero, Feature-Kacheln, Galerie, Download, Footer).</summary>

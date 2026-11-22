@@ -20,15 +20,17 @@ dotnet test
 
 Der erste Build nach dem Klonen des Repositories lädt automatisch den Chromium-Browser herunter (MSBuild-Target `InstallPlaywright`). Dieser Schritt kann einige Minuten dauern.
 
+Ein ungefilterter `dotnet test` umfasst beide Test-Lanes — für die reguläre Lane allein `--filter "Category!=OsInterface"`, für die OS-Schnittstellen-Tests `--filter "Category=OsInterface"` (Details: [OS-Schnittstellen-Tests](../stabilitaet/os-interface-tests.md)).
+
 ## Coverage-Gate prüfen
 
-Für die lokale Qualitätsprüfung wird der globale Coverage-Lauf ausgeführt:
+Für die lokale Qualitätsprüfung wird der Coverage-Lauf der regulären Lane ausgeführt (die OS-Schnittstellen-Lane sammelt keine Coverage — sie ist in der CI best-effort und würde den Schwellwert instabil machen):
 
 ```bash
-dotnet test Schnittstellenzentrale.slnx --collect:"XPlat Code Coverage"
+dotnet test Schnittstellenzentrale.slnx --filter "Category!=OsInterface" --collect:"XPlat Code Coverage"
 ```
 
-Die Qualitätssicherung prüft dabei die globale Line-Coverage und erwartet mindestens `70 %`. Die Umsetzung bettet sich in die bestehenden UI-Tests ein, ohne die Schwelle im Code zu verändern. Relevante Abdeckungsbereiche sind zustandsabhängige Komponenten wie `ApplicationContentView`, `EnvironmentSelector`, `AppShell` und `MainLayout`, die mit gezielten bUnit-Tests abgesichert werden.
+Die Qualitätssicherung prüft dabei die Line-Coverage der regulären Lane und erwartet mindestens `70 %`. Die Umsetzung bettet sich in die bestehenden UI-Tests ein, ohne die Schwelle im Code zu verändern. Relevante Abdeckungsbereiche sind zustandsabhängige Komponenten wie `ApplicationContentView`, `EnvironmentSelector`, `AppShell` und `MainLayout`, die mit gezielten bUnit-Tests abgesichert werden.
 
 > **Hinweis:** Für die CI-Stabilisierung ist die Abdeckung der UI- und State-Pfade wichtiger als die Anzahl der Playwright-Flows. `bUnit` wird aufgrund der geringeren Laufzeit und höheren Reproduzierbarkeit daher bevorzugt.
 
@@ -53,59 +55,59 @@ dotnet test -p:SkipPlaywrightInstall=true
 
 ## Playwright-Traces einsehen
 
-Nach jedem Testlauf werden Trace-Dateien im Verzeichnis `playwright-traces/` relativ zum Testausführungsverzeichnis abgelegt:
+Nach jedem Testlauf werden Trace-Dateien im Verzeichnis `playwright-traces/` im Repo-Root abgelegt (absolut verankert über `TestPaths.FindRepoRoot()`, unabhängig vom Arbeitsverzeichnis des Testhosts). Die Dateinamen tragen einen UTC-Zeitstempel-Suffix, damit mehrere Tests derselben Klasse einander nicht überschreiben:
 
 | Datei | Inhalt |
 |---|---|
-| `playwright-traces/{TestklassenName}.zip` | Trace der Testklasse (alle Tests der Klasse) |
-| `playwright-traces/SignalRSyncTests-A.zip` | Trace von Browser-Kontext A in `SignalRSyncTests` |
-| `playwright-traces/SignalRSyncTests-B.zip` | Trace von Browser-Kontext B in `SignalRSyncTests` |
+| `playwright-traces/{TestklassenName}-HHmmssfff.zip` | Trace des Testlaufs der Klasse (ein ZIP pro Testmethode) |
+| `playwright-traces/SignalRSyncTests-B-HHmmssfff.zip` | Trace des zusätzlichen Browser-Kontexts B in `SignalRSyncTests` |
 
 Trace öffnen mit dem Playwright Trace Viewer:
 
 ```bash
-npx playwright show-trace playwright-traces/ApplicationCrudTests.zip
+npx playwright show-trace playwright-traces/ApplicationCrudTests-101530123.zip
 ```
 
 Alternativ: Trace-Datei auf [trace.playwright.dev](https://trace.playwright.dev) hochladen und im Browser einsehen — ohne lokale Node.js-Installation.
 
-> **Hinweis:** Trace-Dateien werden auch bei erfolgreich bestandenen Tests geschrieben. Sie müssen manuell gelöscht werden oder vor dem nächsten Testlauf überschrieben.
+> **Hinweis:** Trace-Dateien werden auch bei erfolgreich bestandenen Tests geschrieben und akkumulieren durch den Zeitstempel-Suffix über Läufe hinweg — bei Bedarf manuell löschen.
 
 ## Konfiguration
 
 | Parameter | Wert | Beschreibung |
 |---|---|---|
-| SQLite-Dateiname | `schnittstellenzentrale-tests.db` | Fest codiert in `PlaywrightTestFactory`. Die Datei wird im Testausführungsverzeichnis angelegt. |
-| `Api:BaseUrl` | Dynamisch (`Server.BaseAddress`) | Wird in `PlaywrightTestFactory.CreateHost` auf die tatsächliche Kestrel-Adresse gesetzt; kein Eintrag in `appsettings.json` nötig. |
-| `ConnectionStrings:Default` | `Data Source=schnittstellenzentrale-tests.db` | Wird in `PlaywrightTestFactory.ConfigureWebHost` gesetzt; überschreibt die Produktionskonfiguration. |
-| `DatabaseProvider` | `SQLite` | Wird in `PlaywrightTestFactory.ConfigureWebHost` gesetzt. |
-| Trace-Pfad | `playwright-traces/` | Relativ zum Testausführungsverzeichnis; nicht konfigurierbar. |
-| Chromium headless | `true` | Fest codiert in `PlaywrightTestBase.InitializeAsync`; kein sichtbares Browserfenster. |
+| Testdatenbank | benannte In-Memory-SQLite (`Data Source={guid};Mode=Memory;Cache=Shared`) | Wird in `PlaywrightServer.InitializeAsync` pro Fixture angelegt und per geöffneter Anker-Verbindung offen gehalten — kein Datei-Locking zwischen Testläufen. |
+| `Api:BaseUrl` | `http://127.0.0.1:5099` | Aus `appsettings.Playwright.json` (Umgebung `Playwright`); API-Aufrufe laufen ohnehin über den In-Process-Handler der `PlaywrightApiFactory`. |
+| `ConnectionStrings:Default` | `Data Source=schnittstellenzentrale-playwright.db` | Aus `appsettings.Playwright.json`; wird zur Laufzeit durch die benannte In-Memory-Verbindung ersetzt. |
+| `DatabaseProvider` | `SQLite` | Aus `appsettings.Playwright.json`. |
+| `Urls` | `http://127.0.0.1:5099` | Aus `appsettings.Playwright.json`; `PlaywrightServer` setzt `_app.Urls` final auf die `BindUrl` der Fixture-Klasse (Ports 5099–5104). |
+| Trace-Pfad | `playwright-traces/` | Im Repo-Root verankert (`TestPaths.FindRepoRoot()`); nicht konfigurierbar. |
+| Chromium headless | `CI=true` → headless | `TestPaths.IsHeadless()` in `PlaywrightTestBase.InitializeAsync`; lokal läuft der Browser mit sichtbarem Fenster. |
 
 ## CI-Pipeline (GitHub Actions)
 
-Damit Traces bei Fehlern als Build-Artefakte verfügbar sind, muss ein Upload-Schritt konfiguriert werden:
+Der Job `os-interface-tests` (in `pr-staging-ci.yml` und `staging-ci.yml`) lädt die Trace-ZIPs bedingungslos als Artefakt hoch, damit auch ein fehlgeschlagener Lauf Diagnosematerial hinterlässt:
 
 ```yaml
-- uses: actions/upload-artifact@v4
-  if: failure()
+- name: Upload Playwright traces
+  if: always()
+  uses: actions/upload-artifact@v7
   with:
-    name: playwright-traces
-    path: src/Schnittstellenzentrale.Tests/bin/Debug/net10.0/playwright-traces/
+    name: playwright-traces-pr   # bzw. playwright-traces-staging
+    path: playwright-traces/
+    retention-days: 14
 ```
 
-> **Hinweis:** Der genaue Pfad hängt von der Konfiguration und dem Arbeitsverzeichnis des CI-Runners ab. Die Datei wird vom Testprozess relativ zu seinem Arbeitsverzeichnis geschrieben, das in der Regel `bin/Debug/net10.0/` entspricht.
+> **Hinweis:** Der Upload-Pfad `playwright-traces/` ist relativ zum Repo-Root — dort verankert `PlaywrightTestBase` das Trace-Verzeichnis absolut über `TestPaths.FindRepoRoot()`, sodass der Glob unabhängig vom Testhost-Arbeitsverzeichnis greift.
 
 ## Überprüfung
 
-Nach `dotnet test` sollte die Ausgabe zeigen:
+Nach `dotnet test --filter "Category=OsInterface"` sollte die Zusammenfassung ohne Fehlschlag ausgehen (`Failed: 0`).
 
-```text
-Passed! - Failed: 0, Passed: 11, Skipped: 0
-```
-
-Die elf Playwright-Tests verteilen sich auf sieben Testklassen. Wenn Playwright-Tests einzeln übersprungen oder gefiltert werden sollen, kann der xUnit-Trait-Filter verwendet werden:
+Die OS-Schnittstellen-Tests verteilen sich auf die Playwright-Testklassen unter `Schnittstellenzentrale.Tests.Playwright` sowie die Temp-Dateisystem-Tests `ImpressumServiceTests` und `TempDirectoryCleanupTests` (Stand des Audits: 26 Klassen). Wenn Tests dieser Lane einzeln übersprungen oder gefiltert werden sollen, steht der xUnit-Trait-Filter `Category` bereit — alle Klassen der Lane tragen `[OsInterface]`:
 
 ```bash
-dotnet test --filter "FullyQualifiedName~Playwright"
+dotnet test --filter "Category=OsInterface"
 ```
+
+In der CI läuft diese Menge als best-effort-Job `os-interface-tests` (`continue-on-error`), getrennt vom blockierenden `build-and-test`-Job — Details in [OS-Schnittstellen-Tests](../stabilitaet/os-interface-tests.md).

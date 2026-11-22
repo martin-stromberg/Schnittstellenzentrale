@@ -1,14 +1,19 @@
 using Microsoft.Playwright;
+using Schnittstellenzentrale.Tests.Infrastructure.Testing;
 using Schnittstellenzentrale.Tests.Playwright.Infrastructure;
+using Xunit.Abstractions;
 
 namespace Schnittstellenzentrale.Tests.Playwright;
 
 /// <summary>Playwright-Tests für die Impressum-Seite und den Impressum-Link im Sidebar-Footer.</summary>
 [Collection("Playwright")]
+[OsInterface]
 public class ImpressumPageTests : PlaywrightTestBase
 {
     /// <summary>Initialisiert den Test mit dem gemeinsamen PlaywrightServer (keine Impressum-Datei vorhanden).</summary>
-    public ImpressumPageTests(PlaywrightServer server) : base(server) { }
+    /// <param name="server">Die gemeinsame Server-Fixture der Test-Collection.</param>
+    /// <param name="output">Testausgabe-Hilfsinstanz für Diagnose- und Dispose-Logs.</param>
+    public ImpressumPageTests(PlaywrightServer server, ITestOutputHelper output) : base(server, output) { }
 
     /// <summary>ImpressumSeite_ZeigtHinweis_WennDateiFehlt: /impressum zeigt lokalisierten Hinweistext, wenn Datei fehlt.</summary>
     [Fact]
@@ -38,10 +43,13 @@ public class ImpressumPageTests : PlaywrightTestBase
 
 /// <summary>Playwright-Tests für die Impressum-Seite mit vorhandener Impressum-Datei.</summary>
 [Collection("PlaywrightImpressum")]
+[OsInterface]
 public class ImpressumPageWithFileTests : PlaywrightTestBase
 {
     /// <summary>Initialisiert den Test mit dem PlaywrightImpressumServer (Impressum-Datei ist vorhanden).</summary>
-    public ImpressumPageWithFileTests(PlaywrightImpressumServer server) : base(server) { }
+    /// <param name="server">Die gemeinsame Server-Fixture der Test-Collection.</param>
+    /// <param name="output">Testausgabe-Hilfsinstanz für Diagnose- und Dispose-Logs.</param>
+    public ImpressumPageWithFileTests(PlaywrightImpressumServer server, ITestOutputHelper output) : base(server, output) { }
 
     /// <summary>ImpressumSeite_ZeigtInhalt_WennDateiVorhanden: /impressum zeigt Überschrift und Inhalt, wenn Impressum-Datei vorhanden ist.</summary>
     [Fact]
