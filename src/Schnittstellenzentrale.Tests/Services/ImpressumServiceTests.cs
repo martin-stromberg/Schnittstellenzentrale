@@ -1,10 +1,15 @@
 using System.Globalization;
 using Microsoft.Extensions.Options;
 using Schnittstellenzentrale.Infrastructure.Services;
+using Schnittstellenzentrale.Tests.Infrastructure.Testing;
+using Schnittstellenzentrale.Tests.Helpers;
 
 namespace Schnittstellenzentrale.Tests.Services;
 
 /// <summary>Unit-Tests für <see cref="ImpressumService"/>.</summary>
+/// <remarks>OsInterface: echtes Temp-Dateisystem und Schreibzugriffe ins
+/// <see cref="AppContext.BaseDirectory"/> (siehe Audit <c>inventory/audit-os-interface.md</c>).</remarks>
+[OsInterface]
 public class ImpressumServiceTests : IDisposable
 {
     private readonly string _tempDir;
@@ -19,8 +24,8 @@ public class ImpressumServiceTests : IDisposable
     /// <inheritdoc/>
     public void Dispose()
     {
-        if (Directory.Exists(_tempDir))
-            Directory.Delete(_tempDir, recursive: true);
+        // Best-effort: ein Cleanup-Restfehler darf den eigentlichen Assert nie überdecken.
+        TempDirectoryCleanup.DeleteBestEffort(_tempDir);
     }
 
     private static ImpressumService CreateService(string filePath)
@@ -130,8 +135,7 @@ public class ImpressumServiceTests : IDisposable
         finally
         {
             CultureInfo.CurrentUICulture = originalCulture;
-            if (File.Exists(expectedPath))
-                File.Delete(expectedPath);
+            TempDirectoryCleanup.DeleteFileBestEffort(expectedPath);
         }
     }
 
@@ -154,8 +158,7 @@ public class ImpressumServiceTests : IDisposable
         finally
         {
             CultureInfo.CurrentUICulture = originalCulture;
-            if (File.Exists(expectedPath))
-                File.Delete(expectedPath);
+            TempDirectoryCleanup.DeleteFileBestEffort(expectedPath);
         }
     }
 

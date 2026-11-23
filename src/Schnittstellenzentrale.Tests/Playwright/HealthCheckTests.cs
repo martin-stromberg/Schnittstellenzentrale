@@ -1,14 +1,19 @@
 using Microsoft.Playwright;
+using Schnittstellenzentrale.Tests.Infrastructure.Testing;
 using Schnittstellenzentrale.Tests.Playwright.Infrastructure;
+using Xunit.Abstractions;
 
 namespace Schnittstellenzentrale.Tests.Playwright;
 
 /// <summary>Playwright-Tests für den Health-Check-Dialog.</summary>
 [Collection("Playwright")]
+[OsInterface]
 public class HealthCheckTests : PlaywrightTestBase
 {
     /// <summary>Initialisiert den Test mit der gemeinsamen Playwright-Factory.</summary>
-    public HealthCheckTests(PlaywrightServer server) : base(server) { }
+    /// <param name="server">Die gemeinsame Server-Fixture der Test-Collection.</param>
+    /// <param name="output">Testausgabe-Hilfsinstanz für Diagnose- und Dispose-Logs.</param>
+    public HealthCheckTests(PlaywrightServer server, ITestOutputHelper output) : base(server, output) { }
 
     /// <summary>Der Health-Check-Dialog zeigt den „erreichbar"-Status nach Ausführung für die Systemanwendung.</summary>
     [Fact]

@@ -164,22 +164,22 @@ src/
 
 ## Tests
 
-**Unit- und Integrationstests** (ohne Browser):
+**Unit- und Integrationstests** (reguläre Lane, deterministisch — ohne Browser):
 
 ```
-dotnet test --filter "FullyQualifiedName!~Playwright"
+dotnet test --filter "Category!=OsInterface"
 ```
 
-**Playwright-E2E-Tests** (Chromium wird beim ersten Build automatisch heruntergeladen):
+**OS-Schnittstellen-Tests** (Playwright-E2E, echte Kestrel-Bindung, Temp-Dateisystem — Chromium wird beim ersten Build automatisch heruntergeladen; in der CI best-effort als eigener Job `os-interface-tests`):
 
 ```
-dotnet test --filter "FullyQualifiedName~Playwright"
+dotnet test --filter "Category=OsInterface"
 ```
 
-**Coverage-Lauf** (lokale Abfrage der Line-Coverage inklusive der Playwright-Tests):
+**Coverage-Lauf** (lokale Abfrage der Line-Coverage der regulären Lane — die OS-Lane sammelt in der CI keine Coverage):
 
 ```
-dotnet test Schnittstellenzentrale.slnx --collect:"XPlat Code Coverage"
+dotnet test Schnittstellenzentrale.slnx --filter "Category!=OsInterface" --collect:"XPlat Code Coverage"
 ```
 
 Beim ersten Build nach dem Klonen lädt das MSBuild-Target `InstallPlaywright` den Chromium-Browser herunter. Zum Überspringen in CI-Umgebungen:
@@ -188,13 +188,13 @@ Beim ersten Build nach dem Klonen lädt das MSBuild-Target `InstallPlaywright` d
 dotnet test -p:SkipPlaywrightInstall=true
 ```
 
-Trace-Dateien der Playwright-Tests werden nach jedem Lauf unter `playwright-traces/` abgelegt (auch bei Erfolg). Einsehen mit:
+Trace-Dateien der Playwright-Tests werden nach jedem Lauf unter `playwright-traces/` im Repo-Root abgelegt (auch bei Erfolg; Dateinamen `{TestName}-HHmmssfff.zip` mit UTC-Zeitstempel-Suffix). Einsehen mit:
 
 ```
-npx playwright show-trace playwright-traces/ApplicationCrudTests.zip
+npx playwright show-trace playwright-traces/ApplicationCrudTests-101530123.zip
 ```
 
-Das Repository nutzt ein lokales Qualitätsgate für 70 % Line Coverage; die bUnit- und Playwright-Tests werden gezielt erweitert, damit der CI-Lauf stabil durchläuft. Abgedeckte E2E-Szenarien: Startseite, Anwendungs-CRUD, Endpunkt-Ausführung, Swagger-Import, OData-Import, Health-Check, Speichermoduswechsel, SignalR-Echtzeitsynchronisation, Aktivitätsprotokoll.
+Das Repository nutzt ein lokales Qualitätsgate für 70 % Line Coverage in der regulären Lane; die bUnit-Tests werden gezielt erweitert, damit der CI-Lauf stabil durchläuft. Abgedeckte E2E-Szenarien: Startseite, Anwendungs-CRUD, Endpunkt-Ausführung, Swagger-Import, OData-Import, Health-Check, Speichermoduswechsel, SignalR-Echtzeitsynchronisation, Aktivitätsprotokoll.
 
 ## Git-Hooks
 

@@ -1,14 +1,20 @@
 using Microsoft.Playwright;
+using Schnittstellenzentrale.Tests.Helpers;
+using Schnittstellenzentrale.Tests.Infrastructure.Testing;
 using Schnittstellenzentrale.Tests.Playwright.Infrastructure;
+using Xunit.Abstractions;
 
 namespace Schnittstellenzentrale.Tests.Playwright;
 
 /// <summary>Playwright-Tests für den Icon-Upload.</summary>
 [Collection("Playwright")]
+[OsInterface]
 public class IconUploadTests : PlaywrightTestBase
 {
     /// <summary>Initialisiert den Test mit der gemeinsamen Playwright-Factory.</summary>
-    public IconUploadTests(PlaywrightServer server) : base(server) { }
+    /// <param name="server">Die gemeinsame Server-Fixture der Test-Collection.</param>
+    /// <param name="output">Testausgabe-Hilfsinstanz für Diagnose- und Dispose-Logs.</param>
+    public IconUploadTests(PlaywrightServer server, ITestOutputHelper output) : base(server, output) { }
 
     private async Task NavigateToCollectionContentAsync()
     {
@@ -42,7 +48,8 @@ public class IconUploadTests : PlaywrightTestBase
         await NavigateToCollectionContentAsync();
 
         var pngBytes = CreateMinimalPng();
-        var tempFile = Path.Combine(Path.GetTempPath(), "test-icon.png");
+        // Eindeutiger Name verhindert Kollisionen paralleler dotnet-test-Prozesse.
+        var tempFile = Path.Combine(Path.GetTempPath(), $"sz-icon-{Guid.NewGuid():N}.png");
         await File.WriteAllBytesAsync(tempFile, pngBytes);
 
         try
@@ -55,7 +62,8 @@ public class IconUploadTests : PlaywrightTestBase
         }
         finally
         {
-            File.Delete(tempFile);
+            // Best-effort: ein Cleanup-Restfehler darf den Assert nie überdecken.
+            TempDirectoryCleanup.DeleteFileBestEffort(tempFile);
         }
     }
 
@@ -65,26 +73,17 @@ public class IconUploadTests : PlaywrightTestBase
     {
         await NavigateToCollectionContentAsync();
 
-        var tempFile = Path.Combine(Path.GetTempPath(), "test-icon.txt");
-        await File.WriteAllTextAsync(tempFile, "kein Bild");
-
-        try
+        var fileInput = Page.Locator("input[type='file'][accept*='image/png']").First;
+        // In-Memory-FilePayload — kein Temp-File nötig.
+        await fileInput.SetInputFilesAsync(new FilePayload
         {
-            var fileInput = Page.Locator("input[type='file'][accept*='image/png']").First;
-            await fileInput.SetInputFilesAsync(new FilePayload
-            {
-                Name = "test-icon.txt",
-                MimeType = "text/plain",
-                Buffer = System.Text.Encoding.UTF8.GetBytes("kein Bild")
-            });
+            Name = "test-icon.txt",
+            MimeType = "text/plain",
+            Buffer = System.Text.Encoding.UTF8.GetBytes("kein Bild")
+        });
 
-            var errorSpan = Page.Locator(".sz-upload-error");
-            await Assertions.Expect(errorSpan).ToBeVisibleAsync();
-        }
-        finally
-        {
-            File.Delete(tempFile);
-        }
+        var errorSpan = Page.Locator(".sz-upload-error");
+        await Assertions.Expect(errorSpan).ToBeVisibleAsync();
     }
 
     /// <summary>Datei größer als 512 KB zeigt Fehlermeldung.</summary>

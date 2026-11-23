@@ -1,14 +1,19 @@
 using Microsoft.Playwright;
+using Schnittstellenzentrale.Tests.Infrastructure.Testing;
 using Schnittstellenzentrale.Tests.Playwright.Infrastructure;
+using Xunit.Abstractions;
 
 namespace Schnittstellenzentrale.Tests.Playwright;
 
 /// <summary>Playwright-Tests für das Anlegen, Bearbeiten und Löschen von Anwendungen.</summary>
 [Collection("Playwright")]
+[OsInterface]
 public class ApplicationCrudTests : PlaywrightTestBase
 {
     /// <summary>Initialisiert den Test mit der gemeinsamen Playwright-Factory.</summary>
-    public ApplicationCrudTests(PlaywrightServer server) : base(server) { }
+    /// <param name="server">Die gemeinsame Server-Fixture der Test-Collection.</param>
+    /// <param name="output">Testausgabe-Hilfsinstanz für Diagnose- und Dispose-Logs.</param>
+    public ApplicationCrudTests(PlaywrightServer server, ITestOutputHelper output) : base(server, output) { }
 
     /// <summary>Eine neu angelegte Anwendung erscheint im Baum.</summary>
     [Fact]

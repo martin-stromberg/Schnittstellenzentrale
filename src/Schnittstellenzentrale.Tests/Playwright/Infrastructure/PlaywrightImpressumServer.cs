@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Schnittstellenzentrale.Infrastructure.Services;
+using Schnittstellenzentrale.Tests.Helpers;
 
 namespace Schnittstellenzentrale.Tests.Playwright.Infrastructure;
 
@@ -60,7 +61,9 @@ public class PlaywrightImpressumServer : PlaywrightServer
 
     private void Cleanup()
     {
-        if (_tempDir != null && Directory.Exists(_tempDir))
-            Directory.Delete(_tempDir, recursive: true);
+        // Best-effort mit Retry/Backoff: ein Cleanup-Restfehler darf den Test-Assert
+        // und (im Initialize-catch) den eigentlichen Startfehler nie überdecken.
+        if (_tempDir != null)
+            TempDirectoryCleanup.DeleteBestEffort(_tempDir);
     }
 }

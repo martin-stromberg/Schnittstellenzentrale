@@ -66,6 +66,12 @@ Generated\ Files/
 [Bb]uild[Ll]og.*
 *.trx
 
+# Playwright-Trace-ZIPs lokaler Testläufe (PlaywrightTestBase schreibt in den Repo-Root)
+playwright-traces/
+
+# Von Download-OsInterfaceTrxHistory.ps1 geholte CI-TRX-Historie (Flake-Statistik)
+trx-history/
+
 # NUnit
 *.VisualState.xml
 TestResult.xml

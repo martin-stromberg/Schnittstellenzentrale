@@ -1,14 +1,19 @@
 using Microsoft.Playwright;
+using Schnittstellenzentrale.Tests.Infrastructure.Testing;
 using Schnittstellenzentrale.Tests.Playwright.Infrastructure;
+using Xunit.Abstractions;
 
 namespace Schnittstellenzentrale.Tests.Playwright;
 
 /// <summary>Playwright-Tests für die Bereichsnavigation und Breadcrumb.</summary>
 [Collection("Playwright")]
+[OsInterface]
 public class NavigationTests : PlaywrightTestBase
 {
     /// <summary>Initialisiert den Test mit der gemeinsamen Playwright-Factory.</summary>
-    public NavigationTests(PlaywrightServer server) : base(server) { }
+    /// <param name="server">Die gemeinsame Server-Fixture der Test-Collection.</param>
+    /// <param name="output">Testausgabe-Hilfsinstanz für Diagnose- und Dispose-Logs.</param>
+    public NavigationTests(PlaywrightServer server, ITestOutputHelper output) : base(server, output) { }
 
     /// <summary>Klick auf Workspaces-Tab zeigt WorkspacesSidebar.</summary>
     [Fact]

@@ -1,14 +1,19 @@
 using Microsoft.Playwright;
+using Schnittstellenzentrale.Tests.Infrastructure.Testing;
 using Schnittstellenzentrale.Tests.Playwright.Infrastructure;
+using Xunit.Abstractions;
 
 namespace Schnittstellenzentrale.Tests.Playwright;
 
 /// <summary>Playwright-Tests für die Verwaltung von Systemumgebungen und Variablen.</summary>
 [Collection("Playwright")]
+[OsInterface]
 public class EnvironmentManagementTests : PlaywrightTestBase
 {
     /// <summary>Initialisiert den Test mit der gemeinsamen Playwright-Factory.</summary>
-    public EnvironmentManagementTests(PlaywrightServer server) : base(server) { }
+    /// <param name="server">Die gemeinsame Server-Fixture der Test-Collection.</param>
+    /// <param name="output">Testausgabe-Hilfsinstanz für Diagnose- und Dispose-Logs.</param>
+    public EnvironmentManagementTests(PlaywrightServer server, ITestOutputHelper output) : base(server, output) { }
 
     /// <summary>
     /// E2E: Maskierter Variablenwert erscheint nicht im Klartext im DOM;

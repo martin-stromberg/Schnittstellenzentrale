@@ -25,5 +25,6 @@
 
 - [Automatisierte Review-Workflows](review-automatisierung/index.md) — Drei zeitgesteuerte GitHub-Actions-Workflows erzeugen in festen Intervallen Review-Issues mit `@softwarewerkstatt`-Erwähnung und vermeiden Duplikate über dedizierte Labels.
 - [GitHub Page](github-page/index.md) — Die öffentliche Präsentationsseite der Anwendung wird aus `site/` per GitHub-Actions-Workflow auf GitHub Pages deployt.
-- [Playwright-Tests](playwright-tests/index.md) — Die Testinfrastruktur stellt browserbasierte E2E-Prüfungen und die Absicherung des Coverage-Gates für das UI-Verhalten bereit.
+- [Playwright-Tests](playwright-tests/index.md) — Die Testinfrastruktur stellt browserbasierte E2E-Prüfungen für das UI-Verhalten bereit.
+- [Stabilität & Fehlerbehandlung](stabilitaet/index.md) — OS-Schnittstellen-Tests (Trait-Konvention, Retry-/Quarantäne-Regeln) und Flake-Härtung der Testinfrastruktur.
 - [Git-Hooks](git-hooks/index.md) — Versionierte Git-Hooks unter `.githooks/` prüfen lokale Qualitätsregeln beim Commit und Push.
