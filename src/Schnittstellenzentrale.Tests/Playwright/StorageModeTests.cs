@@ -3,18 +3,23 @@ using Microsoft.Playwright;
 using Schnittstellenzentrale.Core.Enums;
 using Schnittstellenzentrale.Core.Interfaces;
 using Schnittstellenzentrale.Core.Models;
+using Schnittstellenzentrale.Tests.Infrastructure.Testing;
 using Schnittstellenzentrale.Tests.Playwright.Infrastructure;
+using Xunit.Abstractions;
 
 namespace Schnittstellenzentrale.Tests.Playwright;
 
 /// <summary>Playwright-Tests für den Speichermodus-Wechsel und localStorage-Persistierung.</summary>
 [Collection("Playwright")]
+[OsInterface]
 public class StorageModeTests : PlaywrightTestBase
 {
     private readonly PlaywrightServer _server;
 
     /// <summary>Initialisiert den Test mit der gemeinsamen Playwright-Factory.</summary>
-    public StorageModeTests(PlaywrightServer server) : base(server)
+    /// <param name="server">Die gemeinsame Server-Fixture der Test-Collection.</param>
+    /// <param name="output">Testausgabe-Hilfsinstanz für Diagnose- und Dispose-Logs.</param>
+    public StorageModeTests(PlaywrightServer server, ITestOutputHelper output) : base(server, output)
     {
         _server = server;
     }

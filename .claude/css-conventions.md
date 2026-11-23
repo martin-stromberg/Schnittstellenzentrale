@@ -37,7 +37,7 @@ Theme-Aktivierung: `theme.js` setzt `.dark`-Klasse auf `<html>` (kein `data-them
 Nach Implementierungen mit UI-Änderungen:
 
 1. `dotnet build` — fehlerfrei
-2. `dotnet test --filter "FullyQualifiedName!~Playwright"` — alle Unit-Tests grün
+2. `dotnet test --filter "Category!=OsInterface"` — alle regulären Tests grün
 3. App starten und prüfen: strukturiertes Layout, kein Kollaps in die obere linke Ecke
 
 `LayoutSmokeTests.cs` prüft automatisch via `BoundingBoxAsync()`, dass alle Hauptbereiche tatsächlich Fläche einnehmen.

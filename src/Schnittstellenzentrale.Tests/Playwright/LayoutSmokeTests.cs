@@ -1,5 +1,7 @@
 using Microsoft.Playwright;
+using Schnittstellenzentrale.Tests.Infrastructure.Testing;
 using Schnittstellenzentrale.Tests.Playwright.Infrastructure;
+using Xunit.Abstractions;
 
 namespace Schnittstellenzentrale.Tests.Playwright;
 
@@ -8,10 +10,13 @@ namespace Schnittstellenzentrale.Tests.Playwright;
 /// Fängt fehlende CSS-Definitionen auf, die das Layout auf Höhe/Breite 0 kollabieren lassen.
 /// </summary>
 [Collection("Playwright")]
+[OsInterface]
 public class LayoutSmokeTests : PlaywrightTestBase
 {
     /// <summary>Initialisiert den Test mit dem gemeinsamen PlaywrightServer.</summary>
-    public LayoutSmokeTests(PlaywrightServer server) : base(server) { }
+    /// <param name="server">Die gemeinsame Server-Fixture der Test-Collection.</param>
+    /// <param name="output">Testausgabe-Hilfsinstanz für Diagnose- und Dispose-Logs.</param>
+    public LayoutSmokeTests(PlaywrightServer server, ITestOutputHelper output) : base(server, output) { }
 
     /// <summary>AppShell muss Breite und Höhe größer als 200px haben.</summary>
     [Fact]

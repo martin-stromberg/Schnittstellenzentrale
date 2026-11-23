@@ -3,7 +3,9 @@ using Microsoft.Playwright;
 using Schnittstellenzentrale.Core.Enums;
 using Schnittstellenzentrale.Core.Interfaces;
 using Schnittstellenzentrale.Core.Models;
+using Schnittstellenzentrale.Tests.Infrastructure.Testing;
 using Schnittstellenzentrale.Tests.Playwright.Infrastructure;
+using Xunit.Abstractions;
 
 namespace Schnittstellenzentrale.Tests.Playwright;
 
@@ -12,12 +14,15 @@ namespace Schnittstellenzentrale.Tests.Playwright;
 /// OData-Endpunkte ausgeführt werden können und OData-Filterausdrücke korrekt verarbeitet werden.
 /// </summary>
 [Collection("PlaywrightODataEndpoint")]
+[OsInterface]
 public class ODataEndpointExecutionTests : PlaywrightTestBase
 {
     private readonly PlaywrightODataEndpointServer _server;
 
     /// <summary>Initialisiert den Test mit dem OData-Endpunkt-Server.</summary>
-    public ODataEndpointExecutionTests(PlaywrightODataEndpointServer server) : base(server)
+    /// <param name="server">Die gemeinsame Server-Fixture der Test-Collection.</param>
+    /// <param name="output">Testausgabe-Hilfsinstanz für Diagnose- und Dispose-Logs.</param>
+    public ODataEndpointExecutionTests(PlaywrightODataEndpointServer server, ITestOutputHelper output) : base(server, output)
     {
         _server = server;
     }

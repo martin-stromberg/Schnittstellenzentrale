@@ -1,9 +1,7 @@
 name: Pre-Release
 
-# Filename stays staging-ci.yml (only the display name is "Pre-Release") - see
-# ci-target-schema.md section 3. staging-to-main-promotion.yml's workflow_run trigger
-# references this display name, not the filename; both were added together in the same
-# commit so the promotion chain never points at a name that doesn't exist yet.
+# Filename stays staging-ci.yml even though the display name is "Pre-Release" - see
+# ci-target-schema.md section 3.
 #
 # Same two parallel jobs as pr-staging-ci.yml (static-checks, build-and-test; hybrid model,
 # ci-target-schema.md section 4.2/4.3), followed by version + prerelease. detect-backmerge
@@ -117,12 +115,12 @@ jobs:
         shell: pwsh
 
       - name: Test
-        run: dotnet test Schnittstellenzentrale.slnx --configuration Release --no-build --filter "FullyQualifiedName!~Playwright" --collect:"XPlat Code Coverage" --logger "trx;LogFileName=test-results.trx" --logger "console;verbosity=normal"
-        shell: pwsh
-
-      - name: Test Playwright
-        continue-on-error: true
-        run: dotnet test Schnittstellenzentrale.slnx --configuration Release --no-build --filter "FullyQualifiedName~Playwright" --collect:"XPlat Code Coverage" --logger "trx;LogFileName=test-results-playwright.trx" --logger "console;verbosity=normal"
+        # Blocking gate: the regular lane runs only deterministic tests - the
+        # environment-sensitive ones (Playwright/Chromium, real Kestrel binding on ports
+        # 5099-5104, temp filesystem) carry the trait Category=OsInterface and run in the
+        # separate best-effort job os-interface-tests below. This is the only lane that
+        # collects coverage and feeds the threshold below (ci-target-schema.md section 4.5).
+        run: dotnet test Schnittstellenzentrale.slnx --configuration Release --no-build --filter "Category!=OsInterface" --collect:"XPlat Code Coverage" --logger "trx;LogFileName=test-results.trx" --logger "console;verbosity=normal"
         shell: pwsh
 
       - name: Install ReportGenerator
@@ -134,6 +132,12 @@ jobs:
         shell: pwsh
 
       - name: Enforce coverage threshold
+        # Gate 5: hard 70% line-coverage minimum (ci-target-schema.md section 4.5).
+        # Only the regular lane (Category!=OsInterface) feeds this - the best-effort
+        # OS-interface lane deliberately collects no coverage so the threshold never
+        # depends on a non-blocking lane (measured 72.77% / line-rate 0.7277 locally
+        # on the regular lane alone after the OsInterface tagging - i.e. already
+        # excluding ImpressumServiceTests).
         env:
           COVERAGE_THRESHOLD: '70'
         run: |
@@ -166,12 +170,111 @@ jobs:
             src/Schnittstellenzentrale.Tests/TestResults/*.trx
           retention-days: 14
 
+  os-interface-tests:
+    name: os-interface tests
+    needs: detect-backmerge
+    if: needs.detect-backmerge.outputs.is_backmerge != 'true'
+    # Same split as pr-staging-ci.yml: the OS-interface lane (Playwright/Chromium,
+    # real Kestrel binding on ports 5099-5104, temp filesystem) is the slowest part
+    # of the suite and used to run as a step inside build & test, where its runtime
+    # counted against the blocking job's timeout. version/prerelease deliberately do
+    # not `needs:` this job, so even a hard failure here can never block the release
+    # chain. Job-level continue-on-error keeps the overall run green.
+    continue-on-error: true
+    runs-on: windows-latest
+    timeout-minutes: 45
+    # Job-level permissions replace the workflow permissions - list all needed scopes
+    # explicitly: contents:read (checkout), issues:write (quarantine issues),
+    # actions:read (gh run list/download for the TRX history).
+    permissions:
+      contents: read
+      issues: write
+      actions: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore Schnittstellenzentrale.slnx
+        shell: pwsh
+
+      - name: Build
+        # Triggers Schnittstellenzentrale.Tests' InstallPlaywright MSBuild target
+        # (AfterTargets="Build") -> Chromium install, same as in build-and-test.
+        run: dotnet build Schnittstellenzentrale.slnx -c Release --no-restore
+        shell: pwsh
+
+      - name: Test OS interface
+        # No --collect: the OS lane is excluded from the 70% coverage gate so the
+        # threshold never depends on a best-effort lane.
+        run: dotnet test Schnittstellenzentrale.slnx -c Release --no-build --filter "Category=OsInterface" --logger "trx;LogFileName=test-results-os-interface.trx" --logger "console;verbosity=normal"
+        shell: pwsh
+
+      - name: Retry flaky tests once
+        # if: failure() is deliberately broad: on a build failure or missing TRX the
+        # script reports "keine Flaky-Fehlschlaege" and exits 0, so the original
+        # failing step stays the leading signal. Persistent flaky failures fail this
+        # step - the job still stays non-blocking via job-level continue-on-error.
+        if: failure()
+        # No trailing `exit $LASTEXITCODE`: the script itself calls `exit 0`/`exit 1`,
+        # which ends the whole step pwsh session with that code - a follow-up line
+        # would be dead code.
+        run: |
+          & scripts/Retry-FlakyTests.ps1 -TestProject src/Schnittstellenzentrale.Tests/Schnittstellenzentrale.Tests.csproj -PrimaryTrx src/Schnittstellenzentrale.Tests/TestResults/test-results-os-interface.trx -Configuration Release
+        shell: pwsh
+
+      - name: Download OS-interface TRX history
+        # Artifact-chain persistence for the flake statistics: pulls this workflow's
+        # own test-results-os-interface artifacts of the last ~15 runs so the analyzer
+        # sees more than the current run. Fully best-effort - missing artifacts
+        # (older runs, 14d retention) or API errors never fail the step.
+        if: always()
+        continue-on-error: true
+        run: |
+          & scripts/Download-OsInterfaceTrxHistory.ps1 -WorkflowFile staging-ci.yml -ArtifactName test-results-os-interface-staging -Destination trx-history -MaxRuns 15
+        shell: pwsh
+
+      - name: Analyze flaky test results
+        # Pure visibility report over this run's TestResults plus the downloaded
+        # history (always exit 0); writes the quarantine candidates JSON for the
+        # next step.
+        if: always()
+        run: |
+          & scripts/Analyze-FlakyTestResults.ps1 -Path src/Schnittstellenzentrale.Tests/TestResults, trx-history -CandidatesFile flaky-quarantine-candidates.json
+        shell: pwsh
+
+      - name: Create quarantine issues
+        # Creates a deduplicated "Quarantaene: <test>" issue per analyzer candidate.
+        # No-op on empty/missing candidates file; best-effort - the script tolerates
+        # missing issues:write rights and exits 0 with a warning.
+        if: always()
+        run: |
+          & scripts/New-FlakyQuarantineIssue.ps1 -CandidatesFile flaky-quarantine-candidates.json
+        shell: pwsh
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-results-os-interface-staging
+          path: |
+            src/Schnittstellenzentrale.Tests/TestResults/test-results-os-interface*.trx
+          retention-days: 14
+
       - name: Upload Playwright traces
-        # PlaywrightTestBase.DisposeAsync() writes a Screenshots+Snapshots+Sources trace per
-        # test to playwright-traces/{TestName}.zip (relative to the repo root, since "Test
-        # Playwright" runs dotnet test from there). Uploaded unconditionally (if: always())
-        # so a failed run leaves real diagnostic evidence (open the .zip with
-        # `npx playwright show-trace <file>.zip`) instead of only a bare pass/fail count.
+        # PlaywrightTestBase.DisposeAsync() writes a Screenshots+Snapshots+Sources trace
+        # per test to playwright-traces/{TestName}-HHmmssfff.zip, anchored at the repo
+        # root via TestPaths.FindRepoRoot() so this path glob always matches. Uploaded
+        # unconditionally (if: always()) so a failed run leaves real diagnostic
+        # evidence (open the .zip with `npx playwright show-trace <file>.zip`) instead
+        # of only a bare pass/fail count.
         if: always()
         uses: actions/upload-artifact@v7
         with:
@@ -181,6 +284,8 @@ jobs:
 
   version:
     name: version
+    # needs intentionally excludes os-interface-tests: an OS-lane failure must never
+    # block the pre-release chain.
     needs: [detect-backmerge, static-checks, build-and-test]
     if: needs.detect-backmerge.outputs.is_backmerge != 'true'
     runs-on: ubuntu-latest

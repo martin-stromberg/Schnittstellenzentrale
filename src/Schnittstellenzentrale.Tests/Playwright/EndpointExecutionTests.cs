@@ -1,14 +1,19 @@
 using Microsoft.Playwright;
+using Schnittstellenzentrale.Tests.Infrastructure.Testing;
 using Schnittstellenzentrale.Tests.Playwright.Infrastructure;
+using Xunit.Abstractions;
 
 namespace Schnittstellenzentrale.Tests.Playwright;
 
 /// <summary>Playwright-Tests für die Ausführung von Endpunkten über die EndpointPage.</summary>
 [Collection("Playwright")]
+[OsInterface]
 public class EndpointExecutionTests : PlaywrightTestBase
 {
     /// <summary>Initialisiert den Test mit der gemeinsamen Playwright-Factory.</summary>
-    public EndpointExecutionTests(PlaywrightServer server) : base(server) { }
+    /// <param name="server">Die gemeinsame Server-Fixture der Test-Collection.</param>
+    /// <param name="output">Testausgabe-Hilfsinstanz für Diagnose- und Dispose-Logs.</param>
+    public EndpointExecutionTests(PlaywrightServer server, ITestOutputHelper output) : base(server, output) { }
 
     private async Task ExpandSystemGroupAsync()
     {

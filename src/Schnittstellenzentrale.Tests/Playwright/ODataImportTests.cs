@@ -1,14 +1,19 @@
 using Microsoft.Playwright;
+using Schnittstellenzentrale.Tests.Infrastructure.Testing;
 using Schnittstellenzentrale.Tests.Playwright.Infrastructure;
+using Xunit.Abstractions;
 
 namespace Schnittstellenzentrale.Tests.Playwright;
 
 /// <summary>Playwright-Tests für den OData-Import-Dialog.</summary>
 [Collection("Playwright")]
+[OsInterface]
 public class ODataImportTests : PlaywrightTestBase
 {
     /// <summary>Initialisiert den Test mit der gemeinsamen Playwright-Factory.</summary>
-    public ODataImportTests(PlaywrightServer server) : base(server) { }
+    /// <param name="server">Die gemeinsame Server-Fixture der Test-Collection.</param>
+    /// <param name="output">Testausgabe-Hilfsinstanz für Diagnose- und Dispose-Logs.</param>
+    public ODataImportTests(PlaywrightServer server, ITestOutputHelper output) : base(server, output) { }
 
     /// <summary>Nach dem OData-Import sind die importierten Entity-Set-Endpunkte im Baum der Anwendung sichtbar.</summary>
     [Fact]

@@ -1,14 +1,19 @@
 using Microsoft.Playwright;
+using Schnittstellenzentrale.Tests.Infrastructure.Testing;
 using Schnittstellenzentrale.Tests.Playwright.Infrastructure;
+using Xunit.Abstractions;
 
 namespace Schnittstellenzentrale.Tests.Playwright;
 
 /// <summary>Playwright-Tests für den Swagger-Import-Dialog.</summary>
 [Collection("Playwright")]
+[OsInterface]
 public class SwaggerImportTests : PlaywrightTestBase
 {
     /// <summary>Initialisiert den Test mit der gemeinsamen Playwright-Factory.</summary>
-    public SwaggerImportTests(PlaywrightServer server) : base(server) { }
+    /// <param name="server">Die gemeinsame Server-Fixture der Test-Collection.</param>
+    /// <param name="output">Testausgabe-Hilfsinstanz für Diagnose- und Dispose-Logs.</param>
+    public SwaggerImportTests(PlaywrightServer server, ITestOutputHelper output) : base(server, output) { }
 
     /// <summary>Nach dem Swagger-Import sind die importierten Endpunkte im Baum der Systemanwendung sichtbar.</summary>
     [Fact]

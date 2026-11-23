@@ -1,17 +1,22 @@
 using Microsoft.Playwright;
+using Schnittstellenzentrale.Tests.Infrastructure.Testing;
 using Schnittstellenzentrale.Tests.Playwright.Infrastructure;
+using Xunit.Abstractions;
 
 namespace Schnittstellenzentrale.Tests.Playwright;
 
 /// <summary>Playwright-Tests für SignalR-Echtzeitsynchronisation im Team-Modus mit zwei Browser-Kontexten.</summary>
 [Collection("PlaywrightSignalR")]
+[OsInterface]
 public class SignalRSyncTests : PlaywrightTestBase
 {
     private IBrowserContext _contextB = null!;
     private IPage _pageB = null!;
 
     /// <summary>Initialisiert den Test mit der SignalR-Factory.</summary>
-    public SignalRSyncTests(PlaywrightSignalRServer server) : base(server) { }
+    /// <param name="server">Die gemeinsame Server-Fixture der Test-Collection.</param>
+    /// <param name="output">Testausgabe-Hilfsinstanz für Diagnose- und Dispose-Logs.</param>
+    public SignalRSyncTests(PlaywrightSignalRServer server, ITestOutputHelper output) : base(server, output) { }
 
     /// <inheritdoc/>
     protected override async Task OnInitializedAsync()
@@ -23,11 +28,9 @@ public class SignalRSyncTests : PlaywrightTestBase
     /// <inheritdoc/>
     protected override async Task OnDisposingAsync()
     {
-        Directory.CreateDirectory("playwright-traces");
-        await _contextB.Tracing.StopAsync(new TracingStopOptions
-        {
-            Path = Path.Combine("playwright-traces", $"{nameof(SignalRSyncTests)}-B.zip")
-        });
+        // Trace-Stop mit Budget + best-effort Dispose: Fehler werden von der Basis
+        // gesammelt und geloggt, nie als Assert-Overlay geworfen.
+        await StopTraceBestEffortAsync(_contextB, $"{nameof(SignalRSyncTests)}-B.zip");
         await _contextB.DisposeAsync();
     }
 
