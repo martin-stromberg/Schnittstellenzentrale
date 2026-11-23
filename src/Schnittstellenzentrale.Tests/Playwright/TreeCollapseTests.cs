@@ -111,10 +111,31 @@ public class TreeCollapseTests : PlaywrightTestBase
         await Microsoft.Playwright.Assertions.Expect(appRow.Locator(".sz-tree-chevron-btn .sz-icon-chevron-right")).ToBeVisibleAsync();
     }
 
+    // Klappt die Systemgruppe auf und verifiziert das Ergebnis. Zwei Flake-Ursachen werden
+    // abgefedert: Ein Klick während des SignalR-Reconnects nach Page.ReloadAsync() kann
+    // verloren gehen (Blazor Server verwirft Events ohne aktiven Circuit), und ein bereits
+    // persistierter Expand-Zustand dürfte durch einen Blindklick nicht wieder zugeklappt
+    // werden. Deshalb wird vor jedem Klick geprüft, ob die Zielzeile bereits sichtbar ist.
     private async Task ExpandSystemGroupAsync()
     {
+        var appBtn = SystemAppRow.Locator(".sz-tree-item-btn");
         var groupChevron = Page.Locator(".collapsible-section .sz-tree-chevron-btn").First;
-        await groupChevron.ClickAsync();
+
+        for (var attempt = 0; attempt < 3; attempt++)
+        {
+            try
+            {
+                await appBtn.WaitForAsync(new() { Timeout = 5_000 });
+                return;
+            }
+            catch (TimeoutException)
+            {
+            }
+
+            await groupChevron.ClickAsync();
+        }
+
+        await appBtn.WaitForAsync();
     }
 
     private ILocator SystemAppRow =>
