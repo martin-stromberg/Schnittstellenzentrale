@@ -1,0 +1,61 @@
+  Wiederherzustellende Projekte werden ermittelt...
+  Alle Projekte sind für die Wiederherstellung auf dem neuesten Stand.
+Das Projekt "Schnittstellenzentrale.Core" enthält die folgenden Paketverweise.
+   [net10.0]: 
+   Paket oberster Ebene      Angefordert   Aufgelöst
+   > Microsoft.OpenApi       2.10.0        2.10.0   
+
+Das Projekt "Schnittstellenzentrale.Infrastructure" enthält die folgenden Paketverweise.
+   [net10.0]: 
+   Paket oberster Ebene                                         Angefordert   Aufgelöst
+   > Jint                                                       4.9.2         4.9.2    
+   > Markdig                                                    1.2.0         1.2.0    
+   > Microsoft.AspNetCore.Http.Abstractions                     2.3.0         2.3.0    
+   > Microsoft.AspNetCore.SignalR.Client                        10.0.*        10.0.15  
+   > Microsoft.AspNetCore.SignalR.Core                          1.2.10        1.2.10   
+   > Microsoft.EntityFrameworkCore                              10.0.*        10.0.15  
+   > Microsoft.EntityFrameworkCore.Design                       10.0.*        10.0.15  
+   > Microsoft.EntityFrameworkCore.Sqlite                       10.0.*        10.0.15  
+   > Microsoft.EntityFrameworkCore.SqlServer                    10.0.*        10.0.15  
+   > Microsoft.Extensions.Configuration.Abstractions            10.0.*        10.0.15  
+   > Microsoft.Extensions.Configuration.Binder                  10.0.*        10.0.15  
+   > Microsoft.Extensions.DependencyInjection.Abstractions      10.0.*        10.0.15  
+   > Microsoft.Extensions.Http                                  10.0.*        10.0.15  
+   > Microsoft.JSInterop                                        10.0.*        10.0.15  
+   > Microsoft.OData.Edm                                        8.4.3         8.4.3    
+   > Microsoft.OpenApi                                          2.10.0        2.10.0   
+   > SQLitePCLRaw.lib.e_sqlite3                                 3.53.3        3.53.3   
+   > System.Security.Cryptography.Pkcs                          10.0.*        10.0.15  
+
+Das Projekt "Schnittstellenzentrale.Tests" enthält die folgenden Paketverweise.
+   [net10.0]: 
+   Paket oberster Ebene                           Angefordert   Aufgelöst
+   > AngleSharp                                   1.5.0         1.5.0    
+   > bunit                                        2.7.2         2.7.2    
+   > coverlet.collector                           10.0.0        10.0.0   
+   > Jint                                         4.9.2         4.9.2    
+   > Microsoft.AspNetCore.Mvc.Testing             10.0.*        10.0.15  
+   > Microsoft.EntityFrameworkCore.Sqlite         10.0.*        10.0.15  
+   > Microsoft.EntityFrameworkCore.SqlServer      10.0.*        10.0.15  
+   > Microsoft.JSInterop                          10.0.*        10.0.15  
+   > Microsoft.NET.Test.Sdk                       18.5.1        18.5.1   
+   > Microsoft.Playwright                         1.52.0        1.52.0   
+   > Moq                                          4.20.72       4.20.72  
+   > SQLitePCLRaw.lib.e_sqlite3                   3.53.3        3.53.3   
+   > xunit                                        2.9.3         2.9.3    
+   > xunit.runner.visualstudio                    3.1.5         3.1.5    
+
+Das Projekt "Schnittstellenzentrale" enthält die folgenden Paketverweise.
+   [net10.0]: 
+   Paket oberster Ebene                                    Angefordert        Aufgelöst       
+   > Microsoft.AspNetCore.App.Internal.Assets        (A)   [10.0.15, )        10.0.15         
+   > Microsoft.AspNetCore.Authentication.Negotiate         10.0.*             10.0.15         
+   > Microsoft.AspNetCore.OData                            10.0.0-preview.2   10.0.0-preview.2
+   > Microsoft.EntityFrameworkCore.Design                  10.0.*             10.0.15         
+   > Serilog.AspNetCore                                    10.0.0             10.0.0          
+   > Serilog.Sinks.EventLog                                4.0.0              4.0.0           
+   > Serilog.Sinks.File                                    7.0.0              7.0.0           
+   > ShadcnBlazor                                          1.0.14             1.0.14          
+   > Swashbuckle.AspNetCore                                10.1.7             10.1.7          
+
+(A): Automatisch referenziertes Paket.
