@@ -57,7 +57,7 @@ SDK: `Microsoft.NET.Sdk`. Referenziert alle drei anderen Projekte. MSBuild-Targe
 
 | Paket | Deklariert | Aufgelöst | Bemerkung |
 |-------|-----------|-----------|-----------|
-| `AngleSharp` | 1.5.0 | 1.5.0 | **Direkt-Override mit Kommentar** (csproj Z. 13–16): bunit 2.7.2 löst transitiv vulnerable 1.4.0 auf (GHSA-pgww-w46g-26qg, moderate, mXSS); direkte Referenz gewinnt per nearest-wins; zusätzlich direkt genutzt in `PlaywrightServer.cs` |
+| `AngleSharp` | 1.5.0 | 1.5.0 | **Direkt-Override mit Kommentar** (csproj Z. 13–16): bunit 2.7.2 löst transitiv vulnerable 1.4.0 auf (GHSA-pgww-w46g-26qg, moderate, mXSS); direkte Referenz gewinnt per nearest-wins |
 | `bunit` | 2.7.2 | 2.7.2 | |
 | `coverlet.collector` | 10.0.0 | 10.0.0 | `PrivateAssets=all` |
 | `Jint` | 4.9.2 | 4.9.2 | |
@@ -74,7 +74,7 @@ SDK: `Microsoft.NET.Sdk`. Referenziert alle drei anderen Projekte. MSBuild-Targe
 
 ## Projektübergreifende Fakten
 
-- **18 Floating-Referenzen** (`10.0.*`) auf 14 verschiedene Pakete — alle lösen aktuell auf **10.0.15** auf; Patch-Updates fließen bei jedem `dotnet restore` implizit ein.
+- **17 Floating-Referenzen** (`10.0.*`) auf 13 verschiedene Pakete — alle lösen aktuell auf **10.0.15** auf; Patch-Updates fließen bei jedem `dotnet restore` implizit ein.
 - **Kein zentrales Paketmanagement**: weder `Directory.Packages.props` noch `packages.lock.json` noch `nuget.config` im Repo gefunden.
 - **Versionssplit bei `Microsoft.OData.Edm`**: Infrastructure pinnt 8.4.3 direkt; im Web- und Testprojekt löst transitiv (via `Microsoft.AspNetCore.OData` 10.0.0-preview.2) **9.0.0-preview.4** auf — dort gewinnt die höhere transitive Anforderung des Preview-Pakets.
 - **Preview-Abhängigkeiten** (nur transitiv in Web + Tests): `Microsoft.OData.Core`/`Edm`/`Spatial` 9.0.0-preview.4, `Microsoft.OData.ModelBuilder` 3.0.0-preview.1, `AngleSharp.Css` 1.0.0-beta.157 (via bunit).

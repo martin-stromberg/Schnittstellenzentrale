@@ -4,8 +4,8 @@ Faktenlage zu allen `PackageReference`-Einträgen der Solution `Schnittstellenze
 
 ## Zusammenfassung
 
-- **4 Projekte**, insgesamt **45 direkte `PackageReference`-Einträge** (davon 18 mit Floating-Version `10.0.*`, die aktuell alle auf **10.0.15** auflösen). Kein `Directory.Packages.props`, keine `packages.lock.json`, kein `nuget.config` im Repo.
-- **`--outdated`**: **35 Top-Level-Einträge** mit neuerer Version (davon 14 Floating-`10.0.*`-Referenzen, bei denen „Neueste" = 11.0.0 die .NET-11-Linie betrifft — TFM bleibt per Scope `net10.0`); dazu ~120 transitive Pakete mit Updates. Details: [inventory/outdated.md](inventory/outdated.md), Rohdaten [dotnet-list-outdated.txt](inventory/dotnet-list-outdated.txt).
+- **4 Projekte**, insgesamt **45 direkte `PackageReference`-Einträge** (davon 17 mit Floating-Version `10.0.*`, die aktuell alle auf **10.0.15** auflösen). Kein `Directory.Packages.props`, keine `packages.lock.json`, kein `nuget.config` im Repo.
+- **`--outdated`**: **35 Top-Level-Einträge** mit neuerer Version (davon 13 Floating-`10.0.*`-Referenzen, bei denen „Neueste" = 11.0.0 die .NET-11-Linie betrifft — TFM bleibt per Scope `net10.0`); dazu ~120 transitive Pakete mit Updates. Details: [inventory/outdated.md](inventory/outdated.md), Rohdaten [dotnet-list-outdated.txt](inventory/dotnet-list-outdated.txt).
 - **`--vulnerable`**: **0 gefährdete Pakete** (direkt + transitiv, alle 4 Projekte). Rohdaten: [dotnet-list-vulnerable.txt](inventory/dotnet-list-vulnerable.txt).
 - **`--deprecated`**: **xunit 2.9.3** (Top-Level, Grund „Legacy", Alternative `xunit.v3`) plus 4 transitive `xunit.*`-Pakete — nur im Testprojekt. Rohdaten: [dotnet-list-deprecated.txt](inventory/dotnet-list-deprecated.txt).
 - **Zwei dokumentierte Security-Direkt-Overrides** existieren bereits und sind begründet: `AngleSharp` 1.5.0 in Tests (GHSA-pgww-w46g-26qg via bunit) und `System.Security.Cryptography.Pkcs` `10.0.*` in Infrastructure (GHSA-846f-f764-76mx, GHSA-2fmv-rv2c-59x7) — Kommentare stehen in den `.csproj`.

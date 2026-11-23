@@ -53,6 +53,6 @@ Produktive Verwendung — eigener OData-API-Zweig:
 |-------|-----------|
 | `Jint` 4.9.2 | `Infrastructure/Services/EndpointScriptRunner.cs` (`using Jint`, `Jint.Native`, `Jint.Runtime`); direkt auch im Testprojekt referenziert (`EndpointScriptRunnerTests`) |
 | `Markdig` 1.2.0 | `Infrastructure/Services/ImpressumService.cs` (`using Markdig`) |
-| `AngleSharp` 1.5.0 (Tests) | Override gegen transitive 1.4.0 via bunit **und** direkte Nutzung: `Tests/Playwright/Infrastructure/PlaywrightServer.cs` Z. 2 (`using AngleSharp`) |
+| `AngleSharp` 1.5.0 (Tests) | Override gegen transitive 1.4.0 via bunit (die `using AngleSharp;`-Direktive in `Tests/Playwright/Infrastructure/PlaywrightServer.cs` Z. 2 ist ungenutzt — kein API-Aufruf) |
 | `Moq` | z. B. `Mock<ISignalRNotificationService>` in `EndpointScriptRunnerTests`, `EndpointExecutionServiceTests`, `Mock<IHttpContextAccessor>` in `ApplicationApiClientTests` |
 | `Microsoft.OpenApi` 2.10.0 | Core + Infrastructure (Swagger/OpenAPI-Dokumentverarbeitung) |

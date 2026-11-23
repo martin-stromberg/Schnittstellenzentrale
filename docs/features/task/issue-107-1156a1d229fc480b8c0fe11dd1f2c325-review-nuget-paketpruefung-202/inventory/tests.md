@@ -52,7 +52,7 @@ Für die NuGet-Prüfung relevant: keine neuen Tests erforderlich — der Nachwei
 
 - bunit: alle `Components/*Tests.cs` (11 Klassen)
 - `Infrastructure/Testing/TraitParityTests`, `FlakyConventionTests` — prüfen die Trait-Konventionen selbst
-- `AngleSharp`-Direktnutzung: `Playwright/Infrastructure/PlaywrightServer.cs` (Parsing im Test-Server)
+- `AngleSharp`: nur ungenutzte `using`-Direktive in `Playwright/Infrastructure/PlaywrightServer.cs` (kein API-Aufruf; der direkte Override dient der Pin-Funktion)
 
 ## Hilfsmethoden / Test-Infrastruktur
 
