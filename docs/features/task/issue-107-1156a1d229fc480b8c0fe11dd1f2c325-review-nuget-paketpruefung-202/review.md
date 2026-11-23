@@ -28,8 +28,8 @@
 
 ## Offene Aufgaben
 
-- [ ] Folge-Issue für hoch/aufgeschobene Empfehlungen auf GitHub anlegen (Umsetzungsreihenfolge Schritt 5) — im Report liegt nur der **Entwurf** vor; das Issue selbst wurde noch nicht erstellt. Fehlt vollständig.
-- [ ] PR gegen `staging` öffnen mit Empfehlungstabelle im Body + Folge-Issue-Verlinkung und Checks fail-fast überwachen (Umsetzungsreihenfolge Schritt 6) — kein PR vorhanden; Änderungen liegen uncommitted im Arbeitsverzeichnis. Fehlt vollständig.
+- [x] Folge-Issue für hoch/aufgeschobene Empfehlungen auf GitHub anlegen (Umsetzungsreihenfolge Schritt 5) — **erledigt nachträglich:** Issue #108 angelegt (ohne Label `automated-nuget-review`).
+- [x] PR gegen `staging` öffnen mit Empfehlungstabelle im Body + Folge-Issue-Verlinkung und Checks fail-fast überwachen (Umsetzungsreihenfolge Schritt 6) — **erledigt nachträglich:** PR #109 gegen `staging`, alle Checks grün (`build & test`, `static checks`, `os-interface tests`, `detect-backmerge`; `back-merge-skip` designbedingt übersprungen).
 
 ## Hinweise
 
