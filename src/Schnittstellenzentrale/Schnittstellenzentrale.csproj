@@ -14,6 +14,17 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Authentication.Negotiate" Version="11.0.*" />
     <PackageReference Include="Microsoft.AspNetCore.OData" Version="10.0.0-preview.2" />
+    <!-- Stabile ODL-9-Basis unter dem Preview-Host: AspNetCore.OData 10.0.0-preview.2
+         deklariert Mindestversionen ([9.0.0-preview.4, 10.0.0) bzw. [3.0.0-preview.1, 4.0.0)),
+         die stabilen Releases erfuellen diese. Ohne direkte Referenzen loest NuGet die
+         transitiven Preview-Versionen auf, und deren exakter Pin
+         (OData.Core 9.0.0-preview.4 erfordert Edm = 9.0.0-preview.4) kollidiert mit der
+         direkten Edm-9.0.0-Referenz in Infrastructure (NU1608). ModelBuilder wird
+         zusaetzlich direkt im Code genutzt (OData/ODataEdmModelBuilder.cs) -
+         Entscheidung F5, siehe
+         docs/projects/task/issue-108-c9b7f84be6d94f939f0c255d1dd1d977-nuget-updates-mit-hohem-risiko/decisions.md -->
+    <PackageReference Include="Microsoft.OData.Core" Version="9.0.0" />
+    <PackageReference Include="Microsoft.OData.ModelBuilder" Version="3.0.0" />
     <!-- Nicht Teil des Shared Frameworks; wird nur hier genutzt
          (Components/Layout/AppShell.razor, Components/Shared/ApplicationGroupTree.razor).
          Aus Infrastructure verschoben - Entscheidung F6, siehe
