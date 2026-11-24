@@ -10,6 +10,6 @@ Branch: `task/issue-108-c9b7f84be6d94f939f0c255d1dd1d977-nuget-updates-mit-hohem
 | 4 | F4: Serilog.AspNetCore 11.0.0 | 1 | `task/issue-108-c9b7f84be6d94f939f0c255d1dd1d977-nuget-updates-mit-hohem-risiko-schritt-4-serilog` | Fertig |
 | 5 | F3: OpenApi 3.11.1 + Swashbuckle 11.0.1 | 1 | `task/issue-108-c9b7f84be6d94f939f0c255d1dd1d977-nuget-updates-mit-hohem-risiko-schritt-5-openapi-swashbuckle` | Fertig |
 | 6 | xunit.runner.visualstudio 4.0.1 | 1 | `task/issue-108-c9b7f84be6d94f939f0c255d1dd1d977-nuget-updates-mit-hohem-risiko-schritt-6-xunit-runner` | Fertig |
-| 7 | F1: Playwright 1.65.1 | 6 | `task/issue-108-c9b7f84be6d94f939f0c255d1dd1d977-nuget-updates-mit-hohem-risiko-schritt-7-playwright` | In Arbeit |
-| 8 | F2: xunit.v3-Migration | 7 | `task/issue-108-c9b7f84be6d94f939f0c255d1dd1d977-nuget-updates-mit-hohem-risiko-schritt-8-xunit-v3` | Offen |
+| 7 | F1: Playwright 1.65.1 | 6 | `task/issue-108-c9b7f84be6d94f939f0c255d1dd1d977-nuget-updates-mit-hohem-risiko-schritt-7-playwright` | Fertig |
+| 8 | F2: xunit.v3-Migration | 7 | `task/issue-108-c9b7f84be6d94f939f0c255d1dd1d977-nuget-updates-mit-hohem-risiko-schritt-8-xunit-v3` | In Arbeit |
 | 9 | F7-Entscheidung + F8-Auslagerung + Abschluss | 2, 3, 4, 5, 6, 7, 8 | `task/issue-108-c9b7f84be6d94f939f0c255d1dd1d977-nuget-updates-mit-hohem-risiko-schritt-9-abschluss` | Offen |
