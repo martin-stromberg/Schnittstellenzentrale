@@ -38,7 +38,7 @@ Beim initialen SSR-Rendering ubernimmt der Blazor-Server-Circuit die Kultur aus 
 Alle Razor-Komponenten teilen sich diese Kultur fur die Dauer der Sitzung.
 
 Beteiligte Komponenten:
-- ASP.NET Core 9 Blazor Server Circuit-Infrastruktur
+- ASP.NET Core Blazor Server Circuit-Infrastruktur
 
 ### 4. Razor-Komponenten rufen den Localizer auf
 

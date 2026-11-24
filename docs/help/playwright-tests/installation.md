@@ -2,7 +2,7 @@
 
 ## Voraussetzungen
 
-- .NET 10.0 SDK
+- .NET 11.0 SDK
 - PowerShell (`pwsh`) — wird für das `playwright.ps1`-Skript benötigt, das Playwright-Browser installiert
 - Internetzugang beim ersten Build (Playwright lädt den Chromium-Browser herunter)
 

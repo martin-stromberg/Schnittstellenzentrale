@@ -2,7 +2,7 @@
 
 ## Stack
 
-ASP.NET Core 9 / Blazor Server · Entity Framework Core · ShadcnBlazor · xUnit · Playwright
+ASP.NET Core 11 / Blazor Server · Entity Framework Core · ShadcnBlazor · xUnit · Playwright
 
 ## CSS
 

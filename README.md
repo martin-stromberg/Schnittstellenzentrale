@@ -1,9 +1,9 @@
 # Schnittstellenzentrale
 
 [![Release](https://img.shields.io/github/actions/workflow/status/martin-stromberg/Schnittstellenzentrale/release.yml?label=Release)](https://github.com/martin-stromberg/Schnittstellenzentrale/actions/workflows/release.yml)
-![.NET](https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet&logoColor=white)
+![.NET](https://img.shields.io/badge/.NET-11.0-512BD4?logo=dotnet&logoColor=white)
 ![Blazor](https://img.shields.io/badge/Blazor-Server-512BD4?logo=blazor&logoColor=white)
-![EF Core](https://img.shields.io/badge/EF_Core-10-512BD4?logo=dotnet&logoColor=white)
+![EF Core](https://img.shields.io/badge/EF_Core-11-512BD4?logo=dotnet&logoColor=white)
 ![xUnit](https://img.shields.io/badge/Tests-xUnit%20%2B%20Playwright-green?logo=xunit&logoColor=white)
 ![Platform](https://img.shields.io/badge/Platform-Windows%20%2F%20IIS-0078D4?logo=windows&logoColor=white)
 
@@ -31,7 +31,7 @@ Blazor Server-Anwendung zur zentralen Verwaltung lokaler Webservice-Endpunkte. S
 ## Voraussetzungen
 
 - Windows Server oder Windows-Arbeitsstation mit IIS
-- .NET 10.0 Runtime (ASP.NET Core)
+- .NET 11.0 Runtime (ASP.NET Core)
 - IIS: Windows-Authentifizierung aktiviert, Anonyme Authentifizierung deaktiviert
 - SQLite (keine weitere Installation) oder SQL Server
 

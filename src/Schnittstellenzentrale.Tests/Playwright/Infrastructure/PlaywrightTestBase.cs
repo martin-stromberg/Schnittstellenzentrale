@@ -24,7 +24,7 @@ public abstract class PlaywrightTestBase : IAsyncLifetime
 
     // Verzeichnis für Trace-ZIPs — absolut am Repo-Root verankert über
     // TestPaths.FindRepoRoot(). Ein relativer Pfad läge unter dem
-    // Testhost-Arbeitsverzeichnis (bin/<cfg>/net10.0/) und der CI-Upload
+    // Testhost-Arbeitsverzeichnis (bin/<cfg>/net11.0/) und der CI-Upload
     // "playwright-traces/" fände die Dateien nie.
     private static readonly string TraceDirectory =
         Path.Combine(TestPaths.FindRepoRoot(), "playwright-traces");

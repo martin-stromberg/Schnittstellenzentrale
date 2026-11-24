@@ -2,10 +2,11 @@
 
 ## Important Notes Before Update
 
-- There are no special notices.
+- The application now targets .NET 11: install the .NET 11.0 Runtime (ASP.NET Core) on the host before updating; the .NET 10 runtime is no longer sufficient.
 
 ## What's New
 
+- Platform upgrade to .NET 11: all projects now target `net11.0` under SDK 11.0.100, CI builds pin `dotnet-version 11.0.x`, and the floating framework package baseline moved from `10.0.*` to `11.0.*` (resolved 11.0.0); `Microsoft.AspNetCore.OData 10.0.0-preview.2` remains pinned and is verified running under .NET 11.
 - Public GitHub Page presentation site at https://martin-stromberg.github.io/Schnittstellenzentrale/: static German page introducing the application with feature cards, real Playwright-generated screenshots (light and dark), a `releases/latest` download reference and links to the repository, `docs/help/` and `LEGAL.md`; sources live in `site/` and deploy automatically via the `pages.yml` workflow.
 - Centralized SignalR notification policy (`INotificationPolicy`): every mutating operation — REST, all mutating OData operations on the four entity sets, endpoint header/query-parameter routes, import apply and the startup synchronization — now raises exactly one change notification in team storage mode and none in user mode; the duplicate notification when saving an endpoint from the UI has been removed.
 - Unified endpoint aggregate update: replacing an endpoint — scalar values plus the full `Headers` and `QueryParameters` sets — now runs as a single server-side operation shared by the REST update endpoint, the OData `PUT`/`PATCH` operations on `Endpoints` and the import apply paths; optimistic concurrency via `RowVersion` is unchanged.
@@ -17,10 +18,11 @@
 
 ## Wichtige Hinweise vor dem Update
 
-- Es gibt keine besonderen Hinweise.
+- Die Anwendung läuft jetzt unter .NET 11: Vor dem Update ist die .NET 11.0 Runtime (ASP.NET Core) auf dem Host zu installieren; die .NET-10-Runtime reicht nicht mehr aus.
 
 ## Neuerungen
 
+- Plattform-Upgrade auf .NET 11: Alle Projekte zielen auf `net11.0` unter SDK 11.0.100, die CI-Builds pinnen `dotnet-version 11.0.x`, und die Floating-Baseline der Framework-Pakete wurde von `10.0.*` auf `11.0.*` gehoben (aufgelöst: 11.0.0); `Microsoft.AspNetCore.OData 10.0.0-preview.2` bleibt gepinnt und ist unter .NET 11 verifiziert.
 - Öffentliche GitHub-Page-Präsentationsseite unter https://martin-stromberg.github.io/Schnittstellenzentrale/: statische deutschsprachige Seite mit Vorstellung der Anwendung, Feature-Kacheln, echten Playwright-Screenshots (hell und dunkel), `releases/latest`-Download-Verweis sowie Links auf Repository, `docs/help/` und `LEGAL.md`; die Quellen liegen in `site/` und werden über den `pages.yml`-Workflow automatisch deployt.
 - Zentrale SignalR-Benachrichtigungs-Policy (`INotificationPolicy`): Jede mutierende Änderung — REST, alle mutierenden OData-Operationen der vier Entity-Sets, Endpunkt-Header-/Query-Parameter-Routen, Import-Apply und Startabgleich — löst im Team-Speichermodus genau eine Änderungs-Benachrichtigung aus und im Benutzermodus keine; die doppelte Benachrichtigung beim UI-Speichern eines Endpunkts entfällt.
 - Einheitliches Endpunkt-Aggregat-Update: Das Ersetzen eines Endpunkts — Skalarwerte plus die vollständigen Mengen `Headers` und `QueryParameters` — läuft als eine gemeinsame serverseitige Operation, die vom REST-Update-Endpunkt, den OData-`PUT`/`PATCH`-Operationen auf `Endpoints` und den Import-Apply-Pfaden genutzt wird; die Optimistic-Concurrency über `RowVersion` bleibt unverändert.
