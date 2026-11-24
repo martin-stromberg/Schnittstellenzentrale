@@ -4,15 +4,15 @@ namespace Schnittstellenzentrale.Tests.Infrastructure.Testing;
 
 /// <summary>
 /// Liest die effektiven Trait-Paare eines Typs oder Members per Reflection — identisch zur
-/// Semantik des <see cref="CategoryTraitDiscoverer"/> und des eingebauten
-/// <c>Xunit.Sdk.TraitDiscoverer</c>:
+/// Semantik der xUnit-v3-Trait-Aufsammlung:
 /// <list type="bullet">
 /// <item><see cref="TraitAttribute"/>-Vorkommen liefern <c>(Name, Value)</c> aus ihren
-/// Konstruktor-Argumenten (TraitAttribute hat in xUnit v2 keine öffentlichen Properties;
+/// Konstruktor-Argumenten (TraitAttribute hat keine öffentlichen Name/Value-Properties;
 /// gelesen wird daher über <see cref="MemberInfo.CustomAttributes"/>).</item>
-/// <item>Attribute mit lesbarer <c>Category</c>-Property liefern <c>("Category", wert)</c>
-/// (deckt <see cref="OsInterfaceAttribute"/>, <see cref="OsInterfaceFactAttribute"/>,
-/// <see cref="OsInterfaceTheoryAttribute"/> und <see cref="FlakyAttribute"/> ab).</item>
+/// <item>Attribute, die <see cref="Xunit.v3.ITraitAttribute"/> implementieren, liefern
+/// ihre Paare direkt über <c>GetTraits()</c> (deckt <see cref="OsInterfaceAttribute"/>,
+/// <see cref="OsInterfaceFactAttribute"/>, <see cref="OsInterfaceTheoryAttribute"/> und
+/// <see cref="FlakyAttribute"/> ab).</item>
 /// </list>
 /// Dient den Meta-Tests <see cref="FlakyConventionTests"/> und <see cref="TraitParityTests"/>
 /// als gemeinsame Auswertung beider zulässigen Schreibweisen.
@@ -25,11 +25,10 @@ internal static class TestTraitReader
     /// <returns>Die Trait-Paare als Schlüssel-Wert-Sequenz.</returns>
     internal static IEnumerable<KeyValuePair<string, string>> GetTraits(MemberInfo member)
     {
-        // (a) [Trait("name", "value")]: Name/Wert existieren nur als Ctor-Argumente —
-        // TraitAttribute macht sie in xUnit v2 nicht als öffentliche Property lesbar.
-        // Gelesen wird daher über CustomAttributeData, und zwar über die Vererbungskette
-        // (Konsistenz mit Zweig (b)/GetCustomAttributes(inherit: true), das vererbte
-        // Klassen-Traits ebenfalls erfasst — xUnit vererbt Klassen-Traits auf Methoden).
+        // (a) [Trait("name", "value")]: Name/Wert werden über CustomAttributeData gelesen,
+        // und zwar über die Vererbungskette (Konsistenz mit Zweig
+        // (b)/GetCustomAttributes(inherit: true), das vererbte Klassen-Traits ebenfalls
+        // erfasst — xUnit vererbt Klassen-Traits auf Methoden).
         foreach (var attributeData in EnumerateCustomAttributeDataIncludingInherited(member))
         {
             if (attributeData.AttributeType != typeof(TraitAttribute))
@@ -39,16 +38,13 @@ internal static class TestTraitReader
                 yield return new KeyValuePair<string, string>(name, value);
         }
 
-        // (b) Attribute mit lesbarer Category-Property (OsInterface*, Flaky).
+        // (b) Attribute mit ITraitAttribute.GetTraits() (OsInterface*, Flaky).
         foreach (var attribute in member.GetCustomAttributes(inherit: true))
         {
-            var categoryProperty = attribute.GetType().GetProperty("Category", BindingFlags.Public | BindingFlags.Instance);
-            if (categoryProperty is { CanRead: true }
-                && categoryProperty.PropertyType == typeof(string)
-                && categoryProperty.GetValue(attribute) is string category
-                && !string.IsNullOrEmpty(category))
+            if (attribute is Xunit.v3.ITraitAttribute traitAttribute)
             {
-                yield return new KeyValuePair<string, string>("Category", category);
+                foreach (var trait in traitAttribute.GetTraits())
+                    yield return trait;
             }
         }
     }

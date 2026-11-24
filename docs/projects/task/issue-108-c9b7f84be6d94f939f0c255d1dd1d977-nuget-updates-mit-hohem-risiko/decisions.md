@@ -129,3 +129,29 @@ Dieses Dokument sammelt die im Projektverlauf getroffenen Entscheidungen mit Beg
 
 - Die E2E-Suite läuft auf der aktuellen Chrome-for-Testing-Linie; künftige Playwright-Major-Updates folgen demselben Verfahren (Release-Notes-Sichtung + lokaler OsInterface-Gate-Lauf vor Merge).
 - Bei künftigem Einsatz von `inert`, Cookies oder iframes in der App sind die 1.64/1.65-Verhaltensänderungen zu berücksichtigen.
+
+## F2 – Testprojekt: `xunit` 2.9.3 → `xunit.v3` 4.0.3 (Schritt 8)
+
+**Status:** Entschieden und umgesetzt (Schritt-Branch `…-schritt-8-xunit-v3`).
+
+**Entscheidung:**
+
+1. **`xunit` → `xunit.v3` 4.0.3** (letztes stabiles Release; installiert transitiv `xunit.v3.mtp-v2` = Microsoft.Testing.Platform-Runner). Das Testprojekt wird zur selbst laufenden MTP-App: `OutputType=Exe`, `xunit.abstractions` entfällt. `xunit.runner.visualstudio` 4.0.1 und `Microsoft.NET.Test.Sdk` 18.5.1 bleiben bewusst referenziert (IDE-Test-Discovery).
+   - **MTP-CLI:** `dotnet test` läuft über `global.json` (`test.runner: Microsoft.Testing.Platform`) im MTP-Modus; Filter/Reporter werden als Test-App-Argumente hinter `--` übergeben. `--filter` behält die VSTest-Syntax unverändert (empirisch: 641/94-Selektion und Compound-Filter identisch). TRX via `Microsoft.Testing.Extensions.TrxReport` (`--report-trx`), Coverage via `Microsoft.Testing.Extensions.CodeCoverage` 18.12.0 (`--coverage --coverage-output-format cobertura`) — ersetzt `coverlet.collector`/`--collect:"XPlat Code Coverage"` (VSTest-Collector läuft unter MTP nicht).
+   - **API-Migration:** `IAsyncLifetime` nutzt `ValueTask` (betraf `PlaywrightServer` + Overrides, `PlaywrightTestBase`, `EndpointExecutionIntegrationTests`); `ITestOutputHelper` liegt im `Xunit`-Namespace (`using Xunit.Abstractions;` entfernt).
+   - **Traits:** v2-`ITraitDiscoverer`/`Xunit.Sdk` existieren nicht mehr → `CategoryTraitDiscoverer.cs` gelöscht; `[OsInterface]`/`[Flaky]`/`[OsInterfaceFact]`/`[OsInterfaceTheory]` implementieren `Xunit.v3.ITraitAttribute` und liefern `("Category", wert)` selbst via `GetTraits()`. `TestTraitReader` liest rohe `[Trait]`-Attribute per `CustomAttributeData` (inkl. Vererbungskette) und `ITraitAttribute`-Instanzen — beide dokumentierten Schreibweisen funktionieren weiter.
+   - **CI/Skripte:** Workflows `staging-ci.yml`, `pr-staging-ci.yml`, `release.yml` sowie `TestDiscovery.ps1`/`Retry-FlakyTests.ps1` auf die `--`-Argumenttrennung umgestellt; `--results-directory` überall explizit, wo TRX-Pfade konsumiert werden. MTP-Exitcode 8 bei leerer Filterauswahl ist für die Discovery belanglos.
+
+2. **Empirischer Nachweis:** Reguläre Lane 641/641 grün, OS-Schnittstellen-Lane 94/94 grün (lokales Gate), Cobertura-Coverage 72,5 % ≥ 70-%-Gate, `dotnet list package --vulnerable` sauber — siehe Schritt-`test-results.md`.
+
+**Betrachtete Alternativen (verworfen):**
+
+- Auf xunit 2.9.3 bleiben und nur MTP-Extensions nachrüsten: verworfen — F2 fordert die v3-Migration, und die v2-Trait-Discoverer hätten ohnehin ersetzt werden müssen, sobald v3 folgt.
+- Testfilter auf xunit.v3-eigene Selektoren (`-filter`-Query-Language) umstellen: verworfen — die VSTest-Syntax läuft unter xunit.v3 unverändert und hält CI/Skripte/Doku diff-minimal.
+- `Microsoft.NET.Test.Sdk`/`xunit.runner.visualstudio` entfernen: verworfen — beide sichern die IDE-Test-Discovery (VS/Rider/Test Explorer); der MTP-Modus bricht damit nicht.
+
+**Konsequenzen:**
+
+- Alle `dotnet test`-Aufrufe (lokal, CI, Skripte, Doku) nutzen die `--`-Trennung; Reporter-Artefakte brauchen `--report-trx`/`--coverage`-Argumente plus explizites `--results-directory`.
+- Neue Traits/Kategorien werden künftig als `Xunit.v3.ITraitAttribute` implementiert — kein Discoverer-Muster mehr.
+- Künftige xunit-Updates folgen der v3-Linie; für MTP-Erweiterungen (Reporter) gelten eigene Versionslinien (`Microsoft.Testing.Extensions.*`).

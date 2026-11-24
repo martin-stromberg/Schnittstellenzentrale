@@ -1,6 +1,11 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+    <!-- xunit.v3 test projects are self-running Microsoft.Testing.Platform
+         executables. dotnet test runs them in MTP mode (opted in via the
+         test.runner entry in global.json); the VSTest target is unavailable for
+         MTP apps on .NET 10+ SDKs. -->
+    <OutputType>Exe</OutputType>
     <TargetFramework>net11.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
@@ -16,10 +21,12 @@
          resolution picks this direct reference over the transitive one. -->
     <PackageReference Include="AngleSharp" Version="1.5.0" />
     <PackageReference Include="bunit" Version="2.7.2" />
-    <PackageReference Include="coverlet.collector" Version="10.0.0">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
+    <!-- coverlet.collector (VSTest data collector) does not work under MTP.
+         Microsoft.Testing.Extensions.CodeCoverage is the coverlet-based MTP
+         coverage extension and emits coverage.cobertura.xml for the 70% gate;
+         TrxReport provides the report-trx option for the CI TRX artifacts. -->
+    <PackageReference Include="Microsoft.Testing.Extensions.CodeCoverage" Version="18.12.0" />
+    <PackageReference Include="Microsoft.Testing.Extensions.TrxReport" Version="2.5.3" />
     <PackageReference Include="Jint" Version="4.9.2" />
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="11.0.*" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="11.0.*" />
@@ -29,7 +36,7 @@
     <PackageReference Include="Microsoft.Playwright" Version="1.65.1" />
     <PackageReference Include="Moq" Version="4.20.72" />
     <PackageReference Include="SQLitePCLRaw.lib.e_sqlite3" Version="3.53.3" />
-    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.v3" Version="4.0.3" />
     <PackageReference Include="xunit.runner.visualstudio" Version="4.0.1">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>

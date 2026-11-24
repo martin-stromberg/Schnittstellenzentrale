@@ -5,7 +5,6 @@ using Schnittstellenzentrale.Core.Interfaces;
 using Schnittstellenzentrale.Core.Models;
 using Schnittstellenzentrale.Tests.Infrastructure.Testing;
 using Schnittstellenzentrale.Tests.Playwright.Infrastructure;
-using Xunit.Abstractions;
 
 namespace Schnittstellenzentrale.Tests.Playwright;
 

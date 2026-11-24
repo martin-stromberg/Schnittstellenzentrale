@@ -8,10 +8,12 @@
     Ablauf:
       1. Primaer-TRX parsen: Namen aller "Failed"-Ergebnisse einsammeln (Theory-
          Datenzeilen werden auf den Methoden-FQN normalisiert).
-      2. Flaky-Menge des Projekts via "dotnet test --no-build --list-tests
-         --filter Category=Flaky" ermitteln.
+      2. Flaky-Menge des Projekts via "dotnet test --no-build --list-tests --
+         --filter Category=Flaky" ermitteln (xunit.v3/MTP: --filter in
+         VSTest-Syntax als Test-App-Argument hinter "--").
       3. Schnittmenge leer  -> "keine Flaky-Fehlschlaege", Exit 0 (kein Retry).
-         Sonst genau ein Re-Run: --filter "(Category=Flaky)&(FullyQualifiedName~...)".
+         Sonst genau ein Re-Run: --filter "(Category=Flaky)&(FullyQualifiedName~...)"
+         plus --report-trx.
       4. Retry-TRX auswerten: recovered (fehlgeschlagen -> bestanden) vs. persistent.
          Persistente Fehlschlaege -> Exit 1 (ehrliches Signal; in der CI bleibt der
          Job durch continue-on-error trotzdem nicht-blockierend).
@@ -103,12 +105,15 @@ if ([string]::IsNullOrEmpty($resultsDirectory)) {
 if ([string]::IsNullOrWhiteSpace($RetryTrxFileName)) {
     $RetryTrxFileName = [IO.Path]::GetFileNameWithoutExtension($PrimaryTrx) + "-flaky-retry.trx"
 }
+# xunit.v3/MTP: --filter in VSTest-Syntax bleibt als Test-App-Argument hinter "--"
+# (Compound-Ausdruck Category&FullyQualifiedName~ unveraendert); der TRX-Report
+# kommt aus Microsoft.Testing.Extensions.TrxReport (-report-trx-filename relativ
+# zum --results-directory).
 $nameFilter = ($retryMethods | ForEach-Object { "FullyQualifiedName~$_" }) -join "|"
-$retryOutput = & dotnet test $TestProject -c $Configuration --no-build `
-    --filter "(Category=Flaky)&($nameFilter)" `
-    --logger "trx;LogFileName=$RetryTrxFileName" `
+$retryOutput = & dotnet test --project $TestProject -c $Configuration --no-build `
     --results-directory $resultsDirectory `
-    --logger "console;verbosity=normal" 2>&1
+    -- --filter "(Category=Flaky)&($nameFilter)" `
+    --report-trx --report-trx-filename $RetryTrxFileName 2>&1
 $retryOutput | ForEach-Object { Write-Host $_ }
 
 # 4. Retry-TRX auswerten: Nur "Passed" gilt als recovered — andere Outcomes (z. B.
