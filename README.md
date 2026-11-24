@@ -167,19 +167,21 @@ src/
 **Unit- und Integrationstests** (reguläre Lane, deterministisch — ohne Browser):
 
 ```
-dotnet test --filter "Category!=OsInterface"
+dotnet test -- --filter "Category!=OsInterface"
 ```
 
 **OS-Schnittstellen-Tests** (Playwright-E2E, echte Kestrel-Bindung, Temp-Dateisystem — Chromium wird beim ersten Build automatisch heruntergeladen; in der CI best-effort als eigener Job `os-interface-tests`):
 
 ```
-dotnet test --filter "Category=OsInterface"
+dotnet test -- --filter "Category=OsInterface"
 ```
+
+Das Testprojekt läuft auf xunit.v3 und `dotnet test` im Microsoft.Testing.Platform-Modus (Opt-in via `test.runner` in `global.json`): `--filter` bleibt VSTest-Syntax, wird aber als Test-App-Argument hinter `--` übergeben.
 
 **Coverage-Lauf** (lokale Abfrage der Line-Coverage der regulären Lane — die OS-Lane sammelt in der CI keine Coverage):
 
 ```
-dotnet test Schnittstellenzentrale.slnx --filter "Category!=OsInterface" --collect:"XPlat Code Coverage"
+dotnet test --solution Schnittstellenzentrale.slnx -- --filter "Category!=OsInterface" --coverage --coverage-output-format cobertura
 ```
 
 Beim ersten Build nach dem Klonen lädt das MSBuild-Target `InstallPlaywright` den Chromium-Browser herunter. Zum Überspringen in CI-Umgebungen:

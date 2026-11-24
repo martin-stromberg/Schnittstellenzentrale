@@ -19,8 +19,9 @@ Explizite Ausnahme: `SystemEndpointSyncService` verwendet `IApplicationRepositor
 
 ## Tests
 
-- Unit-Tests: `dotnet test --filter "Category!=OsInterface"` (reguläre Lane, blockierend)
-- OS-Schnittstellen-Tests (Playwright, echte Kestrel-Bindung, Temp-FS): `dotnet test --filter "Category=OsInterface"` — läuft in der CI als best-effort-Job `os-interface-tests`, siehe `docs/help/stabilitaet/os-interface-tests.md`
+- Unit-Tests: `dotnet test -- --filter "Category!=OsInterface"` (reguläre Lane, blockierend)
+- OS-Schnittstellen-Tests (Playwright, echte Kestrel-Bindung, Temp-FS): `dotnet test -- --filter "Category=OsInterface"` — läuft in der CI als best-effort-Job `os-interface-tests`, siehe `docs/help/stabilitaet/os-interface-tests.md`
+- Das Testprojekt läuft auf xunit.v3 (Microsoft.Testing.Platform, Opt-in via `test.runner` in `global.json`): `--filter` bleibt VSTest-Syntax, wird aber als Test-App-Argument hinter `--` übergeben; TRX kommt über `--report-trx`, Coverage über `--coverage --coverage-output-format cobertura` (statt `--collect:"XPlat Code Coverage"`).
 - Playwright läuft über `PlaywrightServer` (Kestrel, Port 5099) — kein manueller App-Start nötig
 - `LayoutSmokeTests` prüft via `BoundingBoxAsync()` ob das Layout nicht kollabiert ist
 
