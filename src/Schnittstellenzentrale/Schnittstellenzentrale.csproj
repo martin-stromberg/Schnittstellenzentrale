@@ -14,6 +14,11 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Authentication.Negotiate" Version="11.0.*" />
     <PackageReference Include="Microsoft.AspNetCore.OData" Version="10.0.0-preview.2" />
+    <!-- Nicht Teil des Shared Frameworks; wird nur hier genutzt
+         (Components/Layout/AppShell.razor, Components/Shared/ApplicationGroupTree.razor).
+         Aus Infrastructure verschoben - Entscheidung F6, siehe
+         docs/projects/task/issue-108-c9b7f84be6d94f939f0c255d1dd1d977-nuget-updates-mit-hohem-risiko/decisions.md -->
+    <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="11.0.*" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="11.0.*">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
