@@ -34,7 +34,11 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
-    <PackageReference Include="Serilog.AspNetCore" Version="10.0.0" />
+    <!-- Sinks bewusst unveraendert: Sinks.File 7.0.0 ist die von AspNetCore 11.0.0
+         selbst deklarierte Abhaengigkeit; Sinks.EventLog 4.0.0 ist letzter stabiler
+         Stand (net6.0-Asset, unter net11 aufloesbar). Entscheidung F4, siehe
+         docs/projects/task/issue-108-c9b7f84be6d94f939f0c255d1dd1d977-nuget-updates-mit-hohem-risiko/decisions.md -->
+    <PackageReference Include="Serilog.AspNetCore" Version="11.0.0" />
     <PackageReference Include="Serilog.Sinks.EventLog" Version="4.0.0" />
     <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
     <PackageReference Include="ShadcnBlazor" Version="1.0.14" />
