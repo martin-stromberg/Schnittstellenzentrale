@@ -4,8 +4,8 @@ Branch: `task/issue-108-c9b7f84be6d94f939f0c255d1dd1d977-nuget-updates-mit-hohem
 
 | # | Titel | Abhängigkeiten | Branch | Status |
 |---|-------|----------------|--------|--------|
-| 1 | .NET-11-Basisupgrade (TFM, SDK, CI, Floating-Baseline) | Keine | `task/issue-108-c9b7f84be6d94f939f0c255d1dd1d977-nuget-updates-mit-hohem-risiko-schritt-1-net11-basis` | In Arbeit |
-| 2 | F6: SignalR.Client ins Web-Projekt + FrameworkReference | 1 | `task/issue-108-c9b7f84be6d94f939f0c255d1dd1d977-nuget-updates-mit-hohem-risiko-schritt-2-frameworkref` | Offen |
+| 1 | .NET-11-Basisupgrade (TFM, SDK, CI, Floating-Baseline) | Keine | `task/issue-108-c9b7f84be6d94f939f0c255d1dd1d977-nuget-updates-mit-hohem-risiko-schritt-1-net11-basis` | Fertig |
+| 2 | F6: SignalR.Client ins Web-Projekt + FrameworkReference | 1 | `task/issue-108-c9b7f84be6d94f939f0c255d1dd1d977-nuget-updates-mit-hohem-risiko-schritt-2-frameworkref` | In Arbeit |
 | 3 | F5: OData.Edm 9.0.0 + AspNetCore.OData-Strategie | 1 | `task/issue-108-c9b7f84be6d94f939f0c255d1dd1d977-nuget-updates-mit-hohem-risiko-schritt-3-odata-edm` | Offen |
 | 4 | F4: Serilog.AspNetCore 11.0.0 | 1 | `task/issue-108-c9b7f84be6d94f939f0c255d1dd1d977-nuget-updates-mit-hohem-risiko-schritt-4-serilog` | Offen |
 | 5 | F3: OpenApi 3.11.1 + Swashbuckle 11.0.1 | 1 | `task/issue-108-c9b7f84be6d94f939f0c255d1dd1d977-nuget-updates-mit-hohem-risiko-schritt-5-openapi-swashbuckle` | Offen |
