@@ -24,26 +24,28 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- Direct override to pull in AngleSharp >= 1.5.0: bunit 2.7.2 transitively resolves the
-         vulnerable AngleSharp 1.4.0 (GHSA-pgww-w46g-26qg, moderate, mXSS via annotation-xml HTML
-         integration point), which fails the security-scan quality gate. NuGet's nearest-wins
-         resolution picks this direct reference over the transitive one. -->
-    <PackageReference Include="AngleSharp" Version="1.5.0" />
-    <PackageReference Include="bunit" Version="2.7.2" />
+    <!-- Direct override on the patched AngleSharp line: bunit 2.15.2 transitively requires
+         AngleSharp >= 1.10.1, so the vulnerable AngleSharp 1.4.0 it resolved under bunit 2.7.2
+         (GHSA-pgww-w46g-26qg, moderate, mXSS via annotation-xml HTML integration point) can no
+         longer be pulled in. The explicit pin keeps the resolution on the patched release
+         (1.10.5) above the transitive minimum (>= 1.10.1 from bunit 2.15.2): NuGet's
+         nearest-wins resolution picks this direct reference over the transitive one. -->
+    <PackageReference Include="AngleSharp" Version="1.10.5" />
+    <PackageReference Include="bunit" Version="2.15.2" />
     <!-- coverlet.collector (VSTest data collector) does not work under MTP.
          Microsoft.Testing.Extensions.CodeCoverage is the coverlet-based MTP
          coverage extension and emits coverage.cobertura.xml for the 70% gate;
          TrxReport provides the report-trx option for the CI TRX artifacts. -->
     <PackageReference Include="Microsoft.Testing.Extensions.CodeCoverage" Version="18.12.0" />
     <PackageReference Include="Microsoft.Testing.Extensions.TrxReport" Version="2.5.3" />
-    <PackageReference Include="Jint" Version="4.9.2" />
+    <PackageReference Include="Jint" Version="4.18.1" />
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="11.0.*" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="11.0.*" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="11.0.*" />
     <PackageReference Include="Microsoft.JSInterop" Version="11.0.*" />
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.5.1" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.12.0" />
     <PackageReference Include="Microsoft.Playwright" Version="1.65.1" />
-    <PackageReference Include="Moq" Version="4.20.72" />
+    <PackageReference Include="Moq" Version="4.21.0" />
     <PackageReference Include="SQLitePCLRaw.lib.e_sqlite3" Version="3.53.3" />
     <PackageReference Include="xunit.v3" Version="4.0.3" />
     <PackageReference Include="xunit.runner.visualstudio" Version="4.0.1">

@@ -41,7 +41,7 @@
     <PackageReference Include="Serilog.AspNetCore" Version="11.0.0" />
     <PackageReference Include="Serilog.Sinks.EventLog" Version="4.0.0" />
     <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
-    <PackageReference Include="ShadcnBlazor" Version="1.0.14" />
+    <PackageReference Include="ShadcnBlazor" Version="1.0.22" />
     <!-- Koordiniert mit Microsoft.OpenApi 3.11.1 in Core/Infrastructure: Swashbuckle 11
          setzt OpenAPI.NET 3.x voraus, ein getrenntes Update erzeugte einen OpenApi-2/3-Mix
          (OpenApiDocument steht in der Core-Signatur ISwaggerImportService.SyncFromDocumentAsync,
