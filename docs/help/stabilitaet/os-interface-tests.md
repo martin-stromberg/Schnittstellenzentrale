@@ -160,6 +160,10 @@ Retry ist nicht zur Stabilisierung regulärer Tests vorgesehen. Fachliche Assert
 
 **Job-Rerun-Konvention** (komplementär zum Trait-Retry): Schlägt der `os-interface tests`-Job ohne auswertbares TRX fehl (Runner-Abbruch, Testhost-Crash — der Retry-Schritt findet dann keine Fehlschläge und endet neutral), ist genau ein `gh run rerun --job <job-id>` nur für diesen Job erlaubt — niemals `gh run rerun --failed` (das würde blockierende Jobs mit wiederholen). Die numerische Job-ID kommt aus `gh run view --job <id>` bzw. `gh run view <run-id> --json jobs`. Bleibt der Fehler bestehen, tritt er wiederholt auf oder meldet der Analyzer eine Schwellwert-Überschreitung, wird ein Quarantäne-Issue angelegt und das Fehlerbild unter „Bekannte Fehlerbilder" dokumentiert (inkl. Verweis auf Issue und Analyzer-Befund). Fehler in der regulären Lane werden niemals wiederholt — sie gelten immer als Regression.
 
+## Playwright-Versionsupdates
+
+Bei `Microsoft.Playwright`-Updates (insbesondere Major-Sprüngen über mehrere Releases) gilt wegen der best-effort-CI-Lane ein **lokales Gate als Merge-Pflicht**: `dotnet test --filter "Category=OsInterface"` muss lokal vollständig grün gelaufen sein, bevor der PR gemergt wird; Ergebnis/TRX sind im PR zu verlinken. Vorab sind die Release-Notes aller Zwischenreleases auf entfernte/geänderte APIs zu sichten und gegen die Aufrufe unter `Playwright/` zu prüfen. Die Browser-Installation erfolgt automatisch über das `InstallPlaywright`-MSBuild-Target (`playwright.ps1 install chromium`, abschaltbar via `-p:SkipPlaywrightInstall=true`); ein Browser-Cache existiert in der CI nicht.
+
 ## Audit-Heuristik und Meta-Tests
 
 Klassifizierungskriterium für **neue** Tests: „echte OS-Berührung ⇒ `[OsInterface]`" (Kriterienliste oben). Wiederholbare Suchheuristik für ungetaggte Kandidaten:
