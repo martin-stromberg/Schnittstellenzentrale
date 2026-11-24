@@ -2,6 +2,36 @@
 
 Dieses Dokument sammelt die im Projektverlauf getroffenen Entscheidungen mit Begründung. Jede Entscheidung wird im zugehörigen Entwicklungsschritt ergänzt.
 
+## F3 – OpenAPI-Stack: Microsoft.OpenApi 3.11.1 + Swashbuckle.AspNetCore 11.0.1 (Schritt 5)
+
+**Status:** Entschieden und umgesetzt (Schritt-Branch `…-schritt-5-openapi-swashbuckle`).
+
+**Entscheidung:**
+
+1. **`Microsoft.OpenApi` 2.10.0 → 3.11.1** in `Schnittstellenzentrale.Core.csproj` und `Schnittstellenzentrale.Infrastructure.csproj` sowie **`Swashbuckle.AspNetCore` 10.1.7 → 11.0.1** in `Schnittstellenzentrale.csproj` — zwingend in einem gemeinsamen Schritt.
+   - **Begründung:** Swashbuckle 11 hängt an OpenAPI.NET 3.x; `OpenApiDocument` steht in der öffentlichen Core-Signatur `ISwaggerImportService.SyncFromDocumentAsync` und wird vom `SystemEndpointSyncService` via `ISwaggerProvider.GetSwagger("v1")` bezogen. Ein getrenntes Update hätte einen OpenApi-2/3-Mix erzeugt (v2-Referenz im Importpfad vs. v3-Dokument aus Swashbuckle 11 — binär inkompatible Major-Versionen).
+   - **Zielversionen zum Umsetzungszeitpunkt konkretisiert:** 3.11.1 (16.11.2026) bzw. 11.0.1 (12.11.2026) sind die jeweils neuesten stabilen Releases — keine neuere stabile Linie vorhanden. Swashbuckle 11.0.1 deklariert seine OpenAPI-Abhängigkeit auf der 3.11-Linie; ältere 3.x-Stände (≤ 3.10.x) tragen dokumentierte High-CVSS-Befunde — 3.11.1 ist zusätzlich die sauberste Sicherheitswahl.
+   - **`OpenApiVersion` bleibt Default (OpenAPI 3.0):** Swashbuckle 11 erzeugt standardmäßig weiter OpenAPI-3.0-Dokumente (3.1/3.2 sind Opt-in via `options.OpenApiVersion`). Kein Opt-in gesetzt — das Akzeptanzkriterium fordert ein gültiges OpenAPI-3-Dokument; verifiziert: `openapi: 3.0.4`.
+
+2. **Einzige erforderliche Code-Migration: `SecurityOperationFilter`.**
+   - **Befund aus der realen Abnahme:** `new OpenApiSecuritySchemeReference(schemeId, null)` serialisierte unter 3.x die Security-Requirement als leeres Objekt (`security: [{}]`) statt `{"Negotiate": []}` — Referenzen brauchen in 3.x das Host-Dokument zur Auflösung (dokumentiertes „by design"-Verhalten, dotnet/aspnetcore#64524).
+   - **Fix:** `new OpenApiSecuritySchemeReference(schemeId, context.Document)` — `OperationFilterContext.Document` ist die von Swashbuckle 11 neu bereitgestellte Eigenschaft (vgl. Swashbuckle-Beispielfilter `SecurityRequirementsOperationFilter`). Ohne den Fix hätte `SwaggerOperationHelper.DetectAuthenticationType` beim Startup-Abgleich die Negotiate-Erkennung verloren.
+   - **Übrige Stellen quellkompatibel:** `OpenApiJsonReader`/`ReadAsync`/`OpenApiReaderSettings` (`SwaggerImportService`), `JsonNodeExtension`, `IOpenApiExtension`, `IOpenApiParameter`, `OpenApiPaths`/`OpenApiPathItem.AddOperation`, `OpenApiSchema` (`JsonSchemaType`, `JsonValue`-Enum/Default), `OpenApiInfo`/`OpenApiSecurityScheme` und die Swashbuckle-Filter-/Provider-Schnittstellen (`IOperationFilter`, `ISwaggerProvider`) sind in 3.x unverändert. Die im Plan antizipierte größere Reader-Migration entfiel — der 2.x→3.x-Umbruch ist laut offiziellem Upgrade-Guide klein; der Bestand nutzte bereits die interface-basierte 2.x-API.
+   - **Test-Fixture:** `SystemEntryInitializerTests` setzt die Referenz jetzt gegen das Host-Dokument (produktive Form) statt `null`.
+   - **Swashbuckle-11-Breaking-Changes gesondert geprüft:** `anyOf`-Kombinierung mehrfacher Response-Typen pro Statuscode nicht relevant (kein Action mit doppeltem `ProducesResponseType`-Statuscode — Volltextprüfung über alle Controller), Redoc ungenutzt, net11.0-TFM vorhanden, `net8.0`/`net9.0`-Drop irrelevant.
+
+**Betrachtete Alternativen (verworfen):**
+
+- OpenApi-2.x in Core/Infrastructure pinnen und nur Swashbuckle heben: verworfen — erzeugt genau den zu vermeidenden 2/3-Mix (`OpenApiDocument`-Typ inkompatibel zwischen den Major-Versionen).
+- Opt-in auf OpenAPI 3.1/3.2-Dokumenterzeugung: verworfen als Scope-Erweiterung — kein Nutzerbedarf; Default 3.0 erfüllt das Akzeptanzkriterium.
+- Security-Requirement ohne Referenz als `$ref`-String bauen: verworfen — `context.Document` ist der dokumentierte v11-Weg und hält die Referenz semantisch auflösbar.
+
+**Konsequenzen:**
+
+- `dotnet list package --include-transitive` zeigt `Microsoft.OpenApi` einheitlich 3.11.1 über alle Projekte; `Swashbuckle.AspNetCore.*` einheitlich 11.0.1.
+- Reguläre Test-Lane unverändert 641/641 grün; reale Kestrel-Abnahme: `swagger.json` (200, `openapi: 3.0.4`, `x-sz-*`-Extensions, korrekte Security-Requirements) und Swagger-UI (200) verifiziert; der Startup-Abgleich importierte 34 Systemendpunkte inkl. korrekter Negotiate-/BearerToken-Erkennung.
+- Bei künftigen OpenAPI.NET-Updates ist zu beachten: Referenztypen brauchen ihr Host-Dokument — Test-Fixtures, die Dokumente im Speicher bauen, müssen Referenzen mit dem Dokument verknüpfen, sonst testen sie ein unproduktives Modell.
+
 ## F5 – OData-Stack: Edm 9.0.0 + AspNetCore.OData-Strategie (Schritt 3)
 
 **Status:** Entschieden und umgesetzt (Schritt-Branch `…-schritt-3-odata-edm`).

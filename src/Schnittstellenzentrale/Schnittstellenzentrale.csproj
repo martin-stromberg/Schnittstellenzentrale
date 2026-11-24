@@ -42,7 +42,13 @@
     <PackageReference Include="Serilog.Sinks.EventLog" Version="4.0.0" />
     <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
     <PackageReference Include="ShadcnBlazor" Version="1.0.14" />
-    <PackageReference Include="Swashbuckle.AspNetCore" Version="10.1.7" />
+    <!-- Koordiniert mit Microsoft.OpenApi 3.11.1 in Core/Infrastructure: Swashbuckle 11
+         setzt OpenAPI.NET 3.x voraus, ein getrenntes Update erzeugte einen OpenApi-2/3-Mix
+         (OpenApiDocument steht in der Core-Signatur ISwaggerImportService.SyncFromDocumentAsync,
+         SystemEndpointSyncService bezieht es via ISwaggerProvider.GetSwagger).
+         Entscheidung F3, siehe
+         docs/projects/task/issue-108-c9b7f84be6d94f939f0c255d1dd1d977-nuget-updates-mit-hohem-risiko/decisions.md -->
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="11.0.1" />
   </ItemGroup>
 
   <ItemGroup>

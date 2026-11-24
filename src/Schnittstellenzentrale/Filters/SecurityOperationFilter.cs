@@ -23,9 +23,11 @@ public class SecurityOperationFilter : IOperationFilter
 
         var schemeId = hasAuthorize ? "Negotiate" : "Bearer";
 
+        // Microsoft.OpenApi 3.x: die Referenz braucht das Host-Dokument zur Auflösung,
+        // sonst serialisiert die Requirement als leeres Objekt ({}) statt { "Negotiate": [] }.
         (operation.Security ??= []).Add(new OpenApiSecurityRequirement
         {
-            { new OpenApiSecuritySchemeReference(schemeId, null), new List<string>() }
+            { new OpenApiSecuritySchemeReference(schemeId, context.Document), new List<string>() }
         });
     }
 }
