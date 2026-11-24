@@ -160,7 +160,7 @@ src/
 └── Schnittstellenzentrale.Tests/    # Unit-, Integrations- und Playwright-E2E-Tests
 ```
 
-**Technologien:** ASP.NET Core 10 · Blazor Server · Entity Framework Core 10 · ShadcnBlazor · SignalR · Microsoft.AspNetCore.OData 10 Preview · Serilog · Markdig · xUnit · Playwright
+**Technologien:** ASP.NET Core 11 · Blazor Server · Entity Framework Core 11 · ShadcnBlazor · SignalR · Microsoft.AspNetCore.OData 10 Preview · Serilog · Markdig · xUnit · Playwright
 
 ## Tests
 
