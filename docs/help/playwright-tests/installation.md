@@ -2,7 +2,7 @@
 
 ## Voraussetzungen
 
-- .NET 10.0 SDK
+- .NET 11.0 SDK
 - PowerShell (`pwsh`) — wird für das `playwright.ps1`-Skript benötigt, das Playwright-Browser installiert
 - Internetzugang beim ersten Build (Playwright lädt den Chromium-Browser herunter)
 
@@ -20,14 +20,14 @@ dotnet test
 
 Der erste Build nach dem Klonen des Repositories lädt automatisch den Chromium-Browser herunter (MSBuild-Target `InstallPlaywright`). Dieser Schritt kann einige Minuten dauern.
 
-Ein ungefilterter `dotnet test` umfasst beide Test-Lanes — für die reguläre Lane allein `--filter "Category!=OsInterface"`, für die OS-Schnittstellen-Tests `--filter "Category=OsInterface"` (Details: [OS-Schnittstellen-Tests](../stabilitaet/os-interface-tests.md)).
+Ein ungefilterter `dotnet test` umfasst beide Test-Lanes — für die reguläre Lane allein `-- --filter "Category!=OsInterface"`, für die OS-Schnittstellen-Tests `-- --filter "Category=OsInterface"` (xunit.v3/MTP: Filter als Test-App-Argument hinter `--`) (Details: [OS-Schnittstellen-Tests](../stabilitaet/os-interface-tests.md)).
 
 ## Coverage-Gate prüfen
 
 Für die lokale Qualitätsprüfung wird der Coverage-Lauf der regulären Lane ausgeführt (die OS-Schnittstellen-Lane sammelt keine Coverage — sie ist in der CI best-effort und würde den Schwellwert instabil machen):
 
 ```bash
-dotnet test Schnittstellenzentrale.slnx --filter "Category!=OsInterface" --collect:"XPlat Code Coverage"
+dotnet test --solution Schnittstellenzentrale.slnx -- --filter "Category!=OsInterface" --coverage --coverage-output-format cobertura
 ```
 
 Die Qualitätssicherung prüft dabei die Line-Coverage der regulären Lane und erwartet mindestens `70 %`. Die Umsetzung bettet sich in die bestehenden UI-Tests ein, ohne die Schwelle im Code zu verändern. Relevante Abdeckungsbereiche sind zustandsabhängige Komponenten wie `ApplicationContentView`, `EnvironmentSelector`, `AppShell` und `MainLayout`, die mit gezielten bUnit-Tests abgesichert werden.
@@ -102,12 +102,12 @@ Der Job `os-interface-tests` (in `pr-staging-ci.yml` und `staging-ci.yml`) lädt
 
 ## Überprüfung
 
-Nach `dotnet test --filter "Category=OsInterface"` sollte die Zusammenfassung ohne Fehlschlag ausgehen (`Failed: 0`).
+Nach `dotnet test -- --filter "Category=OsInterface"` sollte die Zusammenfassung ohne Fehlschlag ausgehen.
 
 Die OS-Schnittstellen-Tests verteilen sich auf die Playwright-Testklassen unter `Schnittstellenzentrale.Tests.Playwright` sowie die Temp-Dateisystem-Tests `ImpressumServiceTests` und `TempDirectoryCleanupTests` (Stand des Audits: 26 Klassen). Wenn Tests dieser Lane einzeln übersprungen oder gefiltert werden sollen, steht der xUnit-Trait-Filter `Category` bereit — alle Klassen der Lane tragen `[OsInterface]`:
 
 ```bash
-dotnet test --filter "Category=OsInterface"
+dotnet test -- --filter "Category=OsInterface"
 ```
 
 In der CI läuft diese Menge als best-effort-Job `os-interface-tests` (`continue-on-error`), getrennt vom blockierenden `build-and-test`-Job — Details in [OS-Schnittstellen-Tests](../stabilitaet/os-interface-tests.md).

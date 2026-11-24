@@ -28,7 +28,6 @@
     private void OnEnvironmentSelected(int environmentId)
     {
         _selectedEnvironmentId = environmentId;
-        StateHasChanged();
     }
 
     private void OnStateChanged() => InvokeAsync(StateHasChanged);

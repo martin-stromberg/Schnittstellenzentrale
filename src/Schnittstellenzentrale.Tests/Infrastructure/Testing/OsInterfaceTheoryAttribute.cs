@@ -1,4 +1,5 @@
-using Xunit.Sdk;
+using System.Runtime.CompilerServices;
+using Xunit.v3;
 
 namespace Schnittstellenzentrale.Tests.Infrastructure.Testing;
 
@@ -8,14 +9,26 @@ namespace Schnittstellenzentrale.Tests.Infrastructure.Testing;
 /// <c>[Theory]</c>-Anwender in der OS-Schnittstellen-Lane.
 /// </summary>
 /// <remarks>
-/// <see cref="Xunit.Sdk.ITraitAttribute"/> ist zwingend: xUnit 2.9.3 sammelt Trait-Attribute
-/// ausschließlich über <c>GetCustomAttributes(typeof(ITraitAttribute))</c> — ohne das
-/// memberlose Marker-Interface würde der <see cref="CategoryTraitDiscoverer"/> nie aufgerufen.
+/// xUnit v3 kennt keine <c>ITraitDiscoverer</c> mehr: Attribute beschreiben ihre
+/// Traits selbst über <see cref="ITraitAttribute.GetTraits"/>. Da dieses Attribut
+/// zugleich das Theory-Attribut der Methode ist, liefert es den Trait direkt mit.
 /// </remarks>
-[TraitDiscoverer("Schnittstellenzentrale.Tests.Infrastructure.Testing.CategoryTraitDiscoverer", "Schnittstellenzentrale.Tests")]
 [AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
 public sealed class OsInterfaceTheoryAttribute : TheoryAttribute, ITraitAttribute
 {
-    /// <summary>Der vom <see cref="CategoryTraitDiscoverer"/> gelesene Kategorie-Wert.</summary>
-    public string Category => TestCategories.OsInterface;
+    /// <summary>Initialisiert das Attribut und reicht die Source-Informationen des
+    /// Aufrufortes an <see cref="TheoryAttribute"/> weiter (xUnit3003).</summary>
+    /// <param name="sourceFilePath">Pfad der Datei mit der Testmethode (Compiler-gefüllt).</param>
+    /// <param name="sourceLineNumber">Zeilennummer der Testmethode (Compiler-gefüllt).</param>
+    public OsInterfaceTheoryAttribute(
+        [CallerFilePath] string? sourceFilePath = null,
+        [CallerLineNumber] int sourceLineNumber = -1)
+        : base(sourceFilePath, sourceLineNumber)
+    {
+    }
+
+    /// <summary>Liefert das <c>("Category", "OsInterface")</c>-Trait-Paar.</summary>
+    /// <returns>Die Trait-Paare dieses Attributs.</returns>
+    public IReadOnlyCollection<KeyValuePair<string, string>> GetTraits()
+        => [new KeyValuePair<string, string>("Category", TestCategories.OsInterface)];
 }

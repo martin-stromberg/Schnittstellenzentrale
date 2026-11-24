@@ -111,9 +111,15 @@
     {
         if (firstRender)
         {
-            _jsModule = await JSRuntime.InvokeAsync<IJSObjectReference>("import", "./endpoint-page.js");
-            await _jsModule.InvokeVoidAsync("applyStoredSidebarWidth", _sidebarElement);
-            await _jsModule.InvokeVoidAsync("initializeSidebarResize", _resizeHandleElement, _sidebarElement);
+            try
+            {
+                _jsModule = await JSRuntime.InvokeAsync<IJSObjectReference>("import", "./endpoint-page.js");
+                await _jsModule.InvokeVoidAsync("applyStoredSidebarWidth", _sidebarElement);
+                await _jsModule.InvokeVoidAsync("initializeSidebarResize", _resizeHandleElement, _sidebarElement);
+            }
+            catch (Exception ex) when (ex is JSException or JSDisconnectedException or TaskCanceledException)
+            {
+            }
         }
     }
 
@@ -361,7 +367,6 @@
         catch (Exception ex)
         {
             _errorMessage = string.Format(L["ApplicationGroupTree_Error_RemoveFromGroup"], ex.Message);
-            StateHasChanged();
         }
     }
 

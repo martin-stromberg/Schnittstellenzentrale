@@ -14,13 +14,16 @@ function Get-FlakyTestNames {
     # Liefert die Methoden-FQNs aller Tests mit Category=Flaky des Projekts als
     # HashSet[string] (leere Menge bei leerem/fehlgeschlagenem List-Lauf). Der Aufruf
     # nutzt --no-build und setzt daher einen zuvor erfolgten Build voraus.
+    # xunit.v3/MTP: --filter nimmt weiterhin die VSTest-Syntax (Category=...), wird
+    # aber als Test-App-Argument hinter "--" uebergeben. Eine leere Treffermenge
+    # endet mit MTP-Exitcode 8 — fuer die reine Namensauswertung belanglos.
     # xUnit-Theory-Datenzeilen ("Ns.Class.Method(arg: 1)") werden durch das
     # Praefix-Muster automatisch auf den Methoden-FQN reduziert, weil die
     # Klammer-Argumente nicht zum Match gehoeren.
     # Rueckgabe per ","-Operator: HashSet implementiert IEnumerable und wuerde sonst
     # beim Funktions-Output in die Einzelnamen unrollt werden.
     param([string]$ProjectPath, [string]$Configuration = "Debug")
-    $listOutput = & dotnet test $ProjectPath -c $Configuration --no-build --list-tests --filter "Category=Flaky" 2>&1
+    $listOutput = & dotnet test --project $ProjectPath -c $Configuration --no-build --list-tests -- --filter "Category=Flaky" 2>&1
     $names = [System.Collections.Generic.HashSet[string]]::new()
     foreach ($line in $listOutput) {
         $trimmed = "$line".Trim()

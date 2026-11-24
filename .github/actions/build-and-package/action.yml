@@ -1,7 +1,7 @@
 name: Build and package
 
 description: >
-  Provisions the .NET 10 SDK, restores, publishes Schnittstellenzentrale self-contained for
+  Provisions the .NET 11 SDK, restores, publishes Schnittstellenzentrale self-contained for
   win-x64 in Release mode, packages it as a ZIP, and generates the update manifest
   (update.json, Rezepte-format: SHA-256/size/URL per asset). Used by both the "prerelease" job
   in staging-ci.yml ("Pre-Release") and the "release" job in release.yml, so these
@@ -35,10 +35,10 @@ outputs:
 runs:
   using: composite
   steps:
-    - name: Setup .NET 10
+    - name: Setup .NET 11
       uses: actions/setup-dotnet@v6
       with:
-        dotnet-version: '10.0.x'
+        dotnet-version: '11.0.x'
 
     - name: Restore solution
       run: dotnet restore Schnittstellenzentrale.slnx
@@ -54,7 +54,7 @@ runs:
         }
 
         $output = Join-Path "publish" "win-x64"
-        dotnet publish src/Schnittstellenzentrale/Schnittstellenzentrale.csproj --configuration Release --framework net10.0 --runtime win-x64 --self-contained true --output $output -p:Version=$env:RELEASE_VERSION
+        dotnet publish src/Schnittstellenzentrale/Schnittstellenzentrale.csproj --configuration Release --framework net11.0 --runtime win-x64 --self-contained true --output $output -p:Version=$env:RELEASE_VERSION
         if ($LASTEXITCODE -ne 0) {
           throw "Publish failed for win-x64."
         }

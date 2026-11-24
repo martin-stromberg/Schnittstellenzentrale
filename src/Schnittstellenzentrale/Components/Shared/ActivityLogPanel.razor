@@ -114,13 +114,11 @@ else
         }
         _needsResizeInit = true;
         await OnDisplayModeChanged.InvokeAsync(_displayMode);
-        StateHasChanged();
     }
 
     private void ClearLog()
     {
         ActivityLogService.Clear();
-        StateHasChanged();
     }
 
     private RenderFragment RenderPanelContent() => __builder =>

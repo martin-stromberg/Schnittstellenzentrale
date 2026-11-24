@@ -1,7 +1,6 @@
 using Microsoft.Playwright;
 using Schnittstellenzentrale.Tests.Infrastructure.Testing;
 using Schnittstellenzentrale.Tests.Playwright.Infrastructure;
-using Xunit.Abstractions;
 
 namespace Schnittstellenzentrale.Tests.Playwright;
 
@@ -29,7 +28,7 @@ public class ODataImportTests : PlaywrightTestBase
         await Page.GetByLabel("Basis-URL").FillAsync($"{BaseUrl}/odatav4");
         await Page.GetByLabel("Schnittstellen-URL").FillAsync($"{BaseUrl}/odatav4/$metadata");
 
-        await Assertions.Expect(Page.GetByText("OData")).ToBeVisibleAsync();
+        await Assertions.Expect(Page.Locator(".sz-form-hint", new() { HasText = "OData" })).ToBeVisibleAsync();
 
         await Page.GetByRole(AriaRole.Button, new() { Name = "Speichern" }).ClickAsync();
 

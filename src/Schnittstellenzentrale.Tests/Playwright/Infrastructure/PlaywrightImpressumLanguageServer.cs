@@ -20,7 +20,7 @@ public class PlaywrightImpressumLanguageServer : PlaywrightServer
     private string? _fallbackFilePath;
 
     /// <inheritdoc/>
-    public override async Task InitializeAsync()
+    public override async ValueTask InitializeAsync()
     {
         _tempDir = Path.Combine(Path.GetTempPath(), $"sz-impressum-lang-{Guid.NewGuid():N}");
         Directory.CreateDirectory(_tempDir);
@@ -52,7 +52,7 @@ public class PlaywrightImpressumLanguageServer : PlaywrightServer
     }
 
     /// <inheritdoc/>
-    public override async Task DisposeAsync()
+    public override async ValueTask DisposeAsync()
     {
         try
         {
