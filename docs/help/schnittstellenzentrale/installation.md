@@ -3,7 +3,7 @@
 ## Voraussetzungen
 
 - Windows Server oder Windows-Arbeitsstation mit IIS
-- .NET 10.0 Runtime (ASP.NET Core)
+- .NET 11.0 Runtime (ASP.NET Core)
 - Windows-Authentifizierung im IIS aktiviert (`Windows Authentication` Feature)
 - Anonyme Authentifizierung im IIS deaktiviert
 - SQLite (keine weitere Installation nötig) oder SQL Server

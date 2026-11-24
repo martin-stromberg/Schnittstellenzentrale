@@ -1,0 +1,21 @@
+  Wiederherzustellende Projekte werden ermittelt...
+  Alle Projekte sind für die Wiederherstellung auf dem neuesten Stand.
+
+Die folgenden Quellen wurden verwendet:
+   https://api.nuget.org/v3/index.json
+   C:\Program Files (x86)\Microsoft SDKs\NuGetPackages\
+
+Für das angegebene Projekt "Schnittstellenzentrale.Core" liegen gemäß den aktuellen Quellen keine veralteten Pakete vor.
+Für das angegebene Projekt "Schnittstellenzentrale.Infrastructure" liegen gemäß den aktuellen Quellen keine veralteten Pakete vor.
+Für das Projekt "Schnittstellenzentrale.Tests" liegen die folgenden veralteten Pakete vor
+   [net10.0]: 
+   Paket oberster Ebene      Angefordert   Aufgelöst   Ursache(n)   Alternative      
+   > xunit                   2.9.3         2.9.3       Legacy       xunit.v3 >= 0.0.0
+
+   Transitives Paket                    Aufgelöst   Ursache(n)   Alternative                         
+   > xunit.assert                       2.9.3       Legacy       xunit.v3.assert >= 0.0.0            
+   > xunit.core                         2.9.3       Legacy       xunit.v3.core >= 0.0.0              
+   > xunit.extensibility.core           2.9.3       Legacy       xunit.v3.extensibility.core >= 0.0.0
+   > xunit.extensibility.execution      2.9.3       Legacy       xunit.v3.extensibility.core >= 0.0.0
+
+Für das angegebene Projekt "Schnittstellenzentrale" liegen gemäß den aktuellen Quellen keine veralteten Pakete vor.

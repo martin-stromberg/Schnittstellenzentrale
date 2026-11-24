@@ -21,7 +21,7 @@ public class SitePageTests : IAsyncLifetime
     private IPage _page = null!;
 
     /// <inheritdoc/>
-    public async Task InitializeAsync()
+    public async ValueTask InitializeAsync()
     {
         _playwright = await Microsoft.Playwright.Playwright.CreateAsync();
         _browser = await _playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions
@@ -45,7 +45,7 @@ public class SitePageTests : IAsyncLifetime
     /// <remarks>Komplett best-effort: Jeder Dispose-Schritt läuft einzeln, Fehler werden
     /// gesammelt und protokolliert — die Methode wirft nie, damit ein Cleanup-Fehler den
     /// eigentlichen Test-Assert nicht überdeckt.</remarks>
-    public async Task DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
         var errors = new List<Exception>();
 

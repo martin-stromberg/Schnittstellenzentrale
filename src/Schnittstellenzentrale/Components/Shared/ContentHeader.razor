@@ -178,8 +178,14 @@
 
     private async Task TriggerFileInput()
     {
-        _jsModule ??= await JSRuntime.InvokeAsync<IJSObjectReference>("import", "./content-header.js");
-        await _jsModule.InvokeVoidAsync("clickElement", _fileInputId);
+        try
+        {
+            _jsModule ??= await JSRuntime.InvokeAsync<IJSObjectReference>("import", "./content-header.js");
+            await _jsModule.InvokeVoidAsync("clickElement", _fileInputId);
+        }
+        catch (Exception ex) when (ex is JSException or JSDisconnectedException or TaskCanceledException)
+        {
+        }
     }
 
     public async ValueTask DisposeAsync()

@@ -75,10 +75,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
-      - name: Setup .NET 10
+      - name: Setup .NET 11
         uses: actions/setup-dotnet@v6
         with:
-          dotnet-version: '10.0.x'
+          dotnet-version: '11.0.x'
 
       - name: Restore dependencies
         run: dotnet restore Schnittstellenzentrale.slnx
@@ -120,10 +120,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
-      - name: Setup .NET 10
+      - name: Setup .NET 11
         uses: actions/setup-dotnet@v6
         with:
-          dotnet-version: '10.0.x'
+          dotnet-version: '11.0.x'
 
       - name: Restore dependencies
         run: dotnet restore Schnittstellenzentrale.slnx
@@ -143,7 +143,10 @@ jobs:
         # 5099-5104, temp filesystem) carry the trait Category=OsInterface and run in the
         # separate best-effort job os-interface-tests below. This is the only lane that
         # collects coverage and feeds the threshold below (ci-target-schema.md section 4.5).
-        run: dotnet test Schnittstellenzentrale.slnx --configuration Release --no-build --filter "Category!=OsInterface" --collect:"XPlat Code Coverage" --logger "trx;LogFileName=test-results.trx" --logger "console;verbosity=normal"
+        # xunit.v3/MTP: dotnet test runs in Microsoft.Testing.Platform mode (global.json
+        # test.runner). xunit.v3 provides --filter (VSTest syntax), --coverage and
+        # --report-trx as test-app args after `--`.
+        run: dotnet test --solution Schnittstellenzentrale.slnx --configuration Release --no-build --results-directory src/Schnittstellenzentrale.Tests/TestResults -- --filter "Category!=OsInterface" --coverage --coverage-output-format cobertura --coverage-output coverage.cobertura.xml --report-trx --report-trx-filename test-results.trx
         shell: pwsh
 
       - name: Install ReportGenerator
@@ -220,10 +223,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
-      - name: Setup .NET 10
+      - name: Setup .NET 11
         uses: actions/setup-dotnet@v6
         with:
-          dotnet-version: '10.0.x'
+          dotnet-version: '11.0.x'
 
       - name: Restore dependencies
         run: dotnet restore Schnittstellenzentrale.slnx
@@ -236,9 +239,9 @@ jobs:
         shell: pwsh
 
       - name: Test OS interface
-        # No --collect: the OS lane is excluded from the 70% coverage gate so the
+        # No coverage: the OS lane is excluded from the 70% coverage gate so the
         # threshold never depends on a best-effort lane.
-        run: dotnet test Schnittstellenzentrale.slnx -c Release --no-build --filter "Category=OsInterface" --logger "trx;LogFileName=test-results-os-interface.trx" --logger "console;verbosity=normal"
+        run: dotnet test --solution Schnittstellenzentrale.slnx -c Release --no-build --results-directory src/Schnittstellenzentrale.Tests/TestResults -- --filter "Category=OsInterface" --report-trx --report-trx-filename test-results-os-interface.trx
         shell: pwsh
 
       - name: Retry flaky tests once

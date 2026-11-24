@@ -273,7 +273,7 @@ Der Service lädt die Definition über `IHttpClientFactory` (HTTP GET auf `Swagg
 
 ### 3. Definition parsen
 
-- `SwaggerImportService`: Deserialisiert OpenAPI-Dokument via `OpenApiStreamReader` (Microsoft.OpenApi). Iteriert über `document.Paths` und deren `Operations`.
+- `SwaggerImportService`: Deserialisiert OpenAPI-Dokument via `OpenApiJsonReader` (Microsoft.OpenApi 3.x). Iteriert über `document.Paths` und deren `Operations`.
 - `ODataImportService`: Parst XML via `CsdlReader.Parse` (Microsoft.OData.Edm). Erzeugt Endpunkte für `EntitySets` (GET + POST) und `IEdmOperation`-Elemente (Actions → POST, Functions → GET).
 
 ### 4. Diff berechnen

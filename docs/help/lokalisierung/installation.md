@@ -2,9 +2,9 @@
 
 ## Voraussetzungen
 
-- ASP.NET Core 9
+- ASP.NET Core 11
 - Keine zusatzlichen NuGet-Pakete erforderlich; `Microsoft.Extensions.Localization` ist im
-  ASP.NET Core 9 SDK enthalten.
+  ASP.NET Core SDK enthalten.
 
 ## Konfiguration in `Program.cs`
 

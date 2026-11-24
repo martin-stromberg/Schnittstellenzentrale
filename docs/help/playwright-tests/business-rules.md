@@ -5,7 +5,7 @@
 **Beschreibung:** Das bestehende CI-Gate verlangt eine globale Line-Coverage von mindestens `70 %`. Es ist kein Produkt-Feature, sondern eine Qualitätsvorgabe für die Testbasis.
 
 **Bedingungen:**
-- Die Auswertung erfolgt über `dotnet test Schnittstellenzentrale.slnx --collect:"XPlat Code Coverage"`.
+- Die Auswertung erfolgt über `dotnet test --solution Schnittstellenzentrale.slnx -- --filter "Category!=OsInterface" --coverage --coverage-output-format cobertura`.
 - Die Schwelle bleibt unverändert; sie wird nicht durch Anpassung der Metrik gelöst.
 - Die sichere Methode ist die Ergänzung fehlender UI- und State-Tests.
 

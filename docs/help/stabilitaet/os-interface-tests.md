@@ -45,6 +45,8 @@ Im Testprojekt `Schnittstellenzentrale.Tests` stehen dafür zentrale Attribute b
 
 Konvention: `[OsInterface]` auf **Klassen**ebene (eine Zeile pro Klasse, deckt alle Methoden). Methodenebene nur für Einzelmethoden-Ausnahmen. `[OsInterface]` nicht gleichzeitig auf Klasse und Methode derselben Klasse (funktional harmlos, aber konventionswidrig). Die Meta-Tests akzeptieren die Attribut- und die rohe `[Trait("Category", "OsInterface")]`-Schreibweise gleichermaßen.
 
+Die Attribute implementieren `Xunit.v3.ITraitAttribute` und liefern ihr `("Category", wert)`-Paar selbst über `GetTraits()` — xUnit v3 kennt keine `ITraitDiscoverer` mehr (Migration aus Schritt 8 der NuGet-Updates; v2-Discoverer `CategoryTraitDiscoverer` entfernt).
+
 ## `Flaky`-Kategorie
 
 `Flaky` ist eine reine Markierungs-Kategorie für nachweislich umgebungsflaky OS-nahe Tests. Sie berechtigt zum einmaligen automatischen Retry in der best-effort-Lane.
@@ -74,15 +76,17 @@ Schreibweisen:
 
 ## Lokale Befehle
 
+Das Testprojekt läuft auf xunit.v3 und `dotnet test` im Microsoft.Testing.Platform-Modus (Opt-in via `test.runner` in `global.json`; der VSTest-Modus steht MTP-Apps unter .NET 10+ SDK nicht mehr zur Verfügung). Filter- und Report-Optionen werden als Test-App-Argumente **hinter `--`** übergeben. `--filter` nimmt weiterhin die vertraute VSTest-Syntax (`Category=…`, `FullyQualifiedName~…`, `&`/`|`); eine leere Treffermenge endet mit MTP-Exitcode 8 (tolerierbar via `--ignore-exit-code 8`). TRX kommt aus `Microsoft.Testing.Extensions.TrxReport` (`--report-trx`), Coverage aus `Microsoft.Testing.Extensions.CodeCoverage` (`--coverage --coverage-output-format cobertura`, ersetzt den VSTest-Collector `--collect:"XPlat Code Coverage"`).
+
 ```powershell
 # Nur reguläre Tests (Standard, blockierend)
-dotnet test src/Schnittstellenzentrale.Tests/Schnittstellenzentrale.Tests.csproj --filter "Category!=OsInterface"
+dotnet test --project src/Schnittstellenzentrale.Tests/Schnittstellenzentrale.Tests.csproj -- --filter "Category!=OsInterface"
 
 # Nur OS-Schnittstellen-Tests
-dotnet test src/Schnittstellenzentrale.Tests/Schnittstellenzentrale.Tests.csproj --filter "Category=OsInterface"
+dotnet test --project src/Schnittstellenzentrale.Tests/Schnittstellenzentrale.Tests.csproj -- --filter "Category=OsInterface"
 
 # Nur Flaky-markierte Tests
-dotnet test src/Schnittstellenzentrale.Tests/Schnittstellenzentrale.Tests.csproj --filter "Category=Flaky"
+dotnet test --project src/Schnittstellenzentrale.Tests/Schnittstellenzentrale.Tests.csproj -- --filter "Category=Flaky"
 ```
 
 ## Automatischer Retry (Flaky)
@@ -92,9 +96,9 @@ Der automatische Einmal-Retry greift ausschließlich für `Flaky`-markierte Test
 **In der CI** (`os-interface tests`-Job in `pr-staging-ci.yml` und `staging-ci.yml`): Schlägt der Testschritt fehl, läuft `Retry flaky tests once` (`if: failure()`) `scripts/Retry-FlakyTests.ps1`:
 
 1. Primär-TRX parsen, fehlgeschlagene Testnamen einsammeln (Theory-Datenzeilen werden auf den Methoden-FQN normalisiert).
-2. Flaky-Menge via `dotnet test --no-build --list-tests --filter "Category=Flaky"` ermitteln.
+2. Flaky-Menge via `dotnet test --no-build --list-tests -- --filter "Category=Flaky"` ermitteln.
 3. Schnittmenge leer → „keine Flaky-Fehlschläge", Exit 0 (kein Retry; bei Build-Fehlschlag/fehlendem TRX ebenso).
-4. Sonst genau ein gefilterter Re-Run: `--filter "(Category=Flaky)&(FullyQualifiedName~...)"` → Retry-TRX `<primaername>-flaky-retry.trx`.
+4. Sonst genau ein gefilterter Re-Run: `--filter "(Category=Flaky)&(FullyQualifiedName~...)"` mit `--report-trx` → Retry-TRX `<primaername>-flaky-retry.trx`.
 5. Auswertung recovered/persistent: recovered wird als `::notice::`, persistent als `::warning::` annotiert; persistente Fehlschläge lassen den Schritt mit Exit 1 fehlschlagen (der Job bleibt durch `continue-on-error` nicht-blockierend).
 
 Beide TRX-Dateien (Primär und Retry) wandern über das Artefakt-Glob `test-results-os-interface*.trx` ins Upload-Artefakt — der Erstfehlschlag bleibt sichtbar.
@@ -102,7 +106,7 @@ Beide TRX-Dateien (Primär und Retry) wandern über das Artefakt-Glob `test-resu
 **Lokal** — alternativ manuell:
 
 ```powershell
-dotnet test src/Schnittstellenzentrale.Tests/Schnittstellenzentrale.Tests.csproj --filter "Category=OsInterface" --logger "trx;LogFileName=lauf.trx"
+dotnet test --project src/Schnittstellenzentrale.Tests/Schnittstellenzentrale.Tests.csproj --results-directory src/Schnittstellenzentrale.Tests/TestResults -- --filter "Category=OsInterface" --report-trx --report-trx-filename lauf.trx
 ./scripts/Retry-FlakyTests.ps1 -TestProject src/Schnittstellenzentrale.Tests/Schnittstellenzentrale.Tests.csproj -PrimaryTrx src/Schnittstellenzentrale.Tests/TestResults/lauf.trx
 ```
 
@@ -159,6 +163,10 @@ Es gibt **keine** Skip-Flags per Umgebungsvariable (`*_SKIP_*` o. ä.): Alle Pla
 Retry ist nicht zur Stabilisierung regulärer Tests vorgesehen. Fachliche Assertion-Fehler regulärer Tests werden nicht kaschiert. Ausnahme: der oben beschriebene `Flaky`-Einmal-Retry — er existiert nur in der best-effort-Lane, weil `Flaky` nur zusammen mit `OsInterface` vergeben wird.
 
 **Job-Rerun-Konvention** (komplementär zum Trait-Retry): Schlägt der `os-interface tests`-Job ohne auswertbares TRX fehl (Runner-Abbruch, Testhost-Crash — der Retry-Schritt findet dann keine Fehlschläge und endet neutral), ist genau ein `gh run rerun --job <job-id>` nur für diesen Job erlaubt — niemals `gh run rerun --failed` (das würde blockierende Jobs mit wiederholen). Die numerische Job-ID kommt aus `gh run view --job <id>` bzw. `gh run view <run-id> --json jobs`. Bleibt der Fehler bestehen, tritt er wiederholt auf oder meldet der Analyzer eine Schwellwert-Überschreitung, wird ein Quarantäne-Issue angelegt und das Fehlerbild unter „Bekannte Fehlerbilder" dokumentiert (inkl. Verweis auf Issue und Analyzer-Befund). Fehler in der regulären Lane werden niemals wiederholt — sie gelten immer als Regression.
+
+## Playwright-Versionsupdates
+
+Bei `Microsoft.Playwright`-Updates (insbesondere Major-Sprüngen über mehrere Releases) gilt wegen der best-effort-CI-Lane ein **lokales Gate als Merge-Pflicht**: `dotnet test -- --filter "Category=OsInterface"` muss lokal vollständig grün gelaufen sein, bevor der PR gemergt wird; Ergebnis/TRX sind im PR zu verlinken. Vorab sind die Release-Notes aller Zwischenreleases auf entfernte/geänderte APIs zu sichten und gegen die Aufrufe unter `Playwright/` zu prüfen. Die Browser-Installation erfolgt automatisch über das `InstallPlaywright`-MSBuild-Target (`playwright.ps1 install chromium`, abschaltbar via `-p:SkipPlaywrightInstall=true`); ein Browser-Cache existiert in der CI nicht.
 
 ## Audit-Heuristik und Meta-Tests
 

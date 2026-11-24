@@ -13,7 +13,7 @@ Das konkrete Feature „Coverage Gate schlägt fehl“ wird in den bUnit-Kompone
 Die Ausgangsbasis ist ein lokaler Lauf oder das CI-Artifact mit dem Line-Coverage-Report. Kandidaten sind Komponenten mit 0 % oder deutlich unter 70 % Abdeckung, etwa `ApplicationContentView`, `EnvironmentSelector`, `AppShell` und `MainLayout`.
 
 Beteiligte Komponenten:
-- `dotnet test Schnittstellenzentrale.slnx --filter "Category!=OsInterface" --collect:"XPlat Code Coverage"` — führt die lokale Coverage-Erfassung der regulären Lane aus.
+- `dotnet test --solution Schnittstellenzentrale.slnx -- --filter "Category!=OsInterface" --coverage --coverage-output-format cobertura` — führt die lokale Coverage-Erfassung der regulären Lane aus.
 - `TestMockFactory.CreateCoverageScenarioDependencies` — liefert wiederverwendbare Mocks und Testdaten für kritische Zustände.
 
 ### 2. Fehler- und State-Pfade absichern
@@ -30,7 +30,7 @@ Für jede betroffene UI-Komponente wird ein kompakter bUnit-Test ergänzt:
 Der relevante Nachweis ist der wiederholte lokale Lauf:
 
 ```bash
-dotnet test Schnittstellenzentrale.slnx --filter "Category!=OsInterface" --collect:"XPlat Code Coverage"
+dotnet test --solution Schnittstellenzentrale.slnx -- --filter "Category!=OsInterface" --coverage --coverage-output-format cobertura
 ```
 
 Erst wenn die Line-Coverage der regulären Lane die feste 70-%-Schwelle überschreitet, gilt das Feature als abgeschlossen. Ein zusätzliches E2E-Setup bleibt optional und dient nur dann dem Ziel, wenn die UI-Abdeckung durch bUnit-Tests allein nicht ausreicht.
@@ -40,7 +40,7 @@ flowchart TD
     A[Coverage-Report oder lokaler Lauf] --> B[0-%/niedrige UI-Komponenten priorisieren]
     B --> C[bUnit-Tests ergänzen]
     C --> D[State-, Fehler- und Wiederherstellungsfälle prüfen]
-    D --> E[dotnet test ... --collect:"XPlat Code Coverage"]
+    D --> E[dotnet test ... --coverage --coverage-output-format cobertura]
     E --> F{>= 70 % Line Coverage?}
     F -- Ja --> G[CI-Gate stabil]
     F -- Nein --> B
