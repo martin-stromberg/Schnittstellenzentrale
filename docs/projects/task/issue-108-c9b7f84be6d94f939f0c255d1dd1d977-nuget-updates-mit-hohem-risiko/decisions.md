@@ -104,3 +104,28 @@ Dieses Dokument sammelt die im Projektverlauf getroffenen Entscheidungen mit Beg
 
 - Der Serilog-Stack folgt jetzt der net11-Linie des Hostings; künftige Sink-Updates können unabhängig vom Hostpaket erfolgen (Sinks hängen nur am Serilog-Kern).
 - Nachweisbarkeit des Loggings ist jetzt Teil der Schritt-Abnahme dokumentiert: File-Sink und EventLog-Sink schreiben real — bei künftigen Serilog-Updates ist die reale Kestrel-Abnahme (Datei- und EventLog-Prüfung) zu wiederholen.
+
+## F1 – Playwright-Stack: `Microsoft.Playwright` 1.65.1 (Schritt 7)
+
+**Status:** Entschieden und umgesetzt (Schritt-Branch `…-schritt-7-playwright`).
+
+**Entscheidung:**
+
+1. **`Microsoft.Playwright` 1.52.0 → 1.65.1** in `Schnittstellenzentrale.Tests.csproj` — einzige Code-Änderung des Schritts.
+   - **Release-Notes-Sichtung 1.53–1.65.1 vollständig:** Breaking Changes in 1.55 (Chromium-Extension-MV2), 1.56 (`BrowserContext.BackgroundPage`), 1.57 (`Page.Accessibility` entfernt; Wechsel Chromium → Chrome for Testing), 1.58 (`_react`/`_vue`/`:light`-Selektoren, `Devtools`-Option), 1.59/1.60 (macOS-WebKit, `Handle`-Option `ExposeBindingAsync`, Docker-Image), 1.64 (Elemente in versteckten iframes gelten als hidden), 1.65 (Aktionen warten auf nicht-inerte Elemente; Cookie-Matching RFC 6265; ungerenderter Text fällt aus Accessible Names; `ParamsString` angehängt statt ersetzt; Proxy-Credentials nur an Proxy-Challenges).
+   - **Befund: keine der entfernten/geänderten APIs oder Verhaltensmuster wird im Repo verwendet** (`BackgroundPage`, `Accessibility`, `_react`, `_vue`, `:light`, `Devtools`, `ExposeBinding`, `APIRequestContext`, `ParamsString`, `AriaSnapshot`, `Cookie`, `iframe`, `inert` → jeweils 0 Treffer; ~60 `GetByRole`-Locators mit `Name` matchen gerenderten Text; einziges `<details>` in `ActivityLogPanel.razor` wird nicht per Role-Name adressiert). Die vollständige Release-Tabelle liegt im Schritt-`inventory/release-notes-befund.md` (in der Git-Historie des Planungscommits erhalten).
+   - **Empirisch bestätigt:** OsInterface-Lane 94/94 grün unter Chromium 159.0.8154.6 (Chrome for Testing, Revision 1255) — keine Test-/Infrastrukturanpassung nötig (`PlaywrightTestBase`, `PlaywrightServer`, `PlaywrightApiFactory`, `PlaywrightSignalRServer` unverändert).
+
+2. **Browser-Installation läuft weiterhin über das `InstallPlaywright`-MSBuild-Target** — kein dedizierter Install-Schritt nötig; die paketkonforme Revision landet in `%LOCALAPPDATA%/ms-playwright/`. **CI-Cache-Befund:** Es existiert kein `actions/cache` für `ms-playwright` in den Workflows — nichts zu invalidieren; jeder CI-Build installiert die paketkonforme Revision frisch.
+
+3. **Lokales Gate als Merge-Pflicht (Prozessentscheidung):** Da die OsInterface-CI-Lane best-effort (`continue-on-error`) läuft, gilt für Playwright-Updates verbindlich: `dotnet test --filter "Category=OsInterface"` muss **lokal vollständig grün** gelaufen sein, bevor der PR gemergt wird; Ergebnis/TRX werden im PR verlinkt. Für diesen Schritt nachgewiesen: 94/94 grün (`test-results-os-interface.trx`).
+
+**Betrachtete Alternativen (verworfen):**
+
+- Testcode vorsorglich auf neue APIs (z. B. `Locator.Visible`, `FrameLocator()` ohne Selektor) umstellen: verworfen als Scope-Erweiterung — die bestehenden Aufrufe sind quell- und laufzeitkompatibel.
+- `[Flaky]`-Markierungen vorsorglich vergeben: verworfen — Repo-Konvention erlaubt `Flaky` nur bei dokumentiertem Flake-Ereignis; der Lauf war ohne Einzelfehlschlag.
+
+**Konsequenzen:**
+
+- Die E2E-Suite läuft auf der aktuellen Chrome-for-Testing-Linie; künftige Playwright-Major-Updates folgen demselben Verfahren (Release-Notes-Sichtung + lokaler OsInterface-Gate-Lauf vor Merge).
+- Bei künftigem Einsatz von `inert`, Cookies oder iframes in der App sind die 1.64/1.65-Verhaltensänderungen zu berücksichtigen.
