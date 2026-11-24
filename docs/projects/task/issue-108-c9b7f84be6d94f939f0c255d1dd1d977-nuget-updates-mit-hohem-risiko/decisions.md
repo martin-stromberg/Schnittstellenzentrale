@@ -155,3 +155,49 @@ Dieses Dokument sammelt die im Projektverlauf getroffenen Entscheidungen mit Beg
 - Alle `dotnet test`-Aufrufe (lokal, CI, Skripte, Doku) nutzen die `--`-Trennung; Reporter-Artefakte brauchen `--report-trx`/`--coverage`-Argumente plus explizites `--results-directory`.
 - Neue Traits/Kategorien werden künftig als `Xunit.v3.ITraitAttribute` implementiert — kein Discoverer-Muster mehr.
 - Künftige xunit-Updates folgen der v3-Linie; für MTP-Erweiterungen (Reporter) gelten eigene Versionslinien (`Microsoft.Testing.Extensions.*`).
+
+## F7 – Update-Prozessstrategie: Floating `11.0.*` beibehalten + regelmäßige Paketprüfung (Schritt 9)
+
+**Status:** Entschieden (Schritt-Branch `…-schritt-9-abschluss`) — reine Prozessentscheidung, keine Code-/Manifeständerung.
+
+**Entscheidung:** Variante (a) — die 11 Floating-Referenzen `11.0.*` (3 × Web, 4 × Infrastructure, 4 × Tests; `Core` hat keine Floating-Referenz) bleiben unverändert; die Update-Disziplin läuft weiter über die etablierte regelmäßige Paketprüfung. Es werden **keine** `packages.lock.json` und **kein** `Directory.Packages.props` eingeführt.
+
+**Begründung:**
+
+- **Floating ist bewusst gewählt.** Security-Patches sollen implizit einfließen — ursprünglich im `System.Security.Cryptography.Pkcs`-Kommentar der `Infrastructure.csproj` begründet (`10.0.*` wegen GHSA-846f-f764-76mx / GHSA-2fmv-rv2c-59x7). Seit F6 kommt Pkcs aus der Runtime-Installation (NU1510-Folgebereinigung); die Strategie gilt unverändert für die verbliebenen `11.0.*`-Referenzen: Framework-/EF-Patches fließen ohne Manifeständerung beim nächsten Restore mit.
+- **„Floating + Lock" ist kein sinnvoller Mittelweg.** Bei Floating-Versionen löst eine Lock-Datei bei jedem Restore neu auf — sie liefert dann keine Reproduzierbarkeit, sondern nur Pflegeoverhead. Wer Lock-Reproduzierbarkeit will, muss zuerst pinnen — das ist Variante (b), die verworfen ist.
+- **Die Paketprüfungs-Praxis trägt das Risiko bereits.** Der automatisierte `weekly-nuget-review`-Workflow erzeugt wöchentlich ein Review-Issue (Label `automated-nuget-review`, Duplikat-Schutz); die Issue-#107/#108-Kette ist die konkrete Ausprägung dieser Praxis — Major-/Risiko-Updates werden gebündelt, entschieden und schrittweise mit eigener Verifikation umgesetzt. Ein zusätzlicher Lock-/Bot-Mechanismus adressiert ein Problem, das die bestehende Kadenz bereits abdeckt.
+
+**Betrachtete Alternativen (verworfen):**
+
+- **(b) Pinnen + `packages.lock.json` im Locked-Mode + botgestützte Update-PRs** (Dependabot/Renovate): verworfen — Reproduzierbarkeit und nachverfolgbare Update-Diffs werden mit neuer Bot-/Review-Infrastruktur erkauft; das konterkariert die bewusst gewählte implizite Security-Patch-Zufuhr und liegt außerhalb des Issue-Scopes. Bei künftigem Reproduzierbarkeits-Bedarf (z. B. Audit-/Compliance-Anforderung) ist der Umstieg jederzeit nachrüstbar.
+- **(c) Central Package Management via `Directory.Packages.props`**: verworfen — zentrale Versionswahrheit bringt bei 4 Projekten und überschaubarer Referenzmenge keinen Reproduzierbarkeits-Gewinn; als „Zwischenschritt" ohne Zielentscheidung wäre es Mehraufwand ohne Gegenwert.
+- **Floating + Lock-Kombination**: verworfen — kein sinnvoller Mittelweg (siehe Begründung).
+
+**Konsequenzen:**
+
+- Der Restore löst die `11.0.*`-Referenzen auf die jeweils neuesten 11.0.x-Patches auf; Builds auf unterschiedlichen Ständen können unterschiedliche Patch-Stände einspielen — akzeptiert, da Framework-Patches kompatibel sind und die wöchentliche Prüfung Abweichungen sichtbar macht.
+- `dotnet list package --vulnerable` bleibt Teil der Update-/Schritt-Abnahmen; Security-relevante Patches werden weiterhin explizit bewertet (Kette #107/#108), zusätzlich zur impliziten Patch-Zufuhr.
+- Re-Evaluation zulässig und billig: Bei verändertem Risikobild (Reproduzierbarkeits-Anforderung, Bot-Infrastruktur ohnehin geplant) kann die Entscheidung ohne Altlasten revidiert werden — es wurde nichts eingeführt, was zurückgebaut werden müsste.
+
+## F8 – Auslagerung: npm-devDependencies + GitHub-Actions-Pins (Schritt 9)
+
+**Status:** Entschieden und umgesetzt (Schritt-Branch `…-schritt-9-abschluss`) — Folge-Issue angelegt.
+
+**Entscheidung:** Die beiden Nicht-NuGet-Abhängigkeitsbereiche werden **nicht** in Issue #108 bearbeitet, sondern in das separate Folge-Issue **[#110](https://github.com/martin-stromberg/Schnittstellenzentrale/issues/110)** ausgelagert — mit empfohlener eigener Review-Kadenz (Vorschlag: monatlich, analog zum `monthly-architecture-security-review`-Muster, statt der wöchentlichen NuGet-Kadenz).
+
+**Scope des Folge-Issues:**
+
+- **npm-`devDependencies`** der Release-Automatisierung (`package.json`, Root): `semantic-release` ^25.0.5, `@semantic-release/commit-analyzer` ^13.0.1, `@semantic-release/github` ^11.0.6, `@semantic-release/release-notes-generator` ^14.0.3, `conventional-changelog-conventionalcommits` ^9.1.0.
+- **GitHub-Actions-Pins:** 11 Workflows + 3 Composite Actions unter `.github/` — alle externen `uses:` als Major-Tag-Pins (`@v5`–`@v7`), keine SHA-Pins, keine Dependabot-/Renovate-Konfiguration.
+
+**Begründung:**
+
+- Beide Bereiche liegen **außerhalb des NuGet-Scopes** von Issue #108 (NuGet-Paketprüfung); die Aufnahme hier wäre Scope-Creep.
+- Anderer Technologie-/Werkzeugkreis (npm-Ökosystem, Actions-Marketplace) mit eigenen Prüfwerkzeugen und eigenem Änderungsrhythmus — ein separater Review-Zyklus ist fachlich sauberer und verhindert, dass die wöchentliche NuGet-Kadenz auf einen kleinen, selten ändernden Scope überdimensioniert wirkt.
+- Issue #108 wird dadurch entscheidungsseitig abschließbar, ohne die Befunde zu verlieren.
+
+**Konsequenzen:**
+
+- Issue #108 ist mit diesem Schritt fachlich abgeschlossen; die Umsetzung von #110 ist eigenständig und blockiert den #108-Abschluss nicht.
+- In #110 ist zu entscheiden, ob die Prüfung manuell-periodisch bleibt oder per Bot/Workflow automatisiert wird (Dependabot-/Renovate-Frage für `github-actions` + `npm` gehört dorthin — nicht zu F7, das nur NuGet betrifft).
