@@ -1,7 +1,6 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Playwright;
-using Xunit.Abstractions;
 
 namespace Schnittstellenzentrale.Tests.Playwright.Infrastructure;
 
@@ -24,7 +23,7 @@ public abstract class PlaywrightTestBase : IAsyncLifetime
 
     // Verzeichnis für Trace-ZIPs — absolut am Repo-Root verankert über
     // TestPaths.FindRepoRoot(). Ein relativer Pfad läge unter dem
-    // Testhost-Arbeitsverzeichnis (bin/<cfg>/net10.0/) und der CI-Upload
+    // Testhost-Arbeitsverzeichnis (bin/<cfg>/net11.0/) und der CI-Upload
     // "playwright-traces/" fände die Dateien nie.
     private static readonly string TraceDirectory =
         Path.Combine(TestPaths.FindRepoRoot(), "playwright-traces");
@@ -62,7 +61,7 @@ public abstract class PlaywrightTestBase : IAsyncLifetime
     }
 
     /// <inheritdoc/>
-    public async Task InitializeAsync()
+    public async ValueTask InitializeAsync()
     {
         var seeder = new TestDatabaseSeeder(
             _server.Services,
@@ -134,7 +133,7 @@ public abstract class PlaywrightTestBase : IAsyncLifetime
     /// Fehlersammlung, Trace-Stop mit <see cref="TraceStopBudget"/>-Deadline — ein
     /// Cleanup-Fehler darf den eigentlichen Test-Assert nie überdecken (kein
     /// AggregateException-/Dispose-Overlay mehr). Die Methode wirft nie.</remarks>
-    public async Task DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
         var errors = new List<Exception>();
 

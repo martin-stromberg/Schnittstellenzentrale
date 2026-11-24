@@ -216,9 +216,15 @@
     {
         if (firstRender)
         {
-            _jsModule = await JSRuntime.InvokeAsync<IJSObjectReference>("import", "./endpoint-page.js");
-            _dotNetRef = DotNetObjectReference.Create(this);
-            await _jsModule.InvokeVoidAsync("registerSaveShortcut", _dotNetRef);
+            try
+            {
+                _jsModule = await JSRuntime.InvokeAsync<IJSObjectReference>("import", "./endpoint-page.js");
+                _dotNetRef = DotNetObjectReference.Create(this);
+                await _jsModule.InvokeVoidAsync("registerSaveShortcut", _dotNetRef);
+            }
+            catch (Exception ex) when (ex is JSException or JSDisconnectedException or TaskCanceledException)
+            {
+            }
         }
     }
 
@@ -328,8 +334,14 @@
             _locationChangingRegistration = NavigationManager.RegisterLocationChangingHandler(HandleLocationChanging);
         if (!_beforeUnloadActive && _jsModule != null)
         {
-            await _jsModule.InvokeVoidAsync("enableBeforeUnloadGuard");
-            _beforeUnloadActive = true;
+            try
+            {
+                await _jsModule.InvokeVoidAsync("enableBeforeUnloadGuard");
+                _beforeUnloadActive = true;
+            }
+            catch (Exception ex) when (ex is JSException or JSDisconnectedException or TaskCanceledException)
+            {
+            }
         }
     }
 
@@ -337,8 +349,14 @@
     {
         if (_beforeUnloadActive && _jsModule != null)
         {
-            await _jsModule.InvokeVoidAsync("disableBeforeUnloadGuard");
-            _beforeUnloadActive = false;
+            try
+            {
+                await _jsModule.InvokeVoidAsync("disableBeforeUnloadGuard");
+                _beforeUnloadActive = false;
+            }
+            catch (Exception ex) when (ex is JSException or JSDisconnectedException or TaskCanceledException)
+            {
+            }
         }
     }
 
@@ -352,7 +370,15 @@
     {
         if (!_isDirty)
             return;
-        var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", L["EndpointPage_Confirm_UnsavedChanges"].Value);
+        bool confirmed;
+        try
+        {
+            confirmed = await JSRuntime.InvokeAsync<bool>("confirm", L["EndpointPage_Confirm_UnsavedChanges"].Value);
+        }
+        catch (Exception ex) when (ex is JSException or JSDisconnectedException or TaskCanceledException)
+        {
+            return;
+        }
         if (!confirmed)
             context.PreventNavigation();
     }

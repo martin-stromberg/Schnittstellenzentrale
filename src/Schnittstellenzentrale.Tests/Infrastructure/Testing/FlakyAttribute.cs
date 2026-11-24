@@ -1,4 +1,4 @@
-using Xunit.Sdk;
+using Xunit.v3;
 
 namespace Schnittstellenzentrale.Tests.Infrastructure.Testing;
 
@@ -16,14 +16,14 @@ namespace Schnittstellenzentrale.Tests.Infrastructure.Testing;
 /// Fehlerbild) oder einem Analyzer-Befund aus <c>scripts/Analyze-FlakyTestResults.ps1</c>.</item>
 /// <item>Die Markierung wird entfernt, sobald die Ursache behoben ist.</item>
 /// </list>
-/// <see cref="Xunit.Sdk.ITraitAttribute"/> ist zwingend: xUnit 2.9.3 sammelt Trait-Attribute
-/// ausschließlich über <c>GetCustomAttributes(typeof(ITraitAttribute))</c> — ohne das
-/// memberlose Marker-Interface würde der <see cref="CategoryTraitDiscoverer"/> nie aufgerufen.
+/// xUnit v3 kennt keine <c>ITraitDiscoverer</c> mehr: Attribute beschreiben ihre
+/// Traits selbst über <see cref="ITraitAttribute.GetTraits"/>.
 /// </remarks>
-[TraitDiscoverer("Schnittstellenzentrale.Tests.Infrastructure.Testing.CategoryTraitDiscoverer", "Schnittstellenzentrale.Tests")]
 [AttributeUsage(AttributeTargets.Class | AttributeTargets.Method, AllowMultiple = false)]
 public sealed class FlakyAttribute : Attribute, ITraitAttribute
 {
-    /// <summary>Der vom <see cref="CategoryTraitDiscoverer"/> gelesene Kategorie-Wert.</summary>
-    public string Category => TestCategories.Flaky;
+    /// <summary>Liefert das <c>("Category", "Flaky")</c>-Trait-Paar.</summary>
+    /// <returns>Die Trait-Paare dieses Attributs.</returns>
+    public IReadOnlyCollection<KeyValuePair<string, string>> GetTraits()
+        => [new KeyValuePair<string, string>("Category", TestCategories.Flaky)];
 }

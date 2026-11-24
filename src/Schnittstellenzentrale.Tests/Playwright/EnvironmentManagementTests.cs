@@ -1,7 +1,6 @@
 using Microsoft.Playwright;
 using Schnittstellenzentrale.Tests.Infrastructure.Testing;
 using Schnittstellenzentrale.Tests.Playwright.Infrastructure;
-using Xunit.Abstractions;
 
 namespace Schnittstellenzentrale.Tests.Playwright;
 

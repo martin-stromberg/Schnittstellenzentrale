@@ -55,7 +55,7 @@ public class PlaywrightServer : IAsyncLifetime
     /// <remarks>Die Init-Phasen tragen Marker; Fehler werden mit Phasen-Label, BindUrl und
     /// Ursache erneut geworfen, damit ein Startfehler im TRX diagnostizierbar bleibt statt
     /// erst beim ersten <c>Page.GotoAsync</c> als Timeout-Flake aufzutreten.</remarks>
-    public virtual async Task InitializeAsync()
+    public virtual async ValueTask InitializeAsync()
     {
         var phase = "Anchor-DB";
         try
@@ -223,7 +223,7 @@ public class PlaywrightServer : IAsyncLifetime
     /// <remarks>Dispose ist komplett best-effort: Jeder Schritt läuft einzeln, Fehler werden
     /// gesammelt und nach <see cref="Console.Error"/> protokolliert — die Methode wirft nie,
     /// damit ein Cleanup-Fehler den eigentlichen Test-Assert nicht überdeckt.</remarks>
-    public virtual async Task DisposeAsync()
+    public virtual async ValueTask DisposeAsync()
     {
         var errors = new List<Exception>();
 

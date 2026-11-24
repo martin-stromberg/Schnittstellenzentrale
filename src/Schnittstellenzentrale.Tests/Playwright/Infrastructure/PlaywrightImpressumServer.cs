@@ -19,7 +19,7 @@ public class PlaywrightImpressumServer : PlaywrightServer
     private string? _impressumFilePath;
 
     /// <inheritdoc/>
-    public override async Task InitializeAsync()
+    public override async ValueTask InitializeAsync()
     {
         _tempDir = Path.Combine(Path.GetTempPath(), $"sz-impressum-{Guid.NewGuid():N}");
         Directory.CreateDirectory(_tempDir);
@@ -47,7 +47,7 @@ public class PlaywrightImpressumServer : PlaywrightServer
     }
 
     /// <inheritdoc/>
-    public override async Task DisposeAsync()
+    public override async ValueTask DisposeAsync()
     {
         try
         {

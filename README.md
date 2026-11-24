@@ -1,9 +1,9 @@
 # Schnittstellenzentrale
 
 [![Release](https://img.shields.io/github/actions/workflow/status/martin-stromberg/Schnittstellenzentrale/release.yml?label=Release)](https://github.com/martin-stromberg/Schnittstellenzentrale/actions/workflows/release.yml)
-![.NET](https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet&logoColor=white)
+![.NET](https://img.shields.io/badge/.NET-11.0-512BD4?logo=dotnet&logoColor=white)
 ![Blazor](https://img.shields.io/badge/Blazor-Server-512BD4?logo=blazor&logoColor=white)
-![EF Core](https://img.shields.io/badge/EF_Core-10-512BD4?logo=dotnet&logoColor=white)
+![EF Core](https://img.shields.io/badge/EF_Core-11-512BD4?logo=dotnet&logoColor=white)
 ![xUnit](https://img.shields.io/badge/Tests-xUnit%20%2B%20Playwright-green?logo=xunit&logoColor=white)
 ![Platform](https://img.shields.io/badge/Platform-Windows%20%2F%20IIS-0078D4?logo=windows&logoColor=white)
 
@@ -31,7 +31,7 @@ Blazor Server-Anwendung zur zentralen Verwaltung lokaler Webservice-Endpunkte. S
 ## Voraussetzungen
 
 - Windows Server oder Windows-Arbeitsstation mit IIS
-- .NET 10.0 Runtime (ASP.NET Core)
+- .NET 11.0 Runtime (ASP.NET Core)
 - IIS: Windows-Authentifizierung aktiviert, Anonyme Authentifizierung deaktiviert
 - SQLite (keine weitere Installation) oder SQL Server
 
@@ -160,26 +160,28 @@ src/
 └── Schnittstellenzentrale.Tests/    # Unit-, Integrations- und Playwright-E2E-Tests
 ```
 
-**Technologien:** ASP.NET Core 10 · Blazor Server · Entity Framework Core 10 · ShadcnBlazor · SignalR · Microsoft.AspNetCore.OData 10 Preview · Serilog · Markdig · xUnit · Playwright
+**Technologien:** ASP.NET Core 11 · Blazor Server · Entity Framework Core 11 · ShadcnBlazor · SignalR · Microsoft.AspNetCore.OData 10 Preview · Serilog · Markdig · xUnit · Playwright
 
 ## Tests
 
 **Unit- und Integrationstests** (reguläre Lane, deterministisch — ohne Browser):
 
 ```
-dotnet test --filter "Category!=OsInterface"
+dotnet test -- --filter "Category!=OsInterface"
 ```
 
 **OS-Schnittstellen-Tests** (Playwright-E2E, echte Kestrel-Bindung, Temp-Dateisystem — Chromium wird beim ersten Build automatisch heruntergeladen; in der CI best-effort als eigener Job `os-interface-tests`):
 
 ```
-dotnet test --filter "Category=OsInterface"
+dotnet test -- --filter "Category=OsInterface"
 ```
+
+Das Testprojekt läuft auf xunit.v3 und `dotnet test` im Microsoft.Testing.Platform-Modus (Opt-in via `test.runner` in `global.json`): `--filter` bleibt VSTest-Syntax, wird aber als Test-App-Argument hinter `--` übergeben.
 
 **Coverage-Lauf** (lokale Abfrage der Line-Coverage der regulären Lane — die OS-Lane sammelt in der CI keine Coverage):
 
 ```
-dotnet test Schnittstellenzentrale.slnx --filter "Category!=OsInterface" --collect:"XPlat Code Coverage"
+dotnet test --solution Schnittstellenzentrale.slnx -- --filter "Category!=OsInterface" --coverage --coverage-output-format cobertura
 ```
 
 Beim ersten Build nach dem Klonen lädt das MSBuild-Target `InstallPlaywright` den Chromium-Browser herunter. Zum Überspringen in CI-Umgebungen:

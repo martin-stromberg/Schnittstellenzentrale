@@ -12,17 +12,43 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.AspNetCore.Authentication.Negotiate" Version="10.0.*" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.Negotiate" Version="11.0.*" />
     <PackageReference Include="Microsoft.AspNetCore.OData" Version="10.0.0-preview.2" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.*">
+    <!-- Stabile ODL-9-Basis unter dem Preview-Host: AspNetCore.OData 10.0.0-preview.2
+         deklariert Mindestversionen ([9.0.0-preview.4, 10.0.0) bzw. [3.0.0-preview.1, 4.0.0)),
+         die stabilen Releases erfuellen diese. Ohne direkte Referenzen loest NuGet die
+         transitiven Preview-Versionen auf, und deren exakter Pin
+         (OData.Core 9.0.0-preview.4 erfordert Edm = 9.0.0-preview.4) kollidiert mit der
+         direkten Edm-9.0.0-Referenz in Infrastructure (NU1608). ModelBuilder wird
+         zusaetzlich direkt im Code genutzt (OData/ODataEdmModelBuilder.cs) -
+         Entscheidung F5, siehe
+         docs/projects/task/issue-108-c9b7f84be6d94f939f0c255d1dd1d977-nuget-updates-mit-hohem-risiko/decisions.md -->
+    <PackageReference Include="Microsoft.OData.Core" Version="9.0.0" />
+    <PackageReference Include="Microsoft.OData.ModelBuilder" Version="3.0.0" />
+    <!-- Nicht Teil des Shared Frameworks; wird nur hier genutzt
+         (Components/Layout/AppShell.razor, Components/Shared/ApplicationGroupTree.razor).
+         Aus Infrastructure verschoben - Entscheidung F6, siehe
+         docs/projects/task/issue-108-c9b7f84be6d94f939f0c255d1dd1d977-nuget-updates-mit-hohem-risiko/decisions.md -->
+    <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="11.0.*" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="11.0.*">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
-    <PackageReference Include="Serilog.AspNetCore" Version="10.0.0" />
+    <!-- Sinks bewusst unveraendert: Sinks.File 7.0.0 ist die von AspNetCore 11.0.0
+         selbst deklarierte Abhaengigkeit; Sinks.EventLog 4.0.0 ist letzter stabiler
+         Stand (net6.0-Asset, unter net11 aufloesbar). Entscheidung F4, siehe
+         docs/projects/task/issue-108-c9b7f84be6d94f939f0c255d1dd1d977-nuget-updates-mit-hohem-risiko/decisions.md -->
+    <PackageReference Include="Serilog.AspNetCore" Version="11.0.0" />
     <PackageReference Include="Serilog.Sinks.EventLog" Version="4.0.0" />
     <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
     <PackageReference Include="ShadcnBlazor" Version="1.0.22" />
-    <PackageReference Include="Swashbuckle.AspNetCore" Version="10.1.7" />
+    <!-- Koordiniert mit Microsoft.OpenApi 3.11.1 in Core/Infrastructure: Swashbuckle 11
+         setzt OpenAPI.NET 3.x voraus, ein getrenntes Update erzeugte einen OpenApi-2/3-Mix
+         (OpenApiDocument steht in der Core-Signatur ISwaggerImportService.SyncFromDocumentAsync,
+         SystemEndpointSyncService bezieht es via ISwaggerProvider.GetSwagger).
+         Entscheidung F3, siehe
+         docs/projects/task/issue-108-c9b7f84be6d94f939f0c255d1dd1d977-nuget-updates-mit-hohem-risiko/decisions.md -->
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="11.0.1" />
   </ItemGroup>
 
   <ItemGroup>
@@ -35,7 +61,7 @@
   </ItemGroup>
 
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
+    <TargetFramework>net11.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>

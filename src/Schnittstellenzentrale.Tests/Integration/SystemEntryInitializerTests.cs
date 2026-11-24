@@ -226,10 +226,13 @@ public class SystemEntryInitializerTests
         await SystemEntryInitializer.InitializeAsync(provider, config);
 
         var swaggerProviderMock = new Mock<ISwaggerProvider>();
+        var document = new OpenApiDocument();
         var negotiateOperation = new OpenApiOperation { OperationId = "getNegotiate" };
         (negotiateOperation.Security ??= []).Add(new OpenApiSecurityRequirement
         {
-            { new OpenApiSecuritySchemeReference("Negotiate", null), new List<string>() }
+            // Microsoft.OpenApi 3.x: Referenz braucht das Host-Dokument zur Auflösung
+            // (produktiv liefert Swashbuckle sie via OperationFilterContext.Document).
+            { new OpenApiSecuritySchemeReference("Negotiate", document), new List<string>() }
         });
         var bearerTokenExtension = new JsonNodeExtension(
             System.Text.Json.Nodes.JsonValue.Create("test-bearer-token"));
@@ -251,7 +254,7 @@ public class SystemEntryInitializerTests
         bearerPath.AddOperation(HttpMethod.Get, bearerOperation);
         paths["/api/bearer"] = bearerPath;
 
-        var document = new OpenApiDocument { Paths = paths };
+        document.Paths = paths;
         swaggerProviderMock.Setup(p => p.GetSwagger("v1", null, null)).Returns(document);
 
         var (syncService, credentialServiceMock) = CreateSyncServiceWithInMemoryDb(factory, swaggerProviderMock.Object);
