@@ -12,6 +12,15 @@
     <IsPackable>false</IsPackable>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <WarningsAsErrors>$(WarningsAsErrors);CS1591</WarningsAsErrors>
+    <!-- xUnit1051 (TestContext.Current.CancellationToken weiterreichen) ist ein
+         Responsiveness-Hinweis des v3-Analyzers; die Suite reicht historisch
+         keine Tokens weiter (~385 Stellen) — schrittweise Einführung bleibt
+         einem eigenen Vorhaben vorbehalten.
+         BL0016 (try/catch um JS-Interop) greift in Tests nicht: die gemockten
+         JSRuntime-/IJSObjectReference-Aufrufe (Moq/bunit) werfen keine
+         JSException; Guards wären reine Zeremonie. In den Produktivprojekten
+         bleiben beide Diagnosen aktiv und wurden behoben. -->
+    <NoWarn>$(NoWarn);xUnit1051;BL0016</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>

@@ -37,11 +37,19 @@ public class StorageModeService : IStorageModeService
     public async Task InitializeAsync()
     {
         var module = await GetModuleAsync();
-        var stored = await module.InvokeAsync<string?>("getStoredMode");
-        if (stored != null && Enum.TryParse<StorageMode>(stored, ignoreCase: true, out var parsed))
+        if (module == null)
+            return;
+        try
         {
-            CurrentMode = parsed;
-            OnModeChanged?.Invoke();
+            var stored = await module.InvokeAsync<string?>("getStoredMode");
+            if (stored != null && Enum.TryParse<StorageMode>(stored, ignoreCase: true, out var parsed))
+            {
+                CurrentMode = parsed;
+                OnModeChanged?.Invoke();
+            }
+        }
+        catch (Exception ex) when (ex is JSException or TaskCanceledException)
+        {
         }
     }
 
@@ -50,6 +58,8 @@ public class StorageModeService : IStorageModeService
         try
         {
             var module = await GetModuleAsync();
+            if (module == null)
+                return;
             await module.InvokeVoidAsync("setStoredMode", mode.ToString());
         }
         catch (Exception ex) when (ex is JSException or TaskCanceledException)
@@ -57,9 +67,15 @@ public class StorageModeService : IStorageModeService
         }
     }
 
-    private async Task<IJSObjectReference> GetModuleAsync()
+    private async Task<IJSObjectReference?> GetModuleAsync()
     {
-        _module ??= await _jsRuntime.InvokeAsync<IJSObjectReference>("import", "./storage-mode.js");
+        try
+        {
+            _module ??= await _jsRuntime.InvokeAsync<IJSObjectReference>("import", "./storage-mode.js");
+        }
+        catch (Exception ex) when (ex is JSException or TaskCanceledException)
+        {
+        }
         return _module;
     }
 }

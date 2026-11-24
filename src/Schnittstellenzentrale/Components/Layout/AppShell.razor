@@ -225,19 +225,16 @@
     private void ToggleActivityLog()
     {
         _activityLogOpen = !_activityLogOpen;
-        StateHasChanged();
     }
 
     private void OnActivityLogDisplayModeChanged(string mode)
     {
         _activityLogDisplayMode = mode;
-        StateHasChanged();
     }
 
     private void OnActivityLogPanelHeightChanged(int height)
     {
         _activityLogPanelHeight = height;
-        StateHasChanged();
     }
 
     private void OnStateChanged()

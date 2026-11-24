@@ -39,21 +39,43 @@ public class ThemeService : IThemeService
     public async Task InitializeAsync()
     {
         var module = await GetModuleAsync();
-        var stored = await module.InvokeAsync<string?>("getStoredTheme");
-        if (stored != null && Enum.TryParse<ColorScheme>(stored, ignoreCase: true, out var parsed))
-            CurrentScheme = parsed;
+        if (module == null)
+            return;
+        try
+        {
+            var stored = await module.InvokeAsync<string?>("getStoredTheme");
+            if (stored != null && Enum.TryParse<ColorScheme>(stored, ignoreCase: true, out var parsed))
+                CurrentScheme = parsed;
+        }
+        catch (Exception ex) when (ex is JSException or TaskCanceledException)
+        {
+        }
     }
 
     private async Task PersistTheme(ColorScheme scheme)
     {
-        var module = await GetModuleAsync();
-        await module.InvokeVoidAsync("setStoredTheme", scheme.ToString());
-        await module.InvokeVoidAsync("applyTheme", scheme.ToString());
+        try
+        {
+            var module = await GetModuleAsync();
+            if (module == null)
+                return;
+            await module.InvokeVoidAsync("setStoredTheme", scheme.ToString());
+            await module.InvokeVoidAsync("applyTheme", scheme.ToString());
+        }
+        catch (Exception ex) when (ex is JSException or TaskCanceledException)
+        {
+        }
     }
 
-    private async Task<IJSObjectReference> GetModuleAsync()
+    private async Task<IJSObjectReference?> GetModuleAsync()
     {
-        _module ??= await _jsRuntime.InvokeAsync<IJSObjectReference>("import", "./theme.js");
+        try
+        {
+            _module ??= await _jsRuntime.InvokeAsync<IJSObjectReference>("import", "./theme.js");
+        }
+        catch (Exception ex) when (ex is JSException or TaskCanceledException)
+        {
+        }
         return _module;
     }
 }
