@@ -51,3 +51,26 @@ Dieses Dokument sammelt die im Projektverlauf getroffenen Entscheidungen mit Beg
 - Die SignalR-Server-Version in `Infrastructure` folgt künftig der Runtime statt einer pinnenbaren Paketversion — gewollt, da das Hosting-Projekt dieselbe Runtime vorgibt.
 - Security-Update-Pfad für diese APIs läuft über Runtime-/SDK-Patches statt über NuGet-Paketupdates — passt zur Floating-/Patch-Strategie der übrigen Framework-Pakete.
 - **Folgebereinigung (NU1510):** Mit der `FrameworkReference` wurden außerdem die bis dahin direkt referenzierten, nun vollständig im Shared Framework enthaltenen Pakete `Microsoft.Extensions.Configuration.Abstractions`, `Microsoft.Extensions.Configuration.Binder`, `Microsoft.Extensions.DependencyInjection.Abstractions`, `Microsoft.Extensions.Http`, `Microsoft.JSInterop` und `System.Security.Cryptography.Pkcs` als redundant gemeldet und entfernt — sonst blieben dauerhaft NU1510-Warnungen im Build. Zur Pkcs-Sicherheitslage (GHSA-846f-f764-76mx, GHSA-2fmv-rv2c-59x7): Die ursprüngliche Pinning-Begründung entfällt — Pkcs kommt jetzt aus der Runtime-Installation und bleibt über deren Patches auf der gepatchten Linie; die transitive `Microsoft.EntityFrameworkCore.SqlServer`-Anforderung wird auf das Framework-Asset gekürzt.
+
+## F4 – Serilog-Stack: `Serilog.AspNetCore` 11.0.0, Sinks unverändert (Schritt 4)
+
+**Status:** Entschieden und umgesetzt (Schritt-Branch `…-schritt-4-serilog`).
+
+**Entscheidung:**
+
+1. **`Serilog.AspNetCore` 10.0.0 → 11.0.0** in `Schnittstellenzentrale.csproj`.
+   - **Changelog-Bewertung 11.0.0** (GitHub-Release vom 18.11.2026): Der Release fügt den net11.0-TFM hinzu (net8.0/net9.0 entfallen — irrelevant, das Projekt läuft auf net11.0), hebt den Serilog-Kern auf 4.4.0 und alle `Serilog.*`-Satelliten auf die v11-Linie (`Extensions.Hosting`, `Extensions.Logging`, `Settings.Configuration` je 11.0.0). Die einzige Verhaltensänderung — das Request-Logging (`UseSerilogRequestLogging`) unterdrückt Exceptions bei client-seitig abgebrochenen Requests — ist für diese Anwendung **ohne Wirkung**, weil die Middleware nicht genutzt wird (per Volltextsuche verifiziert). Kein API-Bruch auf den genutzten Pfaden (`LoggerConfiguration().ReadFrom.Configuration`, `builder.Host.UseSerilog()`, statisches `Log.Logger`); der Bootstrap-Logger-Pfad in `Program.cs` und der `Serilog`-Abschnitt in `appsettings.json` bleiben unverändert.
+
+2. **Sinks bleiben unverändert** (dokumentierte Annahme): `Serilog.Sinks.File` 7.0.0 und `Serilog.Sinks.EventLog` 4.0.0.
+   - **Begründung:** `Sinks.File` 7.0.0 ist die von `Serilog.AspNetCore` 11.0.0 selbst deklarierte Abhängigkeit (`>= 7.0.0`) — Kompatibilität per Paketdeklaration; kein neuerer stabiler Stand verfügbar (nur Prerelease). `Sinks.EventLog` 4.0.0 ist letzter stabiler Stand, targetet net6.0/netstandard2.0 und löst unter net11.0 via Nearest-TFM auf; die Serilog-4.x-Abhängigkeit ist major-kompatibel zu 4.4.0. Ein Mitheben entfällt — kein technischer Anlass.
+   - **Verifiziert:** Reale E2E-Abnahme unter Kestrel — `logs/log-20261124.txt` schreibt Request-/Hub-Events, und der EventLog-Sink schreibt auf diesem Windows-Host tatsächlich Einträge unter Provider `Schnittstellenzentrale` ins Anwendungsprotokoll (Aussage stärker als das geforderte „Konfiguration wird geladen").
+
+**Betrachtete Alternativen (verworfen):**
+
+- Sinks vorsorglich auf Prerelease-Stände heben: verworfen — ohne konkreten Kompatibilitätsbefund würde das Prerelease-Risiko ohne Gegenwert eingeführt.
+- `manageEventSource: true` in der EventLog-Konfiguration ergänzen: verworfen als Scope-Erweiterung — seit Sink-v3.0 Default `false` (Source muss auf dem Zielhost registriert sein; auf dem Abnahme-Host ist sie es), das Bestandsverhalten bleibt bewusst unverändert.
+
+**Konsequenzen:**
+
+- Der Serilog-Stack folgt jetzt der net11-Linie des Hostings; künftige Sink-Updates können unabhängig vom Hostpaket erfolgen (Sinks hängen nur am Serilog-Kern).
+- Nachweisbarkeit des Loggings ist jetzt Teil der Schritt-Abnahme dokumentiert: File-Sink und EventLog-Sink schreiben real — bei künftigen Serilog-Updates ist die reale Kestrel-Abnahme (Datei- und EventLog-Prüfung) zu wiederholen.
