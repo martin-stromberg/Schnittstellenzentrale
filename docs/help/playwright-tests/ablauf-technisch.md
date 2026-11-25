@@ -93,7 +93,7 @@ Beteiligte Komponenten: `TestAuthHandler`, `AppDbContext`, `ISignalRNotification
 
 Beteiligte Komponenten: `TestDatabaseSeeder`, `IPlaywright`, `IBrowser`, `IBrowserContext`, `IPage`
 
-1. `TestDatabaseSeeder.ResetAsync` wird aufgerufen (Schema zurücksetzen und Systemeinträge seeden, siehe unten).
+1. `TestDatabaseSeeder.ResetAsync` wird aufgerufen (Datenbestand leeren und Systemeinträge seeden, siehe unten).
 2. `_server.BaseAddress` wird in `BaseUrl` gespeichert.
 3. `Microsoft.Playwright.Playwright.CreateAsync()` erzeugt eine `IPlaywright`-Instanz.
 4. `_playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions { Headless = TestPaths.IsHeadless() })` startet Chromium — headless nur unter `CI=true`, lokal mit sichtbarem Fenster.
@@ -119,16 +119,16 @@ Beteiligte Komponenten: `TestDatabaseSeeder`, `IDbContextFactory<AppDbContext>`,
 
 1. Ein neuer DI-Scope wird über `_services.CreateScope()` erzeugt.
 2. `IDbContextFactory<AppDbContext>.CreateDbContext()` erzeugt einen `AppDbContext` auf der benannten In-Memory-DB.
-3. `db.Database.EnsureDeletedAsync()` löscht das bestehende Schema.
-4. `db.Database.EnsureCreatedAsync()` legt das Schema neu an.
+3. `db.Database.EnsureCreatedAsync()` legt das Schema an, falls es noch nicht existiert.
+4. `ClearAllDataAsync` leert alle Tabellen deterministisch per `DELETE FROM` — die Tabellenliste kommt aus dem EF-Modell (`db.Model.GetEntityTypes()` → `GetTableName()`) und deckt damit alle DbSets plus künftige Entities ab. Die Verbindung wird explizit geöffnet und ohne Transaktion gearbeitet (Autocommit je `ExecuteSqlRawAsync`), weil `PRAGMA foreign_keys` ein Per-Connection-Pragma ist und nur außerhalb einer Transaktion greift; `PRAGMA foreign_keys = 0` vor den Deletes macht die Reihenfolge beliebig, der Restore auf `1` läuft best-effort im `finally`. Kein `EnsureDeletedAsync`: Auf der benannten Shared-Cache-In-Memory-DB ist der Aufruf ein wirkungsloser No-op — kein File-Backing (`DbConnection.DataSource` leer), `Mode=Memory`-Verbindungen sind non-pooled, und die offene Anchor-Connection hält die DB bis zum Collection-Ende am Leben (Root Cause von Issue #118, siehe [OS-Schnittstellen-Tests](../stabilitaet/os-interface-tests.md)).
 5. `SystemEntryInitializer.InitializeAsync(_services, _configuration)` legt die Systemgruppe und -anwendung neu an.
 6. `SeedSystemEndpointsAsync()` registriert den System-Endpunkt `POST /authenticate` — im Playwright-Environment ist `SystemEndpointSyncService` als `IHostedService` entfernt.
 
 ```mermaid
 flowchart TD
     A[InitializeAsync in PlaywrightTestBase] --> B[TestDatabaseSeeder.ResetAsync]
-    B --> C[EnsureDeletedAsync]
-    C --> D[EnsureCreatedAsync]
+    B --> C[EnsureCreatedAsync]
+    C --> D["ClearAllDataAsync: DELETE FROM aller Modelltabellen (PRAGMA foreign_keys OFF/ON)"]
     D --> E[SystemEntryInitializer.InitializeAsync]
     E --> F[Playwright.CreateAsync]
     F --> G[Chromium.LaunchAsync headless]
@@ -173,7 +173,8 @@ Beide Kontexte schreiben separate Trace-Dateien: `SignalRSyncTests-HHmmssfff.zip
 | `PlaywrightApiFactory` | `Schnittstellenzentrale.Tests.Playwright.Infrastructure` | `WebApplicationFactory<Program>` mit `TestServer` — In-Process-Handler für API-Aufrufe des Blazor-Servers |
 | `SignalRNotificationProxy` | `Schnittstellenzentrale.Tests.Playwright.Infrastructure` | Leitet Notifications an einen austauschbaren Inner-Service weiter (No-Op → echter Hub-Kontext) |
 | `PlaywrightTestBase` | `Schnittstellenzentrale.Tests.Playwright.Infrastructure` | Basisklasse; verwaltet Playwright-Lebenszyklus und Tracing |
-| `TestDatabaseSeeder` | `Schnittstellenzentrale.Tests.Playwright.Infrastructure` | Setzt die In-Memory-DB zurück; seedet Systemeinträge und Showcase-Daten |
+| `TestDatabaseSeeder` | `Schnittstellenzentrale.Tests.Playwright.Infrastructure` | Setzt die In-Memory-DB zurück (modellgetriebener `DELETE FROM`-Wipe); seedet Systemeinträge und Showcase-Daten |
+| `PlaywrightExpand` | `Schnittstellenzentrale.Tests.Playwright.Infrastructure` | `ExpandWithRetryAsync(waitTarget, clickTarget)` — verifizierter Expand-Klick mit Retry für Baumknoten (Toggle-sicher, reconnect-resistent); genutzt u. a. von `TreeCollapseTests` und `ODataEndpointExecutionTests` |
 | `TestPaths` | `Schnittstellenzentrale.Tests.Playwright.Infrastructure` | `FindRepoRoot()`/`IsHeadless()` — Repo-Root-Anker (`playwright-traces/`, `site/`) und Headless-Steuerung |
 | `PlaywrightCollection` | `Schnittstellenzentrale.Tests.Playwright.Infrastructure` | `[CollectionDefinition("Playwright")]` mit `ICollectionFixture<PlaywrightServer>` |
 | `PlaywrightSignalRCollection` | `Schnittstellenzentrale.Tests.Playwright.Infrastructure` | `[CollectionDefinition("PlaywrightSignalR")]` mit `ICollectionFixture<PlaywrightSignalRServer>` |

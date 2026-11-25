@@ -52,12 +52,19 @@ public class ODataEndpointExecutionTests : PlaywrightTestBase
         await Assertions.Expect(Page.GetByText("OData-Import-Vorschau")).ToBeVisibleAsync();
         await Page.GetByRole(AriaRole.Button, new() { Name = "Übernehmen" }).ClickAsync();
 
-        // Baum aufklappen
+        // Baum aufklappen: Die Anwendung ist über den Klick auf den Anwendungsnamen bereits
+        // expandiert; die per OData-Import neu angelegten Endpunkte sieht der Baum aber erst
+        // nach einem erneuten Expandieren (Zuklappen + Aufklappen löst
+        // ReloadApplicationDataAsync aus — der SignalR-Benachrichtigungsdienst ist in diesem
+        // Testserver ein No-Op, es gibt kein TreeChanged-Event). waitTarget ist deshalb das
+        // importierte Kindelement, nicht der Expand-Indikator.
         var appRow = Page.Locator(".sz-tree-row")
             .Filter(new() { Has = Page.Locator(".sz-tree-item-btn", new() { HasText = "SZ-OData-E2E" }) });
         var appChevron = appRow.First.Locator(".sz-tree-chevron-btn").First;
-        await appChevron.ClickAsync();
-        await appChevron.ClickAsync();
+        var appExpanded = appRow.Locator(".sz-tree-chevron-btn .sz-icon-chevron-down");
+        await PlaywrightExpand.ExpandWithRetryAsync(
+            Page.Locator(".sz-tree-item-btn", new() { HasText = "Authenticate" }).First,
+            appChevron);
 
         // ── Authenticate ──────────────────────────────────────────────────────────
         await Assertions.Expect(
@@ -75,8 +82,7 @@ public class ODataEndpointExecutionTests : PlaywrightTestBase
         await Assertions.Expect(Page.Locator(".sz-response-body-pre")).ToContainTextAsync("token");
 
         // ── GET ApplicationGroups ─────────────────────────────────────────────────
-        await appChevron.ClickAsync();
-        await appChevron.ClickAsync();
+        await PlaywrightExpand.ExpandWithRetryAsync(appExpanded, appChevron);
 
         var applicationGroupsChevron = Page.Locator(".sz-tree-row")
             .Filter(new() { Has = Page.Locator(".sz-tree-item-label", new() { HasText = "ApplicationGroups" }) })
@@ -95,8 +101,7 @@ public class ODataEndpointExecutionTests : PlaywrightTestBase
         await Assertions.Expect(Page.Locator(".sz-response-body-pre")).ToContainTextAsync("isSystem");
 
         // ── GET Applications ──────────────────────────────────────────────────────
-        await appChevron.ClickAsync();
-        await appChevron.ClickAsync();
+        await PlaywrightExpand.ExpandWithRetryAsync(appExpanded, appChevron);
 
         var applicationsChevron = Page.Locator(".sz-tree-row")
             .Filter(new() { Has = Page.Locator(".sz-tree-item-label", new() { HasText = "Applications" }) })
@@ -152,8 +157,10 @@ public class ODataEndpointExecutionTests : PlaywrightTestBase
         var appRow = Page.Locator(".sz-tree-row")
             .Filter(new() { Has = Page.Locator(".sz-tree-item-btn", new() { HasText = "SZ-OData-E2E" }) });
         var appChevron = appRow.First.Locator(".sz-tree-chevron-btn").First;
-        await appChevron.ClickAsync();
-        await appChevron.ClickAsync();
+        var appExpanded = appRow.Locator(".sz-tree-chevron-btn .sz-icon-chevron-down");
+        await PlaywrightExpand.ExpandWithRetryAsync(
+            Page.Locator(".sz-tree-item-btn", new() { HasText = "Authenticate" }).First,
+            appChevron);
 
         await Assertions.Expect(
             Page.Locator(".sz-tree-item-btn", new() { HasText = "Authenticate" }).First).ToBeVisibleAsync();
@@ -162,8 +169,7 @@ public class ODataEndpointExecutionTests : PlaywrightTestBase
         await Assertions.Expect(Page.Locator(".response-section strong").First).ToBeVisibleAsync();
 
         // ── GET Endpoints mit $filter=contains(Name,'Endpunkt') ─────────────────
-        await appChevron.ClickAsync();
-        await appChevron.ClickAsync();
+        await PlaywrightExpand.ExpandWithRetryAsync(appExpanded, appChevron);
 
         var endpointsChevron = Page.Locator(".sz-tree-row")
             .Filter(new() { Has = Page.Locator(".sz-tree-item-label", new() { HasText = "Endpoints" }) })
