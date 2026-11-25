@@ -24,15 +24,26 @@ public class TestDatabaseSeeder
         _configuration = configuration;
     }
 
-    /// <summary>Löscht das Datenbankschema, legt es neu an und führt den Seed-Prozess aus.</summary>
+    /// <summary>Leert alle Datentabellen deterministisch, legt das Schema an (falls noch nicht vorhanden) und führt den Seed-Prozess aus.</summary>
+    /// <remarks>
+    /// Kein <c>EnsureDeletedAsync</c>: Auf der benannten Shared-Cache-In-Memory-SQLite der
+    /// Playwright-Server (<c>Mode=Memory;Cache=Shared</c>) ist der Aufruf ein wirkungsloser
+    /// No-op — ohne File-Backing ist <c>DbConnection.DataSource</c> leer, sodass EF Core
+    /// weder <c>SqliteConnection.ClearAllPools</c> noch <c>File.Delete</c> erreicht;
+    /// <c>Mode=Memory</c>-Verbindungen sind zudem non-pooled, und die offene
+    /// Anchor-Connection hält die Datenbank bis zum Collection-Ende am Leben. Daten
+    /// überlebten den Reset daher deterministisch (Root Cause von Issue #118).
+    /// Stattdessen leert <see cref="ClearAllDataAsync"/> alle modellierten Tabellen
+    /// per <c>DELETE FROM</c>.
+    /// </remarks>
     public async Task ResetAsync()
     {
         using var scope = _services.CreateScope();
         var factory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
         using var db = factory.CreateDbContext();
 
-        await db.Database.EnsureDeletedAsync();
         await db.Database.EnsureCreatedAsync();
+        await ClearAllDataAsync(db);
 
         await SystemEntryInitializer.InitializeAsync(_services, _configuration);
         await SeedSystemEndpointsAsync();
@@ -43,10 +54,9 @@ public class TestDatabaseSeeder
     /// Wird ausschließlich von <c>SiteScreenshotTests</c> nach <see cref="ResetAsync"/> aufgerufen.
     /// Alle Datensätze bleiben im Team-Speichermodus sichtbar, da der Owner-Filter
     /// nur im Benutzermodus greift.
-    /// Die Methode räumt zuvor alle Nicht-System-Daten auf: Auf der benannten
-    /// Shared-Cache-In-Memory-SQLite der Playwright-Server wirkt
-    /// <c>EnsureDeletedAsync</c> nicht zuverlässig, sodass sich Daten über die
-    /// Facts einer Klasse sonst akkumulieren würden.
+    /// Ein separates Aufräumen von Alt-Daten ist nicht nötig: <see cref="ResetAsync"/>
+    /// leert die Datenbank seit dem deterministischen <c>DELETE FROM</c>-Wipe
+    /// (Issue #118) vollständig.
     /// </summary>
     public async Task SeedShowcaseDataAsync()
     {
@@ -55,25 +65,54 @@ public class TestDatabaseSeeder
         var endpointRepo = scope.ServiceProvider.GetRequiredService<IEndpointRepository>();
         var environmentRepo = scope.ServiceProvider.GetRequiredService<ISystemEnvironmentRepository>();
 
-        await ClearNonSystemDataAsync(appRepo, environmentRepo);
-
         var (portalApp, orderApp) = await SeedGroupsAndApplicationsAsync(appRepo);
         await SeedEndpointsAsync(endpointRepo, portalApp, orderApp);
         await SeedEnvironmentsAsync(environmentRepo);
     }
 
-    // Entfernt Nicht-System-Gruppen (kaskadierend), ungruppierte Nicht-System-Anwendungen
-    // und sämtliche Umgebungen; System-Einträge bleiben über den IsSystem-Filter erhalten.
-    private static async Task ClearNonSystemDataAsync(
-        IApplicationRepository appRepo,
-        ISystemEnvironmentRepository environmentRepo)
+    // Leert alle modellierten Tabellen per DELETE FROM — der einzig wirksame Reset auf der
+    // benannten Shared-Cache-In-Memory-SQLite (EnsureDeletedAsync ist dort ein No-op, siehe
+    // ResetAsync). Die Tabellenliste kommt aus dem EF-Modell statt aus einer handgepflegten
+    // Liste: Sie deckt alle DbSets plus künftige Entities ab; Tabellen ohne Entity
+    // (z. B. __EFMigrationsHistory) bleiben zu Recht außen vor.
+    //
+    // PRAGMA foreign_keys ist ein Per-Connection-Pragma und greift nur außerhalb einer
+    // Transaktion — die Verbindung wird daher explizit geöffnet und ohne Transaktion
+    // gearbeitet (Autocommit je ExecuteSqlRawAsync); zwischen zwei Aufrufen ginge das
+    // Pragma auf einer anderen Verbindung sonst verloren. Mit deaktivierten FK-Checks
+    // ist die Reihenfolge der Deletes beliebig.
+    private static async Task ClearAllDataAsync(AppDbContext db)
     {
-        foreach (var group in (await appRepo.GetGroupsAsync(StorageMode.Team, string.Empty)).Where(g => !g.IsSystem))
-            await appRepo.DeleteGroupAsync(group.Id, ApplicationGroupDeleteMode.Delete);
-        foreach (var app in (await appRepo.GetUngroupedApplicationsAsync(StorageMode.Team, string.Empty)).Where(a => !a.IsSystem))
-            await appRepo.DeleteApplicationAsync(app.Id);
-        foreach (var environment in await environmentRepo.GetEnvironmentsAsync(StorageMode.Team, null))
-            await environmentRepo.DeleteAsync(environment.Id);
+        await db.Database.OpenConnectionAsync();
+        try
+        {
+            await db.Database.ExecuteSqlRawAsync("PRAGMA foreign_keys = 0");
+            var tableNames = db.Model.GetEntityTypes()
+                .Select(e => e.GetTableName())
+                .Where(n => n != null)
+                .Distinct();
+            foreach (var tableName in tableNames)
+#pragma warning disable EF1002 // Tabellenname stammt aus dem EF-Modell (GetTableName), nicht aus Nutzereingaben — Identifier sind ohnehin nicht parametrierbar.
+                await db.Database.ExecuteSqlRawAsync($"DELETE FROM \"{tableName}\"");
+#pragma warning restore EF1002
+        }
+        finally
+        {
+            // Restore als Best-Effort-Hygiene im finally: Stünde er im try, ginge er bei
+            // einer Exception zwischen den Deletes verloren — die Korrektheit hinge dann
+            // implizit am Non-Pooling-Verhalten der Mode=Memory-Verbindung. Schlägt der
+            // Restore selbst fehl (bereits defekte Verbindung), ist das unkritisch: Die
+            // Verbindung wird anschließend ohnehin geschlossen und verworfen.
+            try
+            {
+                await db.Database.ExecuteSqlRawAsync("PRAGMA foreign_keys = 1");
+            }
+            catch (Exception)
+            {
+            }
+
+            await db.Database.CloseConnectionAsync();
+        }
     }
 
     private static async Task<(Application PortalApp, Application OrderApp)> SeedGroupsAndApplicationsAsync(

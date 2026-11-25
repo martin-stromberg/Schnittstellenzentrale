@@ -111,52 +111,26 @@ public class TreeCollapseTests : PlaywrightTestBase
     }
 
     // Klappt die Systemgruppe auf und verifiziert das Ergebnis (Flake-Mechanismus:
-    // siehe ExpandWithRetryAsync). Erfolgskriterium ist die sichtbare App-Schaltfläche,
-    // geklickt wird der Gruppen-Chevron.
+    // siehe PlaywrightExpand.ExpandWithRetryAsync). Erfolgskriterium ist die sichtbare
+    // App-Schaltfläche, geklickt wird der Gruppen-Chevron.
     private Task ExpandSystemGroupAsync()
     {
         var appBtn = SystemAppRow.Locator(".sz-tree-item-btn");
         var groupChevron = Page.Locator(".collapsible-section .sz-tree-chevron-btn").First;
 
-        return ExpandWithRetryAsync(appBtn, groupChevron);
+        return PlaywrightExpand.ExpandWithRetryAsync(appBtn, groupChevron);
     }
 
     // Klappt die Systemanwendung auf und verifiziert das Ergebnis — Spiegelbild von
     // ExpandSystemGroupAsync eine Ebene tiefer (Flake-Mechanismus: siehe
-    // ExpandWithRetryAsync). Erfolgskriterium ist der Down-Chevron der Anwendung,
-    // geklickt wird die App-Schaltfläche.
+    // PlaywrightExpand.ExpandWithRetryAsync). Erfolgskriterium ist der Down-Chevron
+    // der Anwendung, geklickt wird die App-Schaltfläche.
     private Task ExpandSystemApplicationAsync()
     {
         var appBtn = SystemAppRow.Locator(".sz-tree-item-btn");
         var expandedChevron = SystemAppRow.Locator(".sz-tree-chevron-btn .sz-icon-chevron-down");
 
-        return ExpandWithRetryAsync(expandedChevron, appBtn);
-    }
-
-    // Klickt clickTarget bis zu dreimal, bis waitTarget sichtbar wird, und verifiziert
-    // das Ergebnis abschließend. Zwei Flake-Ursachen werden abgefedert: Ein Klick
-    // während des SignalR-Reconnects nach Page.ReloadAsync() kann verloren gehen
-    // (Blazor Server verwirft Events ohne aktiven Circuit), und ein bereits
-    // persistierter Expand-Zustand dürfte durch einen Blindklick nicht wieder
-    // zugeklappt werden (Toggle-Semantik). Deshalb steht die Sichtbarkeitsprüfung
-    // auf waitTarget vor jedem Klick.
-    private static async Task ExpandWithRetryAsync(ILocator waitTarget, ILocator clickTarget)
-    {
-        for (var attempt = 0; attempt < 3; attempt++)
-        {
-            try
-            {
-                await waitTarget.WaitForAsync(new() { Timeout = 5_000 });
-                return;
-            }
-            catch (TimeoutException)
-            {
-            }
-
-            await clickTarget.ClickAsync();
-        }
-
-        await waitTarget.WaitForAsync();
+        return PlaywrightExpand.ExpandWithRetryAsync(expandedChevron, appBtn);
     }
 
     private ILocator SystemAppRow =>
