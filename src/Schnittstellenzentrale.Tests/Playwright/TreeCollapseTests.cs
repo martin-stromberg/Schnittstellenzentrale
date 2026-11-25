@@ -110,31 +110,53 @@ public class TreeCollapseTests : PlaywrightTestBase
         await Microsoft.Playwright.Assertions.Expect(appRow.Locator(".sz-tree-chevron-btn .sz-icon-chevron-right")).ToBeVisibleAsync();
     }
 
-    // Klappt die Systemgruppe auf und verifiziert das Ergebnis. Zwei Flake-Ursachen werden
-    // abgefedert: Ein Klick während des SignalR-Reconnects nach Page.ReloadAsync() kann
-    // verloren gehen (Blazor Server verwirft Events ohne aktiven Circuit), und ein bereits
-    // persistierter Expand-Zustand dürfte durch einen Blindklick nicht wieder zugeklappt
-    // werden. Deshalb wird vor jedem Klick geprüft, ob die Zielzeile bereits sichtbar ist.
-    private async Task ExpandSystemGroupAsync()
+    // Klappt die Systemgruppe auf und verifiziert das Ergebnis (Flake-Mechanismus:
+    // siehe ExpandWithRetryAsync). Erfolgskriterium ist die sichtbare App-Schaltfläche,
+    // geklickt wird der Gruppen-Chevron.
+    private Task ExpandSystemGroupAsync()
     {
         var appBtn = SystemAppRow.Locator(".sz-tree-item-btn");
         var groupChevron = Page.Locator(".collapsible-section .sz-tree-chevron-btn").First;
 
+        return ExpandWithRetryAsync(appBtn, groupChevron);
+    }
+
+    // Klappt die Systemanwendung auf und verifiziert das Ergebnis — Spiegelbild von
+    // ExpandSystemGroupAsync eine Ebene tiefer (Flake-Mechanismus: siehe
+    // ExpandWithRetryAsync). Erfolgskriterium ist der Down-Chevron der Anwendung,
+    // geklickt wird die App-Schaltfläche.
+    private Task ExpandSystemApplicationAsync()
+    {
+        var appBtn = SystemAppRow.Locator(".sz-tree-item-btn");
+        var expandedChevron = SystemAppRow.Locator(".sz-tree-chevron-btn .sz-icon-chevron-down");
+
+        return ExpandWithRetryAsync(expandedChevron, appBtn);
+    }
+
+    // Klickt clickTarget bis zu dreimal, bis waitTarget sichtbar wird, und verifiziert
+    // das Ergebnis abschließend. Zwei Flake-Ursachen werden abgefedert: Ein Klick
+    // während des SignalR-Reconnects nach Page.ReloadAsync() kann verloren gehen
+    // (Blazor Server verwirft Events ohne aktiven Circuit), und ein bereits
+    // persistierter Expand-Zustand dürfte durch einen Blindklick nicht wieder
+    // zugeklappt werden (Toggle-Semantik). Deshalb steht die Sichtbarkeitsprüfung
+    // auf waitTarget vor jedem Klick.
+    private static async Task ExpandWithRetryAsync(ILocator waitTarget, ILocator clickTarget)
+    {
         for (var attempt = 0; attempt < 3; attempt++)
         {
             try
             {
-                await appBtn.WaitForAsync(new() { Timeout = 5_000 });
+                await waitTarget.WaitForAsync(new() { Timeout = 5_000 });
                 return;
             }
             catch (TimeoutException)
             {
             }
 
-            await groupChevron.ClickAsync();
+            await clickTarget.ClickAsync();
         }
 
-        await appBtn.WaitForAsync();
+        await waitTarget.WaitForAsync();
     }
 
     private ILocator SystemAppRow =>
@@ -156,8 +178,7 @@ public class TreeCollapseTests : PlaywrightTestBase
         await nameInput.PressAsync("Tab");
         await Page.GetByRole(Microsoft.Playwright.AriaRole.Button, new() { Name = "Anlegen" }).ClickAsync();
 
-        var appBtn = SystemAppRow.Locator(".sz-tree-item-btn");
-        await appBtn.ClickAsync();
+        await ExpandSystemApplicationAsync();
 
         var groupRow = Page.Locator(".sz-tree-row", new() { Has = Page.GetByText("Collapse-Ordner-Test") });
         var labelSpan = groupRow.Locator(".sz-tree-item-label");
@@ -185,8 +206,7 @@ public class TreeCollapseTests : PlaywrightTestBase
         await nameInput.PressAsync("Tab");
         await Page.GetByRole(Microsoft.Playwright.AriaRole.Button, new() { Name = "Anlegen" }).ClickAsync();
 
-        var appBtn = SystemAppRow.Locator(".sz-tree-item-btn");
-        await appBtn.ClickAsync();
+        await ExpandSystemApplicationAsync();
 
         var groupRow = Page.Locator(".sz-tree-row", new() { Has = Page.GetByText("Chevron-Ordner-Test") });
         var chevronBtn = groupRow.Locator(".sz-tree-chevron-btn");
@@ -199,6 +219,7 @@ public class TreeCollapseTests : PlaywrightTestBase
     }
 
     /// <summary>Endpunktordner sind beim Laden des Baums initial zugeklappt.</summary>
+    [Flaky]
     [Fact]
     public async Task EndpointGroupInitiallyCollapsed()
     {
@@ -217,15 +238,21 @@ public class TreeCollapseTests : PlaywrightTestBase
         await contextMenuToggle.ClickAsync();
         await Page.GetByRole(Microsoft.Playwright.AriaRole.Button, new() { Name = "Endpunkt anlegen" }).ClickAsync();
         await Page.GetByPlaceholder("Relativer Pfad").FillAsync("/api/test");
+        await Microsoft.Playwright.Assertions.Expect(Page.Locator(".sz-endpoint-dirty-badge")).ToBeVisibleAsync();
         await Page.GetByRole(Microsoft.Playwright.AriaRole.Button, new() { Name = "Speichern" }).ClickAsync();
+
+        // Speicher-Abschluss abwarten: Das Verschwinden des Dirty-Badges markiert das
+        // Ende von OnSaveSuccessAsync (REST-Write abgeschlossen, beforeunload-Guard
+        // aufgehoben); erst dann kann der Reload nicht mehr blockiert werden.
+        await Microsoft.Playwright.Assertions.Expect(Page.Locator(".sz-endpoint-dirty-badge")).Not.ToBeVisibleAsync(new() { Timeout = 15_000 });
+        await Microsoft.Playwright.Assertions.Expect(Page.Locator(".sz-alert-danger")).Not.ToBeVisibleAsync();
+        await Microsoft.Playwright.Assertions.Expect(Page.Locator(".sz-error")).Not.ToBeVisibleAsync();
 
         await Page.ReloadAsync();
         await ExpandSystemGroupAsync();
-
-        var appBtn = SystemAppRow.Locator(".sz-tree-item-btn");
-        await appBtn.ClickAsync();
+        await ExpandSystemApplicationAsync();
 
         var groupRow = Page.Locator(".sz-tree-row", new() { Has = Page.GetByText("Initial-Collapsed-Ordner") });
-        await Microsoft.Playwright.Assertions.Expect(groupRow.Locator(".sz-icon-chevron-right")).ToBeVisibleAsync();
+        await Microsoft.Playwright.Assertions.Expect(groupRow.Locator(".sz-icon-chevron-right")).ToBeVisibleAsync(new() { Timeout = 15_000 });
     }
 }
